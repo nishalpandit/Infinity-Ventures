@@ -1,0 +1,95 @@
+<!doctype html>
+    <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="description" content="Fixora user Portal — Post a Job"><title>Post a Job · Fixora user</title><link rel="stylesheet" href="/user-dashboard/assets/styles.css"><script defer src="/user-dashboard/assets/app.js"></script></head>
+    <body data-page="job-create" data-title="Post a Job" data-root="../"><div class="app-shell"><div id="sidebar-root"></div><div class="workspace"><div id="topbar-root"></div><main class="page">
+
+<div><section class="card form-card"><form method="POST" action="/user/jobs/create">{% csrf_token %}<div class="form-section"><div class="form-section-head"><span class="section-number">1</span><div><h3>Job information</h3><p>Tell vendors what you need for this project.</p></div></div><div class="form-grid">
+<div class="field full"><label>Job title <span class="required">*</span></label><input class="input" name="title" required placeholder="e.g. Full House Painting"></div>
+<div class="field full"><label>Category <span class="required">*</span></label><select class="select" name="category" required id="categorySelect"><option value="">Select category</option></select></div>
+<div class="field full"><label>Detailed description <span class="required">*</span></label><textarea class="textarea" name="description" required placeholder="Describe the overall scope of the project..."></textarea></div>
+<div class="field full"><label>Scope of work <span class="required">*</span></label><textarea class="textarea" name="scope_of_work" required placeholder="What exact work needs to be done?"></textarea></div>
+<div class="field full"><label>Required work <span class="required">*</span></label><div id="requiredWorkContainer"><div class="dynamic-list-item" style="display:flex;gap:10px;margin-bottom:10px;"><input class="input" name="required_work[]" style="flex:1;" required placeholder="What outcome do you expect?"><button type="button" class="btn btn-secondary btn-icon text-danger" onclick="this.closest('.dynamic-list-item').remove()" style="padding:0 12px;height:40px;"><span data-icon="trash"></span></button></div></div><button type="button" class="btn btn-soft btn-sm mt-2" onclick="addRequiredWorkItem()"><span data-icon="plus"></span> Add More</button></div>
+<div class="field full"><label>Material details</label><textarea class="textarea" name="materials_details" placeholder="Who will provide materials? Any specific brands?"></textarea></div>
+<div class="field"><label>Budget <span class="required">*</span></label><div class="input-prefix"><span>₹</span><input class="input" name="budget" type="number" min="100" required placeholder="15000"></div></div>
+<div class="field"><label>Budget Type</label><select class="select" name="budget_type"><option value="fixed">Fixed</option><option value="estimate">Estimate</option></select></div>
+</div></div>
+<div class="form-section"><div class="form-section-head"><span class="section-number">2</span><div><h3>Schedule & location</h3><p>Choose when and where the project will take place.</p></div></div><div class="form-grid">
+<div class="field"><label>Preferred Start Date <span class="required">*</span></label><input class="input" name="preferred_start_date" type="date" required></div>
+<div class="field"><label>Expected Completion Date</label><input class="input" name="expected_completion" type="date"></div>
+<div class="field"><label>Required Time (Days)</label><input class="input" name="required_time" placeholder="e.g. 5 days"></div>
+<div class="field"><label>Shift availability</label><select class="select" name="shift_availability"><option>Flexible</option><option>Morning</option><option>Afternoon</option><option>Evening</option></select></div>
+<div class="field full"><label>Working hours constraints</label><input class="input" name="working_hours" placeholder="e.g. Only between 9 AM to 6 PM"></div>
+{% regroup locations by state as state_list %}
+<div class="field"><label>State <span class="required">*</span></label><select class="select" required id="stateSelect"><option value="">Select state</option>{% for state in state_list %}<option value="{{ state.grouper }}">{{ state.grouper }}</option>{% endfor %}</select></div>
+<div class="field"><label>City <span class="required">*</span></label><select class="select" name="location_id" required id="citySelect"><option value="">Select city</option></select></div>
+<div class="field"><label>Pincode <span class="required">*</span></label><input class="input" name="pincode" required placeholder="Enter pincode"></div>
+<div class="field full"><label>Address <span class="required">*</span></label><textarea class="textarea" name="address" required placeholder="Enter your full address..."></textarea></div>
+</div></div>
+<div class="form-section"><div class="form-section-head"><span class="section-number">3</span><div><h3>Contact information</h3><p>Used by the selected vendor to coordinate the visit.</p></div></div><div class="form-grid"><div class="field"><label>Contact Name <span class="required">*</span></label><input class="input" name="contact_name" required placeholder="Enter your name"></div><div class="field"><label>Mobile number <span class="required">*</span></label><input class="input" name="contact_mobile" required placeholder="Enter your mobile number" pattern="[+0-9 ]{10,}"></div></div></div><div class="form-actions"><a class="btn btn-secondary" href="/user/jobs/index">Cancel</a><button class="btn btn-primary" type="submit"><span data-icon="briefcase"></span> Post Job</button></div></form></section>
+</div>
+</main></div></div>
+<script>
+  (function() {
+    const categories = {{ categories_json|safe|default:"[]" }};
+    const select = document.getElementById('categorySelect');
+    if (select && categories.length > 0) {
+      categories.forEach(cat => {
+        if (cat.service_type === 'both' || cat.service_type === 'long_job' || !cat.service_type) {
+          const opt = document.createElement('option');
+          opt.value = cat.id;
+          opt.textContent = cat.name;
+          select.appendChild(opt);
+        }
+      });
+    }
+  })();
+</script>
+<script>
+  function addRequiredWorkItem() {
+    const container = document.getElementById('requiredWorkContainer');
+    const div = document.createElement('div');
+    div.className = 'dynamic-list-item';
+    div.style.cssText = 'display:flex;gap:10px;margin-bottom:10px;';
+    
+    const input = document.createElement('input');
+    input.className = 'input';
+    input.name = 'required_work[]';
+    input.style.flex = '1';
+    input.required = true;
+    input.placeholder = 'What outcome do you expect?';
+    
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'btn btn-secondary btn-icon text-danger';
+    btn.style.cssText = 'padding:0 12px;height:40px;';
+    btn.innerHTML = '<span data-icon="trash"></span>';
+    btn.onclick = function() { div.remove(); };
+    
+    div.appendChild(input);
+    div.appendChild(btn);
+    
+    container.appendChild(div);
+  }
+</script>
+<script>
+  (function() {
+    const locations = {{ locations_json|safe|default:"[]" }};
+    const stateSelect = document.getElementById('stateSelect');
+    const citySelect = document.getElementById('citySelect');
+    if (stateSelect && citySelect) {
+      stateSelect.addEventListener('change', function() {
+          citySelect.innerHTML = '<option value="">Select city</option>';
+          const selectedState = this.value;
+          if (!selectedState) return;
+          const activeLocs = locations.filter(l => l.status === 'active' && l.state === selectedState);
+          activeLocs.forEach(loc => {
+              const opt = document.createElement('option');
+              opt.value = loc.id;
+              opt.textContent = loc.city;
+              citySelect.appendChild(opt);
+          });
+      });
+    }
+  })();
+</script>
+
+</body></html>

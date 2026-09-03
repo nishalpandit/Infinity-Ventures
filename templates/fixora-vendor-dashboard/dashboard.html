@@ -1,0 +1,18 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="description" content="Fixora Vendor Portal — Dashboard"><title>Dashboard · Fixora Vendor</title><link rel="stylesheet" href="/fixora-vendor-dashboard/assets/styles.css"><script>
+  window.VENDOR_INITIALS = "{{ vendor_initials|escapejs }}";
+  window.VENDOR_NAME = "{{ vendor_name|escapejs }}";
+  window.VENDOR_TYPE = "{{ vendor_type|escapejs }}";
+  window.VENDOR_LOCATION = "{{ vendor_location|escapejs }}";
+  window.PROFILE_IMAGE_URL = "{{ profile_image_url|escapejs }}" || null;
+  window.VENDOR_CREDITS = {{ remaining_credits|default:5 }};
+</script><script defer src="/fixora-vendor-dashboard/assets/app.js"></script></head><body data-page="dashboard" data-title="Dashboard" data-root=""><div class="app-shell"><div id="sidebar-root"></div><div class="workspace"><div id="topbar-root"></div><main class="page">
+<section class="card hero"><div class="welcome">
+  {% if profile_image_url %}
+    <img src="{{ profile_image_url }}" alt="Profile" class="avatar lg vendor" style="object-fit:cover;">
+  {% else %}
+    <span class="avatar lg vendor">{{ vendor_initials }}</span>
+  {% endif %}
+  <div><div class="eyebrow">{{ current_date }}</div><h1>Welcome back, {{ vendor_name }}!</h1><p><span data-icon="map"></span> {{ vendor_type }} · {{ vendor_location }} · New opportunities are waiting nearby.</p></div></div><div class="hero-actions"><a class="btn btn-primary" href="/vendor/quick-services/nearby.html"><span data-icon="bolt"></span> Find Quick Services</a><a class="btn btn-secondary" href="/vendor/jobs/available.html"><span data-icon="briefcase"></span> Browse Jobs</a><a class="btn btn-secondary" href="/vendor/bid-credits/packages.html"><span data-icon="rupee"></span> Buy Credits</a></div></section>
+<section class="grid grid-4" style="margin:18px 0"><article class="card stat-card"><span class="stat-icon"><span data-icon="bolt"></span></span><div class="stat-value">{{ available_qs }}</div><div class="stat-label">Available Quick Services</div></article><article class="card stat-card"><span class="stat-icon teal"><span data-icon="briefcase"></span></span><div class="stat-value">{{ available_jobs }}</div><div class="stat-label">Available Jobs</div></article><article class="card stat-card credit-balance"><span class="stat-icon green"><span data-icon="award"></span></span><div class="stat-value">{{ remaining_credits }}</div><div class="stat-label">Remaining Bid Credits</div><a class="small" href="/vendor/bid-credits/packages.html">Top up credits →</a></article><article class="card stat-card"><span class="stat-icon orange"><span data-icon="quote"></span></span><div class="stat-value">{{ active_requests }}</div><div class="stat-label">Active Requests</div></article><article class="card stat-card"><span class="stat-icon purple"><span data-icon="file"></span></span><div class="stat-value">{{ active_bids }}</div><div class="stat-label">Active Bids</div></article><article class="card stat-card"><span class="stat-icon blue"><span data-icon="check"></span></span><div class="stat-value">{{ selected_jobs }}</div><div class="stat-label">Selected Jobs</div></article><article class="card stat-card"><span class="stat-icon green"><span data-icon="award"></span></span><div class="stat-value">{{ completed_work }}</div><div class="stat-label">Completed Work</div></article><article class="card stat-card"><span class="stat-icon teal"><span data-icon="chart"></span></span><div class="stat-value">₹{{ total_earnings|floatformat:0 }}</div><div class="stat-label">Total Earnings</div><div class="earning-note">Display only · payments received directly</div></article></section>
+
+</main></div></div></body></html>

@@ -1,0 +1,57 @@
+/* ==========================================================================
+   INFINITY ADMIN DASHBOARD — responsive.css
+   Breakpoints for stat grids, tables, detail layouts, header, forms.
+   ========================================================================== */
+
+/* ---------- Large desktops ---------- */
+@media (min-width: 1400px) {
+  .main-content { padding: 28px 32px; padding-top: calc(var(--header-height) + 28px); }
+}
+
+/* ---------- Laptops ---------- */
+@media (max-width: 1199.98px) {
+  .stat-grid { grid-template-columns: repeat(2, 1fr); }
+  .mini-stat-grid { grid-template-columns: repeat(2, 1fr); }
+  .grid-3 { grid-template-columns: repeat(2, 1fr); }
+  .grid-2-1 { grid-template-columns: 1fr; }
+}
+
+/* ---------- Tablets ---------- */
+@media (max-width: 991.98px) {
+  .header-search { display: none; }
+  .header-profile .meta { display: none; }
+  .main-content { padding: 18px; padding-top: calc(var(--header-height) + 18px); }
+  .grid-2 { grid-template-columns: 1fr; }
+  .grid-3 { grid-template-columns: 1fr; }
+  .profile-banner { flex-direction: column; align-items: flex-start; }
+  .profile-banner .pb-actions { margin-left: 0; width: 100%; }
+  .info-grid { grid-template-columns: 1fr; }
+}
+
+/* ---------- Mobile ---------- */
+@media (max-width: 767.98px) {
+  .stat-grid { grid-template-columns: 1fr; }
+  .mini-stat-grid { grid-template-columns: repeat(2, 1fr); }
+  .page-head { flex-direction: column; align-items: flex-start; }
+  .page-head .ph-actions { width: 100%; }
+  .page-head .ph-actions .btn { flex: 1; justify-content: center; }
+  .table-toolbar { flex-direction: column; align-items: stretch; }
+  .table-toolbar .tt-search { max-width: none; }
+  .table-toolbar .tt-filters { margin-left: 0; width: 100%; }
+  .table-toolbar .tt-filters .form-select { flex: 1; min-width: 120px; }
+  .table-footer { flex-direction: column; align-items: center; }
+  .app-header { padding: 0 14px; gap: 10px; }
+  .header-dropdown { min-width: 260px; right: -40px; }
+  .toast-container { left: 16px; right: 16px; bottom: 16px; }
+  .app-toast { max-width: none; width: 100%; }
+  .modal-dialog { margin: 12px; }
+}
+
+/* ---------- Small phones ---------- */
+@media (max-width: 479.98px) {
+  .mini-stat-grid { grid-template-columns: 1fr; }
+  .page-head .ph-title h1 { font-size: 19px; }
+  .stat-card .stat-info .value { font-size: 19px; }
+  .profile-banner .pb-avatar { width: 64px; height: 64px; font-size: 22px; }
+  .nav-tabs .nav-link { padding: 9px 10px; font-size: 12px; }
+}

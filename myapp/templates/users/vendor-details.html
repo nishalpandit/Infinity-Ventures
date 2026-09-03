@@ -1,0 +1,241 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Vendor Details — Infinity Admin</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
+  <link rel="stylesheet" href="{% static 'assets/css/admin.css' %}">
+  <link rel="stylesheet" href="{% static 'assets/css/sidebar.css' %}">
+  <link rel="stylesheet" href="{% static 'assets/css/responsive.css' %}">
+</head>
+<body>
+  <div id="sidebar-mount"></div>
+  <div class="main-wrapper">
+    <div id="header-mount"></div>
+    <main class="main-content">
+      <div class="breadcrumb" id="breadcrumb"></div>
+
+      <div id="pageContent">
+        <div class="state-box"><div class="spinner"></div><p>Loading vendor…</p></div>
+      </div>
+    </main>
+  </div>
+
+  <script src="{% static 'assets/js/sidebar.js' %}"></script>
+  <script src="{% static 'assets/js/components.js' %}"></script>
+  <script src="{% static 'assets/js/admin.js' %}"></script>
+  <script src="{% static 'assets/js/data.js' %}"></script>
+  <script>
+    (function () {
+      'use strict';
+      var D = window.AdminData, U = window.AdminUI;
+      var id = U.qs('id') || 'VEN-2001';
+      var ven = D.find(D.vendors, id) || D.vendors[0];
+
+      AdminComponents.renderBreadcrumb([
+        { label: 'Users', href: '#' },
+        { label: 'Vendors', href: 'vendors.html' },
+        { label: ven.name }
+      ]);
+
+      var myBids = D.bids.filter(function (b) { return b.vendorId === ven.id; });
+      var myJobs = D.jobs.filter(function (j) {
+        return myBids.some(function (b) { return b.jobId === j.id && b.status === 'selected'; });
+      });
+      var myQS = D.quickServices.filter(function (s) { return s.selectedVendor === ven.name; });
+      var myPurchases = D.purchases.filter(function (p) { return p.vendorId === ven.id; });
+      var myReviews = D.vendorReviews.filter(function (r) { return r.vendor === ven.name; });
+
+      function render() {
+        var html = '';
+
+        /* Hero */
+        html += '<div class="detail-hero card">' +
+          '<div class="dh-left">' +
+          '<span class="avatar avatar-xl ' + U.avatarClass(ven.id) + '">' + U.initials(ven.name) + '</span>' +
+          '<div><h2>' + U.esc(ven.name) + '</h2>' +
+          '<div class="dh-meta"><span class="mono">' + ven.id + '</span> ' + U.badge(ven.type) + ' ' + U.badge(ven.status) + '</div>' +
+          '<div class="dh-sub"><i class="fa-solid fa-layer-group"></i> ' + U.esc(ven.category) +
+          ' &nbsp;·&nbsp; <i class="fa-solid fa-location-dot"></i> ' + U.esc(ven.location) +
+          ' &nbsp;·&nbsp; <i class="fa-regular fa-calendar"></i> Registered ' + ven.registered + '</div></div>' +
+          '</div>' +
+          '<div class="dh-actions">' +
+          '<button class="btn btn-outline btn-sm" id="editBtn"><i class="fa-solid fa-pen"></i> Edit</button>' +
+          (ven.status === 'active'
+            ? '<button class="btn btn-danger btn-sm" id="statusBtn"><i class="fa-solid fa-ban"></i> Suspend</button>'
+            : '<button class="btn btn-success btn-sm" id="statusBtn"><i class="fa-solid fa-check"></i> Activate</button>') +
+          '</div></div>';
+
+        /* Stats */
+        var stats = [
+          { label: 'Total Bids', value: ven.totalBids, icon: 'fa-gavel', cls: 'icon-indigo' },
+          { label: 'Successful Bids', value: ven.successfulBids, icon: 'fa-trophy', cls: 'icon-green' },
+          { label: 'Withdrawn Bids', value: ven.withdrawnBids, icon: 'fa-rotate-left', cls: 'icon-orange' },
+          { label: 'Rejected Bids', value: ven.rejectedBids, icon: 'fa-circle-xmark', cls: 'icon-red' },
+          { label: 'Completed Jobs', value: ven.completedJobs, icon: 'fa-circle-check', cls: 'icon-teal' },
+          { label: 'Active Jobs', value: ven.activeJobs, icon: 'fa-briefcase', cls: 'icon-blue' },
+          { label: 'Bid Credits', value: ven.bidCredits, icon: 'fa-coins', cls: 'icon-purple' },
+          { label: 'Subscription Spending', value: U.inr(ven.subscriptionSpending), icon: 'fa-indian-rupee-sign', cls: 'icon-green' }
+        ];
+        html += '<div class="stat-grid" style="margin-top:20px;">' + stats.map(function (s) {
+          return '<div class="stat-card static"><span class="stat-icon ' + s.cls + '"><i class="fa-solid ' + s.icon + '"></i></span>' +
+            '<div class="stat-info"><div class="label">' + s.label + '</div><div class="value">' + s.value + '</div></div></div>';
+        }).join('') + '</div>';
+
+        /* Tabs */
+        html += '<div class="card" style="margin-top:20px;">' +
+          '<ul class="nav nav-tabs app-tabs" role="tablist">' +
+          '<li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tabProfile">Profile</button></li>' +
+          '<li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tabQS">Quick Services (' + myQS.length + ')</button></li>' +
+          '<li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tabJobs">Jobs (' + myJobs.length + ')</button></li>' +
+          '<li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tabBids">Bids (' + myBids.length + ')</button></li>' +
+          '<li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tabQuotations">Quotations</button></li>' +
+          '<li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tabSubs">Subscription History (' + myPurchases.length + ')</button></li>' +
+          '<li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tabReviews">Reviews (' + myReviews.length + ')</button></li>' +
+          '</ul><div class="tab-content card-body">';
+
+        /* Profile tab */
+        html += '<div class="tab-pane fade show active" id="tabProfile"><div class="row g-4">' +
+          infoBlock('Contact Information', [
+            ['fa-phone', 'Contact', ven.contact],
+            ['fa-envelope', 'Email', ven.email],
+            ['fa-location-dot', 'Location', ven.location]
+          ]) +
+          infoBlock('Vendor Information', [
+            ['fa-id-card', 'Vendor ID', ven.id],
+            ['fa-user-tag', 'Vendor Type', ven.type === 'company' ? 'Company Vendor' : 'Outsider Vendor'],
+            ['fa-layer-group', 'Category', ven.category],
+            ['fa-star', 'Rating', ven.rating + ' / 5.0'],
+            ['fa-calendar', 'Registration Date', ven.registered],
+            ['fa-shield-halved', 'Status', ven.status === 'active' ? 'Active' : 'Suspended']
+          ]) +
+          '</div></div>';
+
+        /* Quick Services tab */
+        html += '<div class="tab-pane fade" id="tabQS">' + listTable(
+          ['ID', 'Service', 'Customer', 'Budget', 'Status'],
+          myQS.map(function (s) {
+            return '<tr><td><a class="link-sm" href="../quick-services/details.html?id=' + s.id + '">' + s.id + '</a></td>' +
+              '<td>' + U.esc(s.title) + '</td><td>' + U.esc(s.customer) + '</td><td>' + U.inr(s.budget) + '</td><td>' + U.badge(s.status) + '</td></tr>';
+          })
+        ) + '</div>';
+
+        /* Jobs tab */
+        html += '<div class="tab-pane fade" id="tabJobs">' + listTable(
+          ['ID', 'Job', 'Customer', 'Budget', 'Status'],
+          myJobs.map(function (j) {
+            return '<tr><td><a class="link-sm" href="../jobs/details.html?id=' + j.id + '">' + j.id + '</a></td>' +
+              '<td>' + U.esc(j.title) + '</td><td>' + U.esc(j.customer) + '</td><td>' + U.inr(j.budget) + '</td><td>' + U.badge(j.status) + '</td></tr>';
+          })
+        ) + '</div>';
+
+        /* Bids tab */
+        html += '<div class="tab-pane fade" id="tabBids">' + listTable(
+          ['Bid ID', 'Job', 'Quotation', 'Submitted', 'Status'],
+          myBids.map(function (b) {
+            return '<tr><td><a class="link-sm" href="../bidding/bid-details.html?id=' + b.id + '">' + b.id + '</a></td>' +
+              '<td>' + U.esc(b.jobTitle) + '</td><td>' + U.inr(b.quotation) + '</td><td>' + b.submitted + '</td><td>' + U.badge(b.status) + '</td></tr>';
+          })
+        ) + '</div>';
+
+        /* Quotations tab */
+        html += '<div class="tab-pane fade" id="tabQuotations">' + listTable(
+          ['Bid ID', 'Job', 'Quotation Amount', 'Work Description', 'Est. Time', 'Status'],
+          myBids.map(function (b) {
+            return '<tr><td><a class="link-sm" href="../bidding/bid-details.html?id=' + b.id + '">' + b.id + '</a></td>' +
+              '<td>' + U.esc(b.jobTitle) + '</td><td><strong>' + U.inr(b.quotation) + '</strong></td>' +
+              '<td>' + U.esc(b.workDescription) + '</td><td>' + b.estimatedTime + '</td><td>' + U.badge(b.status) + '</td></tr>';
+          })
+        ) + '</div>';
+
+        /* Subscription History tab */
+        html += '<div class="tab-pane fade" id="tabSubs">' + listTable(
+          ['Transaction', 'Package', 'Credits', 'Amount', 'Status', 'Date'],
+          myPurchases.map(function (p) {
+            return '<tr><td><a class="link-sm" href="../payments/transaction-details.html?id=' + p.id + '">' + p.id + '</a></td>' +
+              '<td>' + U.esc(p.package) + '</td><td>' + p.credits + '</td><td>' + U.inr(p.amount) + '</td>' +
+              '<td>' + U.badge(p.paymentStatus) + '</td><td>' + p.date + '</td></tr>';
+          })
+        ) + '</div>';
+
+        /* Reviews tab */
+        html += '<div class="tab-pane fade" id="tabReviews">' + (myReviews.length === 0
+          ? emptyBox('No reviews yet', 'This vendor has not received any reviews.')
+          : myReviews.map(function (r) {
+            return '<div class="review-item"><div class="ri-head">' +
+              '<div><strong>' + U.esc(r.customer) + '</strong> <span class="text-muted">· ' + U.esc(r.job) + '</span></div>' +
+              U.stars(r.rating) + '</div><p>' + U.esc(r.review) + '</p>' +
+              '<div class="text-muted" style="font-size:12px;">' + r.date + ' · ' + U.badge(r.status) + '</div></div>';
+          }).join('')) + '</div>';
+
+        html += '</div></div>';
+        document.getElementById('pageContent').innerHTML = html;
+
+        document.getElementById('editBtn').addEventListener('click', function () {
+          U.modal({
+            title: 'Edit Vendor — ' + ven.id,
+            body:
+              '<div class="row g-3">' +
+              '<div class="col-md-6"><label class="form-label">Name</label><input class="form-control" id="eName" value="' + U.esc(ven.name) + '"></div>' +
+              '<div class="col-md-6"><label class="form-label">Contact</label><input class="form-control" id="eContact" value="' + U.esc(ven.contact) + '"></div>' +
+              '<div class="col-md-6"><label class="form-label">Category</label><select class="form-select" id="eCat">' +
+              D.categories.map(function (c) { return '<option' + (c === ven.category ? ' selected' : '') + '>' + c + '</option>'; }).join('') + '</select></div>' +
+              '<div class="col-md-6"><label class="form-label">Location</label><select class="form-select" id="eLoc">' +
+              D.cities.map(function (c) { return '<option' + (c === ven.location ? ' selected' : '') + '>' + c + '</option>'; }).join('') + '</select></div>' +
+              '</div>',
+            onSave: function () {
+              ven.name = document.getElementById('eName').value;
+              ven.contact = document.getElementById('eContact').value;
+              ven.category = document.getElementById('eCat').value;
+              ven.location = document.getElementById('eLoc').value;
+              U.toast('success', 'Vendor updated', ven.name + ' has been saved.');
+              render();
+            }
+          });
+        });
+
+        document.getElementById('statusBtn').addEventListener('click', function () {
+          if (ven.status === 'active') {
+            U.confirm({
+              title: 'Suspend vendor?', message: ven.name + ' will no longer be able to bid or accept work.',
+              danger: true, icon: 'fa-ban', confirmText: 'Suspend',
+              onConfirm: function () { ven.status = 'suspended'; U.toast('warning', 'Vendor suspended'); render(); }
+            });
+          } else {
+            ven.status = 'active';
+            U.toast('success', 'Vendor activated');
+            render();
+          }
+        });
+      }
+
+      function infoBlock(title, rows) {
+        return '<div class="col-md-6"><div class="info-block"><h6>' + title + '</h6>' +
+          rows.map(function (r) {
+            return '<div class="ib-row"><span class="ib-icon"><i class="fa-solid ' + r[0] + '"></i></span>' +
+              '<div><div class="ib-label">' + r[1] + '</div><div class="ib-value">' + U.esc(r[2]) + '</div></div></div>';
+          }).join('') + '</div></div>';
+      }
+
+      function listTable(headers, rowsHtml) {
+        if (!rowsHtml.length) return emptyBox('No records found', 'Nothing to display here yet.');
+        return '<div class="table-wrap"><table class="table"><thead><tr>' +
+          headers.map(function (h) { return '<th>' + h + '</th>'; }).join('') +
+          '</tr></thead><tbody>' + rowsHtml.join('') + '</tbody></table></div>';
+      }
+
+      function emptyBox(title, text) {
+        return '<div class="state-box"><div class="state-icon"><i class="fa-regular fa-folder-open"></i></div>' +
+          '<h5>' + title + '</h5><p>' + text + '</p></div>';
+      }
+
+      setTimeout(render, 350);
+    })();
+  </script>
+</body>
+</html>

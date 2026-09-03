@@ -1,0 +1,77 @@
+<!doctype html>
+    <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="description" content="Fixora user Portal — Post a Quick Service"><title>Post a Quick Service · Fixora user</title><link rel="stylesheet" href="/user-dashboard/assets/styles.css"><script defer src="/user-dashboard/assets/app.js"></script></head>
+    <body data-page="quick-create" data-title="Post a Quick Service" data-root="../"><div class="app-shell"><div id="sidebar-root"></div><div class="workspace"><div id="topbar-root"></div><main class="page">
+
+<div><section class="card form-card"><form method="POST" action="/user/quick-services/create">{% csrf_token %}<div class="form-section"><div class="form-section-head"><span class="section-number">1</span><div><h3>Service information</h3><p>Tell vendors what you need help with.</p></div></div><div class="form-grid"><div class="field full"><label>Service title <span class="required">*</span></label><input class="input" name="title" required placeholder="e.g. Split AC not cooling properly"></div><div class="field full"><label>Category <span class="required">*</span></label><select class="select" name="category" required id="categorySelect"><option value="">Select category</option></select></div><div class="field full"><label>Detailed description <span class="required">*</span></label><textarea class="textarea" name="description" required placeholder="Describe the issue, when it started and any symptoms..."></textarea><div class="field-hint">A clear description helps vendors quote accurately.</div></div><div class="field full"><label>Required work <span class="required">*</span></label><div id="requiredWorkContainer"><div class="dynamic-list-item" style="display:flex;gap:10px;margin-bottom:10px;"><input class="input" name="required_work[]" style="flex:1;" required placeholder="What outcome do you expect from the vendor?"><button type="button" class="btn btn-secondary btn-icon text-danger" onclick="this.closest('.dynamic-list-item').remove()" style="padding:0 12px;height:40px;"><span data-icon="trash"></span></button></div></div><button type="button" class="btn btn-soft btn-sm mt-2" onclick="addRequiredWorkItem()"><span data-icon="plus"></span> Add More</button></div><div class="field"><label>Budget / expected price <span class="required">*</span></label><div class="input-prefix"><span>₹</span><input class="input" name="budget" type="number" min="100" required placeholder="1500"></div></div><div class="field"><label>Shift availability</label><select class="select" name="shift_availability"><option>Flexible</option><option>Morning</option><option>Afternoon</option><option>Evening</option></select></div></div></div>
+<div class="form-section"><div class="form-section-head"><span class="section-number">2</span><div><h3>Schedule & location</h3><p>Choose when and where the work is required.</p></div></div><div class="form-grid"><div class="field"><label>Preferred Date <span class="required">*</span></label><input class="input" name="preferred_date" type="date" required></div><div class="field"><label>Preferred Time <span class="required">*</span></label><input class="input" name="preferred_time" type="time" required></div>{% regroup locations by state as state_list %}<div class="field"><label>State <span class="required">*</span></label><select class="select" required id="stateSelect"><option value="">Select state</option>{% for state in state_list %}<option value="{{ state.grouper }}">{{ state.grouper }}</option>{% endfor %}</select></div><div class="field"><label>City <span class="required">*</span></label><select class="select" name="location_id" required id="citySelect"><option value="">Select city</option></select></div><div class="field full"><label>Address <span class="required">*</span></label><textarea class="textarea" name="address" required placeholder="Enter your full address... e.g. Flat 302, Green Valley Apts, Road No. 2"></textarea><div class="field-hint">Your exact address is shared only with the selected vendor.</div></div><div class="field full"><button type="button" class="btn btn-secondary" data-toast="Location mapped" data-toast-message="Using your current GPS location."><span data-icon="crosshair"></span> Use Current Location</button></div></div></div>
+<div class="form-section"><div class="form-section-head"><span class="section-number">3</span><div><h3>Additional details</h3><p>Add requirements or helpful reference files.</p></div></div><div class="form-grid"><div class="field full"><label>Additional requirements</label><textarea class="textarea" name="additional_requirements" placeholder="Access instructions, preferred materials, special notes..."></textarea></div><div class="field full"><label>Upload images or supporting files</label><label class="upload-zone"><span class="upload-icon"><span data-icon="upload"></span></span><p><span>Click to upload or drag and drop</span></p><small>PNG, JPG, PDF or DOC up to 10 MB</small><input type="file" multiple accept="image/*,.pdf,.doc,.docx" data-preview="quick-files"></label><div class="preview-list" id="quick-files"></div></div></div></div>
+<div class="form-section"><div class="form-section-head"><span class="section-number">4</span><div><h3>Contact information</h3><p>Used by the selected vendor to coordinate the visit.</p></div></div><div class="form-grid"><div class="field"><label>user name <span class="required">*</span></label><input class="input" name="contact_name" required placeholder="Enter your name"></div><div class="field"><label>Mobile number <span class="required">*</span></label><input class="input" name="contact_mobile" required placeholder="Enter your mobile number" pattern="[+0-9 ]{10,}"></div></div></div><div class="form-actions"><a class="btn btn-secondary" href="/user/quick-services">Cancel</a><button type="button" class="btn btn-soft" data-save-draft><span data-icon="file"></span> Save Draft</button><button class="btn btn-primary" type="submit"><span data-icon="bolt"></span> Post Quick Service</button></div></form></section>
+<aside class="stack" style="display:none;"></aside></div>
+<section class="card success-panel" id="quick-success" hidden><span class="success-icon"><span data-icon="check"></span></span><h2>Quick Service posted successfully!</h2><p>Your request has been shared with verified nearby vendors. You’ll be notified when a quotation arrives.</p><div class="success-summary"><div class="info-item"><span class="info-label">Service ID</span><strong>QS-2026-0820</strong></div><div class="info-item"><span class="info-label">Service title</span><strong>Split AC not cooling properly</strong></div><div class="info-item"><span class="info-label">Posted date</span><strong>20 Aug 2026, 11:24 AM</strong></div><div class="info-item"><span class="info-label">Status</span><span class="badge badge-open">Open</span></div><div class="info-item"><span class="info-label">Nearby vendors notified</span><strong>27 vendors</strong></div></div><div class="actions" style="justify-content:center"><a class="btn btn-secondary" href="index.html">My Quick Services</a><a class="btn btn-primary" href="details.html">View Service</a></div></section>
+</main></div></div>
+<script>
+  (function() {
+    const categories = {{ categories_json|safe|default:"[]" }};
+    const select = document.getElementById('categorySelect');
+    if (select && categories.length > 0) {
+      categories.forEach(cat => {
+        if (cat.service_type === 'both' || cat.service_type === 'quick_service') {
+          const opt = document.createElement('option');
+          opt.value = cat.id;
+          opt.textContent = cat.name;
+          select.appendChild(opt);
+        }
+      });
+    }
+  })();
+</script>
+<script>
+  function addRequiredWorkItem() {
+    const container = document.getElementById('requiredWorkContainer');
+    const div = document.createElement('div');
+    div.className = 'dynamic-list-item';
+    div.style.cssText = 'display:flex;gap:10px;margin-bottom:10px;';
+    
+    const input = document.createElement('input');
+    input.className = 'input';
+    input.name = 'required_work[]';
+    input.style.flex = '1';
+    input.required = true;
+    input.placeholder = 'What outcome do you expect from the vendor?';
+    
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'btn btn-secondary btn-icon text-danger';
+    btn.style.cssText = 'padding:0 12px;height:40px;';
+    btn.innerHTML = (window.Fixora && window.Fixora.icon) ? window.Fixora.icon('trash') : '<span data-icon="trash"></span>';
+    btn.onclick = function() { div.remove(); };
+    
+    div.appendChild(input);
+    div.appendChild(btn);
+    
+    container.appendChild(div);
+  }
+</script>
+<script>
+  (function() {
+    const locations = {{ locations_json|safe|default:"[]" }};
+    const stateSelect = document.getElementById('stateSelect');
+    const citySelect = document.getElementById('citySelect');
+    if (stateSelect && citySelect) {
+      stateSelect.addEventListener('change', function() {
+          citySelect.innerHTML = '<option value="">Select city</option>';
+          const selectedState = this.value;
+          if (!selectedState) return;
+          const activeLocs = locations.filter(l => l.status === 'active' && l.state === selectedState);
+          activeLocs.forEach(loc => {
+              const opt = document.createElement('option');
+              opt.value = loc.id;
+              opt.textContent = loc.city;
+              citySelect.appendChild(opt);
+          });
+      });
+    }
+  })();
+</script>
+
+</body></html>

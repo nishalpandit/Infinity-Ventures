@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="description" content="Fixora user Portal — Job Details"><title>Job Details · Fixora user</title><link rel="stylesheet" href="/user-dashboard/assets/styles.css"><script defer src="/user-dashboard/assets/app.js"></script></head>
+<body data-page="job-details" data-title="Job Details" data-root="../"><div class="app-shell"><div id="sidebar-root"></div><div class="workspace"><div id="topbar-root"></div><main class="page">
+
+<div class="stack"><section class="card"><div class="card-head"><div><h2>Job Information</h2><p>Complete requirement shared with vendors</p></div>
+    {% if job.status == 'open' %}<span class="badge badge-open">Open</span>
+    {% elif job.status == 'progress' %}<span class="badge badge-progress">In Progress</span>
+    {% elif job.status == 'selected' %}<span class="badge badge-selected">Vendors Selected</span>
+    {% elif job.status == 'completed' %}<span class="badge badge-completed">Completed</span>
+    {% elif job.status == 'cancelled' %}<span class="badge badge-cancelled">Cancelled</span>
+    {% elif job.status == 'closed' %}<span class="badge badge-closed">Closed</span>
+    {% else %}<span class="badge badge-open">{{ job.get_status_display }}</span>
+    {% endif %}
+</div><div class="card-body"><div class="info-list"><div class="info-item"><div class="info-label">Job ID</div><div class="info-value">JOB-{{ job.id }}</div></div><div class="info-item"><div class="info-label">Category</div><div class="info-value">{{ job.category.name|default:'Uncategorized' }}</div></div><div class="info-item"><div class="info-label">Budget</div><div class="info-value">₹{{ job.budget }} expected</div></div><div class="info-item"><div class="info-label">Start Date</div><div class="info-value">{{ start_date_fmt }}</div></div><div class="info-item"><div class="info-label">End Date</div><div class="info-value">{{ end_date_fmt }}</div></div><div class="info-item"><div class="info-label">Location</div><div class="info-value">{{ job.location.city|default:'Unknown' }}{% if job.location.state %}, {{ job.location.state }}{% endif %}</div></div><div class="info-item" style="grid-column:1/-1"><div class="info-label">Address</div><div class="info-value">{{ job.address|default:'Not specified' }}</div></div></div><div class="divider"></div><h3 class="section-title">Description</h3><p class="muted">{{ job.description|default:'No description provided.' }}</p><h3 class="section-title">Required work</h3><ul class="muted" style="padding-left:20px;">{% for work in job.required_work %}<li>{{ work }}</li>{% empty %}<li>No specific work items provided.</li>{% endfor %}</ul>{% if job.additional_requirements %}<h3 class="section-title">Additional requirements</h3><p class="muted">{{ job.additional_requirements }}</p>{% endif %}</div></section>
+<section><div class="page-head" style="margin:8px 0 14px"><div><h1 style="font-size:18px">Job Quotations</h1><p>{{ job_stats.total_bids }} vendor(s) responded. View them below or go to <a href="quotations.html?job_id={{ job.id }}">All Quotations</a>.</p></div></div><div class="grid grid-2">
+    <div class="card" style="padding:20px;">
+      <h3 style="margin-bottom:10px;">Lowest Bid</h3>
+      <p style="font-size:24px;font-weight:600;">₹{{ job_stats.lowest_amount }}</p>
+      <p class="small muted">from {{ job_stats.lowest_vendor }}</p>
+    </div>
+    <div class="card" style="padding:20px;">
+      <h3 style="margin-bottom:10px;">Highest Bid</h3>
+      <p style="font-size:24px;font-weight:600;">₹{{ job_stats.highest_amount }}</p>
+      <p class="small muted">from {{ job_stats.highest_vendor }}</p>
+    </div>
+</div>
+</main></div></div></body></html>

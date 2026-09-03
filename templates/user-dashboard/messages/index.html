@@ -1,0 +1,27 @@
+<!doctype html>
+    <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="description" content="Fixora user Portal — Messages"><title>Messages · Fixora user</title><link rel="stylesheet" href="/user-dashboard/assets/styles.css"><script defer src="/user-dashboard/assets/app.js"></script></head>
+    <body data-page="messages" data-title="Messages" data-root="../"><div class="app-shell"><div id="sidebar-root"></div><div class="workspace"><div id="topbar-root"></div><main class="page">
+<section class="card inbox"><div class="conversation-list"><div class="conversation-search"><div class="search-box" style="max-width:none"><span data-icon="search"></span><input class="input" placeholder="Search conversations"></div></div>
+{% for conv in conversations %}
+<a class="conversation {% if forloop.first %}active{% endif %}" href="chat.html?vendor_id={{ conv.vendor_id }}"> 
+<span class="online"><span class="avatar md vendor">{{ conv.initials }}</span></span>
+<span class="conversation-copy">
+<span class="conversation-line"><strong>{{ conv.name }}</strong><time>{{ conv.latest_message.created_at|date:"h:i A" }}</time></span>
+<span class="conversation-line"><p>{{ conv.latest_message.content|truncatechars:35 }}</p>
+{% if conv.unread_count > 0 %}<span class="badge" style="background:var(--primary);color:#fff">{{ conv.unread_count }}</span>{% endif %}
+</span></span></a>
+{% empty %}
+<p style="padding:20px;text-align:center;color:var(--text-muted)">No conversations yet.</p>
+{% endfor %}
+</div><div class="chat-preview"><div class="chat-header">
+{% if conversations %}
+<span class="avatar md vendor">{{ conversations.0.initials }}</span><div class="vendor-meta"><h3>{{ conversations.0.name }}</h3><span>● Online</span></div><a class="btn btn-secondary btn-sm" href="../vendors/details.html?id={{ conversations.0.vendor_id }}">Vendor Profile</a><a class="btn btn-primary btn-sm" href="chat.html?vendor_id={{ conversations.0.vendor_id }}">Open Chat</a></div><div class="chat-messages">
+<div class="date-separator"><span>Latest Message</span></div>
+<div class="message-row {% if conversations.0.latest_message.sender == request.user %}sent{% endif %}"><div class="message">{{ conversations.0.latest_message.content }}<div class="message-time">{{ conversations.0.latest_message.created_at|date:"h:i A" }} {% if conversations.0.latest_message.is_read %}· Read ✓✓{% endif %}</div></div></div>
+</div>
+<div class="payment-note">For your safety, agree service pricing clearly. Fixora does not process user-to-Vendor service payments.</div><div class="chat-compose"><button class="icon-btn" data-attachment><span data-icon="paperclip"></span></button><input class="input" placeholder="Type a message..." disabled><a class="btn btn-primary" href="chat.html?vendor_id={{ conversations.0.vendor_id }}">Open full chat</a></div>
+{% else %}
+<div class="payment-note" style="margin: auto;">No active conversations. Start a chat from a vendor's profile or job quotation!</div>
+{% endif %}
+</div></section>
+</main></div></div></body></html>

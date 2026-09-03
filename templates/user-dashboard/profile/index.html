@@ -1,0 +1,110 @@
+<!doctype html>
+    <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="description" content="Fixora user Portal — Profile"><title>Profile · Fixora user</title><link rel="stylesheet" href="/user-dashboard/assets/styles.css"><script defer src="/user-dashboard/assets/app.js"></script></head>
+    <body data-page="profile" data-title="Profile" data-root="../"><div class="app-shell"><div id="sidebar-root"></div><div class="workspace"><div id="topbar-root"></div><main class="page">
+
+
+<section class="card profile-hero">
+    <span class="avatar xl teal">
+        {% if request.user.first_name %}
+            {{ request.user.first_name|slice:":1"|upper }}{{ request.user.last_name|slice:":1"|upper }}
+        {% else %}
+            {{ request.user.username|slice:":2"|upper }}
+        {% endif %}
+    </span>
+    <div class="profile-main">
+        <div class="eyebrow">User Account</div>
+        <h1>{{ request.user.get_full_name|default:request.user.username }}</h1>
+        <div class="profile-meta">
+            <span><span data-icon="mail"></span> {{ request.user.email|default:"—" }}</span>
+            <span><span data-icon="phone"></span> {{ request.user.user_profile.phone_number|default:"—" }}</span>
+            <span><span data-icon="map"></span> Unknown Location</span>
+        </div>
+        <div style="margin-top:10px">
+            <span class="badge badge-success">Active</span>
+        </div>
+    </div>
+</section>
+
+<section class="stats">
+    <article class="card stat-card">
+        <div class="stat-icon"><span data-icon="bolt"></span></div>
+        <div class="stat-value">{{ qs_count|default:"0" }}</div>
+        <div class="stat-label">Quick Services Posted</div>
+    </article>
+    <article class="card stat-card">
+        <div class="stat-icon teal"><span data-icon="briefcase"></span></div>
+        <div class="stat-value">{{ jobs_count|default:"0" }}</div>
+        <div class="stat-label">Jobs Posted</div>
+    </article>
+    <article class="card stat-card">
+        <div class="stat-icon blue"><span data-icon="check"></span></div>
+        <div class="stat-value">{{ completed_qs|default:"0" }}</div>
+        <div class="stat-label">Completed Services</div>
+    </article>
+    <article class="card stat-card">
+        <div class="stat-icon green"><span data-icon="award"></span></div>
+        <div class="stat-value">{{ completed_jobs|default:"0" }}</div>
+        <div class="stat-label">Completed Jobs</div>
+    </article>
+    <article class="card stat-card">
+        <div class="stat-icon purple"><span data-icon="users"></span></div>
+        <div class="stat-value">{{ vendors_selected|default:"0" }}</div>
+        <div class="stat-label">Vendors Selected</div>
+    </article>
+    <article class="card stat-card">
+        <div class="stat-icon orange"><span data-icon="calendar"></span></div>
+        <div class="stat-value" style="font-size:18px">{{ request.user.date_joined|date:"j M 'y" }}</div>
+        <div class="stat-label">Registration Date</div>
+    </article>
+</section>
+
+<div class="grid grid-2">
+    <section class="card">
+        <div class="card-head">
+            <h2>Personal Information</h2>
+            <a class="link small" href="edit.html">Edit</a>
+        </div>
+        <div class="card-body">
+            <div class="info-list">
+                <div class="info-item">
+                    <div class="info-label">Full name</div>
+                    <div class="info-value">{{ request.user.get_full_name|default:request.user.username }}</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">Mobile</div>
+                    <div class="info-value">{{ request.user.user_profile.phone_number|default:"—" }}</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">Email</div>
+                    <div class="info-value">{{ request.user.email|default:"—" }}</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">Preferred language</div>
+                    <div class="info-value">English</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">Location</div>
+                    <div class="info-value">Unknown Location</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">Registration date</div>
+                    <div class="info-value">{{ request.user.date_joined|date:"j F Y" }}</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="card">
+        <div class="card-head">
+            <h2>Default Address</h2>
+            <a class="link small" href="addresses.html">Manage</a>
+        </div>
+        <div class="card-body">
+            <div class="address-type"><span data-icon="home"></span> Home <span class="badge badge-selected">Default</span></div>
+            <p><strong>{{ request.user.get_full_name|default:request.user.username }}</strong> · {{ request.user.user_profile.phone_number|default:"—" }}</p>
+            <p class="muted">Address details not set.</p>
+            <a class="btn btn-secondary btn-sm" href="addresses.html">View all addresses</a>
+        </div>
+    </section>
+</div>
+</main></div></div></body></html>

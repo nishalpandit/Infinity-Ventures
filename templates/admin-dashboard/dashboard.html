@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard — Infinity Admin</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
+  <link rel="stylesheet" href="/admin-dashboard/assets/css/admin.css">
+  <link rel="stylesheet" href="/admin-dashboard/assets/css/sidebar.css">
+  <link rel="stylesheet" href="/admin-dashboard/assets/css/responsive.css">
+</head>
+<body>
+  <div id="sidebar-mount"></div>
+  <div class="main-wrapper">
+    <div id="header-mount"></div>
+    <main class="main-content">
+      <div class="breadcrumb" id="breadcrumb"></div>
+
+      
+
+      <!-- Stat cards -->
+      <div class="stat-grid" id="statGrid">
+        <a class="stat-card" href="users/customers.html">
+          <span class="stat-icon icon-indigo"><i class="fa-solid fa-users"></i></span>
+          <div class="stat-info"><div class="label">Total Customers</div><div class="value">{{ total_customers }}</div>
+          <div class="trend up"><i class="fa-solid fa-arrow-trend-up"></i> Live data</div></div>
+        </a>
+        <a class="stat-card" href="users/vendors.html">
+          <span class="stat-icon icon-purple"><i class="fa-solid fa-user-tie"></i></span>
+          <div class="stat-info"><div class="label">Total Vendors</div><div class="value">{{ total_vendors }}</div>
+          <div class="trend up"><i class="fa-solid fa-arrow-trend-up"></i> Live data</div></div>
+        </a>
+        <a class="stat-card" href="jobs/index.html">
+          <span class="stat-icon icon-green"><i class="fa-solid fa-briefcase"></i></span>
+          <div class="stat-info"><div class="label">Active Jobs</div><div class="value">{{ active_jobs }}</div>
+          <div class="trend up"><i class="fa-solid fa-arrow-trend-up"></i> Running now</div></div>
+        </a>
+        <a class="stat-card" href="reports/revenue.html">
+          <span class="stat-icon icon-indigo"><i class="fa-solid fa-indian-rupee-sign"></i></span>
+          <div class="stat-info"><div class="label">Subscription Revenue</div><div class="value">₹{{ revenue }}</div>
+          <div class="trend up"><i class="fa-solid fa-arrow-trend-up"></i> Live data</div></div>
+        </a>
+      </div>
+
+      <!-- Charts Row 1 -->
+      <div class="grid-2 mb-grid">
+        <div class="card">
+          <div class="card-header"><h5 class="card-title">Quick Services</h5></div>
+          <div class="card-body"><div class="chart-box"><canvas id="qsChart"></canvas></div></div>
+        </div>
+        <div class="card">
+          <div class="card-header"><h5 class="card-title">Jobs Overview</h5></div>
+          <div class="card-body"><div class="chart-box"><canvas id="jobChart"></canvas></div></div>
+        </div>
+      </div>
+
+      <!-- Charts Row 2 -->
+      <div class="grid-2-1 mb-grid">
+        <div class="card">
+          <div class="card-header"><h5 class="card-title">Revenue (Last 6 Months)</h5></div>
+          <div class="card-body"><div class="chart-box"><canvas id="revChart"></canvas></div></div>
+        </div>
+        <div class="card">
+          <div class="card-header"><h5 class="card-title">Bids Status</h5></div>
+          <div class="card-body"><div class="chart-box"><canvas id="bidChart"></canvas></div></div>
+        </div>
+      </div>
+
+      <!-- Recent Tables Row 1 -->
+      <div class="grid-2 mb-grid">
+        <div class="card">
+          <div class="card-header">
+            <h5 class="card-title">Recent Quick Services</h5>
+            <a href="quick-services/index.html" class="link-sm">View All</a>
+          </div>
+          <div class="card-body p-0" id="recentQS">
+            <div class="table-wrap"><table class="table"><thead><tr><th>ID</th><th>Service</th><th>Customer</th><th>Budget</th><th>Status</th></tr></thead><tbody>
+              {% for qs in recent_quick_services %}
+              <tr><td><a class="link-sm" href="quick-services/details.html?id={{ qs.id }}">{{ qs.id }}</a></td><td>{{ qs.title }}</td><td>{{ qs.customer_name }}</td><td>₹{{ qs.budget }}</td><td><span class="badge badge-{{ qs.status|lower }}">{{ qs.status|title }}</span></td></tr>
+              {% empty %}
+              <tr><td colspan="5" class="text-center">No recent quick services.</td></tr>
+              {% endfor %}
+            </tbody></table></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header">
+            <h5 class="card-title">Recent Jobs</h5>
+            <a href="jobs/index.html" class="link-sm">View All</a>
+          </div>
+          <div class="card-body p-0" id="recentJobs">
+            <div class="table-wrap"><table class="table"><thead><tr><th>ID</th><th>Job</th><th>Customer</th><th>Bids</th><th>Status</th></tr></thead><tbody>
+              {% for j in recent_jobs %}
+              <tr><td><a class="link-sm" href="jobs/details.html?id={{ j.id }}">{{ j.id }}</a></td><td>{{ j.title }}</td><td>{{ j.customer_name }}</td><td>{{ j.bids_count }}</td><td><span class="badge badge-{{ j.status|lower }}">{{ j.status|title }}</span></td></tr>
+              {% empty %}
+              <tr><td colspan="5" class="text-center">No recent jobs.</td></tr>
+              {% endfor %}
+            </tbody></table></div>
+          </div>
+        </div>
+      </div>
+
+
+
+
+
+
+    </main>
+  </div>
+
+  <script src="/admin-dashboard/assets/js/sidebar.js"></script>
+  <script src="/admin-dashboard/assets/js/components.js"></script>
+  <script src="/admin-dashboard/assets/js/admin.js"></script>
+  <script src="/admin-dashboard/assets/js/data.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+  <script>
+    (function () {
+      'use strict';
+      var D = window.AdminData, U = window.AdminUI;
+
+      AdminComponents.renderBreadcrumb([{ label: 'Dashboard' }]);
+
+      /* ---------- Stat cards removed (Using Django template) ---------- */
+
+
+      /* ---------- Charts ---------- */
+      var days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+      Chart.defaults.font.family = "'Inter', sans-serif";
+      Chart.defaults.color = '#64748b';
+
+      new Chart(document.getElementById('qsChart'), {
+        type: 'line',
+        data: {
+          labels: days,
+          datasets: [{
+            label: 'Quick Services', data: [6, 9, 7, 12, 10, 14, 11],
+            borderColor: '#4f46e5', backgroundColor: 'rgba(79,70,229,.10)', fill: true, tension: .4, borderWidth: 2, pointRadius: 3
+          }]
+        },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, grid: { color: '#eef2f7' } }, x: { grid: { display: false } } } }
+      });
+
+      new Chart(document.getElementById('jobChart'), {
+        type: 'bar',
+        data: {
+          labels: days,
+          datasets: [
+            { label: 'New Jobs', data: [4, 6, 5, 8, 7, 9, 6], backgroundColor: '#8b5cf6', borderRadius: 6 },
+            { label: 'Completed', data: [2, 3, 4, 5, 4, 6, 4], backgroundColor: '#c4b5fd', borderRadius: 6 }
+          ]
+        },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, usePointStyle: true } } }, scales: { y: { beginAtZero: true, grid: { color: '#eef2f7' } }, x: { grid: { display: false } } } }
+      });
+
+      new Chart(document.getElementById('bidChart'), {
+        type: 'doughnut',
+        data: {
+          labels: ['Submitted', 'Selected', 'Rejected', 'Withdrawn'],
+          datasets: [{ data: [11, 6, 4, 3], backgroundColor: ['#0ea5e9', '#10b981', '#ef4444', '#94a3b8'], borderWidth: 0 }]
+        },
+        options: { responsive: true, maintainAspectRatio: false, cutout: '62%', plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, usePointStyle: true } } } }
+      });
+
+      new Chart(document.getElementById('revChart'), {
+        type: 'line',
+        data: {
+          labels: ['Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug'],
+          datasets: [{
+            label: 'Revenue (₹)', data: [1850, 2400, 2100, 3200, 3900, 4650],
+            borderColor: '#10b981', backgroundColor: 'rgba(16,185,129,.10)', fill: true, tension: .4, borderWidth: 2, pointRadius: 3
+          }]
+        },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, grid: { color: '#eef2f7' } }, x: { grid: { display: false } } } }
+      });
+
+      /* ---------- Recent tables removed (Using Django template) ---------- */
+
+      document.getElementById('refreshBtn').addEventListener('click', function () {
+        U.toast('success', 'Dashboard refreshed', 'All metrics updated to the latest values.');
+      });
+      document.getElementById('dashRange').addEventListener('change', function (e) {
+        U.toast('info', 'Range updated', 'Showing data for ' + e.target.value + '.');
+      });
+    })();
+  </script>
+</body>
+</html>

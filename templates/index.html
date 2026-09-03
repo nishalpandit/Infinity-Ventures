@@ -1,0 +1,465 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <title>Login - Infinity Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+  <style>
+    :root {
+      --primary: #6366f1;
+      --primary-hover: #4f46e5;
+      --bg-gradient: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%);
+      --glass-bg: rgba(255, 255, 255, 0.05);
+      --glass-border: rgba(255, 255, 255, 0.1);
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+    }
+
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: 'Inter', sans-serif;
+      background: linear-gradient(rgba(15, 23, 42, 0.7), rgba(30, 27, 75, 0.7)),
+      url("{% static 'assets/images/image.png' %}") no-repeat center center fixed;
+      background-size: cover;
+      color: var(--text-main);
+      height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+
+    /* Background animated elements */
+    .blob {
+      position: absolute;
+      border-radius: 50%;
+      filter: blur(80px);
+      z-index: 0;
+      animation: float 10s ease-in-out infinite alternate;
+    }
+
+    .blob-1 {
+      width: 400px;
+      height: 400px;
+      background: rgba(99, 102, 241, 0.4);
+      top: -100px;
+      left: -100px;
+      animation-delay: 0s;
+    }
+
+    .blob-2 {
+      width: 300px;
+      height: 300px;
+      background: rgba(236, 72, 153, 0.3);
+      bottom: -50px;
+      right: -50px;
+      animation-delay: 2s;
+    }
+
+    @keyframes float {
+      0% {
+        transform: translate(0, 0);
+      }
+
+      100% {
+        transform: translate(30px, 30px);
+      }
+    }
+
+    .login-wrapper {
+      position: relative;
+      z-index: 1;
+      background: transparent;
+      border: none;
+      border-radius: 24px;
+      padding: 48px;
+      width: 100%;
+      max-width: 420px;
+      transform: translateY(20px);
+      opacity: 0;
+      animation: slideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+
+    @keyframes slideUp {
+      to {
+        transform: translateY(0);
+        opacity: 1;
+      }
+    }
+
+    .logo-area {
+      text-align: center;
+      margin-bottom: 32px;
+    }
+
+    .logo-area .icon {
+      font-size: 40px;
+      background: -webkit-linear-gradient(45deg, #818cf8, #c084fc);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 12px;
+    }
+
+    .logo-area h1 {
+      margin: 0;
+      font-size: 24px;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+    }
+
+    .logo-area p {
+      margin: 8px 0 0;
+      color: var(--text-muted);
+      font-size: 14px;
+    }
+
+    .form-group {
+      margin-bottom: 20px;
+      position: relative;
+    }
+
+    .form-group label {
+      display: block;
+      margin-bottom: 8px;
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--text-muted);
+      transition: color 0.3s ease;
+    }
+
+    .form-control {
+      width: 100%;
+      box-sizing: border-box;
+      background: rgba(0, 0, 0, 0.2);
+      border: 1px solid var(--glass-border);
+      color: var(--text-main);
+      padding: 14px 16px 14px 44px;
+      border-radius: 12px;
+      font-family: inherit;
+      font-size: 15px;
+      transition: all 0.3s ease;
+      outline: none;
+    }
+
+    .form-control:focus {
+      border-color: var(--primary);
+      background: rgba(0, 0, 0, 0.4);
+      box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.1);
+    }
+
+    .form-group i {
+      position: absolute;
+      left: 16px;
+      top: 42px;
+      color: var(--text-muted);
+      transition: color 0.3s ease;
+    }
+
+    .form-control:focus+i,
+    .form-control:focus~i {
+      color: var(--primary);
+    }
+
+    .btn-submit {
+      width: 100%;
+      background: var(--primary);
+      color: white;
+      border: none;
+      padding: 14px;
+      border-radius: 12px;
+      font-family: inherit;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      margin-top: 10px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .btn-submit:hover {
+      background: var(--primary-hover);
+      transform: translateY(-2px);
+      box-shadow: 0 10px 20px -10px var(--primary);
+    }
+
+    .btn-submit:active {
+      transform: translateY(0);
+    }
+
+    .error-msg {
+      background: rgba(239, 68, 68, 0.1);
+      border: 1px solid rgba(239, 68, 68, 0.2);
+      color: #fca5a5;
+      padding: 12px;
+      border-radius: 8px;
+      font-size: 14px;
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .demo-creds {
+      margin-top: 24px;
+      text-align: center;
+      font-size: 13px;
+      color: var(--text-muted);
+      border-top: 1px solid var(--glass-border);
+      padding-top: 16px;
+    }
+
+    /* Modal Styles */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(15, 23, 42, 0.8);
+      backdrop-filter: blur(8px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+      opacity: 0;
+      visibility: hidden;
+      transition: all 0.3s ease;
+    }
+
+    .modal-overlay.active {
+      opacity: 1;
+      visibility: visible;
+    }
+
+    .modal-content {
+      background: rgba(30, 27, 75, 0.6);
+      border: 1px solid var(--glass-border);
+      border-radius: 24px;
+      padding: 40px;
+      width: 100%;
+      max-width: 480px;
+      position: relative;
+      transform: translateY(20px) scale(0.95);
+      transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+    }
+
+    .modal-overlay.active .modal-content {
+      transform: translateY(0) scale(1);
+    }
+
+    .close-btn {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      background: rgba(255, 255, 255, 0.1);
+      border: none;
+      color: var(--text-muted);
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .close-btn:hover {
+      background: rgba(255, 255, 255, 0.2);
+      color: white;
+    }
+
+    .modal-content h2 {
+      margin: 0 0 8px;
+      font-size: 24px;
+      font-weight: 700;
+      color: white;
+      text-align: center;
+    }
+
+    .modal-content>p {
+      margin: 0 0 32px;
+      color: var(--text-muted);
+      text-align: center;
+      font-size: 15px;
+    }
+
+    .modal-options {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .role-card {
+      display: flex;
+      align-items: center;
+      background: rgba(0, 0, 0, 0.2);
+      border: 1px solid var(--glass-border);
+      border-radius: 16px;
+      padding: 20px;
+      text-decoration: none;
+      color: white;
+      transition: all 0.3s ease;
+    }
+
+    .role-card:hover {
+      background: rgba(99, 102, 241, 0.1);
+      border-color: rgba(99, 102, 241, 0.4);
+      transform: translateY(-2px);
+    }
+
+    .role-card .icon-wrapper {
+      width: 48px;
+      height: 48px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      margin-right: 16px;
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    .user-card .icon-wrapper {
+      color: #60a5fa;
+      background: rgba(96, 165, 250, 0.1);
+    }
+
+    .vendor-card .icon-wrapper {
+      color: #c084fc;
+      background: rgba(192, 132, 252, 0.1);
+    }
+
+    .role-info {
+      flex: 1;
+    }
+
+    .role-info h3 {
+      margin: 0 0 4px;
+      font-size: 16px;
+      font-weight: 600;
+    }
+
+    .role-info p {
+      margin: 0;
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+
+    .role-card .arrow {
+      color: var(--text-muted);
+      transition: transform 0.3s, color 0.3s;
+    }
+
+    .role-card:hover .arrow {
+      transform: translateX(4px);
+      color: white;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="blob blob-1"></div>
+  <div class="blob blob-2"></div>
+
+  <div class="login-wrapper">
+    <div class="logo-area">
+      <div class="icon"><i class="fa-solid fa-infinity"></i></div>
+      <h1>Welcome back</h1>
+      <p>Sign in to your dashboard</p>
+    </div>
+
+    {% if error %}
+    <div class="error-msg">
+      <i class="fa-solid fa-circle-exclamation"></i>
+      {{ error }}
+    </div>
+    {% endif %}
+
+    <form method="POST" action="">
+      {% csrf_token %}
+
+
+      <div class="form-group">
+        <label for="username">Username</label>
+        <input type="text" id="username" name="username" class="form-control" placeholder="Enter your username"
+          required>
+        <i class="fa-solid fa-user"></i>
+      </div>
+
+      <div class="form-group">
+        <label for="password">Password</label>
+        <input type="password" id="password" name="password" class="form-control" placeholder="Enter your password"
+          required>
+        <i class="fa-solid fa-lock"></i>
+      </div>
+
+      <button type="submit" class="btn-submit">
+        Sign In <i class="fa-solid fa-arrow-right"></i>
+      </button>
+    </form>
+
+    <div class="demo-creds" style="font-size: 14px;">
+      Don't have an account? <a href="#" onclick="openModal(event)"
+        style="color: var(--primary); text-decoration: none; font-weight: 600;">Sign up</a>
+    </div>
+  </div>
+
+  <!-- Signup Modal -->
+  <div id="signupModal" class="modal-overlay">
+    <div class="modal-content">
+      <button class="close-btn" onclick="closeModal()"><i class="fa-solid fa-xmark"></i></button>
+      <h2>Join Infinity</h2>
+      <p>How would you like to register?</p>
+
+      <div class="modal-options">
+        <a href="{% url 'register_user' %}" class="role-card user-card">
+          <div class="icon-wrapper"><i class="fa-solid fa-user"></i></div>
+          <div class="role-info">
+            <h3>Register as User</h3>
+            <p>Access services and manage your profile</p>
+          </div>
+          <i class="fa-solid fa-chevron-right arrow"></i>
+        </a>
+
+        <a href="{% url 'register_vendor' %}" class="role-card vendor-card">
+          <div class="icon-wrapper"><i class="fa-solid fa-store"></i></div>
+          <div class="role-info">
+            <h3>Register as Vendor</h3>
+            <p>Offer services and grow your business</p>
+          </div>
+          <i class="fa-solid fa-chevron-right arrow"></i>
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function openModal(e) {
+      if (e) e.preventDefault();
+      document.getElementById('signupModal').classList.add('active');
+    }
+
+    function closeModal() {
+      document.getElementById('signupModal').classList.remove('active');
+    }
+
+    // Close when clicking outside
+    document.getElementById('signupModal').addEventListener('click', function (e) {
+      if (e.target === this) {
+        closeModal();
+      }
+    });
+  </script>
+</body>
+
+</html>

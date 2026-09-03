@@ -1,0 +1,138 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="description" content="Fixora Vendor Portal — Edit Profile"><title>Edit Profile · Fixora Vendor</title><link rel="stylesheet" href="/fixora-vendor-dashboard/assets/styles.css"><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.css"><script defer src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.js"></script><script defer src="/fixora-vendor-dashboard/assets/app.js"></script></head><body data-page="profile-edit" data-title="Edit Profile" data-root="../"><div class="app-shell"><div id="sidebar-root"></div><div class="workspace"><div id="topbar-root"></div><main class="page">
+<section class="card" style="max-width:980px">
+  <form method="POST" action="" enctype="multipart/form-data">
+    {% csrf_token %}
+    <input type="hidden" name="profile_image_base64" id="profile_image_base64">
+    <div class="form-section">
+      <div class="field">
+        <label>Profile Image</label>
+        <div class="cell-user">
+          {% if vendor_profile and vendor_profile.profile_image %}
+            <img src="{{ vendor_profile.profile_image.url }}" alt="Profile" class="avatar xl vendor" style="object-fit:cover;" id="profile-preview-img">
+          {% else %}
+            <span class="avatar xl vendor" id="profile-preview-span">{{ vendor_profile.company_name|default:user.first_name|slice:":2"|upper|default:"V" }}</span>
+          {% endif %}
+          <div class="stack" style="gap:8px">
+            <label class="btn btn-secondary btn-sm"><span data-icon="camera"></span> Change Image
+              <input type="file" name="profile_image" accept="image/*" hidden data-preview="profile-image">
+            </label>
+            <button type="button" class="btn btn-ghost btn-sm" data-toast="Image removed">Remove</button>
+          </div>
+        </div>
+        <div class="preview-list" id="profile-image"></div>
+      </div>
+    </div>
+    <div class="form-section">
+      <div class="form-grid">
+        <div class="field">
+          <label>Business Name <span class="required">*</span></label>
+          <input class="input" type="text" name="company_name" required value="{{ vendor_profile.company_name|default:user.first_name }}">
+        </div>
+        <div class="field">
+          <label>Contact Person <span class="required">*</span></label>
+          <input class="input" type="text" name="first_name" required value="{{ user.first_name }}">
+        </div>
+        <div class="field">
+          <label>Mobile <span class="required">*</span></label>
+          <input class="input" type="text" name="phone_number" required value="{{ user_profile.phone_number|default:'' }}">
+        </div>
+        <div class="field">
+          <label>Email <span class="required">*</span></label>
+          <input class="input" type="email" name="email" required value="{{ user.email }}">
+        </div>
+        <div class="field full">
+          <label>Address <span class="required">*</span></label>
+          <textarea class="textarea" name="address" required>{{ vendor_profile.address|default:'' }}</textarea>
+        </div>
+      </div>
+    </div>
+    <div class="form-actions">
+      <a class="btn btn-secondary" href="index.html">Cancel</a>
+      <button class="btn btn-primary" type="submit"><span data-icon="check"></span> Save</button>
+    </div>
+  </form>
+</section>
+<div class="modal-backdrop" id="cropper-modal" style="display:none; z-index:9999;background:rgba(0,0,0,0.8);position:fixed;top:0;left:0;width:100%;height:100%;align-items:center;justify-content:center;">
+  <div class="modal" style="background:#fff;border-radius:8px;padding:20px;max-width:500px;width:100%;">
+    <div class="modal-header" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:15px;">
+      <h3 class="modal-title" style="margin:0;">Adjust Image Position</h3>
+      <button type="button" class="btn btn-ghost" onclick="closeCropper()" style="border:none;background:none;font-size:18px;cursor:pointer;">✕</button>
+    </div>
+    <div class="modal-body" style="margin-bottom:15px;">
+      <div style="max-height: 400px; width: 100%;">
+        <img id="cropper-image" src="" style="max-width: 100%; display: block;">
+      </div>
+    </div>
+    <div class="modal-footer" style="display:flex;justify-content:flex-end;gap:10px;">
+      <button type="button" class="btn btn-secondary" onclick="closeCropper()">Cancel</button>
+      <button type="button" class="btn btn-primary" id="save-crop-btn">Save Image</button>
+    </div>
+  </div>
+</div>
+<script>
+  let cropper;
+  const cropperModal = document.getElementById('cropper-modal');
+  const cropperImage = document.getElementById('cropper-image');
+  const base64Input = document.getElementById('profile_image_base64');
+  
+  function closeCropper() {
+    cropperModal.style.display = 'none';
+    if (cropper) {
+      cropper.destroy();
+      cropper = null;
+    }
+    document.querySelector('input[name="profile_image"]').value = '';
+  }
+
+  document.querySelector('input[name="profile_image"]').addEventListener('change', function(e) {
+    if (e.target.files && e.target.files[0]) {
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        cropperImage.src = e.target.result;
+        cropperModal.style.display = 'flex';
+        
+        if (cropper) cropper.destroy();
+        cropper = new Cropper(cropperImage, {
+          aspectRatio: 1,
+          viewMode: 1,
+          dragMode: 'move',
+          autoCropArea: 1,
+          cropBoxMovable: false,
+          cropBoxResizable: false,
+        });
+      };
+      reader.readAsDataURL(e.target.files[0]);
+    }
+  });
+
+  document.getElementById('save-crop-btn').addEventListener('click', function() {
+    if (cropper) {
+      const canvas = cropper.getCroppedCanvas({
+        width: 400,
+        height: 400,
+      });
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
+      
+      base64Input.value = dataUrl;
+      
+      let img = document.getElementById('profile-preview-img');
+      let span = document.getElementById('profile-preview-span');
+      if (img) {
+        img.src = dataUrl;
+      } else if (span) {
+        const newImg = document.createElement('img');
+        newImg.id = 'profile-preview-img';
+        newImg.className = 'avatar xl vendor';
+        newImg.style.objectFit = 'cover';
+        newImg.src = dataUrl;
+        newImg.alt = 'Profile';
+        span.parentNode.replaceChild(newImg, span);
+      }
+      
+      cropperModal.style.display = 'none';
+      cropper.destroy();
+      cropper = null;
+    }
+  });
+</script>
+</main></div></div></body></html>

@@ -1,0 +1,250 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Settings — Infinity Admin</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
+  <link rel="stylesheet" href="{% static 'assets/css/admin.css' %}">
+  <link rel="stylesheet" href="{% static 'assets/css/sidebar.css' %}">
+  <link rel="stylesheet" href="{% static 'assets/css/responsive.css' %}">
+</head>
+<body>
+  <div id="sidebar-mount"></div>
+  <div class="main-wrapper">
+    <div id="header-mount"></div>
+    <main class="main-content">
+      <div class="breadcrumb" id="breadcrumb"></div>
+
+      <div class="page-head">
+        <div class="ph-title">
+          <h1>Settings</h1>
+          <p>Platform configuration and preferences</p>
+        </div>
+        <div class="ph-actions">
+          <button class="btn btn-primary btn-sm" id="saveAllBtn"><i class="fa-solid fa-floppy-disk"></i> Save Changes</button>
+        </div>
+      </div>
+
+      <div class="row g-4">
+        <!-- GENERAL -->
+        <div class="col-lg-6">
+          <div class="card">
+            <div class="card-header"><h6><i class="fa-solid fa-gear"></i> General</h6></div>
+            <div class="card-body">
+              <div class="mb-3">
+                <label class="form-label">Platform Name</label>
+                <input type="text" class="form-control" id="platformName" value="Infinity">
+              </div>
+              <div class="mb-3">
+                <label class="form-label">Logo</label>
+                <div class="d-flex align-items-center gap-3">
+                  <span class="avatar avatar-xl avatar-indigo"><i class="fa-solid fa-infinity"></i></span>
+                  <button class="btn btn-outline btn-sm" id="uploadLogoBtn"><i class="fa-solid fa-upload"></i> Upload Logo</button>
+                </div>
+              </div>
+              <div class="mb-3">
+                <label class="form-label">Contact Email</label>
+                <input type="email" class="form-control" id="contactEmail" value="support@infinity.app">
+              </div>
+              <div class="mb-3">
+                <label class="form-label">Contact Number</label>
+                <input type="tel" class="form-control" id="contactNumber" value="+91 98765 43210">
+              </div>
+              <div class="mb-0">
+                <label class="form-label">Address</label>
+                <textarea class="form-control" id="address" rows="2">Infinity HQ, MG Road, Bengaluru, Karnataka 560001</textarea>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- SERVICE SETTINGS -->
+        <div class="col-lg-6">
+          <div class="card">
+            <div class="card-header"><h6><i class="fa-solid fa-list-check"></i> Service Settings</h6></div>
+            <div class="card-body">
+              <label class="form-label">Quick Service Categories</label>
+              <div class="chip-list mb-3" id="quickCats"></div>
+              <div class="input-group input-group-sm mb-4">
+                <input type="text" class="form-control" id="newQuickCat" placeholder="Add quick service category…">
+                <button class="btn btn-outline" id="addQuickCatBtn"><i class="fa-solid fa-plus"></i></button>
+              </div>
+
+              <label class="form-label">Job Categories</label>
+              <div class="chip-list mb-3" id="jobCats"></div>
+              <div class="input-group input-group-sm mb-4">
+                <input type="text" class="form-control" id="newJobCat" placeholder="Add job category…">
+                <button class="btn btn-outline" id="addJobCatBtn"><i class="fa-solid fa-plus"></i></button>
+              </div>
+
+              <label class="form-label">Service Categories</label>
+              <div class="chip-list mb-0" id="serviceCats"></div>
+              <div class="input-group input-group-sm">
+                <input type="text" class="form-control" id="newServiceCat" placeholder="Add service category…">
+                <button class="btn btn-outline" id="addServiceCatBtn"><i class="fa-solid fa-plus"></i></button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- BIDDING SETTINGS -->
+        <div class="col-lg-6">
+          <div class="card">
+            <div class="card-header"><h6><i class="fa-solid fa-gavel"></i> Bidding Settings</h6></div>
+            <div class="card-body">
+              <label class="form-label">Bid Packages</label>
+              <div class="table-responsive mb-3">
+                <table class="table table-sm align-middle mb-0">
+                  <thead><tr><th>Package</th><th>Credits</th><th>Price</th><th>Status</th></tr></thead>
+                  <tbody id="pkgTableBody"></tbody>
+                </table>
+              </div>
+              <a class="btn btn-outline btn-sm" href="subscriptions/packages.html"><i class="fa-solid fa-pen"></i> Manage Packages</a>
+              <hr>
+              <label class="form-label">Bid Credit Rules</label>
+              <div class="form-check form-switch mb-2">
+                <input class="form-check-input" type="checkbox" id="ruleExpiry" checked>
+                <label class="form-check-label" for="ruleExpiry">Bid credits never expire</label>
+              </div>
+              <div class="form-check form-switch mb-2">
+                <input class="form-check-input" type="checkbox" id="ruleRefund">
+                <label class="form-check-label" for="ruleRefund">Refund credits on withdrawn bids</label>
+              </div>
+              <div class="form-check form-switch mb-0">
+                <input class="form-check-input" type="checkbox" id="ruleRejectRefund">
+                <label class="form-check-label" for="ruleRejectRefund">Refund credits on rejected bids</label>
+              </div>
+              <div class="alert alert-warning mt-3 mb-0">
+                <i class="fa-solid fa-triangle-exclamation"></i> By default, used credits are <strong>never returned</strong> for withdrawn or rejected bids.
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- NOTIFICATION SETTINGS -->
+        <div class="col-lg-6">
+          <div class="card">
+            <div class="card-header"><h6><i class="fa-solid fa-bell"></i> Notification Settings</h6></div>
+            <div class="card-body">
+              <h6 class="mb-3">Email</h6>
+              <div class="form-check form-switch mb-2">
+                <input class="form-check-input" type="checkbox" id="emailNewBid" checked>
+                <label class="form-check-label" for="emailNewBid">New bid received</label>
+              </div>
+              <div class="form-check form-switch mb-2">
+                <input class="form-check-input" type="checkbox" id="emailSelected" checked>
+                <label class="form-check-label" for="emailSelected">Vendor selected</label>
+              </div>
+              <div class="form-check form-switch mb-4">
+                <input class="form-check-input" type="checkbox" id="emailPayment" checked>
+                <label class="form-check-label" for="emailPayment">Payment confirmation</label>
+              </div>
+
+              <h6 class="mb-3">SMS</h6>
+              <div class="form-check form-switch mb-2">
+                <input class="form-check-input" type="checkbox" id="smsOtp" checked>
+                <label class="form-check-label" for="smsOtp">OTP verification</label>
+              </div>
+              <div class="form-check form-switch mb-4">
+                <input class="form-check-input" type="checkbox" id="smsAlert">
+                <label class="form-check-label" for="smsAlert">Critical alerts</label>
+              </div>
+
+              <h6 class="mb-3">Push</h6>
+              <div class="form-check form-switch mb-2">
+                <input class="form-check-input" type="checkbox" id="pushBid" checked>
+                <label class="form-check-label" for="pushBid">Bid activity</label>
+              </div>
+              <div class="form-check form-switch mb-0">
+                <input class="form-check-input" type="checkbox" id="pushPromo">
+                <label class="form-check-label" for="pushPromo">Promotions & offers</label>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script src="{% static 'assets/js/sidebar.js' %}"></script>
+  <script src="{% static 'assets/js/components.js' %}"></script>
+  <script src="{% static 'assets/js/admin.js' %}"></script>
+  <script src="{% static 'assets/js/data.js' %}"></script>
+  <script>
+    (function () {
+      'use strict';
+      var D = window.AdminData, U = window.AdminUI;
+
+      AdminComponents.renderBreadcrumb([
+        { label: 'Settings' }
+      ]);
+
+      /* Category chips */
+      var quickCats = D.categories.slice();
+      var jobCats = D.categories.slice();
+      var serviceCats = D.categories.slice();
+
+      function renderChips(elId, arr) {
+        var el = document.getElementById(elId);
+        el.innerHTML = arr.map(function (c, i) {
+          return '<span class="chip">' + U.esc(c) + ' <i class="fa-solid fa-xmark" data-i="' + i + '"></i></span>';
+        }).join('') || '<span class="text-muted">No categories added.</span>';
+        el.querySelectorAll('.fa-xmark').forEach(function (x) {
+          x.addEventListener('click', function () {
+            arr.splice(parseInt(this.getAttribute('data-i'), 10), 1);
+            renderChips(elId, arr);
+            U.toast('info', 'Category removed', 'The category has been removed.');
+          });
+        });
+      }
+
+      function bindAdd(inputId, btnId, arr, elId) {
+        document.getElementById(btnId).addEventListener('click', function () {
+          var input = document.getElementById(inputId);
+          var val = input.value.trim();
+          if (!val) { U.toast('error', 'Empty category', 'Please enter a category name.'); return; }
+          if (arr.indexOf(val) > -1) { U.toast('error', 'Duplicate', 'This category already exists.'); return; }
+          arr.push(val);
+          input.value = '';
+          renderChips(elId, arr);
+          U.toast('success', 'Category added', '"' + val + '" has been added.');
+        });
+      }
+
+      renderChips('quickCats', quickCats);
+      renderChips('jobCats', jobCats);
+      renderChips('serviceCats', serviceCats);
+      bindAdd('newQuickCat', 'addQuickCatBtn', quickCats, 'quickCats');
+      bindAdd('newJobCat', 'addJobCatBtn', jobCats, 'jobCats');
+      bindAdd('newServiceCat', 'addServiceCatBtn', serviceCats, 'serviceCats');
+
+      /* Package table */
+      document.getElementById('pkgTableBody').innerHTML = D.packages.map(function (p) {
+        return '<tr><td><strong>' + U.esc(p.name) + '</strong></td>' +
+          '<td><span class="count-pill blue">' + p.credits + '</span></td>' +
+          '<td>' + U.inr(p.price) + '</td>' +
+          '<td>' + U.badge(p.status) + '</td></tr>';
+      }).join('');
+
+      document.getElementById('uploadLogoBtn').addEventListener('click', function () {
+        U.toast('info', 'Logo upload', 'Logo upload would open a file picker in production.');
+      });
+
+      document.getElementById('saveAllBtn').addEventListener('click', function () {
+        var name = document.getElementById('platformName').value.trim();
+        var email = document.getElementById('contactEmail').value.trim();
+        if (!name || !email) {
+          U.toast('error', 'Missing fields', 'Platform name and contact email are required.');
+          return;
+        }
+        U.toast('success', 'Settings saved', 'All platform settings have been updated.');
+      });
+    })();
+  </script>
+</body>
+</html>

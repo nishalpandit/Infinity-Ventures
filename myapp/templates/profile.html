@@ -1,0 +1,239 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Profile — Infinity Admin</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
+  <link rel="stylesheet" href="{% static 'assets/css/admin.css' %}">
+  <link rel="stylesheet" href="{% static 'assets/css/sidebar.css' %}">
+  <link rel="stylesheet" href="{% static 'assets/css/responsive.css' %}">
+</head>
+<body>
+  <div id="sidebar-mount"></div>
+  <div class="main-wrapper">
+    <div id="header-mount"></div>
+    <main class="main-content">
+      <div class="breadcrumb" id="breadcrumb"></div>
+
+      <div class="page-head">
+        <div class="ph-title">
+          <h1>Admin Profile</h1>
+          <p>Manage your account and security</p>
+        </div>
+        <div class="ph-actions">
+          <button class="btn btn-outline btn-sm" id="editBtn"><i class="fa-solid fa-pen"></i> Edit Profile</button>
+          <button class="btn btn-outline btn-sm" id="pwdBtn"><i class="fa-solid fa-key"></i> Change Password</button>
+          <button class="btn btn-danger btn-sm" id="logoutBtn"><i class="fa-solid fa-right-from-bracket"></i> Logout</button>
+        </div>
+      </div>
+
+      <div class="row g-4">
+        <div class="col-lg-4">
+          <div class="card">
+            <div class="card-body text-center py-5">
+              <span class="avatar avatar-xl avatar-indigo mx-auto" style="width:96px;height:96px;font-size:36px;"><i class="fa-solid fa-user-shield"></i></span>
+              <h4 class="mt-3 mb-1" id="pName">Arjun Mehta</h4>
+              <span class="badge badge-indigo">Super Admin</span>
+              <div class="mt-4 text-start">
+                <div class="ib-row"><span class="ib-icon"><i class="fa-solid fa-envelope"></i></span>
+                  <div><div class="ib-label">Email</div><div class="ib-value" id="pEmail">admin@infinity.app</div></div></div>
+                <div class="ib-row"><span class="ib-icon"><i class="fa-solid fa-phone"></i></span>
+                  <div><div class="ib-label">Mobile</div><div class="ib-value" id="pMobile">+91 98765 43210</div></div></div>
+                <div class="ib-row"><span class="ib-icon"><i class="fa-solid fa-shield-halved"></i></span>
+                  <div><div class="ib-label">Role</div><div class="ib-value">Super Admin</div></div></div>
+                <div class="ib-row"><span class="ib-icon"><i class="fa-solid fa-clock-rotate-left"></i></span>
+                  <div><div class="ib-label">Last Login</div><div class="ib-value" id="pLastLogin"></div></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-lg-8">
+          <div class="card">
+            <div class="card-header"><h6><i class="fa-solid fa-chart-simple"></i> My Activity</h6></div>
+            <div class="card-body">
+              <div class="stat-grid">
+                <div class="stat-card static"><span class="stat-icon icon-indigo"><i class="fa-solid fa-users"></i></span>
+                  <div class="stat-info"><div class="label">Users Managed</div><div class="value" id="actUsers">0</div></div></div>
+                <div class="stat-card static"><span class="stat-icon icon-orange"><i class="fa-solid fa-triangle-exclamation"></i></span>
+                  <div class="stat-info"><div class="label">Complaints Handled</div><div class="value" id="actComplaints">0</div></div></div>
+                <div class="stat-card static"><span class="stat-icon icon-green"><i class="fa-solid fa-bell"></i></span>
+                  <div class="stat-info"><div class="label">Notifications Sent</div><div class="value" id="actNotifs">0</div></div></div>
+                <div class="stat-card static"><span class="stat-icon icon-teal"><i class="fa-solid fa-indian-rupee-sign"></i></span>
+                  <div class="stat-info"><div class="label">Revenue Tracked</div><div class="value" id="actRevenue">₹0</div></div></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="card" style="margin-top:20px;">
+            <div class="card-header"><h6><i class="fa-solid fa-clock-rotate-left"></i> Recent Activity</h6></div>
+            <div class="card-body">
+              <div class="conversation">
+                <div class="conv-msg admin"><span class="avatar avatar-indigo"><i class="fa-solid fa-user-shield"></i></span>
+                  <div class="conv-body"><div class="conv-head"><strong>You</strong> <span class="text-muted">· Today, 09:12</span></div>
+                  <div class="conv-text">Resolved complaint CMP-203 regarding payment dispute.</div></div></div>
+                <div class="conv-msg admin"><span class="avatar avatar-indigo"><i class="fa-solid fa-user-shield"></i></span>
+                  <div class="conv-body"><div class="conv-head"><strong>You</strong> <span class="text-muted">· Yesterday, 17:40</span></div>
+                  <div class="conv-text">Sent a platform notification to all vendors about the new 50-bid package.</div></div></div>
+                <div class="conv-msg admin"><span class="avatar avatar-indigo"><i class="fa-solid fa-user-shield"></i></span>
+                  <div class="conv-body"><div class="conv-head"><strong>You</strong> <span class="text-muted">· Yesterday, 11:05</span></div>
+                  <div class="conv-text">Approved vendor registration for Sharma Electricals.</div></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Edit Profile Modal -->
+  <div class="modal fade" id="editModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title"><i class="fa-solid fa-pen"></i> Edit Profile</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="mb-3">
+            <label class="form-label">Full Name</label>
+            <input type="text" class="form-control" id="editName" value="Arjun Mehta">
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Email</label>
+            <input type="email" class="form-control" id="editEmail" value="admin@infinity.app">
+          </div>
+          <div class="mb-0">
+            <label class="form-label">Mobile</label>
+            <input type="tel" class="form-control" id="editMobile" value="+91 98765 43210">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline btn-sm" data-bs-dismiss="modal">Cancel</button>
+          <button type="button" class="btn btn-primary btn-sm" id="saveProfileBtn"><i class="fa-solid fa-floppy-disk"></i> Save</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Change Password Modal -->
+  <div class="modal fade" id="pwdModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title"><i class="fa-solid fa-key"></i> Change Password</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="mb-3">
+            <label class="form-label">Current Password</label>
+            <input type="password" class="form-control" id="curPwd">
+          </div>
+          <div class="mb-3">
+            <label class="form-label">New Password</label>
+            <input type="password" class="form-control" id="newPwd">
+          </div>
+          <div class="mb-0">
+            <label class="form-label">Confirm New Password</label>
+            <input type="password" class="form-control" id="confPwd">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline btn-sm" data-bs-dismiss="modal">Cancel</button>
+          <button type="button" class="btn btn-primary btn-sm" id="savePwdBtn"><i class="fa-solid fa-floppy-disk"></i> Update Password</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="{% static 'assets/js/sidebar.js' %}"></script>
+  <script src="{% static 'assets/js/components.js' %}"></script>
+  <script src="{% static 'assets/js/admin.js' %}"></script>
+  <script src="{% static 'assets/js/data.js' %}"></script>
+  <script>
+    (function () {
+      'use strict';
+      var D = window.AdminData, U = window.AdminUI;
+
+      AdminComponents.renderBreadcrumb([
+        { label: 'Admin Profile' }
+      ]);
+
+      /* Last login */
+      var now = new Date();
+      document.getElementById('pLastLogin').textContent =
+        now.toISOString().slice(0, 10) + ' ' + now.toTimeString().slice(0, 5);
+
+      /* Activity stats */
+      document.getElementById('actUsers').textContent = D.customers.length + D.vendors.length;
+      document.getElementById('actComplaints').textContent =
+        D.complaints.filter(function (c) { return c.status === 'resolved' || c.status === 'closed'; }).length;
+      document.getElementById('actNotifs').textContent = D.notifications.length;
+      var revenue = D.purchases.filter(function (p) { return p.paymentStatus === 'success'; })
+        .reduce(function (s, p) { return s + p.amount; }, 0);
+      document.getElementById('actRevenue').textContent = U.inr(revenue);
+
+      var editModal = new bootstrap.Modal(document.getElementById('editModal'));
+      var pwdModal = new bootstrap.Modal(document.getElementById('pwdModal'));
+
+      document.getElementById('editBtn').addEventListener('click', function () { editModal.show(); });
+      document.getElementById('pwdBtn').addEventListener('click', function () { pwdModal.show(); });
+
+      document.getElementById('saveProfileBtn').addEventListener('click', function () {
+        var name = document.getElementById('editName').value.trim();
+        var email = document.getElementById('editEmail').value.trim();
+        var mobile = document.getElementById('editMobile').value.trim();
+        if (!name || !email) {
+          U.toast('error', 'Missing fields', 'Name and email are required.');
+          return;
+        }
+        document.getElementById('pName').textContent = name;
+        document.getElementById('pEmail').textContent = email;
+        document.getElementById('pMobile').textContent = mobile;
+        editModal.hide();
+        U.toast('success', 'Profile updated', 'Your profile has been saved.');
+      });
+
+      document.getElementById('savePwdBtn').addEventListener('click', function () {
+        var cur = document.getElementById('curPwd').value;
+        var nw = document.getElementById('newPwd').value;
+        var cf = document.getElementById('confPwd').value;
+        if (!cur || !nw || !cf) {
+          U.toast('error', 'Missing fields', 'Please fill in all password fields.');
+          return;
+        }
+        if (nw.length < 8) {
+          U.toast('error', 'Weak password', 'New password must be at least 8 characters.');
+          return;
+        }
+        if (nw !== cf) {
+          U.toast('error', 'Mismatch', 'New password and confirmation do not match.');
+          return;
+        }
+        document.getElementById('curPwd').value = '';
+        document.getElementById('newPwd').value = '';
+        document.getElementById('confPwd').value = '';
+        pwdModal.hide();
+        U.toast('success', 'Password changed', 'Your password has been updated successfully.');
+      });
+
+      document.getElementById('logoutBtn').addEventListener('click', function () {
+        U.confirm({
+          title: 'Logout?',
+          message: 'You will be signed out of the admin panel.',
+          danger: true, icon: 'fa-right-from-bracket', confirmText: 'Logout',
+          onConfirm: function () {
+            U.toast('info', 'Logged out', 'You have been signed out. (Demo)');
+          }
+        });
+      });
+    })();
+  </script>
+</body>
+</html>

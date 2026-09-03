@@ -1,0 +1,263 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard — Infinity Admin</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
+  <link rel="stylesheet" href="{% static 'assets/css/admin.css' %}">
+  <link rel="stylesheet" href="{% static 'assets/css/sidebar.css' %}">
+  <link rel="stylesheet" href="{% static 'assets/css/responsive.css' %}">
+</head>
+<body>
+  <div id="sidebar-mount"></div>
+  <div class="main-wrapper">
+    <div id="header-mount"></div>
+    <main class="main-content">
+      <div class="breadcrumb" id="breadcrumb"></div>
+
+      <div class="page-head">
+        <div class="ph-title">
+          <h1>Dashboard</h1>
+          <p>Platform overview & key metrics</p>
+        </div>
+        <div class="ph-actions">
+          <select class="form-select form-select-sm" id="dashRange" style="width:auto;">
+            <option>Last 7 days</option>
+            <option selected>Last 30 days</option>
+            <option>Last 90 days</option>
+            <option>This year</option>
+          </select>
+          <button class="btn btn-primary btn-sm" id="refreshBtn"><i class="fa-solid fa-rotate"></i> Refresh</button>
+        </div>
+      </div>
+
+      <!-- Stat cards -->
+      <div class="stat-grid" id="statGrid"></div>
+
+      <!-- Charts Row 1 -->
+      <div class="grid-2 mb-grid">
+        <div class="card">
+          <div class="card-header"><h5 class="card-title">Quick Services</h5></div>
+          <div class="card-body"><div class="chart-box"><canvas id="qsChart"></canvas></div></div>
+        </div>
+        <div class="card">
+          <div class="card-header"><h5 class="card-title">Jobs Overview</h5></div>
+          <div class="card-body"><div class="chart-box"><canvas id="jobChart"></canvas></div></div>
+        </div>
+      </div>
+
+      <!-- Charts Row 2 -->
+      <div class="grid-2-1 mb-grid">
+        <div class="card">
+          <div class="card-header"><h5 class="card-title">Revenue (Last 6 Months)</h5></div>
+          <div class="card-body"><div class="chart-box"><canvas id="revChart"></canvas></div></div>
+        </div>
+        <div class="card">
+          <div class="card-header"><h5 class="card-title">Bids Status</h5></div>
+          <div class="card-body"><div class="chart-box"><canvas id="bidChart"></canvas></div></div>
+        </div>
+      </div>
+
+      <!-- Recent Tables Row 1 -->
+      <div class="grid-2 mb-grid">
+        <div class="card">
+          <div class="card-header">
+            <h5 class="card-title">Recent Quick Services</h5>
+            <a href="quick-services/index.html" class="link-sm">View All</a>
+          </div>
+          <div class="card-body p-0" id="recentQS"></div>
+        </div>
+        <div class="card">
+          <div class="card-header">
+            <h5 class="card-title">Recent Jobs</h5>
+            <a href="jobs/index.html" class="link-sm">View All</a>
+          </div>
+          <div class="card-body p-0" id="recentJobs"></div>
+        </div>
+      </div>
+
+      <!-- Recent Tables Row 2 -->
+      <div class="grid-2 mb-grid">
+        <div class="card">
+          <div class="card-header">
+            <h5 class="card-title">Recent Bids</h5>
+            <a href="bidding/index.html" class="link-sm">View All</a>
+          </div>
+          <div class="card-body p-0" id="recentBids"></div>
+        </div>
+        <div class="card">
+          <div class="card-header">
+            <h5 class="card-title">New Vendors</h5>
+            <a href="users/vendors.html" class="link-sm">View All</a>
+          </div>
+          <div class="card-body p-0" id="recentVendors"></div>
+        </div>
+      </div>
+
+      <!-- Recent Purchases -->
+      <div class="card mb-grid">
+        <div class="card-header">
+          <h5 class="card-title">Recent Purchases (Subscriptions)</h5>
+          <a href="payments/index.html" class="link-sm">View All</a>
+        </div>
+        <div class="card-body p-0" id="recentPurchases"></div>
+      </div>
+
+
+    </main>
+  </div>
+
+  <script src="{% static 'assets/js/sidebar.js' %}"></script>
+  <script src="{% static 'assets/js/components.js' %}"></script>
+  <script src="{% static 'assets/js/admin.js' %}"></script>
+  <script src="{% static 'assets/js/data.js' %}"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+  <script>
+    (function () {
+      'use strict';
+      var D = window.AdminData, U = window.AdminUI;
+
+      AdminComponents.renderBreadcrumb([{ label: 'Dashboard' }]);
+
+      /* ---------- Stat cards ---------- */
+      var totalCustomers = D.customers.length;
+      var totalVendors = D.vendors.length;
+      var companyVendors = D.vendors.filter(function (v) { return v.type === 'company'; }).length;
+      var outsiderVendors = D.vendors.filter(function (v) { return v.type === 'outsider'; }).length;
+      var activeQS = D.quickServices.filter(function (s) { return s.status === 'active' || s.status === 'in-progress'; }).length;
+      var activeJobs = D.jobs.filter(function (j) { return j.status === 'active' || j.status === 'in-progress'; }).length;
+      var totalBids = D.bids.length;
+      var revenue = D.purchases.filter(function (p) { return p.paymentStatus === 'success'; })
+        .reduce(function (s, p) { return s + p.amount; }, 0);
+
+      var stats = [
+        { label: 'Total Customers', value: totalCustomers, icon: 'fa-users', cls: 'icon-indigo', trend: '+12% this month', href: 'users/customers.html' },
+        { label: 'Total Vendors', value: totalVendors, icon: 'fa-user-tie', cls: 'icon-purple', trend: '+8% this month', href: 'users/vendors.html' },
+        { label: 'Company Vendors', value: companyVendors, icon: 'fa-building', cls: 'icon-teal', trend: '+3 this month', href: 'users/company-vendors.html' },
+        { label: 'Outsider Vendors', value: outsiderVendors, icon: 'fa-user-gear', cls: 'icon-orange', trend: '+5 this month', href: 'users/outsider-vendors.html' },
+        { label: 'Active Quick Services', value: activeQS, icon: 'fa-bolt', cls: 'icon-blue', trend: activeQS + ' running now', href: 'quick-services/index.html' },
+        { label: 'Active Jobs', value: activeJobs, icon: 'fa-briefcase', cls: 'icon-green', trend: activeJobs + ' running now', href: 'jobs/index.html' },
+        { label: 'Total Bids', value: totalBids, icon: 'fa-gavel', cls: 'icon-red', trend: '+18 this week', href: 'bidding/index.html' },
+        { label: 'Subscription Revenue', value: U.inr(revenue), icon: 'fa-indian-rupee-sign', cls: 'icon-indigo', trend: '+22% this month', href: 'reports/revenue.html' }
+      ];
+
+      var sg = document.getElementById('statGrid');
+      sg.innerHTML = stats.map(function (s) {
+        return '<a class="stat-card" href="' + s.href + '">' +
+          '<span class="stat-icon ' + s.cls + '"><i class="fa-solid ' + s.icon + '"></i></span>' +
+          '<div class="stat-info"><div class="label">' + s.label + '</div><div class="value">' + s.value + '</div>' +
+          '<div class="trend up"><i class="fa-solid fa-arrow-trend-up"></i> ' + s.trend + '</div></div></a>';
+      }).join('');
+
+      /* ---------- Charts ---------- */
+      var days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+      Chart.defaults.font.family = "'Inter', sans-serif";
+      Chart.defaults.color = '#64748b';
+
+      new Chart(document.getElementById('qsChart'), {
+        type: 'line',
+        data: {
+          labels: days,
+          datasets: [{
+            label: 'Quick Services', data: [6, 9, 7, 12, 10, 14, 11],
+            borderColor: '#4f46e5', backgroundColor: 'rgba(79,70,229,.10)', fill: true, tension: .4, borderWidth: 2, pointRadius: 3
+          }]
+        },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, grid: { color: '#eef2f7' } }, x: { grid: { display: false } } } }
+      });
+
+      new Chart(document.getElementById('jobChart'), {
+        type: 'bar',
+        data: {
+          labels: days,
+          datasets: [
+            { label: 'New Jobs', data: [4, 6, 5, 8, 7, 9, 6], backgroundColor: '#8b5cf6', borderRadius: 6 },
+            { label: 'Completed', data: [2, 3, 4, 5, 4, 6, 4], backgroundColor: '#c4b5fd', borderRadius: 6 }
+          ]
+        },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, usePointStyle: true } } }, scales: { y: { beginAtZero: true, grid: { color: '#eef2f7' } }, x: { grid: { display: false } } } }
+      });
+
+      new Chart(document.getElementById('bidChart'), {
+        type: 'doughnut',
+        data: {
+          labels: ['Submitted', 'Selected', 'Rejected', 'Withdrawn'],
+          datasets: [{ data: [11, 6, 4, 3], backgroundColor: ['#0ea5e9', '#10b981', '#ef4444', '#94a3b8'], borderWidth: 0 }]
+        },
+        options: { responsive: true, maintainAspectRatio: false, cutout: '62%', plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, usePointStyle: true } } } }
+      });
+
+      new Chart(document.getElementById('revChart'), {
+        type: 'line',
+        data: {
+          labels: ['Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug'],
+          datasets: [{
+            label: 'Revenue (₹)', data: [1850, 2400, 2100, 3200, 3900, 4650],
+            borderColor: '#10b981', backgroundColor: 'rgba(16,185,129,.10)', fill: true, tension: .4, borderWidth: 2, pointRadius: 3
+          }]
+        },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, grid: { color: '#eef2f7' } }, x: { grid: { display: false } } } }
+      });
+
+      /* ---------- Recent tables ---------- */
+      function miniTable(headers, rowsHtml) {
+        return '<div class="table-wrap"><table class="table"><thead><tr>' +
+          headers.map(function (h) { return '<th>' + h + '</th>'; }).join('') +
+          '</tr></thead><tbody>' + rowsHtml + '</tbody></table></div>';
+      }
+
+      document.getElementById('recentQS').innerHTML = miniTable(
+        ['ID', 'Service', 'Customer', 'Budget', 'Status'],
+        D.quickServices.slice(0, 5).map(function (s) {
+          return '<tr><td><a class="link-sm" href="quick-services/details.html?id=' + s.id + '">' + s.id + '</a></td>' +
+            '<td>' + U.esc(s.title) + '</td><td>' + U.esc(s.customer) + '</td><td>' + U.inr(s.budget) + '</td><td>' + U.badge(s.status) + '</td></tr>';
+        }).join('')
+      );
+
+      document.getElementById('recentJobs').innerHTML = miniTable(
+        ['ID', 'Job', 'Customer', 'Bids', 'Status'],
+        D.jobs.slice(0, 5).map(function (j) {
+          return '<tr><td><a class="link-sm" href="jobs/details.html?id=' + j.id + '">' + j.id + '</a></td>' +
+            '<td>' + U.esc(j.title) + '</td><td>' + U.esc(j.customer) + '</td><td>' + j.bids + '</td><td>' + U.badge(j.status) + '</td></tr>';
+        }).join('')
+      );
+
+      document.getElementById('recentBids').innerHTML = miniTable(
+        ['ID', 'Vendor', 'Job', 'Quotation', 'Status'],
+        D.bids.slice(0, 5).map(function (b) {
+          return '<tr><td><a class="link-sm" href="bidding/bid-details.html?id=' + b.id + '">' + b.id + '</a></td>' +
+            '<td>' + U.esc(b.vendor) + '</td><td>' + U.esc(b.jobTitle) + '</td><td>' + U.inr(b.quotation) + '</td><td>' + U.badge(b.status) + '</td></tr>';
+        }).join('')
+      );
+
+      document.getElementById('recentVendors').innerHTML = miniTable(
+        ['Vendor', 'Type', 'Category', 'Registered'],
+        D.vendors.slice(0, 5).map(function (v) {
+          return '<tr><td>' + U.userCell(v.name, v.location, v.id) + '</td><td>' + U.badge(v.type) + '</td>' +
+            '<td>' + U.esc(v.category) + '</td><td>' + v.registered + '</td></tr>';
+        }).join('')
+      );
+
+      document.getElementById('recentPurchases').innerHTML = miniTable(
+        ['Transaction', 'Vendor', 'Package', 'Amount', 'Status'],
+        D.purchases.slice(0, 5).map(function (p) {
+          return '<tr><td><a class="link-sm" href="payments/transaction-details.html?id=' + p.id + '">' + p.id + '</a></td>' +
+            '<td>' + U.esc(p.vendor) + '</td><td>' + U.esc(p.package) + '</td><td>' + U.inr(p.amount) + '</td><td>' + U.badge(p.paymentStatus) + '</td></tr>';
+        }).join('')
+      );
+
+      document.getElementById('refreshBtn').addEventListener('click', function () {
+        U.toast('success', 'Dashboard refreshed', 'All metrics updated to the latest values.');
+      });
+      document.getElementById('dashRange').addEventListener('change', function (e) {
+        U.toast('info', 'Range updated', 'Showing data for ' + e.target.value + '.');
+      });
+    })();
+  </script>
+</body>
+</html>

@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Quick Service Details — Infinity Admin</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
+  <link rel="stylesheet" href="/admin-dashboard/assets/css/admin.css">
+  <link rel="stylesheet" href="/admin-dashboard/assets/css/sidebar.css">
+  <link rel="stylesheet" href="/admin-dashboard/assets/css/responsive.css">
+</head>
+<body>
+  <div id="sidebar-mount"></div>
+  <div class="main-wrapper">
+    <div id="header-mount"></div>
+    <main class="main-content">
+      <div class="breadcrumb" id="breadcrumb"></div>
+      <div id="pageContent">
+        <div class="state-box"><div class="spinner"></div><p>Loading service…</p></div>
+      </div>
+    </main>
+  </div>
+
+  <script src="/admin-dashboard/assets/js/sidebar.js"></script>
+  <script src="/admin-dashboard/assets/js/components.js"></script>
+  <script src="/admin-dashboard/assets/js/admin.js"></script>
+  <script src="/admin-dashboard/assets/js/data.js"></script>
+  <script>
+    (function () {
+      'use strict';
+      var U = window.AdminUI;
+      
+      {% if service %}
+      AdminComponents.renderBreadcrumb([
+        { label: 'Quick Services', href: 'index.html' },
+        { label: 'QS-{{ service.id|stringformat:"04d" }}' }
+      ]);
+      {% else %}
+      AdminComponents.renderBreadcrumb([
+        { label: 'Quick Services', href: 'index.html' },
+        { label: 'Not Found' }
+      ]);
+      {% endif %}
+    })();
+  </script>
+
+  {% if service %}
+  <div id="dynamicPageContent" style="padding-top: 20px;">
+    <!-- Hero -->
+    <div class="detail-hero card">
+      <div class="dh-left">
+        <span class="avatar avatar-xl vendor"><i class="fa-solid fa-bolt"></i></span>
+        <div>
+          <h2>{{ service.title }}</h2>
+          <div class="dh-meta">
+            <span class="mono">QS-{{ service.id|stringformat:"04d" }}</span> 
+            <span class="badge badge-{{ service.status|lower }}">{{ service.status|title }}</span>
+          </div>
+          <div class="dh-sub">
+            <i class="fa-solid fa-layer-group"></i> {{ service.category.name|default:"Uncategorized" }}
+            &nbsp;·&nbsp; <i class="fa-solid fa-location-dot"></i> {{ service.location.city|default:"Unknown" }}, {{ service.location.state|default:"" }}
+            &nbsp;·&nbsp; <i class="fa-regular fa-calendar"></i> Created {{ service.created_at|date:"d M Y" }}
+          </div>
+        </div>
+      </div>
+      <div class="dh-actions">
+        <a class="btn btn-outline btn-sm" href="index.html"><i class="fa-solid fa-arrow-left"></i> Back</a>
+      </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="stat-grid" style="margin-top:20px;">
+      <div class="stat-card static">
+        <span class="stat-icon icon-green"><i class="fa-solid fa-indian-rupee-sign"></i></span>
+        <div class="stat-info"><div class="label">Budget</div><div class="value">₹{{ service.budget|floatformat:0 }}</div></div>
+      </div>
+      <div class="stat-card static">
+        <span class="stat-icon icon-indigo"><i class="fa-solid fa-handshake"></i></span>
+        <div class="stat-info"><div class="label">Vendor Requests</div><div class="value">{{ vendor_requests|length }}</div></div>
+      </div>
+      <div class="stat-card static">
+        <span class="stat-icon icon-teal"><i class="fa-solid fa-user-check"></i></span>
+        <div class="stat-info"><div class="label">Selected Vendor</div><div class="value">{% if service.selected_vendor %}{{ service.selected_vendor }}{% else %}None{% endif %}</div></div>
+      </div>
+      <div class="stat-card static">
+        <span class="stat-icon icon-blue"><i class="fa-solid fa-circle-info"></i></span>
+        <div class="stat-info"><div class="label">Status</div><div class="value">{{ service.status|title }}</div></div>
+      </div>
+    </div>
+
+    <!-- Customer + Service info -->
+    <div class="row g-4" style="margin-top:20px;">
+      <div class="col-lg-4">
+        <div class="card">
+          <div class="card-header"><h6><i class="fa-solid fa-user"></i> Customer</h6></div>
+          <div class="card-body">
+            <div class="ib-row"><span class="ib-icon"><i class="fa-solid fa-user"></i></span><div><div class="ib-label">Name</div><div class="ib-value">{{ service.contact_name|default:service.user.get_full_name|default:service.user.username }}</div></div></div>
+            <div class="ib-row"><span class="ib-icon"><i class="fa-solid fa-phone"></i></span><div><div class="ib-label">Contact</div><div class="ib-value">{{ service.contact_mobile|default:service_customer_mobile }}</div></div></div>
+            <div class="ib-row"><span class="ib-icon"><i class="fa-solid fa-location-dot"></i></span><div><div class="ib-label">Location</div><div class="ib-value">{{ service.address|default:"Not specified" }}</div></div></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-lg-8">
+        <div class="card">
+          <div class="card-header"><h6><i class="fa-solid fa-bolt"></i> Service Details</h6></div>
+          <div class="card-body">
+            <div class="row g-3">
+              <div class="col-md-6"><div class="info-col"><div class="ic-label">Title</div><div class="ic-value">{{ service.title }}</div></div></div>
+              <div class="col-md-6"><div class="info-col"><div class="ic-label">Category</div><div class="ic-value">{{ service.category.name|default:"Uncategorized" }}</div></div></div>
+              <div class="col-md-6"><div class="info-col"><div class="ic-label">Budget</div><div class="ic-value">₹{{ service.budget|floatformat:0 }}</div></div></div>
+              <div class="col-md-6"><div class="info-col"><div class="ic-label">Preferred Date</div><div class="ic-value">{{ service.preferred_date|date:"d M Y"|default:"Flexible" }}</div></div></div>
+              <div class="col-md-6"><div class="info-col"><div class="ic-label">Preferred Time</div><div class="ic-value">{{ service.preferred_time|time:"g:i A"|default:"Flexible" }}</div></div></div>
+              <div class="col-md-6"><div class="info-col"><div class="ic-label">Shift Availability</div><div class="ic-value">{{ service.shift_availability|default:"Any" }}</div></div></div>
+            </div>
+            <hr>
+            <h6 class="mb-2">Description</h6><p class="text-muted">{{ service.description|default:"No description provided." }}</p>
+            <h6 class="mb-2">Required Work</h6><p class="text-muted">
+              {% if service.required_work %}
+                {{ service.required_work|join:", " }}
+              {% else %}
+                Not specified.
+              {% endif %}
+            </p>
+            {% if service.additional_requirements %}
+            <h6 class="mb-2">Additional Details</h6><p class="text-muted">{{ service.additional_requirements }}</p>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Vendor Requests -->
+    <div class="card" style="margin-top:20px;">
+      <div class="card-header"><h6><i class="fa-solid fa-handshake"></i> Vendor Requests ({{ vendor_requests|length }})</h6></div>
+      <div class="card-body p-0">
+        {% if not vendor_requests %}
+          <div class="state-box">
+            <div class="state-icon"><i class="fa-regular fa-folder-open"></i></div>
+            <h5>No vendor requests</h5>
+            <p>No vendors have requested this service yet.</p>
+          </div>
+        {% else %}
+          <div class="table-wrap">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>Vendor</th>
+                  <th>Vendor Type</th>
+                  <th>Quotation</th>
+                  <th>Rating</th>
+                  <th>Experience</th>
+                  <th>Submitted</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for bid in vendor_requests %}
+                <tr>
+                  <td>
+                    <div class="user-cell">
+                      <span class="avatar sm vendor">
+                        {% if bid.vendor.vendor_profile.company_name %}{{ bid.vendor.vendor_profile.company_name|slice:":2"|upper }}{% else %}{{ bid.vendor.username|slice:":2"|upper }}{% endif %}
+                      </span>
+                      <div>
+                        <strong>{% if bid.vendor.vendor_profile.company_name %}{{ bid.vendor.vendor_profile.company_name }}{% else %}{{ bid.vendor.get_full_name|default:bid.vendor.username }}{% endif %}</strong>
+                        <div class="small-meta">{{ bid.vendor.email }}</div>
+                      </div>
+                    </div>
+                  </td>
+                  <td>
+                    {% if bid.vendor.vendor_profile.company_name %}
+                      <span class="badge badge-company">Company</span>
+                    {% else %}
+                      <span class="badge badge-outsider">Individual</span>
+                    {% endif %}
+                  </td>
+                  <td><strong>₹{{ bid.amount|floatformat:0 }}</strong></td>
+                  <td><span class="star-rating"><i class="fa-solid fa-star"></i> {{ bid.vendor.vendor_profile.rating|default:"0.0" }}</span></td>
+                  <td>{{ bid.vendor.vendor_profile.experience|default:"0" }} yrs</td>
+                  <td>{{ bid.created_at|date:"d M Y" }}</td>
+                  <td><span class="badge badge-{{ bid.status|lower }}">{{ bid.status|title }}</span></td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+  {% else %}
+  <div id="dynamicPageContent" style="padding-top: 20px;">
+    <div class="state-box">
+      <div class="state-icon" style="color:var(--danger);"><i class="fa-solid fa-triangle-exclamation"></i></div>
+      <h5>Service Not Found</h5>
+      <p>The quick service you are looking for does not exist or has been deleted.</p>
+      <a class="btn btn-outline" style="margin-top:10px;" href="index.html">Back to List</a>
+    </div>
+  </div>
+  {% endif %}
+  <script>
+    // Remove the placeholder loading state and inject the dynamic content
+    document.getElementById('pageContent').innerHTML = document.getElementById('dynamicPageContent').innerHTML;
+    document.getElementById('dynamicPageContent').remove();
+  </script>
+</body>
+</html>

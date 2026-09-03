@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="description" content="Fixora user Portal — Job Quotations"><title>Job Quotations · Fixora user</title><link rel="stylesheet" href="/user-dashboard/assets/styles.css"><script defer src="/user-dashboard/assets/app.js"></script></head>
+<body data-page="job-quotations" data-title="Job Quotations" data-root="../"><div class="app-shell"><div id="sidebar-root"></div><div class="workspace"><div id="topbar-root"></div><main class="page"><section class="card" data-filter-scope>
+  <div class="toolbar">
+    <div class="search-box"><span data-icon="search"></span><input class="input" data-search-input placeholder="Search vendor name or type"></div>
+    <select class="select" style="max-width:145px" data-filter="availability">
+      <option value="all">Availability</option>
+      <option value="available">Available</option>
+    </select>
+    <select class="select" style="max-width:165px" data-sort>
+      <option value="price:asc">Lowest price first</option>
+      <option value="price:desc">Highest price first</option>
+      <option value="rating:desc">Highest rated</option>
+      <option value="experience:desc">Most experienced</option>
+    </select>
+    <span class="small muted" data-result-count id="resultCount">0 results</span>
+  </div>
+  <div data-rows id="quotationsContainer">
+    <!-- Dynamic content will be injected here -->
+  </div>
+</section>
+</main></div></div>
+<script>
+  (function() {
+    const quotations = {{ quotations_json|safe|default:"[]" }};
+    const container = document.getElementById('quotationsContainer');
+    const resultCount = document.getElementById('resultCount');
+    
+    resultCount.textContent = `${quotations.length} results`;
+    
+    if (quotations.length === 0) {
+      container.innerHTML = '<div style="padding: 30px; text-align: center; color: var(--text-muted);">No quotations found.</div>';
+      return;
+    }
+    
+    let html = '';
+    quotations.forEach(q => {
+      // Format price securely
+      const formattedPrice = '₹' + parseInt(q.price).toLocaleString('en-IN');
+      
+      html += `
+      <article class="quote-row" data-row data-price="${q.price}" data-rating="${q.rating}" data-experience="${q.experience}" data-availability="${q.availability}" data-search="${q.vendor_name} ${q.vendor_category}">
+        <div class="quote-vendor">
+          <span class="avatar md vendor">${q.vendor_initials}</span>
+          <div>
+            <h3>${q.vendor_name} <span class="verified"><span data-icon="check"></span></span></h3>
+            <div class="small muted">${q.vendor_category}</div>
+            <div class="rating"><span class="star">★</span>${q.rating} <span class="small muted">(${q.completed_jobs * 2 + 10})</span></div>
+          </div>
+        </div>
+        <div class="quote-price">
+          <strong>${formattedPrice}</strong>
+          <small>Quotation price</small>
+        </div>
+        <div class="quote-time">
+          <strong>${q.estimated_time}</strong><br>
+          <small>Estimated timeline</small>
+        </div>
+        <div class="quote-experience">
+          <strong>${q.experience} yrs</strong><br>
+          <small>${q.completed_jobs} completed jobs</small>
+        </div>
+        <div>
+          <p class="small muted" style="margin:0 0 8px">${q.proposal}</p>
+          <div class="quote-actions">
+            <a class="btn btn-secondary btn-sm" href="quotation-details.html?bid_id=${q.id}">View</a>
+            <a class="btn btn-soft btn-sm" href="../messages/chat.html">Chat</a>
+            <a class="btn btn-secondary btn-sm" href="compare.html">Compare</a>
+            <button class="btn btn-primary btn-sm" data-select-job="${q.vendor_name}">Select Vendor</button>
+          </div>
+        </div>
+      </article>
+      `;
+    });
+    
+    container.innerHTML = html;
+    
+    // Create icons dynamically if Fixora icon system is available
+    if (window.Fixora && window.Fixora.icon) {
+      container.querySelectorAll('[data-icon]').forEach(el => {
+        el.innerHTML = window.Fixora.icon(el.dataset.icon);
+      });
+    }
+  })();
+</script>
+</body></html>

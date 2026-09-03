@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Users — Infinity Admin</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
+  <link rel="stylesheet" href="/admin-dashboard/assets/css/admin.css">
+  <link rel="stylesheet" href="/admin-dashboard/assets/css/sidebar.css">
+  <link rel="stylesheet" href="/admin-dashboard/assets/css/responsive.css">
+  <meta name="csrf-token" content="{{ csrf_token }}">
+</head>
+<body>
+  <div id="sidebar-mount"></div>
+  <div class="main-wrapper">
+    <div id="header-mount"></div>
+    <main class="main-content">
+      <div class="breadcrumb" id="breadcrumb"></div>
+
+      
+
+      <div class="card">
+        <div class="card-body p-0" id="tableMount"></div>
+      </div>
+    </main>
+  </div>
+
+  <script src="/admin-dashboard/assets/js/sidebar.js"></script>
+  <script src="/admin-dashboard/assets/js/components.js"></script>
+  <script src="/admin-dashboard/assets/js/admin.js"></script>
+  <script src="/admin-dashboard/assets/js/data.js"></script>
+  <script>
+    (function () {
+      'use strict';
+      var D = window.AdminData, U = window.AdminUI;
+
+      AdminComponents.renderBreadcrumb([
+        { label: 'Users', href: '#' },
+        { label: 'Users' }
+      ]);
+
+      var dynamicUsers = {{ users_json|safe|default:"[]" }};
+      
+      var table = U.createTable({
+        mount: '#tableMount',
+        data: dynamicUsers,
+        searchKeys: ['id', 'name', 'email', 'mobile', 'location'],
+        searchPlaceholder: 'Search Users…',
+        exportName: 'users',
+        pageSize: 10,
+        filters: [
+          {
+            key: 'status',
+            options: [
+              { value: 'all', label: 'All Status' },
+              { value: 'active', label: 'Active' },
+              { value: 'suspended', label: 'Suspended' }
+            ],
+            match: function (r, v) { return r.status === v; }
+          },
+          {
+            key: 'location',
+            options: [{ value: 'all', label: 'All Locations' }].concat(D.cities.map(function (c) { return { value: c, label: c }; })),
+            match: function (r, v) { return r.location === v; }
+          }
+        ],
+        columns: [
+          { key: 'id', label: 'User ID', sortable: true, render: function (r) { return '<span class="mono">' + r.id + '</span>'; } },
+          { key: 'name', label: 'Profile', sortable: true, render: function (r) { return U.userCell(r.name, r.email, r.id); } },
+          { key: 'mobile', label: 'Mobile', render: function (r) { return U.esc(r.mobile); } },
+          { key: 'location', label: 'Location', sortable: true, render: function (r) { return '<i class="fa-solid fa-location-dot text-muted" style="font-size:11px;"></i> ' + U.esc(r.location); } },
+          { key: 'quickServices', label: 'Quick Services', sortable: true, render: function (r) { return '<span class="count-pill">' + r.quickServices + '</span>'; } },
+          { key: 'jobs', label: 'Jobs', sortable: true, render: function (r) { return '<span class="count-pill">' + r.jobs + '</span>'; } },
+          { key: 'completedJobs', label: 'Completed', sortable: true, render: function (r) { return '<span class="count-pill green">' + r.completedJobs + '</span>'; } },
+          { key: 'status', label: 'Status', sortable: true, render: function (r) { return U.badge(r.status); } },
+          { key: 'registered', label: 'Registered', sortable: true, render: function (r) { return r.registered; } },
+          {
+            key: 'actions', label: 'Actions', csv: false, render: function (r) {
+              return U.actionBtns([
+                { action: 'view', icon: 'fa-eye', title: 'View', cls: 'view' },
+                { action: 'edit', icon: 'fa-pen', title: 'Edit', cls: 'edit' },
+                { action: r.status === 'active' ? 'suspend' : 'activate', icon: r.status === 'active' ? 'fa-ban' : 'fa-check', title: r.status === 'active' ? 'Suspend' : 'Activate', cls: r.status === 'active' ? 'warn' : 'ok' },
+                { action: 'delete', icon: 'fa-trash-can', title: 'Delete', cls: 'danger' }
+              ]);
+            }
+          }
+        ],
+        onAction: function (act, row) {
+          if (act === 'view') {
+            location.href = 'User-details.html?id=' + row.id;
+          } else if (act === 'edit') {
+            U.modal({
+              title: 'Edit User — ' + row.id,
+              body:
+                '<div class="row g-3">' +
+                '<div class="col-md-6"><label class="form-label">Name</label><input class="form-control" id="eName" value="' + U.esc(row.name) + '"></div>' +
+                '<div class="col-md-6"><label class="form-label">Mobile</label><input class="form-control" id="eMobile" value="' + U.esc(row.mobile) + '"></div>' +
+                '<div class="col-md-6"><label class="form-label">Email</label><input class="form-control" id="eEmail" value="' + U.esc(row.email) + '"></div>' +
+                '<div class="col-md-6"><label class="form-label">Location</label><input class="form-control" id="eLoc" value="' + U.esc(row.location) + '"></div>' +
+                '</div>',
+              onSave: function () {
+                row.name = document.getElementById('eName').value;
+                row.mobile = document.getElementById('eMobile').value;
+                row.email = document.getElementById('eEmail').value;
+                row.location = document.getElementById('eLoc').value;
+                table.refresh();
+                U.toast('success', 'User updated', row.name + ' has been saved.');
+              }
+            });
+          } else if (act === 'suspend') {
+            U.confirm({
+              title: 'Suspend User?',
+              message: row.name + ' will no longer be able to access the platform.',
+              danger: true,
+              icon: 'fa-ban',
+              confirmText: 'Suspend',
+              onConfirm: function () {
+                row.status = 'suspended';
+                table.refresh();
+                U.toast('warning', 'User suspended', row.name + ' has been suspended.');
+              }
+            });
+          } else if (act === 'activate') {
+            row.status = 'active';
+            table.refresh();
+            U.toast('success', 'User activated', row.name + ' is now active.');
+          } else if (act === 'delete') {
+            U.confirm({
+              title: 'Delete User?',
+              message: 'This will permanently remove ' + row.name + ' and all associated records.',
+              danger: true,
+              confirmText: 'Delete',
+              onConfirm: function () {
+                var idx = D.users.indexOf(row);
+                if (idx > -1) D.users.splice(idx, 1);
+                table.refresh();
+                U.toast('success', 'User deleted', row.name + ' has been removed.');
+              }
+            });
+          }
+        }
+      });
+
+      document.getElementById('addBtn').addEventListener('click', function () {
+        U.modal({
+          title: 'Add User',
+          body:
+            '<div class="row g-3">' +
+            '<div class="col-md-6"><label class="form-label">Name</label><input class="form-control" id="aName" placeholder="Full name"></div>' +
+            '<div class="col-md-6"><label class="form-label">Mobile</label><input class="form-control" id="aMobile" placeholder="+91"></div>' +
+            '<div class="col-md-6"><label class="form-label">Email</label><input class="form-control" id="aEmail" placeholder="email@example.com"></div>' +
+            '<div class="col-md-6"><label class="form-label">Password</label><input class="form-control" type="password" id="aPassword" placeholder="Strong password"></div>' +
+            '</div>',
+          saveText: 'Create',
+          onSave: function () {
+            var name = document.getElementById('aName').value.trim();
+            var password = document.getElementById('aPassword').value.trim();
+            if (!name) { U.toast('error', 'Name required', 'Please enter the User name.'); return true; }
+            if (!password) { U.toast('error', 'Password required', 'Please enter a password.'); return true; }
+            
+            var email = document.getElementById('aEmail').value.trim();
+            var mobile = document.getElementById('aMobile').value.trim();
+            
+            var csrfToken = document.querySelector('meta[name="csrf-token"]');
+            var token = csrfToken ? csrfToken.getAttribute('content') : '';
+
+            var prevText = document.querySelector('.modal-footer .btn-primary').innerText;
+            document.querySelector('.modal-footer .btn-primary').innerText = 'Creating...';
+            document.querySelector('.modal-footer .btn-primary').disabled = true;
+
+            fetch('/api/add-user/', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': token
+              },
+              body: JSON.stringify({
+                name: name,
+                email: email,
+                mobile: mobile,
+                password: password
+              })
+            })
+            .then(function(res) { return res.json(); })
+            .then(function(data) {
+              if (data.success) {
+                D.users.unshift(data.user);
+                table.refresh();
+                U.toast('success', 'User created', name + ' has been added successfully.');
+                var modalInstance = bootstrap.Modal.getInstance(document.querySelector('.modal'));
+                if (modalInstance) modalInstance.hide();
+              } else {
+                U.toast('error', 'Error', data.error || 'Failed to create user');
+                document.querySelector('.modal-footer .btn-primary').innerText = prevText;
+                document.querySelector('.modal-footer .btn-primary').disabled = false;
+              }
+            })
+            .catch(function(err) {
+              U.toast('error', 'Network Error', 'Could not reach server.');
+              document.querySelector('.modal-footer .btn-primary').innerText = prevText;
+              document.querySelector('.modal-footer .btn-primary').disabled = false;
+            });
+            
+            return true; // Keep modal open while fetching
+          }
+        });
+      });
+
+      document.getElementById('exportBtn').addEventListener('click', function () {
+        U.toast('info', 'Preparing export', 'User list is being exported to CSV.');
+      });
+    })();
+  </script>
+</body>
+</html>

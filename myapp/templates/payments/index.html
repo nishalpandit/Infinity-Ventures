@@ -1,0 +1,124 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Payments — Infinity Admin</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
+  <link rel="stylesheet" href="{% static 'assets/css/admin.css' %}">
+  <link rel="stylesheet" href="{% static 'assets/css/sidebar.css' %}">
+  <link rel="stylesheet" href="{% static 'assets/css/responsive.css' %}">
+</head>
+<body>
+  <div id="sidebar-mount"></div>
+  <div class="main-wrapper">
+    <div id="header-mount"></div>
+    <main class="main-content">
+      <div class="breadcrumb" id="breadcrumb"></div>
+
+      <div class="page-head">
+        <div class="ph-title">
+          <h1>Payments</h1>
+          <p>Platform payment activity — subscription & bid-credit purchases only</p>
+        </div>
+        <div class="ph-actions">
+          <button class="btn btn-outline btn-sm" id="exportBtn"><i class="fa-solid fa-file-export"></i> Export</button>
+        </div>
+      </div>
+
+      <div class="alert alert-warning">
+        <i class="fa-solid fa-circle-info"></i> The platform does <strong>NOT</strong> process customer-to-vendor service payments.
+        Customers pay vendors directly. The platform only processes <strong>vendor subscription / bid-credit purchases</strong>.
+      </div>
+
+      <div class="stat-grid" id="statGrid"></div>
+
+      <div class="card" style="margin-top:20px;">
+        <div class="card-header"><h6><i class="fa-solid fa-credit-card"></i> Subscription Transactions</h6></div>
+        <div class="card-body p-0" id="tableMount"></div>
+      </div>
+    </main>
+  </div>
+
+  <script src="{% static 'assets/js/sidebar.js' %}"></script>
+  <script src="{% static 'assets/js/components.js' %}"></script>
+  <script src="{% static 'assets/js/admin.js' %}"></script>
+  <script src="{% static 'assets/js/data.js' %}"></script>
+  <script>
+    (function () {
+      'use strict';
+      var D = window.AdminData, U = window.AdminUI;
+
+      AdminComponents.renderBreadcrumb([
+        { label: 'Payments', href: '#' },
+        { label: 'All Payments' }
+      ]);
+
+      /* Stats */
+      var success = D.purchases.filter(function (p) { return p.paymentStatus === 'success'; });
+      var failed = D.purchases.filter(function (p) { return p.paymentStatus === 'failed'; });
+      var revenue = success.reduce(function (s, p) { return s + p.amount; }, 0);
+      var avg = success.length ? Math.round(revenue / success.length) : 0;
+
+      var stats = [
+        { label: 'Total Revenue', value: U.inr(revenue), icon: 'fa-indian-rupee-sign', cls: 'icon-green' },
+        { label: 'Successful Transactions', value: success.length, icon: 'fa-circle-check', cls: 'icon-teal' },
+        { label: 'Failed Transactions', value: failed.length, icon: 'fa-circle-xmark', cls: 'icon-red' },
+        { label: 'Avg. Transaction', value: U.inr(avg), icon: 'fa-chart-line', cls: 'icon-indigo' }
+      ];
+      document.getElementById('statGrid').innerHTML = stats.map(function (s) {
+        return '<div class="stat-card static"><span class="stat-icon ' + s.cls + '"><i class="fa-solid ' + s.icon + '"></i></span>' +
+          '<div class="stat-info"><div class="label">' + s.label + '</div><div class="value">' + s.value + '</div></div></div>';
+      }).join('');
+
+      U.createTable({
+        mount: '#tableMount',
+        data: D.purchases,
+        searchKeys: ['id', 'vendor', 'vendorId', 'package'],
+        searchPlaceholder: 'Search transactions…',
+        exportName: 'payments',
+        pageSize: 10,
+        filters: [
+          {
+            key: 'paymentStatus',
+            options: [
+              { value: 'all', label: 'All Status' },
+              { value: 'success', label: 'Success' },
+              { value: 'failed', label: 'Failed' }
+            ],
+            match: function (r, v) { return r.paymentStatus === v; }
+          }
+        ],
+        columns: [
+          { key: 'id', label: 'Transaction ID', sortable: true, render: function (r) { return '<span class="mono">' + r.id + '</span>'; } },
+          { key: 'vendor', label: 'Vendor', sortable: true, render: function (r) { return U.userCell(r.vendor, '', r.vendorId); } },
+          { key: 'vendorType', label: 'Vendor Type', sortable: true, render: function (r) { return U.badge(r.vendorType); } },
+          { key: 'package', label: 'Package', sortable: true, render: function (r) { return '<strong>' + U.esc(r.package) + '</strong>'; } },
+          { key: 'credits', label: 'Credits', sortable: true, render: function (r) { return '<span class="count-pill blue">' + r.credits + '</span>'; } },
+          { key: 'amount', label: 'Amount', sortable: true, render: function (r) { return '<strong>' + U.inr(r.amount) + '</strong>'; } },
+          { key: 'paymentStatus', label: 'Payment Status', sortable: true, render: function (r) { return U.badge(r.paymentStatus); } },
+          { key: 'date', label: 'Date', sortable: true, render: function (r) { return r.date; } },
+          {
+            key: 'actions', label: 'Actions', csv: false, render: function (r) {
+              return U.actionBtns([
+                { action: 'view', icon: 'fa-eye', title: 'View Details', cls: 'view' }
+              ]);
+            }
+          }
+        ],
+        onAction: function (act, row) {
+          if (act === 'view') location.href = 'transaction-details.html?id=' + row.id;
+        }
+      });
+
+      document.getElementById('exportBtn').addEventListener('click', function () {
+        U.toast('info', 'Preparing export', 'Payment transactions are being exported to CSV.');
+      });
+    })();
+  </script>
+</body>
+</html>
