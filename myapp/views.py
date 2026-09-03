@@ -12,6 +12,7 @@ from django.contrib.auth import get_user_model
 User = get_user_model()
 
 import json
+from django.utils import timezone
 
 def dashboard_view(request, path=''):
     if not path:
@@ -313,10 +314,10 @@ def dashboard_view(request, path=''):
             conversations = []
             for v_id in vendor_ids:
                 try:
-                    vendor_user = CustomUser.objects.get(id=v_id)
+                    vendor_user = User.objects.get(id=v_id)
                     latest_message = Message.objects.filter(
-                        models.Q(sender=request.user, receiver=vendor_user) | 
-                        models.Q(sender=vendor_user, receiver=request.user)
+                        Q(sender=request.user, receiver=vendor_user) | 
+                        Q(sender=vendor_user, receiver=request.user)
                     ).order_by('-created_at').first()
                     
                     unread_count = Message.objects.filter(sender=vendor_user, receiver=request.user, is_read=False).count()
@@ -334,7 +335,7 @@ def dashboard_view(request, path=''):
                         'latest_message': latest_message,
                         'unread_count': unread_count,
                     })
-                except CustomUser.DoesNotExist:
+                except User.DoesNotExist:
                     continue
                     
             # Sort conversations by latest message time descending
@@ -347,25 +348,25 @@ def dashboard_view(request, path=''):
             content = request.POST.get('content')
             if content and vendor_id:
                 try:
-                    vendor_user = CustomUser.objects.get(id=vendor_id)
+                    vendor_user = User.objects.get(id=vendor_id)
                     Message.objects.create(
                         sender=request.user,
                         receiver=vendor_user,
                         content=content
                     )
-                except CustomUser.DoesNotExist:
+                except User.DoesNotExist:
                     pass
             return redirect(f'/user/messages/chat.html?vendor_id={vendor_id}')
             
         if vendor_id and request.user.is_authenticated:
             try:
-                vendor_user = CustomUser.objects.get(id=vendor_id)
+                vendor_user = User.objects.get(id=vendor_id)
                 # Mark unread messages as read
                 Message.objects.filter(sender=vendor_user, receiver=request.user, is_read=False).update(is_read=True)
                 
                 messages = Message.objects.filter(
-                    models.Q(sender=request.user, receiver=vendor_user) | 
-                    models.Q(sender=vendor_user, receiver=request.user)
+                    Q(sender=request.user, receiver=vendor_user) | 
+                    Q(sender=vendor_user, receiver=request.user)
                 ).order_by('created_at')
                 
                 try:
@@ -383,7 +384,7 @@ def dashboard_view(request, path=''):
                     'category': category
                 }
                 context['chat_messages'] = messages
-            except CustomUser.DoesNotExist:
+            except User.DoesNotExist:
                 context['chat_vendor'] = None
                 context['chat_messages'] = []
 
