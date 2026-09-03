@@ -95,7 +95,7 @@ def dashboard_view(request, path=''):
     elif mapped_path.startswith('user/'):
         mapped_path = mapped_path.replace('user/', 'user-dashboard/', 1)
     elif mapped_path.startswith('vendor/'):
-        mapped_path = mapped_path.replace('vendor/', 'fixora-vendor-dashboard/', 1)
+        mapped_path = mapped_path.replace('vendor/', 'infinity-vendor-dashboard/', 1)
 
     ext = os.path.splitext(mapped_path)[1]
     if ext and ext not in ['.html']:
@@ -817,7 +817,7 @@ def vendor_dashboard(request):
     context['recent_quick_services'] = QuickService.objects.filter(status='open').order_by('-created_at')[:3]
     context['recent_jobs'] = Job.objects.filter(status='open').order_by('-created_at')[:2]
 
-    return render(request, 'fixora-vendor-dashboard/dashboard.html', context)
+    return render(request, 'infinity-vendor-dashboard/dashboard.html', context)
 
 from django.contrib.auth.decorators import login_required
 

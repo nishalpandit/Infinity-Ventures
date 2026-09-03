@@ -1,11 +1,11 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="description" content="Fixora Vendor Portal — Dashboard"><title>Dashboard · Fixora Vendor</title><link rel="stylesheet" href="/fixora-vendor-dashboard/assets/styles.css"><script>
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="description" content="Infinity Ventures Vendor Portal — Dashboard"><title>Dashboard · Infinity Ventures Vendor</title><link rel="stylesheet" href="/infinity-vendor-dashboard/assets/styles.css"><script>
   window.VENDOR_INITIALS = "{{ vendor_initials|escapejs }}";
   window.VENDOR_NAME = "{{ vendor_name|escapejs }}";
   window.VENDOR_TYPE = "{{ vendor_type|escapejs }}";
   window.VENDOR_LOCATION = "{{ vendor_location|escapejs }}";
   window.PROFILE_IMAGE_URL = "{{ profile_image_url|escapejs }}" || null;
   window.VENDOR_CREDITS = {{ remaining_credits|default:5 }};
-</script><script defer src="/fixora-vendor-dashboard/assets/app.js"></script></head><body data-page="dashboard" data-title="Dashboard" data-root=""><div class="app-shell"><div id="sidebar-root"></div><div class="workspace"><div id="topbar-root"></div><main class="page">
+</script><script defer src="/infinity-vendor-dashboard/assets/app.js"></script></head><body data-page="dashboard" data-title="Dashboard" data-root=""><div class="app-shell"><div id="sidebar-root"></div><div class="workspace"><div id="topbar-root"></div><main class="page">
 <section class="card hero"><div class="welcome">
   {% if profile_image_url %}
     <img src="{{ profile_image_url }}" alt="Profile" class="avatar lg vendor" style="object-fit:cover;">

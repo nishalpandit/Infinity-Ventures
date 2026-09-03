@@ -1,4 +1,4 @@
-/* Fixora Customer — shared Vanilla JS interactions */
+/* Infinity Ventures Customer — shared Vanilla JS interactions */
 (() => {
   'use strict';
   const $ = (s, c=document) => c.querySelector(s);
@@ -79,7 +79,7 @@
     const avatarTopHtml = imgUrl ? `<img src="${imgUrl}" alt="Profile" class="avatar" style="object-fit:cover;">` : `<span class="avatar">${initials}</span>`;
 
     sidebarRoot.outerHTML = `<aside class="sidebar" id="sidebar" aria-label="Vendor navigation">
-      <a class="brand" href="${route('dashboard.html')}"><span class="brand-mark">${icon('tool')}</span><span class="brand-copy"><strong>Fixora</strong><span>Vendor Portal</span></span></a>
+      <a class="brand" href="${route('dashboard.html')}"><span class="brand-mark">${icon('tool')}</span><span class="brand-copy"><strong>Infinity Ventures</strong><span>Vendor Portal</span></span></a>
       <nav class="nav-scroll"><div class="nav-label">Workspace</div>${links}<div class="nav-label">Session</div><a class="nav-link" href="${route('dashboard.html')}" data-confirm="logout" data-tooltip="Logout">${icon('logout')}<span class="nav-text">Logout</span></a></nav>
       <div class="sidebar-bottom"><div class="side-user">${avatarHtml}<span class="side-user-copy"><strong>${name}</strong><span>${type} • ${loc}</span></span></div></div>
     </aside>`;
@@ -101,8 +101,8 @@
   $$('[data-icon]').forEach(el => el.innerHTML = icon(el.dataset.icon));
 
   // Sidebar state and mobile drawer.
-  if(localStorage.getItem('fixora-vendor-sidebar') === 'collapsed' && innerWidth > 767) body.classList.add('sidebar-collapsed');
-  $('#collapse-menu')?.addEventListener('click', () => { body.classList.toggle('sidebar-collapsed'); localStorage.setItem('fixora-vendor-sidebar', body.classList.contains('sidebar-collapsed')?'collapsed':'expanded'); });
+  if(localStorage.getItem('infinity-vendor-sidebar') === 'collapsed' && innerWidth > 767) body.classList.add('sidebar-collapsed');
+  $('#collapse-menu')?.addEventListener('click', () => { body.classList.toggle('sidebar-collapsed'); localStorage.setItem('infinity-vendor-sidebar', body.classList.contains('sidebar-collapsed')?'collapsed':'expanded'); });
   const closeMobile = () => body.classList.remove('mobile-menu-open');
   $('#mobile-menu')?.addEventListener('click', () => body.classList.add('mobile-menu-open'));
   $('#mobile-overlay')?.addEventListener('click', closeMobile);
@@ -136,7 +136,7 @@
   $$('[data-modal-open]').forEach(b=>b.addEventListener('click',()=>$('#'+b.dataset.modalOpen)?.classList.add('open')));
   $$('[data-confirm]').forEach(el=>el.addEventListener('click',e=>{
     e.preventDefault(); const type=el.dataset.confirm; const map={
-      logout:['Log out of Fixora?','You will need to sign in again to manage your services and jobs.','Log out','You have been logged out.'],
+      logout:['Log out of Infinity Ventures?','You will need to sign in again to manage your services and jobs.','Log out','You have been logged out.'],
       cancel:['Cancel this item?','This action will stop new vendor responses. A Quick Service may still be cancelled after a vendor is accepted.','Cancel item','Request cancelled'],
       close:['Close this item?','Closed requests no longer accept quotations. You can review the history at any time.','Close item','Request closed'],
       delete:['Delete this item?','This action cannot be undone.','Delete','Item deleted'],
@@ -158,7 +158,7 @@
       if(!valid){closeModal(btn.closest('.modal-backdrop'));showToast('Complete the bid form','All required fields must be completed before submitting.','error');return;}
     }
     closeModal(btn.closest('.modal-backdrop'));
-    localStorage.setItem('fixora-vendor-credits','4');
+    localStorage.setItem('infinity-vendor-credits','4');
     const formCard=form?.closest('.form-card');if(formCard)formCard.classList.add('hidden-after-submit');
     const success=$('#bid-success');if(success){success.hidden=false;success.scrollIntoView({behavior:'smooth'});}
     showToast('Bid submitted','1 bid credit was used. Your quotation is now permanently locked.');
@@ -167,12 +167,12 @@
   // Shared marketplace selection handlers.
   $$('[data-accept-quick]').forEach(btn=>btn.addEventListener('click',()=>{
     const name=btn.dataset.acceptQuick;
-    openGlobalModal('Accept vendor for this Quick Service?',`<div class="callout neutral">${icon('info')}<div><strong>${name}</strong>Are you sure you want to accept this vendor for this Quick Service? Other vendor responses will remain available.</div></div><p class="small muted">You can still cancel the Quick Service after accepting a vendor. Service payment is made directly to the vendor, not through Fixora.</p>`,'Accept vendor',()=>{ localStorage.setItem('fixora-quick-vendor',name); $$('[data-accept-quick]').forEach(b=>{b.textContent=b.dataset.acceptQuick===name?'Vendor accepted':'Accept vendor';b.disabled=b.dataset.acceptQuick!==name;}); showToast(`${name} selected`,'The vendor has been notified. Other quotations were not rejected.'); });
+    openGlobalModal('Accept vendor for this Quick Service?',`<div class="callout neutral">${icon('info')}<div><strong>${name}</strong>Are you sure you want to accept this vendor for this Quick Service? Other vendor responses will remain available.</div></div><p class="small muted">You can still cancel the Quick Service after accepting a vendor. Service payment is made directly to the vendor, not through Infinity Ventures.</p>`,'Accept vendor',()=>{ localStorage.setItem('infinity-quick-vendor',name); $$('[data-accept-quick]').forEach(b=>{b.textContent=b.dataset.acceptQuick===name?'Vendor accepted':'Accept vendor';b.disabled=b.dataset.acceptQuick!==name;}); showToast(`${name} selected`,'The vendor has been notified. Other quotations were not rejected.'); });
   }));
   $$('[data-select-job]').forEach(btn=>btn.addEventListener('click',()=>{
-    const name=btn.dataset.selectJob; let selected=JSON.parse(localStorage.getItem('fixora-job-vendors')||'[]'); const has=selected.includes(name);
-    if(has){ selected=selected.filter(n=>n!==name); localStorage.setItem('fixora-job-vendors',JSON.stringify(selected)); btn.classList.remove('btn-soft'); btn.classList.add('btn-primary'); btn.innerHTML=`${icon('plus')} Select vendor`; showToast(`${name} removed`,'You can add the vendor again at any time.'); }
-    else openGlobalModal('Select vendor for this job?',`<p>Select <strong>${name}</strong> for the Full House Renovation job?</p><div class="callout success">${icon('users')}<div><strong>Multiple vendors supported</strong>You can select other vendors and assign a different part of the work to each.</div></div>`,'Select vendor',()=>{selected.push(name);localStorage.setItem('fixora-job-vendors',JSON.stringify(selected));btn.classList.remove('btn-primary');btn.classList.add('btn-soft');btn.innerHTML=`${icon('check')} Selected`;showToast(`${name} selected`,'Next, assign this vendor a scope of work.');});
+    const name=btn.dataset.selectJob; let selected=JSON.parse(localStorage.getItem('infinity-job-vendors')||'[]'); const has=selected.includes(name);
+    if(has){ selected=selected.filter(n=>n!==name); localStorage.setItem('infinity-job-vendors',JSON.stringify(selected)); btn.classList.remove('btn-soft'); btn.classList.add('btn-primary'); btn.innerHTML=`${icon('plus')} Select vendor`; showToast(`${name} removed`,'You can add the vendor again at any time.'); }
+    else openGlobalModal('Select vendor for this job?',`<p>Select <strong>${name}</strong> for the Full House Renovation job?</p><div class="callout success">${icon('users')}<div><strong>Multiple vendors supported</strong>You can select other vendors and assign a different part of the work to each.</div></div>`,'Select vendor',()=>{selected.push(name);localStorage.setItem('infinity-job-vendors',JSON.stringify(selected));btn.classList.remove('btn-primary');btn.classList.add('btn-soft');btn.innerHTML=`${icon('check')} Selected`;showToast(`${name} selected`,'Next, assign this vendor a scope of work.');});
   }));
 
   // Tabs filter table/card rows.
@@ -239,11 +239,11 @@
   $('#global-search')?.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();showToast(`Searching for “${e.target.value}”`,'Use the page filters to narrow results.','info');}});
 
   // Initial state for selected vendors.
-  const selectedJobs=JSON.parse(localStorage.getItem('fixora-job-vendors')||'[]');
+  const selectedJobs=JSON.parse(localStorage.getItem('infinity-job-vendors')||'[]');
   $$('[data-select-job]').forEach(btn=>{if(selectedJobs.includes(btn.dataset.selectJob)){btn.classList.remove('btn-primary');btn.classList.add('btn-soft');btn.innerHTML=`${icon('check')} Selected`;}});
-  const selectedQuick=localStorage.getItem('fixora-quick-vendor');
+  const selectedQuick=localStorage.getItem('infinity-quick-vendor');
   if(selectedQuick) $$('[data-accept-quick]').forEach(b=>{if(b.dataset.acceptQuick===selectedQuick)b.innerHTML=`${icon('check')} Vendor accepted`;});
 
   // Expose helpers for small page scripts.
-  window.Fixora={icon,openModal:openGlobalModal,closeModal,showToast};
+  window.Infinity Ventures={icon,openModal:openGlobalModal,closeModal,showToast};
 })();

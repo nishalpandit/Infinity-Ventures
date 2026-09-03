@@ -1,5 +1,5 @@
 <!doctype html>
-    <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="description" content="Fixora user Portal — Chat with Vendor"><title>Chat with Vendor · Fixora user</title><link rel="stylesheet" href="/user-dashboard/assets/styles.css"><script defer src="/user-dashboard/assets/app.js"></script></head>
+    <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="description" content="Infinity Ventures user Portal — Chat with Vendor"><title>Chat with Vendor · Infinity Ventures user</title><link rel="stylesheet" href="/user-dashboard/assets/styles.css"><script defer src="/user-dashboard/assets/app.js"></script></head>
     <body data-page="message-chat" data-title="Chat with Vendor" data-root="../"><div class="app-shell"><div id="sidebar-root"></div><div class="workspace"><div id="topbar-root"></div><main class="page">
 <section class="card chat-panel" style="height:calc(100vh - 150px);min-height:590px">
 {% if chat_vendor %}
@@ -10,7 +10,7 @@
 {% empty %}
 <p style="text-align:center; color:var(--text-muted); margin-top:20px;">No messages yet. Send a message to start chatting.</p>
 {% endfor %}
-</div><div class="payment-note">Chat is for negotiation and coordination. Actual service payment is not processed through Fixora—pay the vendor directly.</div>
+</div><div class="payment-note">Chat is for negotiation and coordination. Actual service payment is not processed through Infinity Ventures—pay the vendor directly.</div>
 <form class="chat-compose" method="POST" action="chat.html?vendor_id={{ chat_vendor.id }}">
 {% csrf_token %}
 <button type="button" class="icon-btn" data-attachment aria-label="Attach file"><span data-icon="paperclip"></span></button><input class="input" name="content" placeholder="Write a message..." aria-label="Message" required><button class="btn btn-primary" type="submit"><span data-icon="send"></span> Send</button></form>
