@@ -5,7 +5,7 @@ import mimetypes
 from django.conf import settings
 from django.http import Http404, HttpResponse, JsonResponse
 from django.template import TemplateDoesNotExist
-from django.db.models import Sum, Q
+from django.db.models import Sum, Q, Max
 from .models import VendorProfile, QuickService, Job, Bid, Subscription, Category, Location, UserProfile, Message
 from django.contrib.auth import get_user_model
 
@@ -236,6 +236,7 @@ def dashboard_view(request, path=''):
 
                 bids_data.append({
                     'id': bid.id,
+                    'vendor_id': vendor.id,
                     'price': float(bid.amount),
                     'estimated_time': bid.estimated_time or '1-2 Days',
                     'vendor_name': vendor_name,
@@ -392,11 +393,88 @@ def dashboard_view(request, path=''):
         available_jobs = Job.objects.filter(status='open').order_by('-created_at')
         context['available_jobs'] = available_jobs
 
+    if path == 'vendor/jobs/details' or path == 'vendor/jobs/send-quotation':
+        job_id = request.GET.get('id') or request.GET.get('job_id')
+        
+        if path == 'vendor/jobs/send-quotation' and request.method == 'POST' and request.user.is_authenticated:
+            amount = request.POST.get('amount')
+            estimated_time = request.POST.get('estimated_time')
+            proposal = request.POST.get('proposal')
+            attachment = request.FILES.get('attachment')
+            
+            if job_id and amount:
+                try:
+                    job = Job.objects.get(id=job_id)
+                    if not Bid.objects.filter(job=job, vendor=request.user).exists():
+                        Bid.objects.create(
+                            vendor=request.user,
+                            job=job,
+                            amount=amount,
+                            estimated_time=estimated_time,
+                            proposal=proposal,
+                            attachment=attachment
+                        )
+                except Job.DoesNotExist:
+                    pass
+            # Let the script handle the success state, or reload if JS doesn't prevent default
+            
+        if job_id:
+            try:
+                job = Job.objects.select_related('category', 'location', 'user').get(id=job_id)
+                context['job'] = job
+                
+                if request.user.is_authenticated:
+                    has_bid = Bid.objects.filter(job=job, vendor=request.user).exists()
+                    context['has_bid'] = has_bid
+            except Job.DoesNotExist:
+                return redirect('/vendor/jobs/available.html')
+        else:
+            return redirect('/vendor/jobs/available.html')
+
     if path == 'vendor/quick-services/nearby':
         available_qs = QuickService.objects.filter(status='open').order_by('-created_at')
         context['available_qs'] = available_qs
 
+    if path == 'vendor/quick-services/details' or path == 'vendor/quick-services/send-quotation':
+        qs_id = request.GET.get('id') or request.GET.get('qs_id')
+        
+        if path == 'vendor/quick-services/send-quotation' and request.method == 'POST' and request.user.is_authenticated:
+            amount = request.POST.get('amount')
+            estimated_time = request.POST.get('estimated_time')
+            proposal = request.POST.get('proposal')
+            attachment = request.FILES.get('attachment')
+            
+            if qs_id and amount:
+                try:
+                    qs = QuickService.objects.get(id=qs_id)
+                    if not Bid.objects.filter(quick_service=qs, vendor=request.user).exists():
+                        Bid.objects.create(
+                            vendor=request.user,
+                            quick_service=qs,
+                            amount=amount,
+                            estimated_time=estimated_time,
+                            proposal=proposal,
+                            attachment=attachment
+                        )
+                except QuickService.DoesNotExist:
+                    pass
+                    
+        if qs_id:
+            try:
+                qs = QuickService.objects.select_related('category', 'location', 'user').get(id=qs_id)
+                context['qs'] = qs
+                
+                if request.user.is_authenticated:
+                    has_bid = Bid.objects.filter(quick_service=qs, vendor=request.user).exists()
+                    context['has_bid'] = has_bid
+            except QuickService.DoesNotExist:
+                return redirect('/vendor/quick-services/nearby.html')
+        else:
+            return redirect('/vendor/quick-services/nearby.html')
 
+    if path == 'vendor/quick-services/my-requests' and request.user.is_authenticated:
+        my_bids = Bid.objects.filter(vendor=request.user, quick_service__isnull=False).select_related('quick_service', 'quick_service__user').order_by('-created_at')
+        context['my_bids'] = my_bids
     if 'master/locations' in path:
         context['locations'] = Location.objects.all().order_by('-created_at')
         context['states'] = Location.objects.values_list('state', flat=True).distinct().order_by('state')
@@ -536,9 +614,11 @@ def dashboard_view(request, path=''):
             
             # Update UserProfile mobile
             try:
-                user_profile = u.user_profile
-                user_profile.phone_number = request.POST.get('phone_number', user_profile.phone_number)
-                user_profile.save()
+                user_profile, _ = UserProfile.objects.get_or_create(user=u)
+                new_mobile = request.POST.get('phone_number') or request.POST.get('mobile')
+                if new_mobile:
+                    user_profile.phone_number = new_mobile.strip()
+                    user_profile.save()
             except Exception:
                 pass
                 
@@ -561,7 +641,7 @@ def dashboard_view(request, path=''):
         context['completed_jobs'] = Job.objects.filter(user=u, status='completed').count()
         context['vendors_selected'] = Bid.objects.filter(job__user=u, status='selected').count()
         
-    if 'jobs/quotations' in path or 'quick-services/quotations' in path:
+    if path == 'user/jobs/quotations' or path == 'user/quick-services/quotations':
         job_id = request.GET.get('job_id')
         if job_id:
             bids = Bid.objects.filter(job_id=job_id).select_related('vendor', 'job')
@@ -586,6 +666,7 @@ def dashboard_view(request, path=''):
             bids_data.append({
                 'id': bid.id,
                 'job_id': bid.job_id,
+                'vendor_id': vendor.id,
                 'price': float(bid.amount),
                 'rating': rating,
                 'experience': 5,
@@ -596,9 +677,148 @@ def dashboard_view(request, path=''):
                 'completed_jobs': completed_jobs,
                 'estimated_time': getattr(bid, 'estimated_time', '15 days'),
                 'proposal': getattr(bid, 'proposal', 'Standard quotation terms apply.'),
+                'attachment_url': bid.attachment.url if bid.attachment else None,
                 'status': bid.status
             })
         context['quotations_json'] = json.dumps(bids_data)
+
+    if path == 'user/jobs/quotation-details':
+        bid_id = request.GET.get('bid_id')
+        if bid_id:
+            try:
+                bid = Bid.objects.select_related('vendor', 'job').get(id=bid_id)
+                context['bid'] = bid
+                
+                vendor = bid.vendor
+                try:
+                    profile = vendor.vendor_profile
+                    company = profile.company_name or vendor.get_full_name() or vendor.username
+                    rating = float(profile.rating)
+                    category = profile.category or 'General Contractor'
+                except Exception:
+                    company = vendor.get_full_name() or vendor.username
+                    rating = 4.5
+                    category = 'General Contractor'
+                    
+                context['vendor_info'] = {
+                    'name': company,
+                    'initials': company[:2].upper() if company else 'V',
+                    'category': category,
+                    'rating': rating,
+                    'completed_jobs': Job.objects.filter(bids__vendor=vendor, status='completed').distinct().count()
+                }
+            except Bid.DoesNotExist:
+                return redirect('/user/jobs/quotations.html')
+        else:
+            return redirect('/user/jobs/quotations.html')
+            
+    if 'messages/index' in path or 'messages/chat' in path:
+        u = request.user
+        if not u.is_authenticated:
+            return redirect('/login/')
+            
+        is_vendor = 'vendor' in path
+        
+        # Determine conversations (unique opposite party)
+        if is_vendor:
+            # For vendor, conversations are with Users (role='USER')
+            conversations_qs = Message.objects.filter(
+                Q(sender=u) | Q(receiver=u)
+            ).values('sender', 'receiver').distinct()
+            
+            contact_ids = set()
+            for c in conversations_qs:
+                if c['sender'] != u.id: contact_ids.add(c['sender'])
+                if c['receiver'] != u.id: contact_ids.add(c['receiver'])
+                
+            contacts = User.objects.filter(id__in=contact_ids, role='USER')
+        else:
+            # For user, conversations are with Vendors
+            conversations_qs = Message.objects.filter(
+                Q(sender=u) | Q(receiver=u)
+            ).values('sender', 'receiver').distinct()
+            
+            contact_ids = set()
+            for c in conversations_qs:
+                if c['sender'] != u.id: contact_ids.add(c['sender'])
+                if c['receiver'] != u.id: contact_ids.add(c['receiver'])
+                
+            contacts = User.objects.filter(id__in=contact_ids, role='VENDOR')
+            
+        conversations_list = []
+        for contact in contacts:
+            latest_msg = Message.objects.filter(
+                Q(sender=u, receiver=contact) | Q(sender=contact, receiver=u)
+            ).order_by('-created_at').first()
+            
+            unread_count = Message.objects.filter(sender=contact, receiver=u, is_read=False).count()
+            
+            name = contact.get_full_name() or contact.username
+            if not is_vendor:
+                try:
+                    name = contact.vendor_profile.company_name or name
+                except Exception:
+                    pass
+                    
+            conversations_list.append({
+                'id': contact.id,
+                'vendor_id': contact.id, # useful for user side
+                'user_id': contact.id, # useful for vendor side
+                'name': name,
+                'initials': name[:2].upper() if name else 'C',
+                'latest_message': latest_msg,
+                'unread_count': unread_count,
+            })
+            
+        conversations_list.sort(key=lambda x: x['latest_message'].created_at if x['latest_message'] else timezone.now(), reverse=True)
+        context['conversations'] = conversations_list
+        
+        if 'messages/chat' in path:
+            other_user_id = request.GET.get('vendor_id') or request.GET.get('user_id')
+            if not other_user_id and conversations_list:
+                other_user_id = conversations_list[0]['id']
+                
+            if other_user_id:
+                other_user = User.objects.filter(id=other_user_id).first()
+                if other_user:
+                    # Mark messages as read
+                    Message.objects.filter(sender=other_user, receiver=u, is_read=False).update(is_read=True)
+                    
+                    if request.method == 'POST':
+                        content = request.POST.get('content')
+                        attachment = request.FILES.get('attachment')
+                        if content or attachment:
+                            Message.objects.create(
+                                sender=u,
+                                receiver=other_user,
+                                content=content,
+                                attachment=attachment
+                            )
+                            # Redirect to prevent duplicate submission
+                            param = '?vendor_id=' + str(other_user.id) if not is_vendor else '?user_id=' + str(other_user.id)
+                            return redirect('/' + path + '.html' + param)
+                            
+                    chat_messages = Message.objects.filter(
+                        Q(sender=u, receiver=other_user) | Q(sender=other_user, receiver=u)
+                    ).order_by('created_at')
+                    context['chat_messages'] = chat_messages
+                    
+                    name = other_user.get_full_name() or other_user.username
+                    category = 'User'
+                    if not is_vendor:
+                        try:
+                            name = other_user.vendor_profile.company_name or name
+                            category = other_user.vendor_profile.category
+                        except Exception:
+                            category = 'Vendor'
+                            
+                    context['chat_user'] = {
+                        'id': other_user.id,
+                        'name': name,
+                        'initials': name[:2].upper() if name else 'U',
+                        'category': category,
+                    }
+                    context['chat_vendor'] = context['chat_user'] # alias for templates
             
     try:
         return render(request, template_name, context)
@@ -634,8 +854,8 @@ def admin_dashboard(request):
 def user_login_view(request):
     error = None
     if request.method == 'POST':
-        username = request.POST.get('username')
-        password = request.POST.get('password')
+        username = request.POST.get('username', '').strip()
+        password = request.POST.get('password', '')
         user = authenticate(request, username=username, password=password)
         if user is not None:
             login(request, user)
@@ -643,11 +863,11 @@ def user_login_view(request):
                 return redirect('admin_dashboard')
             elif user.role == 'VENDOR':
                 return redirect('vendor_dashboard')
-            elif user.role == 'USER':
+            elif user.role in ['USER', 'CUSTOMER']:
                 return redirect('user_dashboard')
             return redirect('admin_dashboard')
         else:
-            error = 'Invalid username or password'
+            error = 'Invalid username, email, phone number, or password.'
     return render(request, 'index.html', {'error': error})
 
 def user_logout_view(request):

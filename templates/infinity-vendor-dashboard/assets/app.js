@@ -162,6 +162,7 @@
     const formCard=form?.closest('.form-card');if(formCard)formCard.classList.add('hidden-after-submit');
     const success=$('#bid-success');if(success){success.hidden=false;success.scrollIntoView({behavior:'smooth'});}
     showToast('Bid submitted','1 bid credit was used. Your quotation is now permanently locked.');
+    if(form) form.submit();
   }));
 
   // Shared marketplace selection handlers.
@@ -220,8 +221,7 @@
 
   // Inbox, chat compose, notification state.
   $$('.conversation').forEach(c=>c.addEventListener('click',()=>{$$('.conversation').forEach(x=>x.classList.remove('active'));c.classList.add('active');if(innerWidth<768&&c.dataset.href)location.href=c.dataset.href;}));
-  $$('.chat-compose').forEach(form=>form.addEventListener('submit',e=>{e.preventDefault();const input=$('input',form);if(!input.value.trim())return;const area=$('.chat-messages');const row=document.createElement('div');row.className='message-row sent';row.innerHTML=`<div class="message">${input.value.replace(/[<>]/g,'')}<div class="message-time">Just now · Read ✓✓</div></div>`;area.append(row);input.value='';area.scrollTop=area.scrollHeight;}));
-  $$('[data-attachment]').forEach(b=>b.addEventListener('click',()=>showToast('Choose an attachment','Images and documents up to 10 MB are supported.','info')));
+
   $$('[data-notification-read]').forEach(b=>b.addEventListener('click',()=>{const n=b.closest('.notification-item');n.classList.remove('unread');b.remove();showToast('Marked as read');}));
   $('[data-mark-all]')?.addEventListener('click',()=>{$$('.notification-item.unread').forEach(n=>n.classList.remove('unread'));$$('[data-notification-read]').forEach(b=>b.remove());showToast('All caught up','All notifications have been marked as read.');});
 
@@ -245,5 +245,5 @@
   if(selectedQuick) $$('[data-accept-quick]').forEach(b=>{if(b.dataset.acceptQuick===selectedQuick)b.innerHTML=`${icon('check')} Vendor accepted`;});
 
   // Expose helpers for small page scripts.
-  window.Infinity Ventures={icon,openModal:openGlobalModal,closeModal,showToast};
+  window.InfinityVentures={icon,openModal:openGlobalModal,closeModal,showToast};
 })();

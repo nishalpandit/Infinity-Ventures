@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="description" content="Infinity Ventures user Portal — Quotation Details"><title>Quotation Details · Infinity Ventures user</title><link rel="stylesheet" href="/user-dashboard/assets/styles.css"><script defer src="/user-dashboard/assets/app.js"></script></head>
+<body data-page="job-quotations" data-title="Quotation Details" data-root="../"><div class="app-shell"><div id="sidebar-root"></div><div class="workspace"><div id="topbar-root"></div><main class="page">
+<div class="layout-main">
+  <section class="card">
+    <div class="card-head">
+      <div>
+        <h2>Quotation Details</h2>
+        <p>Review the proposal from <strong>{{ vendor_info.name }}</strong></p>
+      </div>
+      <a class="btn btn-secondary btn-sm" href="quotations.html?job_id={{ bid.job_id }}">Back to list</a>
+    </div>
+    
+    <div class="card-body">
+      <div class="grid grid-2" style="margin-bottom: 30px;">
+        <div style="background: var(--surface-hover); border-radius: 8px; padding: 20px;">
+          <h3 style="margin-bottom: 5px; font-size: 14px; color: var(--text-muted); font-weight: 500; text-transform: uppercase;">Quotation Amount</h3>
+          <div style="font-size: 32px; font-weight: 600; color: var(--text);">₹{{ bid.amount|floatformat:0 }}</div>
+        </div>
+        <div style="background: var(--surface-hover); border-radius: 8px; padding: 20px;">
+          <h3 style="margin-bottom: 5px; font-size: 14px; color: var(--text-muted); font-weight: 500; text-transform: uppercase;">Estimated Timeline</h3>
+          <div style="font-size: 24px; font-weight: 600; color: var(--text); padding-top: 4px;">{{ bid.estimated_time|default:"Not specified" }}</div>
+        </div>
+      </div>
+
+      <h3 class="section-title">Detailed Proposal</h3>
+      <p class="muted" style="line-height: 1.6; font-size: 15px; margin-bottom: 25px;">
+        {{ bid.proposal|default:"The vendor did not provide a detailed proposal message. Standard service terms apply."|linebreaksbr }}
+      </p>
+
+      {% if bid.attachment %}
+      <h3 class="section-title">Attachment</h3>
+      <div style="margin-bottom: 30px;">
+        <a class="attachment" href="{{ bid.attachment.url }}" target="_blank" style="display:inline-flex; align-items:center; max-width:400px;">
+          <span data-icon="paperclip"></span>
+          <span>
+            <strong>Quotation Document</strong>
+            <span>Click to download or view</span>
+          </span>
+          <span data-icon="download"></span>
+        </a>
+      </div>
+      {% endif %}
+      
+      <div class="divider"></div>
+      
+      <div class="form-actions" style="margin-top: 25px; display: flex; gap: 12px; justify-content: flex-end;">
+        <a class="btn btn-secondary" href="../messages/chat.html?vendor_id={{ bid.vendor_id }}">Chat with Vendor</a>
+        <button class="btn btn-primary" data-select-job="{{ vendor_info.name }}">Accept Quotation</button>
+      </div>
+    </div>
+  </section>
+
+  <aside class="stack">
+    <section class="card">
+      <div class="card-head"><h3>Vendor Information</h3></div>
+      <div class="card-body">
+        <div class="vendor-top">
+          <span class="avatar lg vendor">{{ vendor_info.initials }}</span>
+          <div class="vendor-meta">
+            <h3>{{ vendor_info.name }} <span class="verified"><span data-icon="check"></span></span></h3>
+            <div class="small muted">{{ vendor_info.category }}</div>
+            <div class="rating"><span class="star">★</span>{{ vendor_info.rating }} <span class="small muted">({{ vendor_info.completed_jobs|add:15 }} ratings)</span></div>
+          </div>
+        </div>
+        
+        <div class="info-list" style="margin-top: 20px;">
+          <div class="info-item">
+            <div class="info-label">Completed Jobs</div>
+            <div class="info-value">{{ vendor_info.completed_jobs }} via Infinity Ventures</div>
+          </div>
+          <div class="info-item">
+            <div class="info-label">Experience</div>
+            <div class="info-value">5 Years</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="card-head"><h3>Job Reference</h3></div>
+      <div class="card-body">
+        <div class="info-list">
+          <div class="info-item">
+            <div class="info-label">Job Title</div>
+            <div class="info-value">{{ bid.job.title }}</div>
+          </div>
+          <div class="info-item">
+            <div class="info-label">Your Budget</div>
+            <div class="info-value">₹{{ bid.job.budget|floatformat:0 }}</div>
+          </div>
+        </div>
+        <div style="margin-top: 15px;">
+          <a href="details.html?id={{ bid.job_id }}" class="small">View Job Details →</a>
+        </div>
+      </div>
+    </section>
+  </aside>
+</div>
+</main></div></div></body></html>

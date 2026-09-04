@@ -1,0 +1,94 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="description" content="Infinity Ventures Vendor Portal — Send Quotation"><title>Send Quotation · Infinity Ventures Vendor</title><link rel="stylesheet" href="/infinity-vendor-dashboard/assets/styles.css"><script defer src="/infinity-vendor-dashboard/assets/app.js"></script></head><body data-page="quick-submit" data-title="Send Quotation" data-root="../"><div class="app-shell"><div id="sidebar-root"></div><div class="workspace"><div id="topbar-root"></div><main class="page">
+
+<div class="layout-main">
+    <section class="card form-card">
+        <div class="card-head">
+            <div>
+                <h2>Send Quotation</h2>
+                <p>Submit your best offer for <strong>{{ qs.title }}</strong></p>
+            </div>
+        </div>
+        <div class="card-body">
+            <form id="bid-form" class="stack" method="POST" action="" enctype="multipart/form-data">
+                {% csrf_token %}
+                <div class="form-group">
+                    <label class="label">Quotation Amount (₹)<span class="required">*</span></label>
+                    <input type="number" name="amount" class="input" placeholder="e.g. 15000" required>
+                </div>
+                <div class="form-group">
+                    <label class="label">Estimated Time</label>
+                    <input type="text" name="estimated_time" class="input" placeholder="e.g. 3 Days, 2 Weeks">
+                </div>
+                <div class="form-group">
+                    <label class="label">Detailed Proposal</label>
+                    <textarea name="proposal" class="input" rows="5" placeholder="Explain your approach, what's included, and any other relevant details..."></textarea>
+                </div>
+                <div class="form-group">
+                    <label class="label">Attachment</label>
+                    <input type="file" name="attachment" class="input" accept="image/*,.pdf,.doc,.docx" data-preview="attachment-preview">
+                    <div class="small muted" style="margin-top:5px;">You can attach an image, PDF, or Word document (max 10MB)</div>
+                    <div id="attachment-preview" class="file-list" style="margin-top:10px;"></div>
+                </div>
+                
+                <div class="form-actions" style="margin-top:20px;">
+                    <a href="details.html?id={{ qs.id }}" class="btn btn-secondary">Cancel</a>
+                    <button type="button" class="btn btn-primary" data-modal-open="bid-confirm-modal">Review & Submit</button>
+                </div>
+            </form>
+        </div>
+    </section>
+
+    <!-- Success state, hidden by default -->
+    <section id="bid-success" class="card" hidden>
+        <div class="card-body" style="text-align: center; padding: 40px 20px;">
+            <div style="font-size: 48px; color: var(--success); margin-bottom: 20px;"><span data-icon="check"></span></div>
+            <h2>Quotation Sent Successfully!</h2>
+            <p class="muted" style="max-width: 400px; margin: 10px auto 20px;">Your quotation for {{ qs.title }} has been submitted to the customer. We will notify you if you are selected.</p>
+            <a href="nearby.html" class="btn btn-primary">Return to Available Requests</a>
+        </div>
+    </section>
+
+    <!-- Job summary sidebar -->
+    <aside class="stack">
+        <section class="card">
+            <div class="card-head"><h3>Service Summary</h3></div>
+            <div class="card-body">
+                <div class="info-list">
+                    <div class="info-item"><div class="info-label">Customer Budget</div><div class="info-value">₹{{ qs.budget }}</div></div>
+                    <div class="info-item"><div class="info-label">Location</div><div class="info-value">{{ qs.location.city|default:"Unknown" }}</div></div>
+                    <div class="info-item"><div class="info-label">Date Requested</div><div class="info-value">{{ qs.preferred_date|date:"d M Y"|default:"Flexible" }}</div></div>
+                </div>
+                <div style="margin-top: 15px;">
+                    <a href="details.html?id={{ qs.id }}" class="small">View full details →</a>
+                </div>
+            </div>
+        </section>
+        <div class="callout neutral">
+            <span data-icon="award"></span>
+            <div>
+                <strong>Credit Cost</strong>
+                This action will consume 1 bid credit from your account.
+            </div>
+        </div>
+    </aside>
+</div>
+
+<!-- Confirmation Modal -->
+<div class="modal-backdrop" id="bid-confirm-modal" role="dialog" aria-modal="true">
+    <div class="modal">
+        <div class="modal-head">
+            <h3>Confirm Submission</h3>
+            <button class="modal-close" data-modal-close><span data-icon="x"></span></button>
+        </div>
+        <div class="modal-body">
+            <p>Are you sure you want to submit this quotation? Once submitted, it cannot be modified.</p>
+            <p class="small muted" style="margin-top:10px;">This will deduct <strong>1 credit</strong> from your balance.</p>
+        </div>
+        <div class="modal-actions">
+            <button class="btn btn-secondary" data-modal-close>Cancel</button>
+            <button class="btn btn-primary" data-submit-bid>Submit Quotation</button>
+        </div>
+    </div>
+</div>
+
+</main></div></div></body></html>

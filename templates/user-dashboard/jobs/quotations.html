@@ -62,9 +62,14 @@
         </div>
         <div>
           <p class="small muted" style="margin:0 0 8px">${q.proposal}</p>
+          ${q.attachment_url ? `
+          <a class="btn btn-secondary btn-sm" href="${q.attachment_url}" target="_blank" style="margin-bottom:12px; display:inline-flex; align-items:center; gap:6px;">
+            <span data-icon="paperclip" style="width:14px;height:14px;"></span> View Attachment
+          </a>
+          ` : ''}
           <div class="quote-actions">
             <a class="btn btn-secondary btn-sm" href="quotation-details.html?bid_id=${q.id}">View</a>
-            <a class="btn btn-soft btn-sm" href="../messages/chat.html">Chat</a>
+            <a class="btn btn-soft btn-sm" href="../messages/chat.html?vendor_id=${q.vendor_id}">Chat</a>
             <a class="btn btn-secondary btn-sm" href="compare.html">Compare</a>
             <button class="btn btn-primary btn-sm" data-select-job="${q.vendor_name}">Select Vendor</button>
           </div>
@@ -76,9 +81,9 @@
     container.innerHTML = html;
     
     // Create icons dynamically if Infinity Ventures icon system is available
-    if (window.Infinity Ventures && window.Infinity Ventures.icon) {
+    if (window.InfinityVentures && window.InfinityVentures.icon) {
       container.querySelectorAll('[data-icon]').forEach(el => {
-        el.innerHTML = window.Infinity Ventures.icon(el.dataset.icon);
+        el.innerHTML = window.InfinityVentures.icon(el.dataset.icon);
       });
     }
   })();

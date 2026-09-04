@@ -390,9 +390,9 @@
 
 
       <div class="form-group">
-        <label for="username">Username</label>
-        <input type="text" id="username" name="username" class="form-control" placeholder="Enter your username"
-          required>
+        <label for="username">Username / Email / Phone Number</label>
+        <input type="text" id="username" name="username" class="form-control" placeholder="Enter username, email or phone"
+          value="{{ request.POST.username|default:'' }}" required>
         <i class="fa-solid fa-user"></i>
       </div>
 

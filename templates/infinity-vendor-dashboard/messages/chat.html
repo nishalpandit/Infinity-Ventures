@@ -1,3 +1,25 @@
 <!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="description" content="Infinity Ventures Vendor Portal — Chat with Customer"><title>Chat with Customer · Infinity Ventures Vendor</title><link rel="stylesheet" href="/infinity-vendor-dashboard/assets/styles.css"><script defer src="/infinity-vendor-dashboard/assets/app.js"></script></head><body data-page="message-chat" data-title="Chat with Customer" data-root="../"><div class="app-shell"><div id="sidebar-root"></div><div class="workspace"><div id="topbar-root"></div><main class="page">
-<section class="card chat-panel" style="height:calc(100vh - 150px);min-height:590px"><div class="chat-header"><span class="avatar md teal">AS</span><div class="vendor-meta"><h3>Ananya Sharma</h3><span>● Online · Customer</span></div><button class="icon-btn" data-toast="Call request opened" data-toast-message="Use your registered vendor number to contact this customer."><span data-icon="phone"></span></button><a class="btn btn-secondary btn-sm" href="../jobs/details.html">Related Job</a></div><div class="chat-messages"><div class="date-separator"><span>Yesterday</span></div><div class="message-row"><div class="message">Hello, thank you for bidding on the Full House Renovation job. Would you be available for a site visit?<div class="message-time">4:05 PM</div></div></div><div class="message-row sent"><div class="message">Yes. Friday at 3 PM works for our supervisor. Please share society entry instructions.<div class="message-time">4:12 PM · Read ✓✓</div></div></div><div class="message-row"><div class="message">I have informed security. Please bring a government-issued ID.<div class="message-time">4:15 PM</div></div></div><div class="date-separator"><span>Today</span></div><div class="message-row"><div class="message">Can you confirm whether the switch plates in the quotation are Anchor Roma?<div class="message-time">9:34 AM</div></div></div><div class="message-row sent"><div class="message">Yes, Anchor Roma is included for all replacement points. Here is the material schedule.<div class="message-file"><span data-icon="file"></span><span><strong>material-schedule.pdf</strong><br><span class="tiny">PDF · 1.2 MB</span></span><button class="btn btn-secondary btn-sm" data-toast="Attachment opened"><span data-icon="eye"></span></button></div><div class="message-time">9:41 AM · Read ✓✓</div></div></div><div class="message-row"><div class="message">Great. Can you also confirm the site visit for Friday?<div class="message-time">10:42 AM</div></div></div></div><div class="payment-note">Use chat for negotiation and coordination. Infinity Ventures does not process service payments; the customer pays you directly.</div><form class="chat-compose"><button type="button" class="icon-btn" data-attachment><span data-icon="paperclip"></span></button><input class="input" placeholder="Write a message..." aria-label="Message"><button class="btn btn-primary" type="submit"><span data-icon="send"></span> Send</button></form></section>
+<section class="card chat-panel" style="height:calc(100vh - 150px);min-height:590px">
+{% if chat_user %}
+<div class="chat-header"><span class="avatar md teal">{{ chat_user.initials }}</span><div class="vendor-meta"><h3>{{ chat_user.name }}</h3><span>Customer</span></div></div><div class="chat-messages">
+<div class="date-separator"><span>Messages</span></div>
+{% for msg in chat_messages %}
+<div class="message-row {% if msg.sender == request.user %}sent{% endif %}"><div class="message">{{ msg.content }}{% if msg.attachment %}<div class="message-file"><span data-icon="file"></span><span><strong><a href="{{ msg.attachment.url }}" target="_blank">Attachment</a></strong><br></span></div>{% endif %}<div class="message-time">{{ msg.created_at|date:"h:i A" }} {% if msg.sender == request.user and msg.is_read %}· Read ✓✓{% endif %}</div></div></div>
+{% empty %}
+<p style="text-align:center; color:var(--text-muted); margin-top:20px;">No messages yet. Send a message to start chatting.</p>
+{% endfor %}
+</div><div class="payment-note">Use chat for negotiation and coordination. Infinity Ventures does not process service payments; the customer pays you directly.</div>
+<form class="chat-compose" method="POST" action="chat.html?user_id={{ chat_user.id }}" enctype="multipart/form-data">
+{% csrf_token %}
+<input type="file" name="attachment" id="chat-attach" style="display:none;" onchange="alert('File selected! Click Send when ready.')">
+<button type="button" class="icon-btn" onclick="document.getElementById('chat-attach').click()" aria-label="Attach file"><span data-icon="paperclip"></span></button>
+<input class="input" name="content" placeholder="Write a message..." aria-label="Message" required>
+<button class="btn btn-primary" type="submit"><span data-icon="send"></span> Send</button>
+</form>
+{% else %}
+<div class="chat-messages" style="display:flex;align-items:center;justify-content:center;height:100%;">
+  <p class="muted">Please select a conversation from <a href="index.html">messages</a> or a user's request.</p>
+</div>
+{% endif %}
+</section>
 </main></div></div></body></html>

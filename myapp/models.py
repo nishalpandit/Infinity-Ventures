@@ -118,6 +118,8 @@ class Bid(models.Model):
     amount = models.DecimalField(max_digits=10, decimal_places=2)
     estimated_time = models.CharField(max_length=100, null=True, blank=True)
     message = models.TextField(null=True, blank=True)
+    proposal = models.TextField(null=True, blank=True)
+    attachment = models.FileField(upload_to='bid_attachments/', null=True, blank=True)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='submitted')
     created_at = models.DateTimeField(default=timezone.now)
 

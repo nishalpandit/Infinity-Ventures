@@ -132,3 +132,8 @@ MAILERS = {
 
 # Custom User Model
 AUTH_USER_MODEL = 'myapp.CustomUser'
+
+AUTHENTICATION_BACKENDS = [
+    'myapp.backends.PhoneEmailUsernameBackend',
+    'django.contrib.auth.backends.ModelBackend',
+]

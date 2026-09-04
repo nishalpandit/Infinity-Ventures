@@ -3,7 +3,7 @@
     <body data-page="message-chat" data-title="Chat with Vendor" data-root="../"><div class="app-shell"><div id="sidebar-root"></div><div class="workspace"><div id="topbar-root"></div><main class="page">
 <section class="card chat-panel" style="height:calc(100vh - 150px);min-height:590px">
 {% if chat_vendor %}
-<div class="chat-header"><span class="avatar md vendor">{{ chat_vendor.initials }}</span><div class="vendor-meta"><h3>{{ chat_vendor.name }} <span class="verified"><span data-icon="check"></span></span></h3><span>● Online · {{ chat_vendor.category }}</span></div><button class="icon-btn" data-toast="Call request opened" data-toast-message="Use your registered mobile number to contact this vendor."><span data-icon="phone"></span></button><a class="btn btn-secondary btn-sm" href="../vendors/details.html?id={{ chat_vendor.id }}">Vendor Profile</a></div><div class="chat-messages">
+<div class="chat-header"><span class="avatar md vendor">{{ chat_vendor.initials }}</span><div class="vendor-meta"><h3>{{ chat_vendor.name }} <span class="verified"><span data-icon="check"></span></span></h3><span>{{ chat_vendor.category }}</span></div><a class="btn btn-secondary btn-sm" href="../vendors/details.html?id={{ chat_vendor.id }}">Vendor Profile</a></div><div class="chat-messages">
 <div class="date-separator"><span>Messages</span></div>
 {% for msg in chat_messages %}
 <div class="message-row {% if msg.sender == request.user %}sent{% endif %}"><div class="message">{{ msg.content }}{% if msg.attachment %}<div class="message-file"><span data-icon="file"></span><span><strong><a href="{{ msg.attachment.url }}" target="_blank">Attachment</a></strong><br></span></div>{% endif %}<div class="message-time">{{ msg.created_at|date:"h:i A" }} {% if msg.sender == request.user and msg.is_read %}· Read ✓✓{% endif %}</div></div></div>
@@ -11,9 +11,13 @@
 <p style="text-align:center; color:var(--text-muted); margin-top:20px;">No messages yet. Send a message to start chatting.</p>
 {% endfor %}
 </div><div class="payment-note">Chat is for negotiation and coordination. Actual service payment is not processed through Infinity Ventures—pay the vendor directly.</div>
-<form class="chat-compose" method="POST" action="chat.html?vendor_id={{ chat_vendor.id }}">
+<form class="chat-compose" method="POST" action="chat.html?vendor_id={{ chat_vendor.id }}" enctype="multipart/form-data">
 {% csrf_token %}
-<button type="button" class="icon-btn" data-attachment aria-label="Attach file"><span data-icon="paperclip"></span></button><input class="input" name="content" placeholder="Write a message..." aria-label="Message" required><button class="btn btn-primary" type="submit"><span data-icon="send"></span> Send</button></form>
+<input type="file" name="attachment" id="chat-attach" style="display:none;" onchange="alert('File selected! Click Send when ready.')">
+<button type="button" class="icon-btn" onclick="document.getElementById('chat-attach').click()" aria-label="Attach file"><span data-icon="paperclip"></span></button>
+<input class="input" name="content" placeholder="Write a message..." aria-label="Message" required>
+<button class="btn btn-primary" type="submit"><span data-icon="send"></span> Send</button>
+</form>
 {% else %}
 <div class="chat-messages" style="display:flex;align-items:center;justify-content:center;height:100%;">
   <p class="muted">Please select a conversation from <a href="index.html">messages</a> or a vendor's profile.</p>
