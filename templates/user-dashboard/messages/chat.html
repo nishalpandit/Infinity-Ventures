@@ -23,5 +23,55 @@
   <p class="muted">Please select a conversation from <a href="index.html">messages</a> or a vendor's profile.</p>
 </div>
 {% endif %}
+{% if chat_vendor %}
+<script>
+    const vendorId = {{ chat_vendor.id }};
+    const currentUserId = {{ request.user.id }};
+    const wsScheme = window.location.protocol === "https:" ? "wss" : "ws";
+    const chatSocket = new WebSocket(
+        wsScheme + '://' + window.location.host + '/ws/chat/' + vendorId + '/'
+    );
+
+    chatSocket.onmessage = function(e) {
+        const data = JSON.parse(e.data);
+        const messagesContainer = document.querySelector('.chat-messages');
+        
+        const noMsg = messagesContainer.querySelector('p');
+        if (noMsg && noMsg.textContent.includes('No messages yet')) {
+            noMsg.remove();
+        }
+        
+        const isSent = data.sender_id === currentUserId;
+        const msgRowClass = isSent ? "message-row sent" : "message-row";
+        
+        const newMsg = `
+            <div class="${msgRowClass}">
+                <div class="message">${data.message}
+                    <div class="message-time">${data.time}</div>
+                </div>
+            </div>
+        `;
+        messagesContainer.insertAdjacentHTML('beforeend', newMsg);
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    };
+
+    chatSocket.onclose = function(e) {
+        console.error('Chat socket closed unexpectedly');
+    };
+
+    document.querySelector('.chat-compose').addEventListener('submit', function(e) {
+        const fileInput = document.getElementById('chat-attach');
+        const msgInput = document.querySelector('input[name="content"]');
+        
+        if (!fileInput.files.length && msgInput.value.trim() !== '') {
+            e.preventDefault();
+            chatSocket.send(JSON.stringify({
+                'message': msgInput.value
+            }));
+            msgInput.value = '';
+        }
+    });
+</script>
+{% endif %}
 </section>
 </main></div></div></body></html>

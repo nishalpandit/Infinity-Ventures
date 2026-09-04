@@ -11,6 +11,119 @@
   <link rel="stylesheet" href="/admin-dashboard/assets/css/admin.css">
   <link rel="stylesheet" href="/admin-dashboard/assets/css/sidebar.css">
   <link rel="stylesheet" href="/admin-dashboard/assets/css/responsive.css">
+  <style>
+    body { background: #f4f5f7; font-family: 'Inter', sans-serif; }
+    .page-wrapper { padding-bottom: 40px; }
+
+    /* ── Hero Card ── */
+    .hero-card {
+      background: #fff; border-radius: 16px;
+      padding: 28px 32px; margin-bottom: 20px;
+      display: flex; align-items: center; justify-content: space-between; gap: 16px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+    }
+    .hero-left { display: flex; align-items: center; gap: 20px; flex: 1; min-width: 0; }
+    .hero-icon {
+      width: 60px; height: 60px; border-radius: 16px; flex-shrink: 0;
+      background: linear-gradient(135deg, #6366f1, #4f46e5);
+      color: #fff; font-size: 24px;
+      display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 4px 14px rgba(79,70,229,0.25);
+    }
+    .hero-info { min-width: 0; }
+    .hero-title { font-size: 22px; font-weight: 700; color: #111827; margin: 0 0 6px; }
+    .hero-badges { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+    .hero-id { font-family: monospace; font-size: 13px; color: #6b7280; background: #f3f4f6; padding: 2px 10px; border-radius: 6px; }
+    .hero-meta { display: flex; align-items: center; gap: 18px; color: #6b7280; font-size: 13px; font-weight: 500; flex-wrap: wrap; }
+    .hero-meta span { display: flex; align-items: center; gap: 5px; }
+    .btn-back {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 9px 18px; border-radius: 10px; font-size: 13px; font-weight: 600;
+      color: #374151; background: #f3f4f6; border: none; cursor: pointer; text-decoration: none;
+      transition: background 0.2s; white-space: nowrap;
+    }
+    .btn-back:hover { background: #e5e7eb; color: #111827; }
+
+    /* ── Stat Row ── */
+    .stats-row { display: grid; grid-template-columns: repeat(4,1fr); gap: 16px; margin-bottom: 20px; }
+    .stat-box {
+      background: #fff; border-radius: 14px; padding: 20px;
+      display: flex; align-items: center; gap: 16px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+    }
+    .stat-box-icon { width: 46px; height: 46px; border-radius: 12px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 18px; }
+    .si-green  { background: #dcfce7; color: #16a34a; }
+    .si-violet { background: #ede9fe; color: #7c3aed; }
+    .si-teal   { background: #ccfbf1; color: #0d9488; }
+    .si-blue   { background: #dbeafe; color: #2563eb; }
+    .stat-box-label { font-size: 11px; font-weight: 600; color: #6b7280; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
+    .stat-box-value { font-size: 18px; font-weight: 700; color: #111827; line-height: 1.1; }
+
+    /* ── Info Grid ── */
+    .info-grid { display: grid; grid-template-columns: 300px 1fr; gap: 20px; margin-bottom: 20px; }
+
+    /* ── Cards ── */
+    .d-card { background: #fff; border-radius: 14px; box-shadow: 0 1px 4px rgba(0,0,0,0.05); overflow: hidden; }
+    .d-card-header { padding: 18px 24px; border-bottom: 1px solid #f3f4f6; display: flex; align-items: center; gap: 10px; }
+    .d-card-header h6 { margin: 0; font-size: 14px; font-weight: 700; color: #111827; }
+    .d-card-header-icon { color: #9ca3af; font-size: 15px; }
+    .d-card-body { padding: 20px 24px; }
+
+    /* ── Customer rows ── */
+    .cust-row { display: flex; align-items: center; gap: 14px; padding: 14px 0; border-bottom: 1px solid #f3f4f6; }
+    .cust-row:first-child { padding-top: 0; }
+    .cust-row:last-child { border-bottom: none; padding-bottom: 0; }
+    .cust-icon { width: 38px; height: 38px; border-radius: 10px; background: #f3f4f6; color: #6b7280; display: flex; align-items: center; justify-content: center; font-size: 15px; flex-shrink: 0; }
+    .cust-label { font-size: 11px; font-weight: 600; color: #9ca3af; text-transform: uppercase; letter-spacing: 0.4px; margin-bottom: 2px; }
+    .cust-value { font-size: 14px; font-weight: 600; color: #111827; }
+
+    /* ── Service details grid ── */
+    .detail-grid { display: grid; grid-template-columns: repeat(3,1fr); border-bottom: 1px solid #f3f4f6; }
+    .detail-cell { padding: 18px 20px; border-right: 1px solid #f3f4f6; }
+    .detail-cell:nth-child(3n) { border-right: none; }
+    .dc-label { font-size: 11px; font-weight: 600; color: #9ca3af; text-transform: uppercase; letter-spacing: 0.4px; margin-bottom: 5px; }
+    .dc-value { font-size: 14px; font-weight: 600; color: #111827; }
+
+    /* ── Description sections ── */
+    .desc-section { padding: 20px 24px; border-top: 1px solid #f3f4f6; }
+    .desc-label { font-size: 11px; font-weight: 700; color: #374151; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
+    .desc-text { font-size: 14px; color: #6b7280; line-height: 1.7; margin: 0; }
+    .tag-list { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
+    .tag { background: #f3f4f6; color: #374151; font-size: 12px; font-weight: 500; padding: 4px 12px; border-radius: 20px; }
+
+    /* ── Vendor table ── */
+    .vendor-table-wrap { overflow-x: auto; }
+    .vendor-table { width: 100%; border-collapse: collapse; }
+    .vendor-table thead tr { background: #f9fafb; }
+    .vendor-table th { padding: 12px 16px; font-size: 11px; font-weight: 700; color: #6b7280; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid #e5e7eb; white-space: nowrap; }
+    .vendor-table td { padding: 16px; font-size: 14px; color: #374151; border-bottom: 1px solid #f3f4f6; vertical-align: middle; }
+    .vendor-table tbody tr:last-child td { border-bottom: none; }
+    .v-cell { display: flex; align-items: center; gap: 12px; }
+    .v-avatar { width: 36px; height: 36px; border-radius: 10px; background: #ede9fe; color: #7c3aed; font-size: 13px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .v-name { font-weight: 600; color: #111827; font-size: 14px; }
+    .v-email { font-size: 12px; color: #6b7280; margin-top: 2px; }
+    .star-rating { color: #f59e0b; font-weight: 600; font-size: 13px; }
+
+    /* ── Badges ── */
+    .qs-badge { display: inline-flex; align-items: center; gap: 5px; padding: 3px 10px; border-radius: 20px; font-size: 12px; font-weight: 600; }
+    .qs-badge .dot { width: 6px; height: 6px; border-radius: 50%; }
+    .b-open     { background: #dbeafe; color: #1d4ed8; }  .b-open .dot { background: #3b82f6; }
+    .b-active   { background: #ede9fe; color: #5b21b6; }  .b-active .dot { background: #7c3aed; }
+    .b-progress { background: #fef3c7; color: #92400e; }  .b-progress .dot { background: #f59e0b; }
+    .b-completed{ background: #dcfce7; color: #15803d; }  .b-completed .dot { background: #22c55e; }
+    .b-cancelled{ background: #fee2e2; color: #b91c1c; }  .b-cancelled .dot { background: #ef4444; }
+    .b-selected { background: #d1fae5; color: #047857; }  .b-selected .dot { background: #10b981; }
+    .b-company  { background: #ede9fe; color: #5b21b6; }
+    .b-individual { background: #f3f4f6; color: #374151; }
+    .b-submitted { background: #dbeafe; color: #1d4ed8; } .b-submitted .dot { background: #3b82f6; }
+    .b-rejected  { background: #fee2e2; color: #b91c1c; } .b-rejected .dot { background: #ef4444; }
+    .b-withdrawn { background: #f3f4f6; color: #6b7280; }
+
+    /* ── Empty state ── */
+    .empty-state { padding: 50px 20px; text-align: center; color: #9ca3af; }
+    .empty-state i { font-size: 36px; margin-bottom: 12px; display: block; }
+    .empty-state p { font-size: 14px; }
+  </style>
 </head>
 <body>
   <div id="sidebar-mount"></div>
@@ -30,9 +143,6 @@
   <script src="/admin-dashboard/assets/js/data.js"></script>
   <script>
     (function () {
-      'use strict';
-      var U = window.AdminUI;
-      
       {% if service %}
       AdminComponents.renderBreadcrumb([
         { label: 'Quick Services', href: 'index.html' },
@@ -48,152 +158,227 @@
   </script>
 
   {% if service %}
-  <div id="dynamicPageContent" style="padding-top: 20px;">
+  <div id="dynamicPageContent" class="page-wrapper">
+
     <!-- Hero -->
-    <div class="detail-hero card">
-      <div class="dh-left">
-        <span class="avatar avatar-xl vendor"><i class="fa-solid fa-bolt"></i></span>
-        <div>
-          <h2>{{ service.title }}</h2>
-          <div class="dh-meta">
-            <span class="mono">QS-{{ service.id|stringformat:"04d" }}</span> 
-            <span class="badge badge-{{ service.status|lower }}">{{ service.status|title }}</span>
+    <div class="hero-card">
+      <div class="hero-left">
+        <div class="hero-icon"><i class="fa-solid fa-bolt"></i></div>
+        <div class="hero-info">
+          <div class="hero-title">{{ service.title }}</div>
+          <div class="hero-badges">
+            <span class="hero-id">QS-{{ service.id|stringformat:"04d" }}</span>
+            {% if service.status == 'open' %}<span class="qs-badge b-open"><span class="dot"></span>Open</span>
+            {% elif service.status == 'active' %}<span class="qs-badge b-active"><span class="dot"></span>Active</span>
+            {% elif service.status == 'progress' %}<span class="qs-badge b-progress"><span class="dot"></span>In Progress</span>
+            {% elif service.status == 'completed' %}<span class="qs-badge b-completed"><span class="dot"></span>Completed</span>
+            {% elif service.status == 'cancelled' %}<span class="qs-badge b-cancelled"><span class="dot"></span>Cancelled</span>
+            {% elif service.status == 'selected' %}<span class="qs-badge b-selected"><span class="dot"></span>Vendor Selected</span>
+            {% else %}<span class="qs-badge b-individual">{{ service.status|title }}</span>{% endif %}
           </div>
-          <div class="dh-sub">
-            <i class="fa-solid fa-layer-group"></i> {{ service.category.name|default:"Uncategorized" }}
-            &nbsp;·&nbsp; <i class="fa-solid fa-location-dot"></i> {{ service.location.city|default:"Unknown" }}, {{ service.location.state|default:"" }}
-            &nbsp;·&nbsp; <i class="fa-regular fa-calendar"></i> Created {{ service.created_at|date:"d M Y" }}
+          <div class="hero-meta">
+            <span><i class="fa-solid fa-layer-group"></i> {{ service.category.name|default:"Uncategorized" }}</span>
+            <span><i class="fa-solid fa-location-dot"></i> {{ service.location.city|default:"Unknown" }}{% if service.location.state %}, {{ service.location.state }}{% endif %}</span>
+            <span><i class="fa-regular fa-calendar"></i> {{ service.created_at|date:"d M Y" }}</span>
           </div>
         </div>
       </div>
-      <div class="dh-actions">
-        <a class="btn btn-outline btn-sm" href="index.html"><i class="fa-solid fa-arrow-left"></i> Back</a>
-      </div>
+      <a class="btn-back" href="index.html"><i class="fa-solid fa-arrow-left"></i> Back</a>
     </div>
 
     <!-- Stats -->
-    <div class="stat-grid" style="margin-top:20px;">
-      <div class="stat-card static">
-        <span class="stat-icon icon-green"><i class="fa-solid fa-indian-rupee-sign"></i></span>
-        <div class="stat-info"><div class="label">Budget</div><div class="value">₹{{ service.budget|floatformat:0 }}</div></div>
+    <div class="stats-row">
+      <div class="stat-box">
+        <div class="stat-box-icon si-green"><i class="fa-solid fa-indian-rupee-sign"></i></div>
+        <div>
+          <div class="stat-box-label">Budget</div>
+          <div class="stat-box-value">₹{{ service.budget|floatformat:0 }}</div>
+        </div>
       </div>
-      <div class="stat-card static">
-        <span class="stat-icon icon-indigo"><i class="fa-solid fa-handshake"></i></span>
-        <div class="stat-info"><div class="label">Vendor Requests</div><div class="value">{{ vendor_requests|length }}</div></div>
+      <div class="stat-box">
+        <div class="stat-box-icon si-violet"><i class="fa-solid fa-handshake"></i></div>
+        <div>
+          <div class="stat-box-label">Vendor Requests</div>
+          <div class="stat-box-value">{{ vendor_requests|length }}</div>
+        </div>
       </div>
-      <div class="stat-card static">
-        <span class="stat-icon icon-teal"><i class="fa-solid fa-user-check"></i></span>
-        <div class="stat-info"><div class="label">Selected Vendor</div><div class="value">{% if service.selected_vendor %}{{ service.selected_vendor }}{% else %}None{% endif %}</div></div>
+      <div class="stat-box">
+        <div class="stat-box-icon si-teal"><i class="fa-solid fa-user-check"></i></div>
+        <div>
+          <div class="stat-box-label">Selected Vendor</div>
+          <div class="stat-box-value" style="font-size:14px;font-weight:600;">{{ selected_vendor_name|default:"None" }}</div>
+        </div>
       </div>
-      <div class="stat-card static">
-        <span class="stat-icon icon-blue"><i class="fa-solid fa-circle-info"></i></span>
-        <div class="stat-info"><div class="label">Status</div><div class="value">{{ service.status|title }}</div></div>
+      <div class="stat-box">
+        <div class="stat-box-icon si-blue"><i class="fa-solid fa-circle-info"></i></div>
+        <div>
+          <div class="stat-box-label">Status</div>
+          <div class="stat-box-value" style="font-size:14px;font-weight:600;">{{ service.status|title }}</div>
+        </div>
       </div>
     </div>
 
-    <!-- Customer + Service info -->
-    <div class="row g-4" style="margin-top:20px;">
-      <div class="col-lg-4">
-        <div class="card">
-          <div class="card-header"><h6><i class="fa-solid fa-user"></i> Customer</h6></div>
-          <div class="card-body">
-            <div class="ib-row"><span class="ib-icon"><i class="fa-solid fa-user"></i></span><div><div class="ib-label">Name</div><div class="ib-value">{{ service.contact_name|default:service.user.get_full_name|default:service.user.username }}</div></div></div>
-            <div class="ib-row"><span class="ib-icon"><i class="fa-solid fa-phone"></i></span><div><div class="ib-label">Contact</div><div class="ib-value">{{ service.contact_mobile|default:service_customer_mobile }}</div></div></div>
-            <div class="ib-row"><span class="ib-icon"><i class="fa-solid fa-location-dot"></i></span><div><div class="ib-label">Location</div><div class="ib-value">{{ service.address|default:"Not specified" }}</div></div></div>
+    <!-- Info Grid -->
+    <div class="info-grid">
+
+      <!-- Customer -->
+      <div class="d-card">
+        <div class="d-card-header">
+          <i class="fa-solid fa-user d-card-header-icon"></i>
+          <h6>Customer</h6>
+        </div>
+        <div class="d-card-body">
+          <div class="cust-row">
+            <div class="cust-icon"><i class="fa-solid fa-user"></i></div>
+            <div>
+              <div class="cust-label">Name</div>
+              <div class="cust-value">{{ service.contact_name|default:service.user.get_full_name|default:service.user.username }}</div>
+            </div>
+          </div>
+          <div class="cust-row">
+            <div class="cust-icon"><i class="fa-solid fa-phone"></i></div>
+            <div>
+              <div class="cust-label">Contact</div>
+              <div class="cust-value">{{ service.contact_mobile|default:service_customer_mobile|default:"—" }}</div>
+            </div>
+          </div>
+          <div class="cust-row">
+            <div class="cust-icon"><i class="fa-solid fa-envelope"></i></div>
+            <div>
+              <div class="cust-label">Email</div>
+              <div class="cust-value">{{ service.user.email|default:"—" }}</div>
+            </div>
+          </div>
+          <div class="cust-row">
+            <div class="cust-icon"><i class="fa-solid fa-location-dot"></i></div>
+            <div>
+              <div class="cust-label">Address</div>
+              <div class="cust-value">{{ service.address|default:"Not specified" }}</div>
+            </div>
           </div>
         </div>
       </div>
 
-      <div class="col-lg-8">
-        <div class="card">
-          <div class="card-header"><h6><i class="fa-solid fa-bolt"></i> Service Details</h6></div>
-          <div class="card-body">
-            <div class="row g-3">
-              <div class="col-md-6"><div class="info-col"><div class="ic-label">Title</div><div class="ic-value">{{ service.title }}</div></div></div>
-              <div class="col-md-6"><div class="info-col"><div class="ic-label">Category</div><div class="ic-value">{{ service.category.name|default:"Uncategorized" }}</div></div></div>
-              <div class="col-md-6"><div class="info-col"><div class="ic-label">Budget</div><div class="ic-value">₹{{ service.budget|floatformat:0 }}</div></div></div>
-              <div class="col-md-6"><div class="info-col"><div class="ic-label">Preferred Date</div><div class="ic-value">{{ service.preferred_date|date:"d M Y"|default:"Flexible" }}</div></div></div>
-              <div class="col-md-6"><div class="info-col"><div class="ic-label">Preferred Time</div><div class="ic-value">{{ service.preferred_time|time:"g:i A"|default:"Flexible" }}</div></div></div>
-              <div class="col-md-6"><div class="info-col"><div class="ic-label">Shift Availability</div><div class="ic-value">{{ service.shift_availability|default:"Any" }}</div></div></div>
-            </div>
-            <hr>
-            <h6 class="mb-2">Description</h6><p class="text-muted">{{ service.description|default:"No description provided." }}</p>
-            <h6 class="mb-2">Required Work</h6><p class="text-muted">
-              {% if service.required_work %}
-                {{ service.required_work|join:", " }}
-              {% else %}
-                Not specified.
-              {% endif %}
-            </p>
-            {% if service.additional_requirements %}
-            <h6 class="mb-2">Additional Details</h6><p class="text-muted">{{ service.additional_requirements }}</p>
-            {% endif %}
+      <!-- Service Details -->
+      <div class="d-card">
+        <div class="d-card-header">
+          <i class="fa-solid fa-bolt d-card-header-icon"></i>
+          <h6>Service Details</h6>
+        </div>
+        <div class="detail-grid">
+          <div class="detail-cell">
+            <div class="dc-label">Title</div>
+            <div class="dc-value">{{ service.title }}</div>
+          </div>
+          <div class="detail-cell">
+            <div class="dc-label">Category</div>
+            <div class="dc-value">{{ service.category.name|default:"Uncategorized" }}</div>
+          </div>
+          <div class="detail-cell">
+            <div class="dc-label">Budget</div>
+            <div class="dc-value">₹{{ service.budget|floatformat:0 }}</div>
+          </div>
+          <div class="detail-cell">
+            <div class="dc-label">Preferred Date</div>
+            <div class="dc-value">{{ service.preferred_date|date:"d M Y"|default:"Flexible" }}</div>
+          </div>
+          <div class="detail-cell">
+            <div class="dc-label">Preferred Time</div>
+            <div class="dc-value">{{ service.preferred_time|time:"g:i A"|default:"Flexible" }}</div>
+          </div>
+          <div class="detail-cell">
+            <div class="dc-label">Shift</div>
+            <div class="dc-value">{{ service.shift_availability|default:"Any" }}</div>
           </div>
         </div>
+        {% if service.description %}
+        <div class="desc-section">
+          <div class="desc-label">Description</div>
+          <p class="desc-text">{{ service.description }}</p>
+        </div>
+        {% endif %}
+        {% if service.required_work %}
+        <div class="desc-section">
+          <div class="desc-label">Required Work</div>
+          <div class="tag-list">
+            {% for item in service.required_work %}<span class="tag">{{ item }}</span>{% endfor %}
+          </div>
+        </div>
+        {% endif %}
+        {% if service.additional_requirements %}
+        <div class="desc-section">
+          <div class="desc-label">Additional Requirements</div>
+          <p class="desc-text">{{ service.additional_requirements }}</p>
+        </div>
+        {% endif %}
       </div>
     </div>
 
     <!-- Vendor Requests -->
-    <div class="card" style="margin-top:20px;">
-      <div class="card-header"><h6><i class="fa-solid fa-handshake"></i> Vendor Requests ({{ vendor_requests|length }})</h6></div>
-      <div class="card-body p-0">
-        {% if not vendor_requests %}
-          <div class="state-box">
-            <div class="state-icon"><i class="fa-regular fa-folder-open"></i></div>
-            <h5>No vendor requests</h5>
-            <p>No vendors have requested this service yet.</p>
-          </div>
-        {% else %}
-          <div class="table-wrap">
-            <table class="table">
-              <thead>
-                <tr>
-                  <th>Vendor</th>
-                  <th>Vendor Type</th>
-                  <th>Quotation</th>
-                  <th>Rating</th>
-                  <th>Experience</th>
-                  <th>Submitted</th>
-                  <th>Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {% for bid in vendor_requests %}
-                <tr>
-                  <td>
-                    <div class="user-cell">
-                      <span class="avatar sm vendor">
-                        {% if bid.vendor.vendor_profile.company_name %}{{ bid.vendor.vendor_profile.company_name|slice:":2"|upper }}{% else %}{{ bid.vendor.username|slice:":2"|upper }}{% endif %}
-                      </span>
-                      <div>
-                        <strong>{% if bid.vendor.vendor_profile.company_name %}{{ bid.vendor.vendor_profile.company_name }}{% else %}{{ bid.vendor.get_full_name|default:bid.vendor.username }}{% endif %}</strong>
-                        <div class="small-meta">{{ bid.vendor.email }}</div>
-                      </div>
-                    </div>
-                  </td>
-                  <td>
-                    {% if bid.vendor.vendor_profile.company_name %}
-                      <span class="badge badge-company">Company</span>
-                    {% else %}
-                      <span class="badge badge-outsider">Individual</span>
-                    {% endif %}
-                  </td>
-                  <td><strong>₹{{ bid.amount|floatformat:0 }}</strong></td>
-                  <td><span class="star-rating"><i class="fa-solid fa-star"></i> {{ bid.vendor.vendor_profile.rating|default:"0.0" }}</span></td>
-                  <td>{{ bid.vendor.vendor_profile.experience|default:"0" }} yrs</td>
-                  <td>{{ bid.created_at|date:"d M Y" }}</td>
-                  <td><span class="badge badge-{{ bid.status|lower }}">{{ bid.status|title }}</span></td>
-                </tr>
-                {% endfor %}
-              </tbody>
-            </table>
-          </div>
-        {% endif %}
+    <div class="d-card">
+      <div class="d-card-header">
+        <i class="fa-solid fa-handshake d-card-header-icon"></i>
+        <h6>Vendor Requests</h6>
+        <span style="margin-left:auto;background:#f3f4f6;color:#374151;font-size:12px;font-weight:700;padding:2px 10px;border-radius:20px;">{{ vendor_requests|length }}</span>
       </div>
+      {% if not vendor_requests %}
+        <div class="empty-state">
+          <i class="fa-regular fa-folder-open"></i>
+          <p>No vendors have requested this service yet.</p>
+        </div>
+      {% else %}
+        <div class="vendor-table-wrap">
+          <table class="vendor-table">
+            <thead>
+              <tr>
+                <th>Vendor</th>
+                <th>Type</th>
+                <th>Quotation</th>
+                <th>Rating</th>
+                <th>Experience</th>
+                <th>Submitted</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for bid in vendor_requests %}
+              <tr>
+                <td>
+                  <div class="v-cell">
+                    <div class="v-avatar">{% if bid.vendor.vendor_profile.company_name %}{{ bid.vendor.vendor_profile.company_name|slice:":2"|upper }}{% else %}{{ bid.vendor.username|slice:":2"|upper }}{% endif %}</div>
+                    <div>
+                      <div class="v-name">{% if bid.vendor.vendor_profile.company_name %}{{ bid.vendor.vendor_profile.company_name }}{% else %}{{ bid.vendor.get_full_name|default:bid.vendor.username }}{% endif %}</div>
+                      <div class="v-email">{{ bid.vendor.email }}</div>
+                    </div>
+                  </div>
+                </td>
+                <td>
+                  {% if bid.vendor.vendor_profile.company_name %}<span class="qs-badge b-company">Company</span>
+                  {% else %}<span class="qs-badge b-individual">Individual</span>{% endif %}
+                </td>
+                <td><strong>₹{{ bid.amount|floatformat:0 }}</strong></td>
+                <td><span class="star-rating"><i class="fa-solid fa-star"></i> {{ bid.vendor.vendor_profile.rating|default:"0.0" }}</span></td>
+                <td>{{ bid.vendor.vendor_profile.experience|default:"0" }} yrs</td>
+                <td>{{ bid.created_at|date:"d M Y" }}</td>
+                <td>
+                  {% if bid.status == 'submitted' %}<span class="qs-badge b-submitted"><span class="dot"></span>Submitted</span>
+                  {% elif bid.status == 'selected' %}<span class="qs-badge b-selected"><span class="dot"></span>Selected</span>
+                  {% elif bid.status == 'rejected' %}<span class="qs-badge b-rejected"><span class="dot"></span>Rejected</span>
+                  {% elif bid.status == 'withdrawn' %}<span class="qs-badge b-withdrawn">Withdrawn</span>
+                  {% else %}<span class="qs-badge b-individual">{{ bid.status|title }}</span>{% endif %}
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% endif %}
     </div>
+
   </div>
+
   {% else %}
-  <div id="dynamicPageContent" style="padding-top: 20px;">
+  <div id="dynamicPageContent" style="padding-top:20px;">
     <div class="state-box">
       <div class="state-icon" style="color:var(--danger);"><i class="fa-solid fa-triangle-exclamation"></i></div>
       <h5>Service Not Found</h5>
@@ -203,7 +388,6 @@
   </div>
   {% endif %}
   <script>
-    // Remove the placeholder loading state and inject the dynamic content
     document.getElementById('pageContent').innerHTML = document.getElementById('dynamicPageContent').innerHTML;
     document.getElementById('dynamicPageContent').remove();
   </script>

@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Quick Services — Infinity Admin</title>
+  <title>Closed Quick Services — Infinity Admin</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
@@ -115,76 +115,79 @@
     <div id="header-mount"></div>
     <main class="main-content">
 
-      <!-- ── Active Quick Services ── -->
-      <div class="qs-section" id="active">
-        <div class="qs-section-header">
-          <div class="qs-section-title">
-            <span class="section-dot dot-active"></span>
-            <h5>Active Quick Services</h5>
-            <span class="count-badge active">{{ active_qs|length }}</span>
+      <!-- Page heading -->
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
+        <div style="display:flex;align-items:center;gap:14px;">
+          <div style="width:44px;height:44px;border-radius:12px;background:#f3f4f6;color:#6b7280;font-size:18px;display:flex;align-items:center;justify-content:center;">
+            <i class="fa-solid fa-circle-check"></i>
+          </div>
+          <div>
+            <div style="font-size:20px;font-weight:700;color:#111827;margin-bottom:2px;">Closed Quick Services</div>
+            <div style="font-size:13px;color:#6b7280;">Completed, cancelled and closed service requests</div>
           </div>
         </div>
-        <div class="qs-card">
-          {% if active_qs %}
-          <div class="table-wrap">
-            <table class="qs-table">
-              <thead>
-                <tr>
-                  <th>ID</th>
-                  <th>Customer</th>
-                  <th>Service</th>
-                  <th>Category</th>
-                  <th>Location</th>
-                  <th>Budget</th>
-                  <th>Vendor Requests</th>
-                  <th>Selected Vendor</th>
-                  <th>Status</th>
-                  <th>Created</th>
-                  <th>Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                {% for qs in active_qs %}
-                <tr>
-                  <td><span class="mono">{{ qs.id }}</span></td>
-                  <td>
-                    <div class="cell-user">
-                      <span class="avatar {{ qs.avatar_class }}">{{ qs.customer|slice:":2"|upper }}</span>
-                      <div>
-                        <div class="u-name">{{ qs.customer }}</div>
-                        <div class="u-sub">{{ qs.customerMobile }}</div>
-                      </div>
-                    </div>
-                  </td>
-                  <td><strong>{{ qs.title }}</strong></td>
-                  <td>{{ qs.category }}</td>
-                  <td>{{ qs.location }}</td>
-                  <td><strong>₹{{ qs.budget|floatformat:0 }}</strong></td>
-                  <td><span class="vendor-count"><i class="fa-solid fa-handshake"></i> {{ qs.vendorRequests }}</span></td>
-                  <td>{% if qs.selectedVendor != '—' %}<strong>{{ qs.selectedVendor }}</strong>{% else %}<span style="color:#9ca3af">—</span>{% endif %}</td>
-                  <td>
-                    {% if qs.status == 'open' %}<span class="qs-badge b-open"><span class="dot"></span>Open</span>
-                    {% elif qs.status == 'active' %}<span class="qs-badge b-active"><span class="dot"></span>Active</span>
-                    {% elif qs.status == 'progress' %}<span class="qs-badge b-progress"><span class="dot"></span>In Progress</span>
-                    {% elif qs.status == 'selected' %}<span class="qs-badge b-selected"><span class="dot"></span>Vendor Selected</span>
-                    {% else %}<span class="qs-badge b-closed"><span class="dot"></span>{{ qs.status|title }}</span>{% endif %}
-                  </td>
-                  <td>{{ qs.created }}</td>
-                  <td><a href="details.html?id={{ qs.id }}" class="action-btn" title="View"><i class="fa-solid fa-eye"></i></a></td>
-                </tr>
-                {% endfor %}
-              </tbody>
-            </table>
-          </div>
-          {% else %}
-          <div class="empty-state">
-            <i class="fa-regular fa-folder-open"></i>
-            <p>No active quick services at the moment.</p>
-          </div>
-          {% endif %}
-        </div>
+        <span style="background:#f3f4f6;color:#374151;font-size:13px;font-weight:700;padding:4px 14px;border-radius:20px;">{{ closed_qs|length }} Records</span>
       </div>
 
+      <div class="qs-card">
+        {% if closed_qs %}
+        <div class="table-wrap">
+          <table class="qs-table">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Customer</th>
+                <th>Service</th>
+                <th>Category</th>
+                <th>Location</th>
+                <th>Budget</th>
+                <th>Vendor Requests</th>
+                <th>Selected Vendor</th>
+                <th>Status</th>
+                <th>Created</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for qs in closed_qs %}
+              <tr>
+                <td><span class="mono">{{ qs.id }}</span></td>
+                <td>
+                  <div class="cell-user">
+                    <span class="avatar {{ qs.avatar_class }}">{{ qs.customer|slice:":2"|upper }}</span>
+                    <div>
+                      <div class="u-name">{{ qs.customer }}</div>
+                      <div class="u-sub">{{ qs.customerMobile }}</div>
+                    </div>
+                  </div>
+                </td>
+                <td><strong>{{ qs.title }}</strong></td>
+                <td>{{ qs.category }}</td>
+                <td>{{ qs.location }}</td>
+                <td><strong>&#8377;{{ qs.budget|floatformat:0 }}</strong></td>
+                <td><span class="vendor-count"><i class="fa-solid fa-handshake"></i> {{ qs.vendorRequests }}</span></td>
+                <td>{% if qs.selectedVendor != '&mdash;' %}<strong>{{ qs.selectedVendor }}</strong>{% else %}<span style="color:#9ca3af">&#8212;</span>{% endif %}</td>
+                <td>
+                  {% if qs.status == 'completed' %}<span class="qs-badge b-completed"><span class="dot"></span>Completed</span>
+                  {% elif qs.status == 'cancelled' %}<span class="qs-badge b-cancelled"><span class="dot"></span>Cancelled</span>
+                  {% elif qs.status == 'closed' %}<span class="qs-badge b-closed"><span class="dot"></span>Closed</span>
+                  {% else %}<span class="qs-badge b-closed"><span class="dot"></span>{{ qs.status|title }}</span>{% endif %}
+                </td>
+                <td>{{ qs.created }}</td>
+                <td><a href="details.html?id={{ qs.id }}" class="action-btn" title="View"><i class="fa-solid fa-eye"></i></a></td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% else %}
+        <div style="padding:70px 20px;text-align:center;color:#9ca3af;">
+          <i class="fa-solid fa-circle-check" style="font-size:40px;margin-bottom:14px;display:block;color:#d1d5db;"></i>
+          <div style="font-size:16px;font-weight:600;color:#374151;margin-bottom:6px;">No closed services yet</div>
+          <p style="font-size:14px;margin:0;">Completed, cancelled and closed quick services will appear here.</p>
+        </div>
+        {% endif %}
+      </div>
 
     </main>
   </div>
@@ -194,7 +197,10 @@
   <script src="/admin-dashboard/assets/js/admin.js"></script>
   <script>
     (function () {
-      'use strict';
+      AdminComponents.renderBreadcrumb([
+        { label: 'Quick Services', href: 'index.html' },
+        { label: 'Closed' }
+      ]);
     })();
   </script>
 </body>

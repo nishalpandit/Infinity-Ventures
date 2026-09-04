@@ -47,10 +47,8 @@
     },
     {
       label: 'Quick Services', icon: 'fa-bolt', children: [
-        { label: 'All Quick Services', href: 'quick-services/index.html' },
-        { label: 'Active', href: 'quick-services/index.html?status=active' },
-        { label: 'Completed', href: 'quick-services/index.html?status=completed' },
-        { label: 'Cancelled', href: 'quick-services/index.html?status=cancelled' }
+        { label: 'Active Quick Services', href: 'quick-services/index.html' },
+        { label: 'Closed Quick Services', href: 'quick-services/closed.html' }
       ]
     },
     {

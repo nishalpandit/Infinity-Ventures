@@ -534,7 +534,8 @@ def dashboard_view(request, path=''):
             context['vendors_json'] = json.dumps(vendors_data)
             
     if 'quick-services' in path:
-        quick_services = QuickService.objects.select_related('user').all().order_by('-created_at')
+        from django.db.models import Count, Prefetch
+        quick_services = QuickService.objects.exclude(category__service_type='job').select_related('user', 'category', 'location').annotate(vendor_requests_count=Count('bids')).prefetch_related(Prefetch('bids', queryset=Bid.objects.filter(status='selected').select_related('vendor', 'vendor__vendor_profile'), to_attr='selected_bids')).order_by('-created_at')
         qs_data = []
         for qs in quick_services:
             u = qs.user
@@ -544,21 +545,36 @@ def dashboard_view(request, path=''):
             except Exception:
                 mobile = '—'
             
+            selected_vendor_name = '—'
+            if hasattr(qs, 'selected_bids') and qs.selected_bids:
+                selected_bid = qs.selected_bids[0]
+                try:
+                    selected_vendor_name = selected_bid.vendor.vendor_profile.company_name or selected_bid.vendor.get_full_name() or selected_bid.vendor.username
+                except Exception:
+                    selected_vendor_name = selected_bid.vendor.get_full_name() or selected_bid.vendor.username
+
             qs_data.append({
                 'id': f'QS-{qs.id:04d}',
-                'user': u.get_full_name() or u.username,
-                'userMobile': mobile,
-                'userId': f'USR-{u.id:04d}',
+                'customer': u.get_full_name() or u.username,
+                'customerMobile': mobile,
+                'customerId': f'USR-{u.id:04d}',
+                'avatar_class': f'av-{(u.id % 5) + 1}',
                 'title': qs.title,
                 'category': qs.category.name if getattr(qs, 'category', None) else 'Uncategorized',
                 'location': f"{qs.location.city}, {qs.location.state}" if getattr(qs, 'location', None) else 'Unknown',
                 'budget': float(qs.budget) if qs.budget else 0,
                 'vendorRequests': getattr(qs, 'vendor_requests_count', 0),
-                'selectedVendor': getattr(qs, 'selected_vendor', '—'),
+                'selectedVendor': selected_vendor_name,
                 'status': qs.status,
                 'created': qs.created_at.strftime('%Y-%m-%d') if qs.created_at else 'Unknown'
             })
         context['quick_services_json'] = json.dumps(qs_data)
+        context['quick_services_list'] = qs_data
+        
+        active_statuses = {'open', 'active', 'progress', 'selected'}
+        closed_statuses = {'completed', 'cancelled', 'closed'}
+        context['active_qs'] = [qs for qs in qs_data if qs['status'] in active_statuses]
+        context['closed_qs'] = [qs for qs in qs_data if qs['status'] in closed_statuses]
         
         if 'quick-services/details' in path:
             qs_id_raw = request.GET.get('id')
@@ -577,8 +593,18 @@ def dashboard_view(request, path=''):
                     context['service_customer_mobile'] = mobile
                     
                     # Also fetch bids / vendor requests for this service
-                    bids = Bid.objects.filter(quick_service=service).select_related('vendor')
+                    bids = Bid.objects.filter(quick_service=service).select_related('vendor', 'vendor__vendor_profile')
                     context['vendor_requests'] = bids
+                    
+                    selected_vendor_name = None
+                    for b in bids:
+                        if b.status == 'selected':
+                            try:
+                                selected_vendor_name = b.vendor.vendor_profile.company_name or b.vendor.get_full_name() or b.vendor.username
+                            except Exception:
+                                selected_vendor_name = b.vendor.get_full_name() or b.vendor.username
+                            break
+                    context['selected_vendor_name'] = selected_vendor_name
                 except (ValueError, QuickService.DoesNotExist):
                     pass
     if 'vendor/profile' in path:
@@ -788,12 +814,33 @@ def dashboard_view(request, path=''):
                         content = request.POST.get('content')
                         attachment = request.FILES.get('attachment')
                         if content or attachment:
-                            Message.objects.create(
+                            msg = Message.objects.create(
                                 sender=u,
                                 receiver=other_user,
                                 content=content,
                                 attachment=attachment
                             )
+                            
+                            from channels.layers import get_channel_layer
+                            from asgiref.sync import async_to_sync
+                            channel_layer = get_channel_layer()
+                            user_ids = sorted([u.id, other_user.id])
+                            room_group_name = f'chat_{user_ids[0]}_{user_ids[1]}'
+                            
+                            # Build text display for attachment if any
+                            extra = f' <br><a href="{msg.attachment.url}" target="_blank">Attachment</a>' if attachment else ''
+                            
+                            async_to_sync(channel_layer.group_send)(
+                                room_group_name,
+                                {
+                                    'type': 'chat_message',
+                                    'message': msg.content + extra,
+                                    'sender_id': u.id,
+                                    'sender_name': u.get_full_name() or u.username,
+                                    'time': msg.created_at.strftime("%I:%M %p").lstrip('0')
+                                }
+                            )
+                            
                             # Redirect to prevent duplicate submission
                             param = '?vendor_id=' + str(other_user.id) if not is_vendor else '?user_id=' + str(other_user.id)
                             return redirect('/' + path + '.html' + param)
