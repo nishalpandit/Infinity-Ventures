@@ -16,5 +16,6 @@ urlpatterns = [
     path('api/update-category/', views.update_category_api, name='update_category_api'),
     path('api/delete-category/', views.delete_category_api, name='delete_category_api'),
     path('api/manage-location/', views.manage_location_view, name='manage_location_view'),
+    path('admin-dashboard/create-company-vendor/', views.create_company_vendor_view, name='create_company_vendor'),
     re_path(r'^(?P<path>.*)$', views.dashboard_view, name='dashboard'),
 ]

@@ -26,17 +26,17 @@
           <div class="card">
             <div class="card-body text-center py-5">
               <span class="avatar avatar-xl avatar-indigo mx-auto" style="width:96px;height:96px;font-size:36px;"><i class="fa-solid fa-user-shield"></i></span>
-              <h4 class="mt-3 mb-1" id="pName">Arjun Mehta</h4>
+              <h4 class="mt-3 mb-1" id="pName">{{ admin_name|default:"Arjun Mehta" }}</h4>
               <span class="badge badge-indigo">Super Admin</span>
               <div class="mt-4 text-start">
                 <div class="ib-row"><span class="ib-icon"><i class="fa-solid fa-envelope"></i></span>
-                  <div><div class="ib-label">Email</div><div class="ib-value" id="pEmail">admin@infinity.app</div></div></div>
+                  <div><div class="ib-label">Email</div><div class="ib-value" id="pEmail">{{ admin_email|default:"admin@infinity.app" }}</div></div></div>
                 <div class="ib-row"><span class="ib-icon"><i class="fa-solid fa-phone"></i></span>
-                  <div><div class="ib-label">Mobile</div><div class="ib-value" id="pMobile">+91 98765 43210</div></div></div>
+                  <div><div class="ib-label">Mobile</div><div class="ib-value" id="pMobile">{{ admin_mobile|default:"+91 98765 43210" }}</div></div></div>
                 <div class="ib-row"><span class="ib-icon"><i class="fa-solid fa-shield-halved"></i></span>
                   <div><div class="ib-label">Role</div><div class="ib-value">Super Admin</div></div></div>
                 <div class="ib-row"><span class="ib-icon"><i class="fa-solid fa-clock-rotate-left"></i></span>
-                  <div><div class="ib-label">Last Login</div><div class="ib-value" id="pLastLogin"></div></div></div>
+                  <div><div class="ib-label">Last Login</div><div class="ib-value" id="pLastLogin">{{ admin_last_login|default:"Never" }}</div></div></div>
               </div>
             </div>
           </div>
@@ -48,13 +48,13 @@
             <div class="card-body">
               <div class="stat-grid">
                 <div class="stat-card static"><span class="stat-icon icon-indigo"><i class="fa-solid fa-users"></i></span>
-                  <div class="stat-info"><div class="label">Users Managed</div><div class="value" id="actUsers">0</div></div></div>
+                  <div class="stat-info"><div class="label">Users Managed</div><div class="value" id="actUsers">{{ actUsers|default:"0" }}</div></div></div>
                 <div class="stat-card static"><span class="stat-icon icon-orange"><i class="fa-solid fa-triangle-exclamation"></i></span>
                   <div class="stat-info"><div class="label">Complaints Handled</div><div class="value" id="actComplaints">0</div></div></div>
                 <div class="stat-card static"><span class="stat-icon icon-green"><i class="fa-solid fa-bell"></i></span>
                   <div class="stat-info"><div class="label">Notifications Sent</div><div class="value" id="actNotifs">0</div></div></div>
                 <div class="stat-card static"><span class="stat-icon icon-teal"><i class="fa-solid fa-indian-rupee-sign"></i></span>
-                  <div class="stat-info"><div class="label">Revenue Tracked</div><div class="value" id="actRevenue">₹0</div></div></div>
+                  <div class="stat-info"><div class="label">Revenue Tracked</div><div class="value" id="actRevenue">₹{{ actRevenue|floatformat:0|default:"0" }}</div></div></div>
               </div>
             </div>
           </div>
@@ -91,15 +91,15 @@
         <div class="modal-body">
           <div class="mb-3">
             <label class="form-label">Full Name</label>
-            <input type="text" class="form-control" id="editName" value="Arjun Mehta">
+            <input type="text" class="form-control" id="editName" value="{{ admin_name|default:'Arjun Mehta' }}">
           </div>
           <div class="mb-3">
             <label class="form-label">Email</label>
-            <input type="email" class="form-control" id="editEmail" value="admin@infinity.app">
+            <input type="email" class="form-control" id="editEmail" value="{{ admin_email|default:'admin@infinity.app' }}">
           </div>
           <div class="mb-0">
             <label class="form-label">Mobile</label>
-            <input type="tel" class="form-control" id="editMobile" value="+91 98765 43210">
+            <input type="tel" class="form-control" id="editMobile" value="{{ admin_mobile|default:'+91 98765 43210' }}">
           </div>
         </div>
         <div class="modal-footer">
@@ -154,20 +154,6 @@
         { label: 'Admin Profile' }
       ]);
 
-      /* Last login */
-      var now = new Date();
-      document.getElementById('pLastLogin').textContent =
-        now.toISOString().slice(0, 10) + ' ' + now.toTimeString().slice(0, 5);
-
-      /* Activity stats */
-      document.getElementById('actUsers').textContent = D.customers.length + D.vendors.length;
-      document.getElementById('actComplaints').textContent =
-        D.complaints.filter(function (c) { return c.status === 'resolved' || c.status === 'closed'; }).length;
-      document.getElementById('actNotifs').textContent = D.notifications.length;
-      var revenue = D.purchases.filter(function (p) { return p.paymentStatus === 'success'; })
-        .reduce(function (s, p) { return s + p.amount; }, 0);
-      document.getElementById('actRevenue').textContent = U.inr(revenue);
-
       var editModal = new bootstrap.Modal(document.getElementById('editModal'));
       var pwdModal = new bootstrap.Modal(document.getElementById('pwdModal'));
 
@@ -218,7 +204,7 @@
           message: 'You will be signed out of the admin panel.',
           danger: true, icon: 'fa-right-from-bracket', confirmText: 'Logout',
           onConfirm: function () {
-            U.toast('info', 'Logged out', 'You have been signed out. (Demo)');
+            window.location.href = '/logout/';
           }
         });
       });

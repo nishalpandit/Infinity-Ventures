@@ -35,7 +35,7 @@
         </a>
         <a class="stat-card" href="jobs/index.html">
           <span class="stat-icon icon-green"><i class="fa-solid fa-briefcase"></i></span>
-          <div class="stat-info"><div class="label">Active Jobs</div><div class="value">{{ active_jobs }}</div>
+          <div class="stat-info"><div class="label">Active Jobs</div><div class="value">{{ active_jobs|default:"0" }}</div>
           <div class="trend up"><i class="fa-solid fa-arrow-trend-up"></i> Running now</div></div>
         </a>
         <a class="stat-card" href="reports/revenue.html">
@@ -69,39 +69,7 @@
         </div>
       </div>
 
-      <!-- Recent Tables Row 1 -->
-      <div class="grid-2 mb-grid">
-        <div class="card">
-          <div class="card-header">
-            <h5 class="card-title">Recent Quick Services</h5>
-            <a href="quick-services/index.html" class="link-sm">View All</a>
-          </div>
-          <div class="card-body p-0" id="recentQS">
-            <div class="table-wrap"><table class="table"><thead><tr><th>ID</th><th>Service</th><th>Customer</th><th>Budget</th><th>Status</th></tr></thead><tbody>
-              {% for qs in recent_quick_services %}
-              <tr><td><a class="link-sm" href="quick-services/details.html?id={{ qs.id }}">{{ qs.id }}</a></td><td>{{ qs.title }}</td><td>{{ qs.customer_name }}</td><td>₹{{ qs.budget }}</td><td><span class="badge badge-{{ qs.status|lower }}">{{ qs.status|title }}</span></td></tr>
-              {% empty %}
-              <tr><td colspan="5" class="text-center">No recent quick services.</td></tr>
-              {% endfor %}
-            </tbody></table></div>
-          </div>
-        </div>
-        <div class="card">
-          <div class="card-header">
-            <h5 class="card-title">Recent Jobs</h5>
-            <a href="jobs/index.html" class="link-sm">View All</a>
-          </div>
-          <div class="card-body p-0" id="recentJobs">
-            <div class="table-wrap"><table class="table"><thead><tr><th>ID</th><th>Job</th><th>Customer</th><th>Bids</th><th>Status</th></tr></thead><tbody>
-              {% for j in recent_jobs %}
-              <tr><td><a class="link-sm" href="jobs/details.html?id={{ j.id }}">{{ j.id }}</a></td><td>{{ j.title }}</td><td>{{ j.customer_name }}</td><td>{{ j.bids_count }}</td><td><span class="badge badge-{{ j.status|lower }}">{{ j.status|title }}</span></td></tr>
-              {% empty %}
-              <tr><td colspan="5" class="text-center">No recent jobs.</td></tr>
-              {% endfor %}
-            </tbody></table></div>
-          </div>
-        </div>
-      </div>
+
 
 
 

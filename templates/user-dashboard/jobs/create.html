@@ -1,95 +1,14 @@
 <!doctype html>
-    <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="description" content="Infinity Ventures user Portal — Post a Job"><title>Post a Job · Infinity Ventures user</title><link rel="stylesheet" href="/user-dashboard/assets/styles.css"><script defer src="/user-dashboard/assets/app.js"></script></head>
+    <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="description" content="Infinity Ventures user Portal — Post a Job"><title>Post a Job · Infinity Ventures user</title><link rel="stylesheet" href="../assets/styles.css"><script defer src="../assets/app.js"></script></head>
     <body data-page="job-create" data-title="Post a Job" data-root="../"><div class="app-shell"><div id="sidebar-root"></div><div class="workspace"><div id="topbar-root"></div><main class="page">
-
-<div><section class="card form-card"><form method="POST" action="/user/jobs/create">{% csrf_token %}<div class="form-section"><div class="form-section-head"><span class="section-number">1</span><div><h3>Job information</h3><p>Tell vendors what you need for this project.</p></div></div><div class="form-grid">
-<div class="field full"><label>Job title <span class="required">*</span></label><input class="input" name="title" required placeholder="e.g. Full House Painting"></div>
-<div class="field full"><label>Category <span class="required">*</span></label><select class="select" name="category" required id="categorySelect"><option value="">Select category</option></select></div>
-<div class="field full"><label>Detailed description <span class="required">*</span></label><textarea class="textarea" name="description" required placeholder="Describe the overall scope of the project..."></textarea></div>
-<div class="field full"><label>Scope of work <span class="required">*</span></label><textarea class="textarea" name="scope_of_work" required placeholder="What exact work needs to be done?"></textarea></div>
-<div class="field full"><label>Required work <span class="required">*</span></label><div id="requiredWorkContainer"><div class="dynamic-list-item" style="display:flex;gap:10px;margin-bottom:10px;"><input class="input" name="required_work[]" style="flex:1;" required placeholder="What outcome do you expect?"><button type="button" class="btn btn-secondary btn-icon text-danger" onclick="this.closest('.dynamic-list-item').remove()" style="padding:0 12px;height:40px;"><span data-icon="trash"></span></button></div></div><button type="button" class="btn btn-soft btn-sm mt-2" onclick="addRequiredWorkItem()"><span data-icon="plus"></span> Add More</button></div>
-<div class="field full"><label>Material details</label><textarea class="textarea" name="materials_details" placeholder="Who will provide materials? Any specific brands?"></textarea></div>
-<div class="field"><label>Budget <span class="required">*</span></label><div class="input-prefix"><span>₹</span><input class="input" name="budget" type="number" min="100" required placeholder="15000"></div></div>
-<div class="field"><label>Budget Type</label><select class="select" name="budget_type"><option value="fixed">Fixed</option><option value="estimate">Estimate</option></select></div>
-</div></div>
-<div class="form-section"><div class="form-section-head"><span class="section-number">2</span><div><h3>Schedule & location</h3><p>Choose when and where the project will take place.</p></div></div><div class="form-grid">
-<div class="field"><label>Preferred Start Date <span class="required">*</span></label><input class="input" name="preferred_start_date" type="date" required></div>
-<div class="field"><label>Expected Completion Date</label><input class="input" name="expected_completion" type="date"></div>
-<div class="field"><label>Required Time (Days)</label><input class="input" name="required_time" placeholder="e.g. 5 days"></div>
-<div class="field"><label>Shift availability</label><select class="select" name="shift_availability"><option>Flexible</option><option>Morning</option><option>Afternoon</option><option>Evening</option></select></div>
-<div class="field full"><label>Working hours constraints</label><input class="input" name="working_hours" placeholder="e.g. Only between 9 AM to 6 PM"></div>
-{% regroup locations by state as state_list %}
-<div class="field"><label>State <span class="required">*</span></label><select class="select" required id="stateSelect"><option value="">Select state</option>{% for state in state_list %}<option value="{{ state.grouper }}">{{ state.grouper }}</option>{% endfor %}</select></div>
-<div class="field"><label>City <span class="required">*</span></label><select class="select" name="location_id" required id="citySelect"><option value="">Select city</option></select></div>
-<div class="field"><label>Pincode <span class="required">*</span></label><input class="input" name="pincode" required placeholder="Enter pincode"></div>
-<div class="field full"><label>Address <span class="required">*</span></label><textarea class="textarea" name="address" required placeholder="Enter your full address..."></textarea></div>
-</div></div>
-<div class="form-section"><div class="form-section-head"><span class="section-number">3</span><div><h3>Contact information</h3><p>Used by the selected vendor to coordinate the visit.</p></div></div><div class="form-grid"><div class="field"><label>Contact Name <span class="required">*</span></label><input class="input" name="contact_name" required placeholder="Enter your name"></div><div class="field"><label>Mobile number <span class="required">*</span></label><input class="input" name="contact_mobile" required placeholder="Enter your mobile number" pattern="[+0-9 ]{10,}"></div></div></div><div class="form-actions"><a class="btn btn-secondary" href="/user/jobs/index">Cancel</a><button class="btn btn-primary" type="submit"><span data-icon="briefcase"></span> Post Job</button></div></form></section>
-</div>
-</main></div></div>
-<script>
-  (function() {
-    const categories = {{ categories_json|safe|default:"[]" }};
-    const select = document.getElementById('categorySelect');
-    if (select && categories.length > 0) {
-      categories.forEach(cat => {
-        if (cat.service_type === 'both' || cat.service_type === 'long_job' || !cat.service_type) {
-          const opt = document.createElement('option');
-          opt.value = cat.id;
-          opt.textContent = cat.name;
-          select.appendChild(opt);
-        }
-      });
-    }
-  })();
-</script>
-<script>
-  function addRequiredWorkItem() {
-    const container = document.getElementById('requiredWorkContainer');
-    const div = document.createElement('div');
-    div.className = 'dynamic-list-item';
-    div.style.cssText = 'display:flex;gap:10px;margin-bottom:10px;';
-    
-    const input = document.createElement('input');
-    input.className = 'input';
-    input.name = 'required_work[]';
-    input.style.flex = '1';
-    input.required = true;
-    input.placeholder = 'What outcome do you expect?';
-    
-    const btn = document.createElement('button');
-    btn.type = 'button';
-    btn.className = 'btn btn-secondary btn-icon text-danger';
-    btn.style.cssText = 'padding:0 12px;height:40px;';
-    btn.innerHTML = '<span data-icon="trash"></span>';
-    btn.onclick = function() { div.remove(); };
-    
-    div.appendChild(input);
-    div.appendChild(btn);
-    
-    container.appendChild(div);
-  }
-</script>
-<script>
-  (function() {
-    const locations = {{ locations_json|safe|default:"[]" }};
-    const stateSelect = document.getElementById('stateSelect');
-    const citySelect = document.getElementById('citySelect');
-    if (stateSelect && citySelect) {
-      stateSelect.addEventListener('change', function() {
-          citySelect.innerHTML = '<option value="">Select city</option>';
-          const selectedState = this.value;
-          if (!selectedState) return;
-          const activeLocs = locations.filter(l => l.status === 'active' && l.state === selectedState);
-          activeLocs.forEach(loc => {
-              const opt = document.createElement('option');
-              opt.value = loc.id;
-              opt.textContent = loc.city;
-              citySelect.appendChild(opt);
-          });
-      });
-    }
-  })();
-</script>
-
-</body></html>
+<div class="page-head"><div><h1>Post a Job</h1><p>For larger or longer work such as renovation, rewiring, waterproofing, full-house painting, major repairs or work requiring multiple workers.</p></div><a class="btn btn-secondary" href="index.html"><span data-icon="x"></span> Cancel</a></div><div class="callout neutral" style="margin-bottom:18px"><span data-icon="info"></span><div><strong>Post one complete requirement</strong>You do not need to create separate work sections now. After comparing bids, you can select multiple vendors and split the work between them.</div></div>
+<div class="layout-main"><section class="card form-card"><form class="needs-validation" data-success-target="job-success"><div class="form-section"><div class="form-section-head"><span class="section-number">1</span><div><h3>Basic Information</h3><p>Give your project a clear identity.</p></div></div><div class="form-grid"><div class="field full"><label>Job title <span class="required">*</span></label><input class="input" required placeholder="e.g. Full House Renovation"></div><div class="field"><label>Category <span class="required">*</span></label><select class="select" required><option value="">Select category</option><option>Renovation</option><option>Electrical</option><option>Waterproofing</option><option>Painting</option><option>Large Repair Work</option></select></div><div class="field"><label>Subcategory <span class="required">*</span></label><select class="select" required><option value="">Select subcategory</option><option>Residential Renovation</option><option>Commercial Renovation</option><option>Full Rewiring</option><option>Terrace Waterproofing</option></select></div></div></div>
+<div class="form-section"><div class="form-section-head"><span class="section-number">2</span><div><h3>Job Details</h3><p>Vendors quote against this complete scope.</p></div></div><div class="form-grid"><div class="field full"><label>Detailed job description <span class="required">*</span></label><textarea class="textarea" required placeholder="Describe the current space, the desired outcome and any known constraints..."></textarea></div><div class="field full"><label>Required work <span class="required">*</span></label><textarea class="textarea" required placeholder="List the key work that needs to be completed..."></textarea></div><div class="field full"><label>Scope of work <span class="required">*</span></label><textarea class="textarea" required placeholder="Describe inclusions, exclusions, rooms, measurements or phases..."></textarea></div><div class="field"><label>Materials / details if applicable</label><textarea class="textarea" placeholder="Preferred brands, grades, finish or who supplies materials..."></textarea></div><div class="field"><label>Additional requirements</label><textarea class="textarea" placeholder="Site access, cleanup, safety or approval requirements..."></textarea></div></div></div>
+<div class="form-section"><div class="form-section-head"><span class="section-number">3</span><div><h3>Budget</h3><p>Your expected budget is visible to bidding vendors.</p></div></div><div class="form-grid"><div class="field"><label>Expected budget <span class="required">*</span></label><div class="input-prefix"><span>₹</span><input class="input" required type="number" min="1000" placeholder="450000"></div></div><div class="field"><label>Budget type <span class="required">*</span></label><select class="select" required><option>Fixed budget</option><option>Budget range</option><option>Open to vendor estimate</option></select></div></div></div>
+<div class="form-section"><div class="form-section-head"><span class="section-number">4</span><div><h3>Schedule</h3><p>Share your preferred working window.</p></div></div><div class="form-grid"><div class="field"><label>Preferred start date <span class="required">*</span></label><input class="input" type="date" required value="2026-09-01"></div><div class="field"><label>Expected completion date <span class="required">*</span></label><input class="input" type="date" required value="2026-10-15"></div><div class="field"><label>Required time</label><input class="input" placeholder="e.g. 6 weeks"></div><div class="field"><label>Shift availability</label><select class="select"><option>Day shift</option><option>Evening shift</option><option>Flexible</option><option>Weekend only</option></select></div><div class="field full"><label>Working hours</label><input class="input" placeholder="e.g. 9:00 AM to 6:00 PM, Monday–Saturday"></div></div></div>
+<div class="form-section"><div class="form-section-head"><span class="section-number">5</span><div><h3>Location</h3><p>Provide the worksite information.</p></div></div><div class="form-grid"><div class="field full"><label>Address <span class="required">*</span></label><input class="input" required value="24, Lake View Residency, Morabadi"></div><div class="field"><label>City <span class="required">*</span></label><input class="input" required value="Ranchi"></div><div class="field"><label>Area <span class="required">*</span></label><input class="input" required value="Morabadi"></div><div class="field"><label>Pincode <span class="required">*</span></label><input class="input" required value="834008"></div><div class="field"><label>Location / map selection</label><button type="button" class="btn btn-secondary" style="width:100%" data-toast="Location pinned" data-toast-message="24, Lake View Residency has been selected."><span data-icon="map"></span> Use current pin</button></div></div></div>
+<div class="form-section"><div class="form-section-head"><span class="section-number">6</span><div><h3>Attachments</h3><p>Add images, documents or reference files.</p></div></div><label class="upload-zone"><span class="upload-icon"><span data-icon="upload"></span></span><p><span>Click to upload or drag and drop</span></p><small>PNG, JPG, PDF or DOC up to 10 MB</small><input type="file" multiple accept="image/*,.pdf,.doc,.docx,.xls,.xlsx" data-preview="job-files"></label><div class="preview-list" id="job-files"></div></div>
+<div class="form-section"><div class="form-section-head"><span class="section-number">7</span><div><h3>Contact</h3><p>Shared with selected vendors for coordination.</p></div></div><div class="form-grid"><div class="field"><label>user name <span class="required">*</span></label><input class="input" required value="Ananya Sharma"></div><div class="field"><label>Mobile number <span class="required">*</span></label><input class="input" required value="+91 98765 43210"></div></div></div><div class="form-actions"><a class="btn btn-secondary" href="index.html">Cancel</a><button type="button" class="btn btn-soft" data-save-draft>Save Draft</button><button type="submit" class="btn btn-primary"><span data-icon="briefcase"></span> Publish Job</button></div></form></section>
+<aside class="stack"><section class="card"><div class="card-head"><h3>Tips for better bids</h3></div><div class="card-body"><div class="stack small"><div class="cell-user"><span class="stat-icon"><span data-icon="file"></span></span><div><strong>Be specific</strong><div class="muted">Include dimensions and desired finish.</div></div></div><div class="cell-user"><span class="stat-icon teal"><span data-icon="image"></span></span><div><strong>Add references</strong><div class="muted">Photos help vendors estimate effort.</div></div></div><div class="cell-user"><span class="stat-icon orange"><span data-icon="calendar"></span></span><div><strong>Use realistic dates</strong><div class="muted">Allow time for sourcing materials.</div></div></div></div></div></section><div class="callout warning"><span data-icon="rupee"></span><div><strong>Service payment is offline</strong>users pay vendors directly. Platform payments are only used by vendors for bidding credits or subscriptions.</div></div></aside></div>
+<section class="card success-panel" id="job-success" hidden><span class="success-icon"><span data-icon="check"></span></span><h2>Your job is live!</h2><p>Verified vendors can now review your complete job requirement and submit one locked quotation each.</p><div class="success-summary"><div class="info-item"><span class="info-label">Job ID</span><strong>JOB-2026-0442</strong></div><div class="info-item"><span class="info-label">Status</span><span class="badge badge-open">Open for Bidding</span></div><div class="info-item"><span class="info-label">Published</span><strong>20 Aug 2026, 11:31 AM</strong></div></div><div class="actions" style="justify-content:center"><a class="btn btn-secondary" href="index.html">My Jobs</a><a class="btn btn-primary" href="details.html">View Job</a></div></section>
+</main></div></div></body></html>

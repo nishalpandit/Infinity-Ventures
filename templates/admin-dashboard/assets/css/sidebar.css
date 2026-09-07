@@ -220,10 +220,8 @@ body.sidebar-collapsed .snav-link .snav-icon { font-size: 17px; }
 body.sidebar-collapsed .snav-sub { display: none; }
 body.sidebar-collapsed .snav-item.open > .snav-link .snav-arrow { transform: none; }
 
-/* ---------- Tooltip (collapsed only) ---------- */
-body.sidebar-collapsed .snav-item { position: relative; }
-body.sidebar-collapsed .snav-item.has-sub .sb-tooltip { display: none !important; }
-body.sidebar-collapsed .snav-item .sb-tooltip {
+/* ---------- Tooltip ---------- */
+.snav-item .sb-tooltip {
   position: absolute;
   left: calc(100% + 12px);
   top: 50%;
@@ -241,7 +239,13 @@ body.sidebar-collapsed .snav-item .sb-tooltip {
   transition: opacity var(--transition);
   z-index: 2000;
   box-shadow: var(--shadow-lg);
+  display: none; /* Hidden by default in expanded state */
 }
+
+/* Tooltip is only active in collapsed state */
+body.sidebar-collapsed .snav-item { position: relative; }
+body.sidebar-collapsed .snav-item .sb-tooltip { display: block; }
+body.sidebar-collapsed .snav-item.has-sub .sb-tooltip { display: none !important; }
 body.sidebar-collapsed .snav-item .sb-tooltip::before {
   content: '';
   position: absolute;

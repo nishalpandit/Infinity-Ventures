@@ -16,6 +16,14 @@ class VendorProfile(models.Model):
     category = models.CharField(max_length=100)
     location = models.CharField(max_length=255)
     
+    VENDOR_TYPE_CHOICES = (
+        ('vendor', 'Vendor'),
+        ('company', 'Company Vendor'),
+    )
+    vendor_type = models.CharField(max_length=20, choices=VENDOR_TYPE_CHOICES, default='vendor')
+    employee_code = models.CharField(max_length=50, null=True, blank=True)
+    employee_details = models.TextField(null=True, blank=True)
+    
     # New Personal Details
     dob = models.DateField(null=True, blank=True)
     gender = models.CharField(max_length=20, null=True, blank=True)

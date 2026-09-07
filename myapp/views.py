@@ -393,6 +393,19 @@ def dashboard_view(request, path=''):
         available_jobs = Job.objects.filter(status='open').order_by('-created_at')
         context['available_jobs'] = available_jobs
 
+    if path == 'vendor/jobs/bid-details':
+        bid_id = request.GET.get('bid_id')
+        if bid_id:
+            try:
+                bid = Bid.objects.select_related('job', 'job__user').get(id=bid_id, vendor=request.user)
+                context['bid'] = bid
+            except Bid.DoesNotExist:
+                pass
+
+    if path == 'vendor/jobs/selected-jobs':
+        selected_bids = Bid.objects.filter(vendor=request.user, status='selected').select_related('job', 'quick_service').order_by('-created_at')
+        context['selected_bids'] = selected_bids
+
     if path == 'vendor/jobs/details' or path == 'vendor/jobs/send-quotation':
         job_id = request.GET.get('id') or request.GET.get('job_id')
         
@@ -479,7 +492,7 @@ def dashboard_view(request, path=''):
         context['locations'] = Location.objects.all().order_by('-created_at')
         context['states'] = Location.objects.values_list('state', flat=True).distinct().order_by('state')
         
-    if 'users/users' in path or 'users/vendors' in path or 'users/company-vendors' in path or 'users/outsider-vendors' in path:
+    if 'users/users' in path or 'users/customers' in path or 'users/vendors' in path or 'users/company-vendors' in path or 'users/outsider-vendors' in path:
         if 'users' in path and 'vendors' not in path:
             users_qs = User.objects.filter(role='USER')
             users_data = []
@@ -513,7 +526,7 @@ def dashboard_view(request, path=''):
             vendors_data = []
             for profile in vendors:
                 user = profile.user
-                v_type = 'company' if profile.company_name else 'outsider'
+                v_type = profile.vendor_type
                 total_bids = Bid.objects.filter(vendor=user).count()
                 completed_jobs = Job.objects.filter(bids__vendor=user, status='completed').distinct().count()
                 
@@ -533,7 +546,71 @@ def dashboard_view(request, path=''):
                 })
             context['vendors_json'] = json.dumps(vendors_data)
             
-    if 'quick-services' in path:
+    if path == 'jobs/details':
+        job_id_raw = request.GET.get('id')
+        if job_id_raw:
+            try:
+                # e.g., 'JOB-0001' -> 1
+                job_id = int(job_id_raw.replace('JOB-', '')) if isinstance(job_id_raw, str) and job_id_raw.startswith('JOB-') else int(job_id_raw)
+                job_obj = Job.objects.select_related('user', 'category', 'location').get(id=job_id)
+                context['job'] = job_obj
+                
+                try:
+                    u_profile = job_obj.user.user_profile
+                    mobile = u_profile.phone_number or '—'
+                except Exception:
+                    mobile = '—'
+                context['job_customer_mobile'] = mobile
+                
+                # Also fetch bids / vendor requests for this service
+                bids = Bid.objects.filter(job=job_obj).select_related('vendor', 'vendor__vendor_profile')
+                context['vendor_requests'] = bids
+                
+                selected_vendor_name = None
+                for b in bids:
+                    if b.status == 'selected':
+                        try:
+                            selected_vendor_name = b.vendor.vendor_profile.company_name or b.vendor.get_full_name() or b.vendor.username
+                        except Exception:
+                            selected_vendor_name = b.vendor.get_full_name() or b.vendor.username
+                        break
+                context['selected_vendor_name'] = selected_vendor_name
+            except (ValueError, Job.DoesNotExist):
+                pass
+
+    elif path == 'quick-services/details':
+        qs_id_raw = request.GET.get('id')
+        if qs_id_raw:
+            try:
+                # e.g., 'QS-0001' -> 1
+                qs_id = int(qs_id_raw.replace('QS-', '')) if isinstance(qs_id_raw, str) and qs_id_raw.startswith('QS-') else int(qs_id_raw)
+                service = QuickService.objects.select_related('user', 'category', 'location').get(id=qs_id)
+                context['service'] = service
+                
+                try:
+                    u_profile = service.user.user_profile
+                    mobile = u_profile.phone_number or '—'
+                except Exception:
+                    mobile = '—'
+                context['service_customer_mobile'] = mobile
+                
+                # Also fetch bids / vendor requests for this service
+                bids = Bid.objects.filter(quick_service=service).select_related('vendor', 'vendor__vendor_profile')
+                context['vendor_requests'] = bids
+                
+                selected_vendor_name = None
+                for b in bids:
+                    if b.status == 'selected':
+                        try:
+                            selected_vendor_name = b.vendor.vendor_profile.company_name or b.vendor.get_full_name() or b.vendor.username
+                        except Exception:
+                            selected_vendor_name = b.vendor.get_full_name() or b.vendor.username
+                        break
+                context['selected_vendor_name'] = selected_vendor_name
+            except (ValueError, QuickService.DoesNotExist):
+                pass
+
+    elif 'quick-services' in path:
         from django.db.models import Count, Prefetch
         quick_services = QuickService.objects.exclude(category__service_type='job').select_related('user', 'category', 'location').annotate(vendor_requests_count=Count('bids')).prefetch_related(Prefetch('bids', queryset=Bid.objects.filter(status='selected').select_related('vendor', 'vendor__vendor_profile'), to_attr='selected_bids')).order_by('-created_at')
         qs_data = []
@@ -576,37 +653,48 @@ def dashboard_view(request, path=''):
         context['active_qs'] = [qs for qs in qs_data if qs['status'] in active_statuses]
         context['closed_qs'] = [qs for qs in qs_data if qs['status'] in closed_statuses]
         
-        if 'quick-services/details' in path:
-            qs_id_raw = request.GET.get('id')
-            if qs_id_raw:
+        
+    elif 'jobs' in path:
+        from django.db.models import Count, Prefetch
+        jobs = Job.objects.select_related('user', 'category', 'location').annotate(vendor_requests_count=Count('bids')).prefetch_related(Prefetch('bids', queryset=Bid.objects.filter(status='selected').select_related('vendor', 'vendor__vendor_profile'), to_attr='selected_bids')).order_by('-created_at')
+        jobs_data = []
+        for job in jobs:
+            u = job.user
+            try:
+                u_profile = u.user_profile
+                mobile = u_profile.phone_number or '—'
+            except Exception:
+                mobile = '—'
+            
+            selected_vendor_name = '—'
+            if hasattr(job, 'selected_bids') and job.selected_bids:
+                selected_bid = job.selected_bids[0]
                 try:
-                    # e.g., 'QS-0001' -> 1
-                    qs_id = int(qs_id_raw.replace('QS-', '')) if isinstance(qs_id_raw, str) and qs_id_raw.startswith('QS-') else int(qs_id_raw)
-                    service = QuickService.objects.select_related('user', 'category', 'location').get(id=qs_id)
-                    context['service'] = service
-                    
-                    try:
-                        u_profile = service.user.user_profile
-                        mobile = u_profile.phone_number or '—'
-                    except Exception:
-                        mobile = '—'
-                    context['service_customer_mobile'] = mobile
-                    
-                    # Also fetch bids / vendor requests for this service
-                    bids = Bid.objects.filter(quick_service=service).select_related('vendor', 'vendor__vendor_profile')
-                    context['vendor_requests'] = bids
-                    
-                    selected_vendor_name = None
-                    for b in bids:
-                        if b.status == 'selected':
-                            try:
-                                selected_vendor_name = b.vendor.vendor_profile.company_name or b.vendor.get_full_name() or b.vendor.username
-                            except Exception:
-                                selected_vendor_name = b.vendor.get_full_name() or b.vendor.username
-                            break
-                    context['selected_vendor_name'] = selected_vendor_name
-                except (ValueError, QuickService.DoesNotExist):
-                    pass
+                    selected_vendor_name = selected_bid.vendor.vendor_profile.company_name or selected_bid.vendor.get_full_name() or selected_bid.vendor.username
+                except Exception:
+                    selected_vendor_name = selected_bid.vendor.get_full_name() or selected_bid.vendor.username
+
+            jobs_data.append({
+                'id': f'JOB-{job.id:04d}',
+                'customer': u.get_full_name() or u.username,
+                'customerMobile': mobile,
+                'customerId': f'USR-{u.id:04d}',
+                'avatar_class': f'av-{(u.id % 5) + 1}',
+                'title': job.title,
+                'category': job.category.name if getattr(job, 'category', None) else 'Uncategorized',
+                'location': f"{job.location.city}, {job.location.state}" if getattr(job, 'location', None) else 'Unknown',
+                'budget': float(job.budget) if job.budget else 0,
+                'vendorRequests': getattr(job, 'vendor_requests_count', 0),
+                'selectedVendor': selected_vendor_name,
+                'status': job.status,
+                'created': job.created_at.strftime('%Y-%m-%d') if job.created_at else 'Unknown'
+            })
+        
+        active_statuses = {'open', 'active', 'progress', 'selected'}
+        closed_statuses = {'completed', 'cancelled', 'closed'}
+        context['active_jobs'] = [j for j in jobs_data if j['status'] in active_statuses]
+        context['closed_jobs'] = [j for j in jobs_data if j['status'] in closed_statuses]
+        
     if 'vendor/profile' in path:
         u = request.user
         try:
@@ -659,14 +747,51 @@ def dashboard_view(request, path=''):
         context['selected_bids_count'] = Bid.objects.filter(vendor=u, status='selected').count()
         context['completed_jobs_count'] = Bid.objects.filter(vendor=u, status='completed').count()
 
-    elif 'profile' in path: # for user profile
+    elif 'profile' in path: # for user or admin profile
         u = request.user
-        context['qs_count'] = QuickService.objects.filter(user=u).count()
-        context['jobs_count'] = Job.objects.filter(user=u).count()
-        context['completed_qs'] = QuickService.objects.filter(user=u, status='completed').count()
-        context['completed_jobs'] = Job.objects.filter(user=u, status='completed').count()
-        context['vendors_selected'] = Bid.objects.filter(job__user=u, status='selected').count()
+        if getattr(u, 'role', '') == 'ADMIN' or u.is_superuser:
+            context['admin_name'] = u.get_full_name() or u.username
+            context['admin_email'] = u.email
+            try:
+                context['admin_mobile'] = u.user_profile.phone_number or "Not Set"
+            except Exception:
+                context['admin_mobile'] = "Not Set"
+            
+            context['admin_last_login'] = u.last_login.strftime('%Y-%m-%d %H:%M') if u.last_login else "Never"
+            context['actUsers'] = User.objects.exclude(is_superuser=True).count()
+            
+            from django.db.models import Sum
+            rev = Subscription.objects.filter(status='success').aggregate(Sum('amount'))['amount__sum']
+            context['actRevenue'] = rev if rev else 0
+        else:
+            context['qs_count'] = QuickService.objects.filter(user=u).count()
+            context['jobs_count'] = Job.objects.filter(user=u).count()
+            context['completed_qs'] = QuickService.objects.filter(user=u, status='completed').count()
+            context['completed_jobs'] = Job.objects.filter(user=u, status='completed').count()
+            context['vendors_selected'] = Bid.objects.filter(job__user=u, status='selected').count()
         
+    if path == 'user/jobs/compare':
+        job_id = request.GET.get('job_id')
+        if job_id:
+            try:
+                job = Job.objects.get(id=job_id, user=request.user)
+                bids = Bid.objects.filter(job=job).select_related('vendor', 'vendor__vendor_profile')
+                context['job'] = job
+                context['bids'] = bids
+            except Job.DoesNotExist:
+                pass
+
+    if path == 'user/quick-services/compare':
+        qs_id = request.GET.get('qs_id')
+        if qs_id:
+            try:
+                qs = QuickService.objects.get(id=qs_id, user=request.user)
+                bids = Bid.objects.filter(quick_service=qs).select_related('vendor', 'vendor__vendor_profile')
+                context['qs'] = qs
+                context['bids'] = bids
+            except QuickService.DoesNotExist:
+                pass
+
     if path == 'user/jobs/quotations' or path == 'user/quick-services/quotations':
         job_id = request.GET.get('job_id')
         if job_id:
@@ -867,6 +992,12 @@ def dashboard_view(request, path=''):
                     }
                     context['chat_vendor'] = context['chat_user'] # alias for templates
             
+    if path == 'reports/revenue':
+        subscriptions = Subscription.objects.all().order_by('-created_at')
+        total_revenue = subscriptions.filter(status='success').aggregate(Sum('amount'))['amount__sum'] or 0
+        context['subscriptions'] = subscriptions
+        context['total_revenue'] = total_revenue
+
     try:
         return render(request, template_name, context)
     except TemplateDoesNotExist:
@@ -1015,6 +1146,46 @@ def register_vendor_view(request):
         'states': sorted(locations_dict.keys()),
     }
     return render(request, 'register_vendor.html', context)
+
+from django.shortcuts import redirect
+from django.contrib import messages
+from django.views.decorators.http import require_POST
+
+@require_POST
+def create_company_vendor_view(request):
+    try:
+        company_name = request.POST.get('company_name', '').strip()
+        email = request.POST.get('email', '').strip()
+        password = request.POST.get('password', '').strip()
+        category = request.POST.get('category', '').strip()
+        location = request.POST.get('location', '').strip()
+        employee_code = request.POST.get('employee_code', '').strip()
+        employee_details = request.POST.get('employee_details', '').strip()
+        
+        if User.objects.filter(email=email).exists() or User.objects.filter(username=email).exists():
+            messages.error(request, 'Email or Username already exists.')
+            return redirect('/admin-dashboard/users/company-vendors.html')
+            
+        username = email if email else company_name.replace(" ", "").lower() + str(User.objects.count())
+        
+        user = User.objects.create_user(username=username, email=email, password=password, first_name=company_name)
+        user.role = 'VENDOR'
+        user.save()
+        
+        VendorProfile.objects.create(
+            user=user,
+            vendor_type='company',
+            company_name=company_name,
+            category=category,
+            location=location,
+            employee_code=employee_code,
+            employee_details=employee_details
+        )
+        messages.success(request, 'Company Vendor created successfully.')
+    except Exception as e:
+        messages.error(request, f'Error creating company vendor: {str(e)}')
+        
+    return redirect('/admin-dashboard/users/company-vendors.html')
 
 from datetime import datetime
 

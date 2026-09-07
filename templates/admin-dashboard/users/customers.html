@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Outsider Vendors — Infinity Admin</title>
+  <title>Customers — Infinity Admin</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
@@ -18,32 +18,24 @@
     <div id="header-mount"></div>
     <main class="main-content">
       <div class="breadcrumb" id="breadcrumb"></div>
-
       
-
-      
-
-      <div class="card">
-        <div class="card-body p-0" id="tableMount"></div>
+      <div class="card" style="margin-top: 2rem;">
+         <div class="card-body" style="padding: 4rem 2rem; text-align: center;">
+           <h3 style="margin-bottom: 1rem; color: #334155;">Page Under Construction</h3>
+           <p style="color: #64748b; margin-bottom: 2rem;">The customers management page is currently being built.</p>
+           <button class="btn btn-primary" onclick="history.back()">Go Back</button>
+         </div>
       </div>
+      
     </main>
   </div>
-
   <script src="/admin-dashboard/assets/js/sidebar.js"></script>
   <script src="/admin-dashboard/assets/js/components.js"></script>
   <script src="/admin-dashboard/assets/js/admin.js"></script>
-  <script src="/admin-dashboard/assets/js/data.js"></script>
-  <script src="/admin-dashboard/assets/js/vendor-table.js"></script>
   <script>
     (function () {
       'use strict';
-      AdminComponents.renderBreadcrumb([
-        { label: 'Users', href: '#' },
-        { label: 'Outsider Vendors' }
-      ]);
-      var dynamicVendors = {{ vendors_json|safe|default:"[]" }};
-      window.AdminData.vendors = dynamicVendors;
-      VendorTable.init({ type: 'outsider', exportName: 'outsider-vendors' });
+      AdminComponents.renderBreadcrumb([{ label: 'Users', url: '#' }, { label: 'Customers' }]);
     })();
   </script>
 </body>

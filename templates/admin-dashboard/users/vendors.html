@@ -41,7 +41,7 @@
       ]);
       var dynamicVendors = {{ vendors_json|safe|default:"[]" }};
       window.AdminData.vendors = dynamicVendors;
-      VendorTable.init({ type: null, exportName: 'all-vendors' });
+      VendorTable.init({ type: 'vendor', exportName: 'vendors' });
     })();
   </script>
 </body>

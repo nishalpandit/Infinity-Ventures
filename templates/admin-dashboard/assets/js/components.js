@@ -39,26 +39,22 @@
     { label: 'Dashboard', icon: 'fa-gauge-high', href: 'dashboard.html' },
     {
       label: 'Users', icon: 'fa-users', children: [
-        { label: 'End Users', href: 'users/users.html' },
-        { label: 'Vendors', href: 'users/vendors.html' },
-        { label: 'Company Vendors', href: 'users/company-vendors.html' },
-        { label: 'Outsider Vendors', href: 'users/outsider-vendors.html' }
+        { label: 'User', href: 'users/users.html' },
+        { label: 'Vendor', href: 'users/vendors.html' },
+        { label: 'Company Vendor', href: 'users/company-vendors.html' }
       ]
     },
     {
       label: 'Quick Services', icon: 'fa-bolt', children: [
-        { label: 'Active Quick Services', href: 'quick-services/index.html' },
-        { label: 'Closed Quick Services', href: 'quick-services/closed.html' }
+        { label: 'Active Quick Services', href: 'quick-services/index.html#active' },
+        { label: 'Closed Quick Services', href: 'quick-services/index.html#closed' }
       ]
     },
 
     {
-      label: 'Bidding', icon: 'fa-gavel', children: [
-        { label: 'All Bids', href: 'bidding/index.html' },
-        { label: 'Active Bids', href: 'bidding/index.html?status=submitted' },
-        { label: 'Withdrawn Bids', href: 'bidding/index.html?status=withdrawn' },
-        { label: 'Rejected Bids', href: 'bidding/index.html?status=rejected' },
-        { label: 'Selected Vendors', href: 'bidding/selected-vendors.html' }
+      label: 'Jobs', icon: 'fa-briefcase', children: [
+        { label: 'Active Jobs', href: 'jobs/index.html#active' },
+        { label: 'Closed Jobs', href: 'jobs/index.html#closed' }
       ]
     },
     {

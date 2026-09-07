@@ -16,7 +16,7 @@
         options: [
           { value: 'all', label: 'All Types' },
           { value: 'company', label: 'Company Vendor' },
-          { value: 'outsider', label: 'Outsider Vendor' }
+          { value: 'vendor', label: 'Vendor' }
         ],
         match: function (r, v) { return r.type === v; }
       }];

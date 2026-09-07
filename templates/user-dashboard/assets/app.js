@@ -31,12 +31,10 @@
     ['quick-create','bolt','Quick Services','quick-services/create.html'],
     ['quick','list','My Quick Services','quick-services/index.html'],
     ['jobs','briefcase','My Jobs','jobs/index.html'],
-    ['vendors','users','Vendors','vendors/index.html'],
-    ['messages','chat','Messages','messages/index.html'],
-    ['notifications','bell','Notifications','notifications.html'],
 
+    ['messages','chat','Messages','messages/index.html'],
     ['profile','user','Profile','profile/index.html'],
-    ['settings','settings','Settings','settings/index.html']
+    ['settings','settings','Settings','settings/security.html']
   ];
   function route(path){ return root + path; }
   function navActive(k){
@@ -67,7 +65,7 @@
   }
   const topbarRoot = $('#topbar-root');
   if(topbarRoot){
-    topbarRoot.outerHTML = `<header class="topbar"><div class="topbar-left"><button class="icon-btn hamburger" id="mobile-menu" aria-label="Open menu">${icon('menu')}</button><button class="icon-btn desktop-collapse" id="collapse-menu" aria-label="Collapse sidebar">${icon('panel')}</button><div><div class="topbar-title">${pageTitle}</div><div class="breadcrumbs"><a href="${route('dashboard.html')}">user</a> &nbsp;/&nbsp; ${pageTitle}</div></div></div><div class="topbar-actions"><div class="top-search">${icon('search')}<input type="search" id="global-search" placeholder="Search jobs, services, vendors" aria-label="Global search"></div><a class="icon-btn" href="${route('messages/index.html')}" aria-label="Messages">${icon('chat')}</a><a class="icon-btn" href="${route('notifications.html')}" aria-label="Notifications">${icon('bell')}<span class="notification-dot"></span></a><a class="top-user" href="${route('profile/index.html')}"><span class="avatar dyn-avatar"></span><span class="top-user-copy"><strong class="dyn-name"></strong><span>user account</span></span></a></div></header>`;
+    topbarRoot.outerHTML = `<header class="topbar"><div class="topbar-left"><button class="icon-btn hamburger" id="mobile-menu" aria-label="Open menu">${icon('menu')}</button><button class="icon-btn desktop-collapse" id="collapse-menu" aria-label="Collapse sidebar">${icon('panel')}</button><div><div class="topbar-title">${pageTitle}</div><div class="breadcrumbs"><a href="${route('dashboard.html')}">user</a> &nbsp;/&nbsp; ${pageTitle}</div></div></div><div class="topbar-actions"><a class="icon-btn" href="${route('messages/index.html')}" aria-label="Messages">${icon('chat')}</a><a class="top-user" href="${route('profile/index.html')}"><span class="avatar dyn-avatar"></span><span class="top-user-copy"><strong class="dyn-name"></strong><span>user account</span></span></a></div></header>`;
   }
 
   fetch('/api/user-nav-data/')
