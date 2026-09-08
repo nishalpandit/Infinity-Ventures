@@ -28,10 +28,8 @@
 
   const nav = [
     {key:'dashboard', icon:'grid', label:'Dashboard', path:'dashboard.html'},
-    {key:'quick-group', icon:'bolt', label:'Quick Services', path:'quick-services/nearby.html', children:[
-      ['quick-nearby','Nearby Services','quick-services/nearby.html'],
-      ['quick-requests','My Requests','quick-services/my-requests.html']
-    ]},
+    {key:'quick-group', icon:'bolt', label:'Quick Services', path:'quick-services/nearby.html'},
+    {key:'job-group', icon:'briefcase', label:'Jobs', path:'jobs/available.html'},
 
     {key:'messages', icon:'chat', label:'Messages', path:'messages/index.html'},
 
@@ -49,9 +47,9 @@
     if(pageKey === k) return true;
     if(k==='quick-group' && pageKey.startsWith('quick-')) return true;
     if(k==='quick-nearby' && ['quick-details','quick-quote'].includes(pageKey)) return true;
-    if(k==='job-group' && pageKey.startsWith('job-')) return true;
-    if(k==='job-available' && ['job-details','job-submit'].includes(pageKey)) return true;
-    if(k==='job-bids' && pageKey==='job-bid-details') return true;
+    if(k==='job-group' && (pageKey.startsWith('job-') || ['selected-jobs', 'bid-details'].includes(pageKey))) return true;
+    if(k==='jobs-available' && ['job-details','job-submit'].includes(pageKey)) return true;
+    if(k==='selected-jobs' && pageKey==='bid-details') return true;
     if(k==='credit-group' && pageKey.startsWith('credit-')) return true;
     if(k==='credit-packages' && pageKey==='credit-checkout') return true;
     if(k==='messages' && pageKey.startsWith('message')) return true;

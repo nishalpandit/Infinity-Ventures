@@ -73,6 +73,7 @@
     .then(d => {
       $$('.avatar:not(.xl)').forEach(el => el.textContent = d.initials);
       $$('.side-user-copy strong, .top-user-copy strong').forEach(el => el.textContent = d.name);
+      $$('.dyn-first-name').forEach(el => el.textContent = d.name.split(' ')[0]);
     }).catch(e => console.error(e));
   if(!$('.mobile-overlay')) body.insertAdjacentHTML('beforeend','<div class="mobile-overlay" id="mobile-overlay"></div><div class="toast-container" id="toast-container" aria-live="polite"></div>');
   if(!$('#global-modal')) body.insertAdjacentHTML('beforeend',`<div class="modal-backdrop" id="global-modal" role="dialog" aria-modal="true"><div class="modal"><div class="modal-head"><h3 id="global-modal-title">Please confirm</h3><button class="modal-close" data-modal-close>${icon('x')}</button></div><div class="modal-body" id="global-modal-body"></div><div class="modal-actions"><button class="btn btn-secondary" data-modal-close>Cancel</button><button class="btn btn-primary" id="global-modal-confirm">Confirm</button></div></div></div>`);
