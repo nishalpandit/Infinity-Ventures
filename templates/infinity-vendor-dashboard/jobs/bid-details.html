@@ -14,13 +14,160 @@
     <div class="workspace">
       <div id="topbar-root"></div>
       <main class="page">
+        {% if bid %}
+        <div class="page-head" style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 24px;">
+          <div>
+            <div style="margin-bottom: 6px;">
+              <a href="/vendor/jobs/available.html" style="color: var(--primary); text-decoration: none; font-weight: 500; font-size: 0.9rem;">&larr; Back to Jobs</a>
+            </div>
+            <h1>Bid #BID-{{ bid.id|stringformat:"04d" }}</h1>
+            <p style="color: var(--text-muted); margin: 0;">Submitted on {{ bid.created_at|date:"d M Y, g:i A" }}</p>
+          </div>
+          <div>
+            {% if bid.status == 'selected' %}
+              <span class="badge badge-success" style="font-size: 0.95rem; padding: 6px 14px;">Accepted / Selected</span>
+            {% elif bid.status == 'submitted' or bid.status == 'pending' %}
+              <span class="badge badge-pending" style="font-size: 0.95rem; padding: 6px 14px;">Under Review</span>
+            {% elif bid.status == 'rejected' %}
+              <span class="badge badge-cancelled" style="font-size: 0.95rem; padding: 6px 14px;">Declined</span>
+            {% else %}
+              <span class="badge" style="font-size: 0.95rem; padding: 6px 14px;">{{ bid.status|title }}</span>
+            {% endif %}
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 24px;">
+          <!-- Left Column: Proposal Details & Job Scope -->
+          <div style="display: flex; flex-direction: column; gap: 24px;">
+            <section class="card" style="padding: 24px;">
+              <h2 style="font-size: 1.2rem; margin-bottom: 16px;">Quotation Proposal</h2>
+              <div style="background: var(--bg-surface, #f8fafc); border-radius: 8px; padding: 18px; line-height: 1.6; color: var(--text); font-size: 0.95rem; white-space: pre-line;">
+                {{ bid.proposal|default:"Standard service quotation terms apply." }}
+              </div>
+
+              {% if bid.attachment %}
+              <div style="margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--border-color, #e2e8f0);">
+                <strong style="font-size: 0.9rem;">Quotation Attachment:</strong>
+                <a href="{{ bid.attachment.url }}" target="_blank" class="btn btn-secondary btn-sm" style="margin-left: 10px;">
+                  View Attachment
+                </a>
+              </div>
+              {% endif %}
+            </section>
+
+            <section class="card" style="padding: 24px;">
+              <h2 style="font-size: 1.2rem; margin-bottom: 16px;">Related Project Information</h2>
+              {% if bid.job %}
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
+                <div>
+                  <span style="font-size: 0.85rem; color: var(--text-muted); display: block;">Project Title</span>
+                  <strong style="font-size: 1rem;">{{ bid.job.title }}</strong>
+                </div>
+                <div>
+                  <span style="font-size: 0.85rem; color: var(--text-muted); display: block;">Category</span>
+                  <span>{{ bid.job.category.name|default:"General" }}</span>
+                </div>
+                <div>
+                  <span style="font-size: 0.85rem; color: var(--text-muted); display: block;">Customer Budget</span>
+                  <strong>₹{{ bid.job.budget|floatformat:0 }}</strong> ({{ bid.job.budget_type|title }})
+                </div>
+                <div>
+                  <span style="font-size: 0.85rem; color: var(--text-muted); display: block;">Location</span>
+                  <span>{{ bid.job.location.city }}, {{ bid.job.location.state }}</span>
+                </div>
+              </div>
+              <div>
+                <span style="font-size: 0.85rem; color: var(--text-muted); display: block; margin-bottom: 4px;">Description / Scope</span>
+                <p style="margin: 0; line-height: 1.5; color: var(--text);">{{ bid.job.description|default:"No additional description." }}</p>
+              </div>
+              {% elif bid.quick_service %}
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
+                <div>
+                  <span style="font-size: 0.85rem; color: var(--text-muted); display: block;">Service Request</span>
+                  <strong style="font-size: 1rem;">{{ bid.quick_service.title }}</strong>
+                </div>
+                <div>
+                  <span style="font-size: 0.85rem; color: var(--text-muted); display: block;">Category</span>
+                  <span>{{ bid.quick_service.category.name|default:"General" }}</span>
+                </div>
+                <div>
+                  <span style="font-size: 0.85rem; color: var(--text-muted); display: block;">Customer Budget</span>
+                  <strong>₹{{ bid.quick_service.budget|floatformat:0 }}</strong>
+                </div>
+                <div>
+                  <span style="font-size: 0.85rem; color: var(--text-muted); display: block;">Location</span>
+                  <span>{{ bid.quick_service.location.city }}, {{ bid.quick_service.location.state }}</span>
+                </div>
+              </div>
+              <div>
+                <span style="font-size: 0.85rem; color: var(--text-muted); display: block; margin-bottom: 4px;">Problem Description</span>
+                <p style="margin: 0; line-height: 1.5; color: var(--text);">{{ bid.quick_service.problem_description|default:"Standard quick service request." }}</p>
+              </div>
+              {% endif %}
+            </section>
+          </div>
+
+          <!-- Right Column: Financials & Customer Info -->
+          <div style="display: flex; flex-direction: column; gap: 24px;">
+            <section class="card" style="padding: 24px;">
+              <h2 style="font-size: 1.2rem; margin-bottom: 16px;">Your Terms</h2>
+              <div style="margin-bottom: 16px;">
+                <span style="font-size: 0.85rem; color: var(--text-muted); display: block;">Quoted Price</span>
+                <div style="font-size: 1.8rem; font-weight: 700; color: var(--primary, #2563eb);">
+                  ₹{{ bid.amount|floatformat:0 }}
+                </div>
+              </div>
+              <div style="margin-bottom: 16px;">
+                <span style="font-size: 0.85rem; color: var(--text-muted); display: block;">Estimated Time</span>
+                <div style="font-size: 1rem; font-weight: 500;">
+                  {{ bid.estimated_time|default:"Flexible" }}
+                </div>
+              </div>
+              <div>
+                <span style="font-size: 0.85rem; color: var(--text-muted); display: block;">Current Bid Status</span>
+                <span style="font-weight: 600; text-transform: capitalize;">{{ bid.status }}</span>
+              </div>
+            </section>
+
+            <section class="card" style="padding: 24px;">
+              <h2 style="font-size: 1.2rem; margin-bottom: 16px;">Customer Details</h2>
+              {% if bid.job %}
+                <div style="font-weight: 600; font-size: 1rem;">
+                  {{ bid.job.contact_name|default:bid.job.user.get_full_name|default:bid.job.user.username }}
+                </div>
+                <div style="color: var(--text-muted); font-size: 0.9rem; margin-top: 4px;">
+                  Phone: {{ bid.job.contact_mobile|default:bid.job.user.user_profile.phone_number|default:"Shared upon assignment" }}
+                </div>
+                <div style="margin-top: 16px;">
+                  <a href="/vendor/messages/chat.html?user_id={{ bid.job.user.id }}" class="btn btn-primary" style="width: 100%; text-align: center;">
+                    Message Customer
+                  </a>
+                </div>
+              {% elif bid.quick_service %}
+                <div style="font-weight: 600; font-size: 1rem;">
+                  {{ bid.quick_service.contact_name|default:bid.quick_service.user.get_full_name|default:bid.quick_service.user.username }}
+                </div>
+                <div style="color: var(--text-muted); font-size: 0.9rem; margin-top: 4px;">
+                  Phone: {{ bid.quick_service.contact_mobile|default:bid.quick_service.user.user_profile.phone_number|default:"Shared upon assignment" }}
+                </div>
+                <div style="margin-top: 16px;">
+                  <a href="/vendor/messages/chat.html?user_id={{ bid.quick_service.user.id }}" class="btn btn-primary" style="width: 100%; text-align: center;">
+                    Message Customer
+                  </a>
+                </div>
+              {% endif %}
+            </section>
+          </div>
+        </div>
+        {% else %}
         <section class="card">
-           <div style="padding: 60px 20px; text-align: center; color: var(--text-muted);">
-             <h2>Coming Soon</h2>
-             <p style="margin-top: 10px; margin-bottom: 20px;">The bid details page is currently under construction.</p>
-             <button class="btn btn-primary" onclick="history.back()">Go Back</button>
-           </div>
+          <div style="padding: 60px 20px; text-align: center; color: var(--text-muted);">
+            <h2>Bid Not Found</h2>
+            <p style="margin-top: 10px; margin-bottom: 20px;">The requested quotation could not be located or belongs to another vendor account.</p>
+            <a class="btn btn-primary" href="/vendor/jobs/available.html">Explore Available Jobs</a>
+          </div>
         </section>
+        {% endif %}
       </main>
     </div>
   </div>

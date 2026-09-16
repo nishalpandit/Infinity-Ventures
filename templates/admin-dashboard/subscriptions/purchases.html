@@ -41,9 +41,11 @@
         { label: 'Purchases' }
       ]);
 
+      var purchasesData = {{ purchases_json|safe|default:"null" }} || D.purchases;
+
       U.createTable({
         mount: '#tableMount',
-        data: D.purchases,
+        data: purchasesData,
         searchKeys: ['id', 'vendor', 'vendorId', 'package'],
         searchPlaceholder: 'Search purchases…',
         exportName: 'subscription-purchases',

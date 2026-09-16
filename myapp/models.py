@@ -1,3 +1,4 @@
+import secrets
 from django.db import models
 from django.utils import timezone
 from django.contrib.auth.models import AbstractUser
@@ -192,4 +193,39 @@ class Message(models.Model):
 
     def __str__(self):
         return f"From {self.sender} to {self.receiver} at {self.created_at}"
+
+class OTPVerification(models.Model):
+    PURPOSE_CHOICES = (
+        ('login', 'Login'),
+        ('signup', 'Signup'),
+        ('general', 'General'),
+    )
+    mobile = models.CharField(max_length=50, db_index=True)
+    otp = models.CharField(max_length=10)
+    purpose = models.CharField(max_length=20, choices=PURPOSE_CHOICES, default='general')
+    is_verified = models.BooleanField(default=False)
+    created_at = models.DateTimeField(default=timezone.now)
+    expires_at = models.DateTimeField()
+
+    def is_valid(self):
+        return not self.is_verified and timezone.now() <= self.expires_at
+
+    def __str__(self):
+        return f"{self.mobile} - {self.otp} ({self.purpose})"
+
+
+class AuthToken(models.Model):
+    user = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='auth_tokens')
+    key = models.CharField(max_length=64, unique=True, db_index=True)
+    created_at = models.DateTimeField(default=timezone.now)
+
+    def save(self, *args, **kwargs):
+        if not self.key:
+            self.key = secrets.token_hex(24)
+        return super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"{self.user.username} - {self.key[:8]}..."
+
+
 

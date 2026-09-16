@@ -49,9 +49,11 @@
         { label: 'All Payments' }
       ]);
 
+      var purchasesData = {{ purchases_json|safe|default:"null" }} || D.purchases;
+
       /* Stats */
-      var success = D.purchases.filter(function (p) { return p.paymentStatus === 'success'; });
-      var failed = D.purchases.filter(function (p) { return p.paymentStatus === 'failed'; });
+      var success = purchasesData.filter(function (p) { return p.paymentStatus === 'success'; });
+      var failed = purchasesData.filter(function (p) { return p.paymentStatus === 'failed'; });
       var revenue = success.reduce(function (s, p) { return s + p.amount; }, 0);
       var avg = success.length ? Math.round(revenue / success.length) : 0;
 
@@ -68,7 +70,7 @@
 
       U.createTable({
         mount: '#tableMount',
-        data: D.purchases,
+        data: purchasesData,
         searchKeys: ['id', 'vendor', 'vendorId', 'package'],
         searchPlaceholder: 'Search transactions…',
         exportName: 'payments',

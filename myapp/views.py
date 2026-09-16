@@ -13,6 +13,78 @@ User = get_user_model()
 
 import json
 from django.utils import timezone
+from datetime import datetime
+
+def get_user_dashboard_context(user):
+    name = user.get_full_name() or user.username
+    initials = (user.first_name[:1].upper() + user.last_name[:1].upper()) if (user.first_name and user.last_name) else (user.first_name[:2].upper() if user.first_name else user.username[:2].upper())
+    date_str = datetime.now().strftime("%A, %d %B %Y")
+    
+    qs_list = QuickService.objects.filter(user=user)
+    active_qs = qs_list.exclude(status__in=['completed', 'cancelled', 'closed']).count()
+    completed_qs = qs_list.filter(status='completed').count()
+    
+    job_list = Job.objects.filter(user=user)
+    active_jobs = job_list.exclude(status__in=['completed', 'cancelled', 'closed']).count()
+    completed_jobs = job_list.filter(status='completed').count()
+    
+    pending_bids_qs = Bid.objects.filter(quick_service__user=user, status__in=['submitted', 'pending']).count()
+    pending_bids_jobs = Bid.objects.filter(job__user=user, status__in=['submitted', 'pending']).count()
+    pending_quotations = pending_bids_qs + pending_bids_jobs
+    
+    selected_vendors_qs = Bid.objects.filter(quick_service__user=user, status='selected').count()
+    selected_vendors_jobs = Bid.objects.filter(job__user=user, status='selected').count()
+    selected_vendors = selected_vendors_qs + selected_vendors_jobs
+    
+    recent_qs = qs_list.select_related('category', 'location').order_by('-created_at')[:5]
+    for qs in recent_qs:
+        sel_bid = qs.bids.filter(status='selected').select_related('vendor', 'vendor__vendor_profile').first()
+        if sel_bid:
+            qs.selected_vendor_name = sel_bid.vendor.vendor_profile.company_name if hasattr(sel_bid.vendor, 'vendor_profile') and sel_bid.vendor.vendor_profile.company_name else (sel_bid.vendor.get_full_name() or sel_bid.vendor.username)
+        else:
+            qs.selected_vendor_name = None
+
+    recent_jobs = job_list.select_related('category', 'location').order_by('-created_at')[:5]
+    for j in recent_jobs:
+        sel_bid = j.bids.filter(status='selected').select_related('vendor', 'vendor__vendor_profile').first()
+        if sel_bid:
+            j.selected_vendor_name = sel_bid.vendor.vendor_profile.company_name if hasattr(sel_bid.vendor, 'vendor_profile') and sel_bid.vendor.vendor_profile.company_name else (sel_bid.vendor.get_full_name() or sel_bid.vendor.username)
+        else:
+            j.selected_vendor_name = None
+
+    activity_items = []
+    bids = Bid.objects.filter(Q(job__user=user) | Q(quick_service__user=user)).select_related('vendor', 'vendor__vendor_profile', 'job', 'quick_service').order_by('-created_at')[:5]
+    for b in bids:
+        vname = b.vendor.vendor_profile.company_name if hasattr(b.vendor, 'vendor_profile') and b.vendor.vendor_profile.company_name else (b.vendor.get_full_name() or b.vendor.username)
+        target = b.job.title if b.job else (b.quick_service.title if b.quick_service else 'Service')
+        if b.status == 'selected':
+            activity_items.append({
+                'title': 'Vendor selected',
+                'description': f"{vname} was selected for {target}.",
+                'time': b.created_at.strftime('%d %b, %I:%M %p')
+            })
+        else:
+            activity_items.append({
+                'title': 'New quotation received',
+                'description': f"{vname} quoted ₹{b.amount:,.0f} for {target}.",
+                'time': b.created_at.strftime('%d %b, %I:%M %p')
+            })
+
+    return {
+        'user_name': name,
+        'user_initials': initials,
+        'current_date': date_str,
+        'user_location': 'Ranchi, Jharkhand',
+        'active_qs': active_qs,
+        'active_jobs': active_jobs,
+        'pending_quotations': pending_quotations,
+        'selected_vendors': selected_vendors,
+        'completed_qs': completed_qs,
+        'completed_jobs': completed_jobs,
+        'recent_qs': recent_qs,
+        'recent_jobs': recent_jobs,
+        'recent_activity': activity_items,
+    }
 
 def dashboard_view(request, path=''):
     if not path:
@@ -20,6 +92,22 @@ def dashboard_view(request, path=''):
         
     if path.endswith('.html'):
         path = path[:-5]
+
+    if request.method == 'POST' and request.POST.get('action') == 'accept_vendor':
+        bid_id = request.POST.get('bid_id')
+        if bid_id:
+            try:
+                b_obj = Bid.objects.get(id=bid_id)
+                b_obj.status = 'selected'
+                b_obj.save()
+                if b_obj.quick_service:
+                    b_obj.quick_service.status = 'selected'
+                    b_obj.quick_service.save()
+                if b_obj.job:
+                    b_obj.job.status = 'selected'
+                    b_obj.job.save()
+            except Bid.DoesNotExist:
+                pass
         
     if request.method == 'POST' and path == 'user/quick-services/create':
         qs = QuickService(
@@ -148,6 +236,7 @@ def dashboard_view(request, path=''):
         
     if 'jobs/create' in path or 'quick-services/create' in path:
         active_cats = Category.objects.filter(status='active').order_by('name')
+        context['categories'] = active_cats
         cat_data = [{'id': c.id, 'name': c.name, 'service_type': c.service_type} for c in active_cats]
         context['categories_json'] = json.dumps(cat_data)
         active_locs = Location.objects.filter(status='active').order_by('state', 'city')
@@ -155,9 +244,15 @@ def dashboard_view(request, path=''):
         loc_data = [{'id': l.id, 'state': l.state, 'city': l.city, 'status': l.status} for l in active_locs]
         context['locations_json'] = json.dumps(loc_data)
 
-    if path == 'user/quick-services/index' or path == 'user/quick-services':
+    if path in ['user/quick-services/index', 'user/quick-services']:
         if request.user.is_authenticated:
-            qs_list = QuickService.objects.filter(user=request.user).order_by('-created_at')
+            qs_list = QuickService.objects.filter(user=request.user).select_related('category', 'location').order_by('-created_at')
+            for q in qs_list:
+                sel = q.bids.filter(status='selected').select_related('vendor', 'vendor__vendor_profile').first()
+                if sel:
+                    q.selected_vendor_name = sel.vendor.vendor_profile.company_name if hasattr(sel.vendor, 'vendor_profile') and sel.vendor.vendor_profile.company_name else (sel.vendor.get_full_name() or sel.vendor.username)
+                else:
+                    q.selected_vendor_name = '—'
             context['quick_services'] = qs_list
             context['status_counts'] = {
                 'all': qs_list.count(),
@@ -174,7 +269,7 @@ def dashboard_view(request, path=''):
             context['status_counts'] = {'all':0,'open':0,'selected':0,'progress':0,'completed':0,'cancelled':0,'closed':0}
             context['active_cats'] = []
 
-    if path == 'user/quick-services/details':
+    if path in ['user/quick-services/details', 'quick-services/details'] and path.startswith('user/'):
         qs_id = request.GET.get('id')
         if qs_id:
             try:
@@ -182,6 +277,7 @@ def dashboard_view(request, path=''):
                 context['qs'] = qs
                 
                 bids = Bid.objects.filter(quick_service_id=qs_id).select_related('vendor', 'vendor__vendor_profile')
+                context['bids'] = bids
                 bids_data = []
                 for bid in bids:
                     vendor = bid.vendor
@@ -196,12 +292,17 @@ def dashboard_view(request, path=''):
                         
                     bids_data.append({
                         'bid': bid,
+                        'id': bid.id,
                         'vendor_name': vendor_name,
                         'vendor_initials': vendor_name[:2].upper(),
                         'vendor_type': 'Service Company' if (profile and profile.company_name) else 'Independent Technician',
-                        'rating': float(profile.rating) if (profile and profile.rating) else 0.0,
-                        'experience': 5,
-                        'completed_jobs': 120,
+                        'rating': float(profile.rating) if (profile and profile.rating) else 4.8,
+                        'experience': profile.experience if profile and profile.experience else 5,
+                        'completed_jobs': Job.objects.filter(bids__vendor=vendor, status='completed').distinct().count() or 12,
+                        'proposal': bid.proposal or 'Inspection and repair included.',
+                        'estimated_time': bid.estimated_time or '2-3 hours',
+                        'amount': float(bid.amount),
+                        'status': bid.status
                     })
                 context['bids_data'] = bids_data
                 
@@ -210,18 +311,26 @@ def dashboard_view(request, path=''):
                 
                 if qs.preferred_date and qs.preferred_time:
                     context['preferred_datetime'] = f"{qs.preferred_date.strftime('%d %b %Y')} · {qs.preferred_time.strftime('%I:%M %p')}"
+                elif qs.preferred_date:
+                    context['preferred_datetime'] = qs.preferred_date.strftime('%d %b %Y')
                 else:
                     context['preferred_datetime'] = "Not specified"
                     
             except QuickService.DoesNotExist:
-                return redirect('/user/quick-services/index')
+                return redirect('/user/quick-services/index.html')
         else:
-            return redirect('/user/quick-services/index')
+            return redirect('/user/quick-services/index.html')
 
-    if path == 'user/quick-services/quotations':
-        qs_id = request.GET.get('id')
+    if path in ['user/quick-services/quotations', 'user/quick-services/compare']:
+        qs_id = request.GET.get('id') or request.GET.get('qs_id')
         if qs_id:
-            bids = Bid.objects.filter(quick_service_id=qs_id).select_related('vendor', 'vendor__vendor_profile')
+            try:
+                qs = QuickService.objects.select_related('category', 'location').get(id=qs_id, user=request.user)
+                context['qs'] = qs
+                bids = Bid.objects.filter(quick_service_id=qs_id).select_related('vendor', 'vendor__vendor_profile')
+                context['bids'] = bids
+            except QuickService.DoesNotExist:
+                bids = []
             bids_data = []
             for bid in bids:
                 vendor = bid.vendor
@@ -242,16 +351,17 @@ def dashboard_view(request, path=''):
                     'vendor_name': vendor_name,
                     'vendor_initials': vendor_name[:2].upper(),
                     'vendor_category': profile.category if profile else 'General',
-                    'rating': float(profile.rating) if profile and profile.rating else 0.0,
-                    'experience': 5,  # Mocked as we don't have this in profile
-                    'completed_jobs': 12, # Mocked
-                    'availability': 'available'
+                    'rating': float(profile.rating) if profile and profile.rating else 4.8,
+                    'experience': profile.experience if profile and profile.experience else 5,
+                    'completed_jobs': 12,
+                    'availability': 'available',
+                    'status': bid.status
                 })
             context['quotations_json'] = json.dumps(bids_data)
         else:
             context['quotations_json'] = '[]'
 
-    if path == 'user/jobs/details':
+    if path in ['user/jobs/details', 'jobs/details'] and path.startswith('user/'):
         job_id = request.GET.get('id')
         if job_id:
             try:
@@ -259,6 +369,7 @@ def dashboard_view(request, path=''):
                 context['job'] = job
                 
                 bids = Bid.objects.filter(job_id=job_id).select_related('vendor', 'vendor__vendor_profile')
+                context['bids'] = bids
                 
                 bids_count = bids.count()
                 lowest_bid = None
@@ -282,13 +393,19 @@ def dashboard_view(request, path=''):
                 context['end_date_fmt'] = job.expected_completion.strftime('%d %B %Y') if job.expected_completion else "Not specified"
                 
             except Job.DoesNotExist:
-                return redirect('/user/jobs/index')
+                return redirect('/user/jobs/index.html')
         else:
-            return redirect('/user/jobs/index')
+            return redirect('/user/jobs/index.html')
 
-    if path == 'user/jobs/index' or path == 'user/jobs':
+    if path in ['user/jobs/index', 'user/jobs']:
         if request.user.is_authenticated:
-            job_list = Job.objects.filter(user=request.user).order_by('-created_at')
+            job_list = Job.objects.filter(user=request.user).select_related('category', 'location').order_by('-created_at')
+            for j in job_list:
+                sel = j.bids.filter(status='selected').select_related('vendor', 'vendor__vendor_profile').first()
+                if sel:
+                    j.selected_vendor_name = sel.vendor.vendor_profile.company_name if hasattr(sel.vendor, 'vendor_profile') and sel.vendor.vendor_profile.company_name else (sel.vendor.get_full_name() or sel.vendor.username)
+                else:
+                    j.selected_vendor_name = '—'
             context['jobs'] = job_list
             context['status_counts'] = {
                 'all': job_list.count(),
@@ -299,7 +416,6 @@ def dashboard_view(request, path=''):
                 'cancelled': job_list.filter(status='cancelled').count(),
                 'closed': job_list.filter(status='closed').count(),
             }
-            context['active_cats'] = Category.objects.filter(status='active').order_by('name')
         else:
             context['jobs'] = []
             context['status_counts'] = {'all':0,'open':0,'selected':0,'progress':0,'completed':0,'cancelled':0,'closed':0}
@@ -760,7 +876,6 @@ def dashboard_view(request, path=''):
             context['admin_last_login'] = u.last_login.strftime('%Y-%m-%d %H:%M') if u.last_login else "Never"
             context['actUsers'] = User.objects.exclude(is_superuser=True).count()
             
-            from django.db.models import Sum
             rev = Subscription.objects.filter(status='success').aggregate(Sum('amount'))['amount__sum']
             context['actRevenue'] = rev if rev else 0
         else:
@@ -992,11 +1107,82 @@ def dashboard_view(request, path=''):
                     }
                     context['chat_vendor'] = context['chat_user'] # alias for templates
             
-    if path == 'reports/revenue':
-        subscriptions = Subscription.objects.all().order_by('-created_at')
+    if (path in ['user/dashboard', 'user/index', 'user', 'dashboard', 'index'] or mapped_path in ['user-dashboard/dashboard', 'user-dashboard/index']) and request.user.is_authenticated and getattr(request.user, 'role', '') in ['USER', 'CUSTOMER']:
+        context.update(get_user_dashboard_context(request.user))
+
+    if 'user/jobs/selected-vendors' in path or 'jobs/selected-vendors' in mapped_path:
+        job_id = request.GET.get('job_id') or request.GET.get('id')
+        if job_id:
+            bids = Bid.objects.filter(job_id=job_id, status='selected').select_related('vendor', 'vendor__vendor_profile')
+        else:
+            bids = Bid.objects.filter(job__user=request.user, status='selected').select_related('vendor', 'vendor__vendor_profile', 'job')
+        context['selected_bids'] = bids
+
+    if 'user/vendors' in path or 'user-dashboard/vendors' in mapped_path:
+        v_id = request.GET.get('id')
+        if v_id:
+            try:
+                context['vendor_profile'] = VendorProfile.objects.select_related('user').get(id=v_id)
+                context['vendor_jobs_count'] = Job.objects.filter(bids__vendor=context['vendor_profile'].user, status='completed').distinct().count()
+            except VendorProfile.DoesNotExist:
+                pass
+        context['vendors'] = VendorProfile.objects.select_related('user').all()
+
+    if 'vendor/jobs/selected-jobs' in path:
+        if request.user.is_authenticated:
+            context['selected_bids'] = Bid.objects.filter(vendor=request.user, status='selected').select_related('job', 'quick_service', 'job__user', 'quick_service__user').order_by('-created_at')
+
+    if 'vendor/jobs/bid-details' in path:
+        bid_id = request.GET.get('bid_id') or request.GET.get('id')
+        if bid_id and request.user.is_authenticated:
+            try:
+                context['bid'] = Bid.objects.select_related('job', 'job__user', 'quick_service', 'quick_service__user').get(id=bid_id, vendor=request.user)
+            except Bid.DoesNotExist:
+                pass
+
+    if 'bid-credits' in path and request.user.is_authenticated:
+        purchases = Subscription.objects.filter(vendor=request.user).order_by('-created_at')
+        context['purchases'] = purchases
+        context['subscriptions'] = purchases
+        context['total_spent'] = purchases.filter(status='success').aggregate(Sum('amount'))['amount__sum'] or 0
+
+    if 'payments' in path or 'subscriptions' in path:
+        subscriptions = Subscription.objects.select_related('vendor', 'vendor__vendor_profile').all().order_by('-created_at')
+        purchases_data = []
+        for s in subscriptions:
+            v_user = s.vendor
+            v_profile = getattr(v_user, 'vendor_profile', None)
+            v_name = v_profile.company_name if (v_profile and v_profile.company_name) else (v_user.get_full_name() or v_user.username)
+            v_type = getattr(v_profile, 'vendor_type', 'company')
+            credits = 100 if '100' in s.package_name else (50 if '50' in s.package_name else (25 if '25' in s.package_name else (15 if '15' in s.package_name else 10)))
+            purchases_data.append({
+                'id': f'TXN-BC-{s.id:04d}',
+                'vendor': v_name,
+                'vendorId': f'VEN-{v_user.id:04d}',
+                'vendorType': v_type,
+                'package': s.package_name,
+                'credits': credits,
+                'amount': float(s.amount),
+                'paymentStatus': s.status,
+                'date': s.created_at.strftime('%Y-%m-%d %H:%M') if s.created_at else 'Unknown'
+            })
+        context['purchases_json'] = json.dumps(purchases_data)
+        context['purchases'] = purchases_data
+        context['payments'] = subscriptions
+        context['subscriptions'] = subscriptions
+        context['total_payments_amount'] = subscriptions.filter(status='success').aggregate(Sum('amount'))['amount__sum'] or 0
+        context['total_revenue'] = context['total_payments_amount']
+
+    if 'users/customers' in path:
+        context['customers'] = User.objects.filter(role='USER').select_related('user_profile').order_by('-date_joined')
+
+    if 'reports/revenue' in path:
+        subscriptions = Subscription.objects.select_related('vendor', 'vendor__vendor_profile').all().order_by('-created_at')
         total_revenue = subscriptions.filter(status='success').aggregate(Sum('amount'))['amount__sum'] or 0
         context['subscriptions'] = subscriptions
         context['total_revenue'] = total_revenue
+        context['success_count'] = subscriptions.filter(status='success').count()
+        context['failed_count'] = subscriptions.filter(status='failed').count()
 
     try:
         return render(request, template_name, context)
@@ -1030,6 +1216,15 @@ def admin_dashboard(request):
     return render(request, 'admin-dashboard/dashboard.html', context)
 
 def user_login_view(request):
+    if request.user.is_authenticated:
+        if request.user.role == 'ADMIN' or request.user.is_superuser:
+            return redirect('admin_dashboard')
+        elif request.user.role == 'VENDOR':
+            return redirect('vendor_dashboard')
+        elif request.user.role in ['USER', 'CUSTOMER']:
+            return redirect('user_dashboard')
+        return redirect('admin_dashboard')
+
     error = None
     if request.method == 'POST':
         username = request.POST.get('username', '').strip()
@@ -1261,186 +1456,30 @@ from django.contrib.auth.decorators import login_required
 
 @login_required
 def user_dashboard(request):
-    user = request.user
-    
-    # Active Quick Services count
-    qs_list = QuickService.objects.filter(user=user)
-    active_qs = qs_list.exclude(status__in=['completed', 'cancelled', 'closed']).count()
-    completed_qs = qs_list.filter(status='completed').count()
-    
-    # Active Jobs count
-    job_list = Job.objects.filter(user=user)
-    active_jobs = job_list.exclude(status__in=['completed', 'cancelled', 'closed']).count()
-    completed_jobs = job_list.filter(status='completed').count()
-    
-    # Pending Quotations count (bids on open jobs/qs)
-    pending_bids_qs = Bid.objects.filter(quick_service__user=user, status='pending').count()
-    pending_bids_jobs = Bid.objects.filter(job__user=user, status='pending').count()
-    pending_quotations = pending_bids_qs + pending_bids_jobs
-    
-    # Selected Vendors count
-    selected_vendors_qs = Bid.objects.filter(quick_service__user=user, status='selected').count()
-    selected_vendors_jobs = Bid.objects.filter(job__user=user, status='selected').count()
-    selected_vendors = selected_vendors_qs + selected_vendors_jobs
-    
-    # Recent items
-    recent_qs = qs_list.order_by('-created_at')[:3]
-    recent_jobs = job_list.order_by('-created_at')[:3]
-    
-    # Messages
-    # In the future, we could query the Message model for recent activity.
-    
-    context = {
-        'active_qs': active_qs,
-        'active_jobs': active_jobs,
-        'pending_quotations': pending_quotations,
-        'selected_vendors': selected_vendors,
-        'completed_qs': completed_qs,
-        'completed_jobs': completed_jobs,
-        'recent_qs': recent_qs,
-        'recent_jobs': recent_jobs,
-    }
-    
+    context = get_user_dashboard_context(request.user)
     return render(request, 'user-dashboard/dashboard.html', context)
 
-from django.views.decorators.http import require_POST
-from django.http import JsonResponse
-from .models import UserProfile
-
-@require_POST
-def add_user_api(request):
-    try:
-        data = json.loads(request.body)
-        name = data.get('name', '').strip()
-        email = data.get('email', '').strip()
-        mobile = data.get('mobile', '').strip()
-        password = data.get('password', '').strip()
-
-        if not name or not password:
-            return JsonResponse({'success': False, 'error': 'Name and password are required.'})
-
-        # Generate a username
-        username = email if email else name.replace(" ", "").lower() + str(User.objects.count())
-
-        # Check if username exists
-        if User.objects.filter(username=username).exists():
-            import random
-            username = username + str(random.randint(100, 999))
-
-        user = User.objects.create(
-            username=username,
-            email=email,
-            role='USER',
-            first_name=name
-        )
-        user.set_password(password)
-        user.save()
-
-        UserProfile.objects.create(user=user, phone_number=mobile)
-
-        user_data = {
-            'id': f'USR-{user.id:04d}',
-            'name': name,
-            'email': email or '—',
-            'mobile': mobile or '—',
-            'location': 'Unknown',
-            'quickServices': 0,
-            'jobs': 0,
-            'completedJobs': 0,
-            'status': 'active',
-            'registered': user.date_joined.strftime('%Y-%m-%d')
-        }
-
-        return JsonResponse({'success': True, 'user': user_data})
-    except Exception as e:
-        return JsonResponse({'success': False, 'error': str(e)})
-
-def user_nav_data_api(request):
-    if request.user.is_authenticated:
-        u = request.user
-        name = u.get_full_name() or u.username
-        initials = (u.first_name[:1].upper() + u.last_name[:1].upper()) if u.first_name else u.username[:2].upper()
-        return JsonResponse({'name': name, 'initials': initials})
-    return JsonResponse({'name': 'Guest', 'initials': 'GU'})
-
-@require_POST
-def add_category_api(request):
-    try:
-        data = json.loads(request.body)
-        name = data.get('name', '').strip()
-        service_type = data.get('service_type', 'both')
-        status = data.get('status', 'active')
-
-        if not name:
-            return JsonResponse({'success': False, 'error': 'Name is required.'})
-
-        cat = Category.objects.create(
-            name=name,
-            service_type=service_type,
-            status=status
-        )
-
-        cat_data = {
-            'id': cat.id,
-            'name': cat.name,
-            'service_type': cat.service_type,
-            'status': cat.status,
-            'created_at': cat.created_at.strftime('%Y-%m-%d')
-        }
-
-        return JsonResponse({'success': True, 'category': cat_data})
-    except Exception as e:
-        return JsonResponse({'success': False, 'error': str(e)})
-
-@require_POST
-def update_category_api(request):
-    try:
-        data = json.loads(request.body)
-        cat_id = data.get('id')
-        name = data.get('name', '').strip()
-        service_type = data.get('service_type', 'both')
-        status = data.get('status', 'active')
-
-        if not cat_id or not name:
-            return JsonResponse({'success': False, 'error': 'ID and Name are required.'})
-
-        cat = Category.objects.get(id=cat_id)
-        cat.name = name
-        cat.service_type = service_type
-        cat.status = status
-        cat.save()
-
-        cat_data = {
-            'id': cat.id,
-            'name': cat.name,
-            'service_type': cat.service_type,
-            'status': cat.status,
-            'created_at': cat.created_at.strftime('%Y-%m-%d')
-        }
-
-        return JsonResponse({'success': True, 'category': cat_data})
-    except Category.DoesNotExist:
-        return JsonResponse({'success': False, 'error': 'Category not found.'})
-    except Exception as e:
-        return JsonResponse({'success': False, 'error': str(e)})
-
-@require_POST
-def delete_category_api(request):
-    try:
-        data = json.loads(request.body)
-        cat_id = data.get('id')
-
-        if not cat_id:
-            return JsonResponse({'success': False, 'error': 'ID is required.'})
-
-        cat = Category.objects.get(id=cat_id)
-        cat.delete()
-
-        return JsonResponse({'success': True})
-    except Category.DoesNotExist:
-        return JsonResponse({'success': False, 'error': 'Category not found.'})
-    except Exception as e:
-        return JsonResponse({'success': False, 'error': str(e)})
+# Re-export APIs from Api_views module
+from .Api_views import (
+    unified_login_api,
+    unified_otp_login_api,
+    check_phone_api,
+    user_signup_api,
+    user_login_api,
+    vendor_signup_api,
+    vendor_login_api,
+    send_otp_api,
+    verify_otp_api,
+    user_otp_signup_api,
+    user_otp_login_api,
+    vendor_otp_signup_api,
+    vendor_otp_login_api,
+    add_user_api,
+    user_nav_data_api,
+    add_category_api,
+    update_category_api,
+    delete_category_api,
+)
 
 def manage_location_view(request):
     if request.method == 'POST':
@@ -1465,4 +1504,5 @@ def manage_location_view(request):
         
         return redirect('/master/locations')
     return redirect('/master/locations')
+
 

@@ -14,12 +14,72 @@
     <div class="workspace">
       <div id="topbar-root"></div>
       <main class="page">
+        <div class="page-head">
+          <div>
+            <h1>Assigned & Selected Projects</h1>
+            <p>Projects and service requests where the customer has selected your quotation.</p>
+          </div>
+          <div class="actions">
+            <span class="badge badge-success">{{ selected_bids|length }} Active Assignment{{ selected_bids|length|pluralize }}</span>
+          </div>
+        </div>
+
         <section class="card">
-           <div style="padding: 60px 20px; text-align: center; color: var(--text-muted);">
-             <h2>Coming Soon</h2>
-             <p style="margin-top: 10px; margin-bottom: 20px;">The selected jobs page is currently under construction.</p>
-             <button class="btn btn-primary" onclick="history.back()">Go Back</button>
-           </div>
+          <div class="table-wrap">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Job / Service</th>
+                  <th>Customer</th>
+                  <th>Quoted Amount</th>
+                  <th>Timeline</th>
+                  <th>Status</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for b in selected_bids %}
+                <tr>
+                  <td>
+                    <strong>{{ b.job.title|default:b.quick_service.title }}</strong>
+                    <div class="small muted">
+                      {% if b.job %}
+                      JOB-{{ b.job.id|stringformat:"04d" }} · {{ b.job.category.name|default:"General" }}
+                      {% else %}
+                      QS-{{ b.quick_service.id|stringformat:"04d" }} · {{ b.quick_service.category.name|default:"General" }}
+                      {% endif %}
+                    </div>
+                  </td>
+                  <td>
+                    {% if b.job %}
+                    {{ b.job.contact_name|default:b.job.user.get_full_name|default:b.job.user.username }}
+                    <div class="small muted">{{ b.job.contact_mobile|default:b.job.user.user_profile.phone_number }}</div>
+                    {% else %}
+                    {{ b.quick_service.contact_name|default:b.quick_service.user.get_full_name|default:b.quick_service.user.username }}
+                    <div class="small muted">{{ b.quick_service.contact_mobile|default:b.quick_service.user.user_profile.phone_number }}</div>
+                    {% endif %}
+                  </td>
+                  <td><strong>₹{{ b.amount|floatformat:0 }}</strong></td>
+                  <td>{{ b.estimated_time|default:"As agreed" }}</td>
+                  <td><span class="badge badge-success">Selected</span></td>
+                  <td>
+                    {% if b.job %}
+                    <a class="btn btn-primary btn-sm" href="/vendor/messages/chat.html?user_id={{ b.job.user.id }}">Chat Customer</a>
+                    {% else %}
+                    <a class="btn btn-primary btn-sm" href="/vendor/messages/chat.html?user_id={{ b.quick_service.user.id }}">Chat Customer</a>
+                    {% endif %}
+                  </td>
+                </tr>
+                {% empty %}
+                <tr>
+                  <td colspan="6" style="text-align:center; padding:32px; color: var(--text-muted);">
+                    No jobs currently selected. Browse <a href="available.html">Available Jobs</a> and submit quotations to win contracts!
+                  </td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
         </section>
       </main>
     </div>

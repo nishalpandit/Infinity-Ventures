@@ -11,6 +11,7 @@
   <link rel="stylesheet" href="/admin-dashboard/assets/css/admin.css">
   <link rel="stylesheet" href="/admin-dashboard/assets/css/sidebar.css">
   <link rel="stylesheet" href="/admin-dashboard/assets/css/responsive.css">
+  <meta name="csrf-token" content="{{ csrf_token }}">
 </head>
 <body>
   <div id="sidebar-mount"></div>
@@ -18,24 +19,70 @@
     <div id="header-mount"></div>
     <main class="main-content">
       <div class="breadcrumb" id="breadcrumb"></div>
-      
-      <div class="card" style="margin-top: 2rem;">
-         <div class="card-body" style="padding: 4rem 2rem; text-align: center;">
-           <h3 style="margin-bottom: 1rem; color: #334155;">Page Under Construction</h3>
-           <p style="color: #64748b; margin-bottom: 2rem;">The customers management page is currently being built.</p>
-           <button class="btn btn-primary" onclick="history.back()">Go Back</button>
-         </div>
+
+      <div class="card">
+        <div class="card-body p-0" id="tableMount"></div>
       </div>
-      
     </main>
   </div>
+
   <script src="/admin-dashboard/assets/js/sidebar.js"></script>
   <script src="/admin-dashboard/assets/js/components.js"></script>
   <script src="/admin-dashboard/assets/js/admin.js"></script>
+  <script src="/admin-dashboard/assets/js/data.js"></script>
   <script>
     (function () {
       'use strict';
-      AdminComponents.renderBreadcrumb([{ label: 'Users', url: '#' }, { label: 'Customers' }]);
+      var D = window.AdminData, U = window.AdminUI;
+
+      AdminComponents.renderBreadcrumb([
+        { label: 'Users', href: '#' },
+        { label: 'Customers' }
+      ]);
+
+      var dynamicUsers = {{ users_json|safe|default:"[]" }};
+      
+      var table = U.createTable({
+        mount: '#tableMount',
+        data: dynamicUsers,
+        searchKeys: ['id', 'name', 'email', 'mobile', 'location'],
+        searchPlaceholder: 'Search Customers…',
+        exportName: 'customers',
+        pageSize: 10,
+        filters: [
+          {
+            key: 'status',
+            options: [
+              { value: 'all', label: 'All Status' },
+              { value: 'active', label: 'Active' },
+              { value: 'suspended', label: 'Suspended' }
+            ],
+            match: function (r, v) { return r.status === v; }
+          }
+        ],
+        columns: [
+          { key: 'id', label: 'Customer ID', sortable: true, render: function (r) { return '<span class="mono">' + r.id + '</span>'; } },
+          { key: 'name', label: 'Customer Profile', sortable: true, render: function (r) { return U.userCell(r.name, r.email, r.id); } },
+          { key: 'mobile', label: 'Mobile', render: function (r) { return U.esc(r.mobile); } },
+          { key: 'quickServices', label: 'Quick Services', sortable: true, render: function (r) { return '<span class="count-pill">' + r.quickServices + '</span>'; } },
+          { key: 'jobs', label: 'Jobs', sortable: true, render: function (r) { return '<span class="count-pill">' + r.jobs + '</span>'; } },
+          { key: 'completedJobs', label: 'Completed', sortable: true, render: function (r) { return '<span class="count-pill green">' + r.completedJobs + '</span>'; } },
+          { key: 'status', label: 'Status', sortable: true, render: function (r) { return U.badge(r.status); } },
+          { key: 'registered', label: 'Registered', sortable: true, render: function (r) { return r.registered; } },
+          {
+            key: 'actions', label: 'Actions', csv: false, render: function (r) {
+              return U.actionBtns([
+                { action: 'view', icon: 'fa-eye', title: 'View', cls: 'view' }
+              ]);
+            }
+          }
+        ],
+        onAction: function (act, row) {
+          if (act === 'view') {
+            location.href = 'User-details.html?id=' + row.id;
+          }
+        }
+      });
     })();
   </script>
 </body>

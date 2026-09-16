@@ -1,5 +1,88 @@
 <!doctype html>
-    <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="description" content="Infinity Ventures user Portal — Messages"><title>Messages · Infinity Ventures user</title><link rel="stylesheet" href="../assets/styles.css"><script defer src="../assets/app.js"></script></head>
-    <body data-page="messages" data-title="Messages" data-root="../"><div class="app-shell"><div id="sidebar-root"></div><div class="workspace"><div id="topbar-root"></div><main class="page">
-<div class="page-head"><div><h1>Messages</h1><p>Continue negotiations and coordinate work with vendors.</p></div></div><section class="card inbox"><div class="conversation-list"><div class="conversation-search"><div class="search-box" style="max-width:none"><span data-icon="search"></span><input class="input" placeholder="Search conversations"></div></div><a class="conversation active" href="chat.html" data-href="chat.html"> <span class="online"><span class="avatar md vendor">BR</span></span><span class="conversation-copy"><span class="conversation-line"><strong>BuildRight Contractors</strong><time>10:42 AM</time></span><span class="conversation-line"><p>The updated material list is attached.</p><span class="badge" style="background:var(--primary);color:#fff">2</span></span></span></a><a class="conversation " href="chat.html" data-href="chat.html"> <span class="online"><span class="avatar md vendor">RK</span></span><span class="conversation-copy"><span class="conversation-line"><strong>Ravi Kumar</strong><time>9:18 AM</time></span><span class="conversation-line"><p>I can arrive around 10:15 tomorrow.</p></span></span></a><a class="conversation " href="chat.html" data-href="chat.html"> <span class=""><span class="avatar md vendor">AH</span></span><span class="conversation-copy"><span class="conversation-line"><strong>Aarav Home Solutions</strong><time>Yesterday</time></span><span class="conversation-line"><p>Thank you, I will review the floor plan.</p></span></span></a><a class="conversation " href="chat.html" data-href="chat.html"> <span class=""><span class="avatar md vendor">SI</span></span><span class="conversation-copy"><span class="conversation-line"><strong>Spark India Services</strong><time>Yesterday</time></span><span class="conversation-line"><p>The electrical inspection is complete.</p><span class="badge" style="background:var(--primary);color:#fff">1</span></span></span></a><a class="conversation " href="chat.html" data-href="chat.html"> <span class=""><span class="avatar md vendor">AE</span></span><span class="conversation-copy"><span class="conversation-line"><strong>AquaShield Experts</strong><time>Monday</time></span><span class="conversation-line"><p>Could you share a photo of the terrace edge?</p></span></span></a><a class="conversation " href="chat.html" data-href="chat.html"> <span class=""><span class="avatar md vendor">CC</span></span><span class="conversation-copy"><span class="conversation-line"><strong>CleanCo Ranchi</strong><time>16 Aug</time></span><span class="conversation-line"><p>Your cleaning service has been completed.</p></span></span></a></div><div class="chat-preview"><div class="chat-header"><span class="avatar md vendor">BR</span><div class="vendor-meta"><h3>BuildRight Contractors</h3><span>● Online</span></div><a class="btn btn-secondary btn-sm" href="../vendors/details.html">Vendor Profile</a><a class="btn btn-primary btn-sm" href="chat.html">Open Chat</a></div><div class="chat-messages"><div class="date-separator"><span>Today</span></div><div class="message-row"><div class="message">Good morning, we reviewed the floor plan. The electrical changes can be completed within the quoted schedule.<div class="message-time">9:34 AM</div></div></div><div class="message-row sent"><div class="message">Thanks. Can you confirm whether the switch plates in the quotation are Anchor Roma?<div class="message-time">9:41 AM · Read ✓✓</div></div></div><div class="message-row"><div class="message">Yes, Anchor Roma is included. I’ve also updated the material list.<div class="message-file"><span data-icon="file"></span><span><strong>material-list-v2.pdf</strong><br><span class="tiny">1.2 MB</span></span></div><div class="message-time">10:42 AM</div></div></div></div><div class="payment-note">For your safety, agree service pricing clearly. Infinity Ventures does not process user-to-Vendor service payments.</div><div class="chat-compose"><button class="icon-btn" data-attachment><span data-icon="paperclip"></span></button><input class="input" placeholder="Type a message..." disabled><a class="btn btn-primary" href="chat.html">Open full chat</a></div></div></section>
-</main></div></div></body></html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="Infinity Ventures User Portal — Messages">
+  <title>Messages · Infinity Ventures User</title>
+  <link rel="stylesheet" href="../assets/styles.css">
+  <script defer src="../assets/app.js"></script>
+</head>
+<body data-page="messages" data-title="Messages" data-root="../">
+  <div class="app-shell">
+    <div id="sidebar-root"></div>
+    <div class="workspace">
+      <div id="topbar-root"></div>
+      <main class="page">
+        <div class="page-head">
+          <div>
+            <h1>Messages</h1>
+            <p>Continue negotiations and coordinate work with vendors.</p>
+          </div>
+        </div>
+
+        <section class="card inbox">
+          <div class="conversation-list">
+            <div class="conversation-search">
+              <div class="search-box" style="max-width:none">
+                <span data-icon="search"></span>
+                <input class="input" placeholder="Search conversations">
+              </div>
+            </div>
+
+            {% for conv in conversations %}
+            <a class="conversation {% if forloop.first %}active{% endif %}" href="chat.html?vendor_id={{ conv.vendor_id }}">
+              <span class="avatar md vendor">{{ conv.initials }}</span>
+              <span class="conversation-copy">
+                <span class="conversation-line">
+                  <strong>{{ conv.name }}</strong>
+                  {% if conv.latest_message %}
+                  <time>{{ conv.latest_message.created_at|date:"h:i A" }}</time>
+                  {% endif %}
+                </span>
+                <span class="conversation-line">
+                  <p>{{ conv.latest_message.content|default:"Start conversation..."|truncatechars:40 }}</p>
+                  {% if conv.unread_count > 0 %}
+                  <span class="badge" style="background:var(--primary);color:#fff">{{ conv.unread_count }}</span>
+                  {% endif %}
+                </span>
+              </span>
+            </a>
+            {% empty %}
+            <div style="padding: 24px; text-align:center; color: var(--text-muted);">
+              No active conversations. When vendors quote on your requests, you can chat with them here.
+            </div>
+            {% endfor %}
+          </div>
+
+          <div class="chat-preview">
+            {% if conversations %}
+            {% with first_conv=conversations.0 %}
+            <div class="chat-header">
+              <span class="avatar md vendor">{{ first_conv.initials }}</span>
+              <div class="vendor-meta">
+                <h3>{{ first_conv.name }}</h3>
+                <span>Verified Vendor</span>
+              </div>
+              <a class="btn btn-primary btn-sm" href="chat.html?vendor_id={{ first_conv.vendor_id }}">Open Full Chat</a>
+            </div>
+
+            <div class="chat-messages" style="display:flex;align-items:center;justify-content:center;flex-direction:column;gap:12px;">
+              <span class="avatar lg vendor">{{ first_conv.initials }}</span>
+              <h3>Chat with {{ first_conv.name }}</h3>
+              <p class="muted">Discuss specifications, clarify quotation items and coordinate visits.</p>
+              <a class="btn btn-primary" href="chat.html?vendor_id={{ first_conv.vendor_id }}">Open Chat Window</a>
+            </div>
+            {% endwith %}
+            {% else %}
+            <div class="chat-messages" style="display:flex;align-items:center;justify-content:center;">
+              <p class="muted">Select or start a conversation from your requests.</p>
+            </div>
+            {% endif %}
+          </div>
+        </section>
+      </main>
+    </div>
+  </div>
+</body>
+</html>
