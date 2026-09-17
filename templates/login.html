@@ -1,0 +1,948 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sign In - Infinity Ventures</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+  <style>
+    :root {
+      --primary: #6366f1;
+      --primary-hover: #4f46e5;
+      --primary-glow: rgba(99, 102, 241, 0.4);
+      --card-bg: rgba(15, 23, 42, 0.82);
+      --card-border: rgba(255, 255, 255, 0.12);
+      --input-bg: rgba(2, 6, 23, 0.6);
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --text-dim: #64748b;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Plus Jakarta Sans', 'Inter', sans-serif;
+      background: radial-gradient(circle at top center, #1e1b4b 0%, #0f172a 50%, #030712 100%);
+      color: var(--text-main);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px 16px;
+      position: relative;
+      overflow-x: hidden;
+    }
+
+    /* Ambient animated lighting */
+    .blob {
+      position: absolute;
+      border-radius: 50%;
+      filter: blur(110px);
+      z-index: 0;
+      pointer-events: none;
+      animation: float 14s ease-in-out infinite alternate;
+    }
+
+    .blob-1 {
+      width: 520px;
+      height: 520px;
+      background: radial-gradient(circle, rgba(99, 102, 241, 0.35) 0%, rgba(99, 102, 241, 0) 70%);
+      top: -160px;
+      left: -120px;
+    }
+
+    .blob-2 {
+      width: 480px;
+      height: 480px;
+      background: radial-gradient(circle, rgba(236, 72, 153, 0.22) 0%, rgba(236, 72, 153, 0) 70%);
+      bottom: -140px;
+      right: -100px;
+      animation-delay: 3s;
+    }
+
+    @keyframes float {
+      0% { transform: translate(0, 0) scale(1); }
+      50% { transform: translate(30px, 20px) scale(1.05); }
+      100% { transform: translate(-20px, 35px) scale(0.95); }
+    }
+
+    /* Main Login Container */
+    .login-container {
+      position: relative;
+      z-index: 10;
+      width: 100%;
+      max-width: 440px;
+      background: var(--card-bg);
+      backdrop-filter: blur(28px);
+      -webkit-backdrop-filter: blur(28px);
+      border: 1px solid var(--card-border);
+      border-radius: 28px;
+      padding: 40px 32px;
+      box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(255, 255, 255, 0.05);
+      animation: fadeInScale 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+
+    @keyframes fadeInScale {
+      from {
+        opacity: 0;
+        transform: translateY(20px) scale(0.97);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+    }
+
+    /* Brand Header */
+    .brand-header {
+      text-align: center;
+      margin-bottom: 28px;
+    }
+
+    .brand-icon {
+      width: 58px;
+      height: 58px;
+      margin: 0 auto 14px;
+      border-radius: 18px;
+      background: linear-gradient(135deg, rgba(99, 102, 241, 0.25), rgba(236, 72, 153, 0.25));
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 28px;
+      color: #818cf8;
+      box-shadow: 0 10px 25px -5px rgba(99, 102, 241, 0.35);
+    }
+
+    .brand-header h1 {
+      font-size: 24px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      color: #ffffff;
+      margin-bottom: 6px;
+    }
+
+    .brand-header p {
+      color: var(--text-muted);
+      font-size: 14px;
+    }
+
+    /* Login Mode Tabs: Mobile OTP vs Password */
+    .auth-toggle-pill {
+      display: flex;
+      background: rgba(0, 0, 0, 0.45);
+      border: 1px solid var(--card-border);
+      border-radius: 14px;
+      padding: 4px;
+      margin-bottom: 24px;
+    }
+
+    .auth-toggle-btn {
+      flex: 1;
+      border: none;
+      background: transparent;
+      color: var(--text-muted);
+      font-family: inherit;
+      font-size: 13.5px;
+      font-weight: 600;
+      padding: 11px 14px;
+      border-radius: 10px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: all 0.25s ease;
+    }
+
+    .auth-toggle-btn.active {
+      background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+      color: #ffffff;
+      box-shadow: 0 4px 14px var(--primary-glow);
+    }
+
+    .auth-toggle-btn:not(.active):hover {
+      color: var(--text-main);
+      background: rgba(255, 255, 255, 0.04);
+    }
+
+    /* Form Fields */
+    .form-group {
+      margin-bottom: 20px;
+      position: relative;
+    }
+
+    .form-label {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-muted);
+      margin-bottom: 8px;
+    }
+
+    .input-box {
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+
+    .input-box i.input-icon {
+      position: absolute;
+      left: 14px;
+      color: var(--text-dim);
+      font-size: 15px;
+      transition: color 0.2s;
+      pointer-events: none;
+    }
+
+    .form-control {
+      width: 100%;
+      background: var(--input-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 12px;
+      color: var(--text-main);
+      padding: 13.5px 14px 13.5px 44px;
+      font-family: inherit;
+      font-size: 14.5px;
+      outline: none;
+      transition: all 0.25s ease;
+    }
+
+    .form-control:focus {
+      border-color: #6366f1;
+      box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.22);
+      background: rgba(0, 0, 0, 0.55);
+    }
+
+    .form-control:focus ~ i.input-icon {
+      color: #818cf8;
+    }
+
+    /* Phone Prefix styling */
+    .phone-prefix {
+      position: absolute;
+      left: 14px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 14px;
+      font-weight: 700;
+      color: #818cf8;
+      pointer-events: none;
+    }
+
+    .form-control.phone-input {
+      padding-left: 72px;
+      letter-spacing: 0.5px;
+    }
+
+    .toggle-pwd {
+      position: absolute;
+      right: 14px;
+      background: none;
+      border: none;
+      color: var(--text-dim);
+      cursor: pointer;
+      font-size: 15px;
+      transition: color 0.2s;
+    }
+
+    .toggle-pwd:hover {
+      color: var(--text-main);
+    }
+
+    /* 6 Segmented OTP Inputs */
+    .otp-digits-wrapper {
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      margin: 12px 0 16px;
+    }
+
+    .otp-digit {
+      width: 48px;
+      height: 52px;
+      text-align: center;
+      font-size: 22px;
+      font-weight: 700;
+      border-radius: 12px;
+      background: var(--input-bg);
+      border: 1px solid var(--card-border);
+      color: #ffffff;
+      outline: none;
+      transition: all 0.2s;
+    }
+
+    .otp-digit:focus {
+      border-color: #818cf8;
+      box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.25);
+      background: rgba(0, 0, 0, 0.5);
+    }
+
+    .otp-meta {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 12.5px;
+      color: var(--text-muted);
+      margin-bottom: 18px;
+    }
+
+    .btn-resend {
+      background: none;
+      border: none;
+      color: #818cf8;
+      font-family: inherit;
+      font-size: 12.5px;
+      font-weight: 600;
+      cursor: pointer;
+      padding: 0;
+      transition: color 0.2s;
+    }
+
+    .btn-resend:disabled {
+      color: var(--text-dim);
+      cursor: not-allowed;
+    }
+
+    /* Submit Button */
+    .btn-submit {
+      width: 100%;
+      background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+      color: #ffffff;
+      border: none;
+      padding: 14px;
+      border-radius: 12px;
+      font-family: inherit;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      box-shadow: 0 8px 20px -4px rgba(99, 102, 241, 0.5);
+      transition: all 0.25s ease;
+    }
+
+    .btn-submit:hover {
+      background: linear-gradient(135deg, #4f46e5 0%, #4338ca 100%);
+      transform: translateY(-1.5px);
+      box-shadow: 0 12px 25px -4px rgba(99, 102, 241, 0.6);
+    }
+
+    .btn-submit:active {
+      transform: translateY(0);
+    }
+
+    .btn-submit:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    /* Alerts */
+    .alert-box {
+      border-radius: 12px;
+      padding: 12px 14px;
+      font-size: 13.5px;
+      margin-bottom: 18px;
+      display: none;
+      align-items: flex-start;
+      gap: 10px;
+      line-height: 1.4;
+      animation: fadeIn 0.3s ease;
+    }
+
+    .alert-box.error {
+      display: flex;
+      background: rgba(239, 68, 68, 0.12);
+      border: 1px solid rgba(239, 68, 68, 0.3);
+      color: #fca5a5;
+    }
+
+    .alert-box.success {
+      display: flex;
+      background: rgba(16, 185, 129, 0.12);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      color: #6ee7b7;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(-6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Footer: Create Account */
+    .login-footer {
+      margin-top: 26px;
+      text-align: center;
+      font-size: 13.5px;
+      color: var(--text-muted);
+      border-top: 1px solid var(--card-border);
+      padding-top: 20px;
+    }
+
+    .login-footer a {
+      color: #818cf8;
+      text-decoration: none;
+      font-weight: 700;
+      margin-left: 4px;
+      transition: color 0.2s;
+    }
+
+    .login-footer a:hover {
+      color: #a5b4fc;
+      text-decoration: underline;
+    }
+
+    /* Modal Styles */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(3, 7, 18, 0.85);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      opacity: 0;
+      visibility: hidden;
+      transition: all 0.3s ease;
+      padding: 16px;
+    }
+
+    .modal-overlay.active {
+      opacity: 1;
+      visibility: visible;
+    }
+
+    .modal-content {
+      background: #0f172a;
+      border: 1px solid var(--card-border);
+      border-radius: 26px;
+      padding: 36px 30px;
+      width: 100%;
+      max-width: 440px;
+      position: relative;
+      transform: translateY(20px) scale(0.96);
+      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+      box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.8);
+    }
+
+    .modal-overlay.active .modal-content {
+      transform: translateY(0) scale(1);
+    }
+
+    .close-btn {
+      position: absolute;
+      top: 18px;
+      right: 18px;
+      background: rgba(255, 255, 255, 0.06);
+      border: none;
+      color: var(--text-muted);
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .close-btn:hover {
+      background: rgba(255, 255, 255, 0.15);
+      color: #ffffff;
+    }
+
+    .role-option-card {
+      display: flex;
+      align-items: center;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid var(--card-border);
+      border-radius: 16px;
+      padding: 18px;
+      text-decoration: none;
+      color: #ffffff;
+      margin-bottom: 14px;
+      transition: all 0.25s ease;
+    }
+
+    .role-option-card:hover {
+      background: rgba(99, 102, 241, 0.12);
+      border-color: rgba(99, 102, 241, 0.45);
+      transform: translateY(-2px);
+      box-shadow: 0 10px 20px -8px rgba(99, 102, 241, 0.3);
+    }
+
+    .role-option-card .icon-box {
+      width: 48px;
+      height: 48px;
+      border-radius: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      margin-right: 16px;
+      flex-shrink: 0;
+    }
+
+    .user-opt .icon-box {
+      background: rgba(96, 165, 250, 0.15);
+      color: #60a5fa;
+    }
+
+    .vendor-opt .icon-box {
+      background: rgba(192, 132, 252, 0.15);
+      color: #c084fc;
+    }
+
+    .role-option-card h3 {
+      font-size: 15.5px;
+      font-weight: 700;
+      margin-bottom: 3px;
+    }
+
+    .role-option-card p {
+      font-size: 12.5px;
+      color: var(--text-muted);
+    }
+  </style>
+</head>
+
+<body>
+  <!-- Ambient background glow -->
+  <div class="blob blob-1"></div>
+  <div class="blob blob-2"></div>
+
+  <div class="login-container">
+    <!-- Brand Header -->
+    <div class="brand-header">
+      <div class="brand-icon">
+        <i class="fa-solid fa-infinity"></i>
+      </div>
+      <h1>Welcome to Infinity</h1>
+      <p>Sign in to your account</p>
+    </div>
+
+    <!-- Login Options: Mobile OTP vs Password -->
+    <div class="auth-toggle-pill" role="tablist">
+      <button type="button" class="auth-toggle-btn active" id="btnTabOtp" onclick="switchLoginMode('otp')">
+        <i class="fa-solid fa-mobile-screen"></i> Mobile OTP
+      </button>
+      <button type="button" class="auth-toggle-btn" id="btnTabPassword" onclick="switchLoginMode('password')">
+        <i class="fa-solid fa-key"></i> Password
+      </button>
+    </div>
+
+    <!-- Alert Box -->
+    <div id="alertBox" class="alert-box">
+      <i id="alertIcon" class="fa-solid fa-circle-exclamation"></i>
+      <div id="alertMsg"></div>
+    </div>
+
+    <!-- 1. MOBILE & OTP LOGIN -->
+    <div id="otpSection">
+      <!-- Step A: Enter Phone Number -->
+      <div id="phoneStep">
+        <div class="form-group">
+          <label class="form-label" for="phoneInput">Mobile Phone Number</label>
+          <div class="input-box">
+            <span class="phone-prefix"><i class="fa-solid fa-phone"></i> +91</span>
+            <input type="tel" id="phoneInput" class="form-control phone-input" placeholder="98765 43210" maxlength="15" oninput="cleanPhoneInput(this)" autofocus>
+          </div>
+        </div>
+
+        <button type="button" id="btnGetOtp" class="btn-submit" onclick="handleSendOtp()">
+          <span>Get Verification Code</span>
+          <i class="fa-solid fa-arrow-right"></i>
+        </button>
+      </div>
+
+      <!-- Step B: Enter OTP -->
+      <div id="verifyStep" style="display: none;">
+        <div class="otp-meta">
+          <div>Code sent to <strong id="phoneDisplay">+91</strong> <a href="#" onclick="goBackToPhone(event)" style="color: #818cf8; margin-left: 4px; font-weight: 600;">Edit</a></div>
+          <button type="button" id="btnResend" class="btn-resend" disabled onclick="handleSendOtp(true)">Resend in <span id="timerSpan">60</span>s</button>
+        </div>
+
+        <label class="form-label">Enter 6-digit verification code</label>
+        <div class="otp-digits-wrapper">
+          <input type="text" class="otp-digit" maxlength="1" pattern="[0-9]" inputmode="numeric" oninput="handleOtpDigit(this, 0)" onkeydown="handleOtpKey(event, 0)">
+          <input type="text" class="otp-digit" maxlength="1" pattern="[0-9]" inputmode="numeric" oninput="handleOtpDigit(this, 1)" onkeydown="handleOtpKey(event, 1)">
+          <input type="text" class="otp-digit" maxlength="1" pattern="[0-9]" inputmode="numeric" oninput="handleOtpDigit(this, 2)" onkeydown="handleOtpKey(event, 2)">
+          <input type="text" class="otp-digit" maxlength="1" pattern="[0-9]" inputmode="numeric" oninput="handleOtpDigit(this, 3)" onkeydown="handleOtpKey(event, 3)">
+          <input type="text" class="otp-digit" maxlength="1" pattern="[0-9]" inputmode="numeric" oninput="handleOtpDigit(this, 4)" onkeydown="handleOtpKey(event, 4)">
+          <input type="text" class="otp-digit" maxlength="1" pattern="[0-9]" inputmode="numeric" oninput="handleOtpDigit(this, 5)" onkeydown="handleOtpKey(event, 5)">
+        </div>
+
+        <button type="button" id="btnVerifyOtp" class="btn-submit" onclick="handleVerifyOtp()">
+          <span>Verify & Sign In</span>
+          <i class="fa-solid fa-check"></i>
+        </button>
+      </div>
+    </div>
+
+    <!-- 2. PASSWORD LOGIN -->
+    <form id="passwordSection" style="display: none;" onsubmit="handlePasswordLogin(event)">
+      {% csrf_token %}
+      <div class="form-group">
+        <label class="form-label" for="loginUsername">Mobile, Email or Username</label>
+        <div class="input-box">
+          <input type="text" id="loginUsername" class="form-control" placeholder="Enter mobile, email or username" required>
+          <i class="fa-solid fa-user input-icon"></i>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="loginPassword">Password</label>
+        <div class="input-box">
+          <input type="password" id="loginPassword" class="form-control" placeholder="Enter your password" required>
+          <i class="fa-solid fa-lock input-icon"></i>
+          <button type="button" class="toggle-pwd" onclick="togglePasswordView('loginPassword', this)">
+            <i class="fa-regular fa-eye"></i>
+          </button>
+        </div>
+      </div>
+
+      <button type="submit" id="btnPasswordSubmit" class="btn-submit">
+        <span>Sign In</span>
+        <i class="fa-solid fa-arrow-right"></i>
+      </button>
+    </form>
+
+    <!-- Create Account (Choose Continue with User or Vendor) -->
+    <div class="login-footer">
+      Don't have an account? <a href="#" onclick="openCreateAccountModal(event)">Create account</a>
+    </div>
+  </div>
+
+  <!-- Create Account Choice Modal -->
+  <div id="createAccountModal" class="modal-overlay">
+    <div class="modal-content">
+      <button class="close-btn" onclick="closeCreateAccountModal()"><i class="fa-solid fa-xmark"></i></button>
+      <h2 style="font-size: 21px; font-weight: 800; color: #fff; margin-bottom: 6px; text-align: center;">Join Infinity Ventures</h2>
+      <p style="color: var(--text-muted); font-size: 13.5px; text-align: center; margin-bottom: 24px;">How would you like to continue?</p>
+
+      <a href="{% url 'register_user' %}" class="role-option-card user-opt">
+        <div class="icon-box"><i class="fa-solid fa-user"></i></div>
+        <div style="flex: 1;">
+          <h3>Continue as User</h3>
+          <p>Book quick services, post jobs, and hire verified professionals</p>
+        </div>
+        <i class="fa-solid fa-arrow-right" style="color: var(--text-dim); font-size: 14px;"></i>
+      </a>
+
+      <a href="{% url 'register_vendor' %}" class="role-option-card vendor-opt">
+        <div class="icon-box"><i class="fa-solid fa-store"></i></div>
+        <div style="flex: 1;">
+          <h3>Continue as Vendor</h3>
+          <p>Provide services, bid on projects, and grow your business</p>
+        </div>
+        <i class="fa-solid fa-arrow-right" style="color: var(--text-dim); font-size: 14px;"></i>
+      </a>
+    </div>
+  </div>
+
+  <script>
+    let activeMode = 'otp'; // 'otp' or 'password'
+    let countdownTimer = null;
+
+    // Switch between Mobile & OTP vs Password
+    function switchLoginMode(mode) {
+      activeMode = mode;
+      document.getElementById('btnTabOtp').classList.toggle('active', mode === 'otp');
+      document.getElementById('btnTabPassword').classList.toggle('active', mode === 'password');
+
+      document.getElementById('otpSection').style.display = mode === 'otp' ? 'block' : 'none';
+      document.getElementById('passwordSection').style.display = mode === 'password' ? 'block' : 'none';
+      hideAlert();
+
+      if (mode === 'otp') {
+        document.getElementById('phoneInput').focus();
+      } else {
+        document.getElementById('loginUsername').focus();
+      }
+    }
+
+    // Toggle password visibility
+    function togglePasswordView(inputId, btn) {
+      const input = document.getElementById(inputId);
+      const isPwd = input.type === 'password';
+      input.type = isPwd ? 'text' : 'password';
+      btn.innerHTML = isPwd ? '<i class="fa-regular fa-eye-slash"></i>' : '<i class="fa-regular fa-eye"></i>';
+    }
+
+    // Alerts
+    function showAlert(message, type = 'error') {
+      const box = document.getElementById('alertBox');
+      const icon = document.getElementById('alertIcon');
+      const msg = document.getElementById('alertMsg');
+      box.className = 'alert-box ' + type;
+      icon.className = type === 'error' ? 'fa-solid fa-circle-exclamation' : 'fa-solid fa-circle-check';
+      msg.innerHTML = message;
+      box.style.display = 'flex';
+    }
+
+    function hideAlert() {
+      document.getElementById('alertBox').style.display = 'none';
+    }
+
+    function cleanPhoneInput(input) {
+      input.value = input.value.replace(/[^0-9\s]/g, '');
+    }
+
+    // ==========================================
+    // 1. MOBILE & OTP FLOW
+    // ==========================================
+    async function handleSendOtp(isResend = false) {
+      hideAlert();
+      const phoneInput = document.getElementById('phoneInput');
+      const mobile = phoneInput.value.replace(/\D/g, '');
+      const btn = document.getElementById('btnGetOtp');
+
+      if (mobile.length < 10) {
+        showAlert('Please enter a valid 10-digit mobile number.');
+        return;
+      }
+
+      if (!isResend) {
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Checking number...';
+      }
+
+      try {
+        // Step 1: Check phone registration status using check-phone API
+        const checkResp = await fetch('/api/auth/check-phone/', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ mobile: mobile })
+        });
+        const checkData = await checkResp.json();
+
+        if (!checkData.is_registered) {
+          showAlert(`Mobile number <strong>${mobile}</strong> is not registered.<br><a href="#" onclick="openCreateAccountModal(event)" style="color: #818cf8; text-decoration: underline; font-weight: 700; margin-top: 4px; display: inline-block;">Create account now &rarr;</a>`, 'error');
+          btn.disabled = false;
+          btn.innerHTML = '<span>Get Verification Code</span> <i class="fa-solid fa-arrow-right"></i>';
+          return;
+        }
+
+        // Step 2: Send OTP using send-otp API
+        const sendResp = await fetch('/api/auth/send-otp/', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ mobile: mobile, purpose: 'login' })
+        });
+        const sendData = await sendResp.json();
+
+        if (sendResp.ok && sendData.status === 'success') {
+          document.getElementById('phoneDisplay').textContent = `+91 ${mobile}`;
+          document.getElementById('phoneStep').style.display = 'none';
+          document.getElementById('verifyStep').style.display = 'block';
+
+          startTimer(60);
+          showAlert(sendData.message || 'Verification code sent successfully!', 'success');
+
+          // Auto-focus first digit box
+          setTimeout(() => {
+            const firstDigit = document.querySelectorAll('.otp-digit')[0];
+            if (firstDigit) firstDigit.focus();
+          }, 150);
+        } else {
+          showAlert(sendData.message || 'Failed to send verification code.');
+          btn.disabled = false;
+          btn.innerHTML = '<span>Get Verification Code</span> <i class="fa-solid fa-arrow-right"></i>';
+        }
+      } catch (err) {
+        showAlert('Network error occurred. Please try again.');
+        btn.disabled = false;
+        btn.innerHTML = '<span>Get Verification Code</span> <i class="fa-solid fa-arrow-right"></i>';
+      }
+    }
+
+    function goBackToPhone(e) {
+      if (e) e.preventDefault();
+      document.getElementById('verifyStep').style.display = 'none';
+      document.getElementById('phoneStep').style.display = 'block';
+      const btn = document.getElementById('btnGetOtp');
+      btn.disabled = false;
+      btn.innerHTML = '<span>Get Verification Code</span> <i class="fa-solid fa-arrow-right"></i>';
+      clearInterval(countdownTimer);
+      hideAlert();
+      document.getElementById('phoneInput').focus();
+    }
+
+    function startTimer(seconds) {
+      clearInterval(countdownTimer);
+      let left = seconds;
+      const resendBtn = document.getElementById('btnResend');
+      const span = document.getElementById('timerSpan');
+      resendBtn.disabled = true;
+
+      countdownTimer = setInterval(() => {
+        left--;
+        span.textContent = left;
+        if (left <= 0) {
+          clearInterval(countdownTimer);
+          resendBtn.disabled = false;
+          resendBtn.textContent = 'Resend Code';
+        }
+      }, 1000);
+    }
+
+    function handleOtpDigit(input, idx) {
+      input.value = input.value.replace(/[^0-9]/g, '');
+      const digits = document.querySelectorAll('.otp-digit');
+      if (input.value && idx < digits.length - 1) {
+        digits[idx + 1].focus();
+      }
+    }
+
+    function handleOtpKey(e, idx) {
+      const digits = document.querySelectorAll('.otp-digit');
+      if (e.key === 'Backspace' && !digits[idx].value && idx > 0) {
+        digits[idx - 1].focus();
+      }
+    }
+
+    async function handleVerifyOtp() {
+      hideAlert();
+      const mobile = document.getElementById('phoneInput').value.replace(/\D/g, '');
+      const digits = Array.from(document.querySelectorAll('.otp-digit')).map(d => d.value).join('');
+      const btn = document.getElementById('btnVerifyOtp');
+
+      if (digits.length < 6) {
+        showAlert('Please enter the complete 6-digit code.');
+        return;
+      }
+
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Verifying...';
+
+      try {
+        const resp = await fetch('/api/auth/otp-login/', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ mobile: mobile, otp: digits })
+        });
+        const data = await resp.json();
+
+        if (resp.ok && data.status === 'success') {
+          showAlert('Logged in successfully! Redirecting...', 'success');
+          setTimeout(() => {
+            window.location.href = data.redirect_url || '/user/dashboard';
+          }, 500);
+        } else {
+          showAlert(data.message || 'Invalid verification code. Please try again.');
+          btn.disabled = false;
+          btn.innerHTML = '<span>Verify & Sign In</span> <i class="fa-solid fa-check"></i>';
+        }
+      } catch (err) {
+        showAlert('Verification failed. Please check your connection.');
+        btn.disabled = false;
+        btn.innerHTML = '<span>Verify & Sign In</span> <i class="fa-solid fa-check"></i>';
+      }
+    }
+
+    // ==========================================
+    // 2. PASSWORD LOGIN FLOW
+    // ==========================================
+    async function handlePasswordLogin(e) {
+      e.preventDefault();
+      hideAlert();
+      const identifier = document.getElementById('loginUsername').value.trim();
+      const password = document.getElementById('loginPassword').value;
+      const btn = document.getElementById('btnPasswordSubmit');
+
+      if (!identifier || !password) {
+        showAlert('Please enter both your identifier and password.');
+        return;
+      }
+
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Signing in...';
+
+      try {
+        const resp = await fetch('/api/auth/login/', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username: identifier, password: password })
+        });
+        const data = await resp.json();
+
+        if (resp.ok && data.status === 'success') {
+          showAlert(data.message || 'Login successful! Redirecting...', 'success');
+          setTimeout(() => {
+            window.location.href = data.redirect_url || '/user/dashboard';
+          }, 500);
+        } else {
+          showAlert(data.message || 'Invalid credentials.');
+          btn.disabled = false;
+          btn.innerHTML = '<span>Sign In</span> <i class="fa-solid fa-arrow-right"></i>';
+        }
+      } catch (err) {
+        // Fallback to standard Django POST
+        submitStandardForm(identifier, password);
+      }
+    }
+
+    function submitStandardForm(username, password) {
+      const form = document.createElement('form');
+      form.method = 'POST';
+      form.action = '';
+      const csrf = document.querySelector('[name=csrfmiddlewaretoken]').value;
+
+      const fCsrf = document.createElement('input');
+      fCsrf.name = 'csrfmiddlewaretoken';
+      fCsrf.value = csrf;
+      form.appendChild(fCsrf);
+
+      const fUser = document.createElement('input');
+      fUser.name = 'username';
+      fUser.value = username;
+      form.appendChild(fUser);
+
+      const fPass = document.createElement('input');
+      fPass.name = 'password';
+      fPass.value = password;
+      form.appendChild(fPass);
+
+      document.body.appendChild(form);
+      form.submit();
+    }
+
+    // ==========================================
+    // 3. CREATE ACCOUNT MODAL (User vs Vendor)
+    // ==========================================
+    function openCreateAccountModal(e) {
+      if (e) e.preventDefault();
+      document.getElementById('createAccountModal').classList.add('active');
+    }
+
+    function closeCreateAccountModal() {
+      document.getElementById('createAccountModal').classList.remove('active');
+    }
+
+    document.getElementById('createAccountModal').addEventListener('click', function (e) {
+      if (e.target === this) closeCreateAccountModal();
+    });
+  </script>
+</body>
+
+</html>

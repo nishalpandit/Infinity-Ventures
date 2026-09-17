@@ -1215,6 +1215,37 @@ def admin_dashboard(request):
     }
     return render(request, 'admin-dashboard/dashboard.html', context)
 
+def home_view(request):
+    error = None
+    if request.method == 'POST':
+        username = request.POST.get('username', '').strip()
+        password = request.POST.get('password', '')
+        user = authenticate(request, username=username, password=password)
+        if user is not None:
+            login(request, user)
+            if user.role == 'ADMIN' or user.is_superuser:
+                return redirect('admin_dashboard')
+            elif user.role == 'VENDOR':
+                return redirect('vendor_dashboard')
+            elif user.role in ['USER', 'CUSTOMER']:
+                return redirect('user_dashboard')
+            return redirect('home')
+        else:
+            error = 'Invalid username, email, phone number, or password.'
+
+    categories = Category.objects.filter(status='active').order_by('name')
+    locations = Location.objects.filter(status='active').order_by('state', 'city')
+    recent_bids = Bid.objects.select_related('vendor', 'job', 'quick_service').order_by('-created_at')[:6]
+
+    context = {
+        'error': error,
+        'categories': categories,
+        'locations': locations,
+        'recent_bids': recent_bids,
+        'user': request.user,
+    }
+    return render(request, 'index.html', context)
+
 def user_login_view(request):
     if request.user.is_authenticated:
         if request.user.role == 'ADMIN' or request.user.is_superuser:
@@ -1241,11 +1272,11 @@ def user_login_view(request):
             return redirect('admin_dashboard')
         else:
             error = 'Invalid username, email, phone number, or password.'
-    return render(request, 'index.html', {'error': error})
+    return render(request, 'login.html', {'error': error})
 
 def user_logout_view(request):
     logout(request)
-    return redirect('login')
+    return redirect('home')
 
 def register_user_view(request):
     error = None
