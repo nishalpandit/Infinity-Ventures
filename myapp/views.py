@@ -421,6 +421,84 @@ def dashboard_view(request, path=''):
             context['status_counts'] = {'all':0,'open':0,'selected':0,'progress':0,'completed':0,'cancelled':0,'closed':0}
             context['active_cats'] = []
             
+    if path == 'user/profile/index' or path == 'user/profile':
+        if request.user.is_authenticated:
+            qs_count = QuickService.objects.filter(user=request.user).count()
+            jobs_count = Job.objects.filter(user=request.user).count()
+            completed_qs = QuickService.objects.filter(user=request.user, status='completed').count()
+            completed_jobs = Job.objects.filter(user=request.user, status='completed').count()
+            vendors_selected = Bid.objects.filter(Q(job__user=request.user) | Q(quick_service__user=request.user), status='selected').count()
+            context.update({
+                'qs_count': qs_count,
+                'jobs_count': jobs_count,
+                'completed_qs': completed_qs,
+                'completed_jobs': completed_jobs,
+                'vendors_selected': vendors_selected,
+            })
+            
+    if path == 'user/profile/edit':
+        if request.method == 'POST' and request.user.is_authenticated:
+            first_name = request.POST.get('first_name')
+            phone_number = request.POST.get('phone_number')
+            email = request.POST.get('email')
+            
+            if first_name:
+                request.user.first_name = first_name
+            if email:
+                request.user.email = email
+            request.user.save()
+            
+            if phone_number:
+                profile, _ = UserProfile.objects.get_or_create(user=request.user)
+                profile.phone_number = phone_number
+                profile.save()
+                
+            return redirect('/user/profile/index.html')
+
+    if path == 'vendor/profile/index' or path == 'vendor/profile':
+        if request.user.is_authenticated:
+            try:
+                v_profile = request.user.vendor_profile
+            except Exception:
+                v_profile = None
+            qs_count = QuickService.objects.filter(bids__vendor=request.user, status='completed').distinct().count()
+            jobs_count = Job.objects.filter(bids__vendor=request.user, status='completed').distinct().count()
+            total_bids = Bid.objects.filter(vendor=request.user).count()
+            context.update({
+                'completed_qs': qs_count,
+                'completed_jobs': jobs_count,
+                'total_bids': total_bids,
+                'profile': v_profile,
+            })
+
+    if path == 'vendor/profile/edit':
+        if request.method == 'POST' and request.user.is_authenticated:
+            company_name = request.POST.get('company_name')
+            category = request.POST.get('category')
+            location = request.POST.get('location')
+            experience = request.POST.get('experience')
+            about = request.POST.get('about')
+            
+            try:
+                profile = request.user.vendor_profile
+                if company_name is not None:
+                    profile.company_name = company_name
+                if category is not None:
+                    profile.category = category
+                if location is not None:
+                    profile.location = location
+                if experience is not None:
+                    try:
+                        profile.experience = int(experience)
+                    except:
+                        pass
+                if about is not None:
+                    profile.about = about
+                profile.save()
+            except Exception:
+                pass
+            return redirect('/vendor/profile/index.html')
+
     if path == 'user/messages/index' or path == 'user/messages':
         if request.user.is_authenticated:
             # Get distinct users the current user has chatted with
