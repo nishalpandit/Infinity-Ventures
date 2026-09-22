@@ -1235,13 +1235,31 @@ def home_view(request):
 
     categories = Category.objects.filter(status='active').order_by('name')
     locations = Location.objects.filter(status='active').order_by('state', 'city')
-    recent_bids = Bid.objects.select_related('vendor', 'job', 'quick_service').order_by('-created_at')[:6]
+    recent_bids = Bid.objects.select_related('vendor', 'vendor__vendor_profile', 'job', 'job__location', 'quick_service', 'quick_service__location').order_by('-created_at')[:12]
+
+    recent_bids_data = []
+    for b in recent_bids:
+        target = b.job or b.quick_service
+        city = (target.location.city if target and target.location else "Ranchi")
+        c_name = target.contact_name or (target.user.get_full_name() or target.user.username) if target and target.user else "Customer"
+        recent_bids_data.append({
+            "customer_name": c_name,
+            "city": city,
+            "service": target.title if target else "Home Service",
+            "price": float(b.amount),
+            "created": b.created_at.strftime("%I:%M %p") if b.created_at else "Just now",
+            "type": "bid"
+        })
 
     context = {
         'error': error,
         'categories': categories,
         'locations': locations,
         'recent_bids': recent_bids,
+        'categories_json': json.dumps(list(categories.values("id", "name", "service_type", "status"))),
+        'locations_json': json.dumps(list(locations.values("id", "state", "city"))),
+        'recent_bids_json': json.dumps(recent_bids_data),
+        'now': timezone.now(),
         'user': request.user,
     }
     return render(request, 'index.html', context)

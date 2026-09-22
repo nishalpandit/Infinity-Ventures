@@ -133,7 +133,8 @@ class Bid(models.Model):
     created_at = models.DateTimeField(default=timezone.now)
 
     def __str__(self):
-        return f"{self.vendor.username} - {self.job.title}"
+        target_title = self.job.title if self.job else (self.quick_service.title if self.quick_service else 'Service')
+        return f"{self.vendor.username} - {target_title}"
 
 class Subscription(models.Model):
     STATUS_CHOICES = (
