@@ -583,25 +583,9 @@
       </a>
       
       <div class="nav-section" style="color: var(--accent); font-weight: 800;">Landing Page CMS</div>
-      <a href="{% url 'super_admin_landing_overview' %}" class="nav-item {% if request.path == '/super-admin/landing/' %}active{% endif %}">
-        <i class="fa-solid fa-table-columns"></i>
-        <span>CMS Command Hub</span>
-      </a>
-      <a href="{% url 'super_admin_landing_branding' %}" class="nav-item {% if '/landing/branding' in request.path %}active{% endif %}">
-        <i class="fa-solid fa-palette"></i>
-        <span>Brand &amp; Identity</span>
-      </a>
-      <a href="{% url 'super_admin_landing_hero' %}" class="nav-item {% if '/landing/hero' in request.path %}active{% endif %}">
-        <i class="fa-solid fa-bullhorn"></i>
-        <span>Hero Banner &amp; CTAs</span>
-      </a>
       <a href="{% url 'super_admin_landing_quick_services' %}" class="nav-item {% if '/landing/quick-services' in request.path %}active{% endif %}">
         <i class="fa-solid fa-bolt-lightning"></i>
         <span>Quick Service Cards</span>
-      </a>
-      <a href="{% url 'super_admin_landing_featured_projects' %}" class="nav-item {% if '/landing/featured-projects' in request.path %}active{% endif %}">
-        <i class="fa-solid fa-file-contract"></i>
-        <span>Bidding Showcase</span>
       </a>
       <a href="{% url 'super_admin_landing_packages' %}" class="nav-item {% if '/landing/packages' in request.path %}active{% endif %}">
         <i class="fa-solid fa-cubes-stacked"></i>
