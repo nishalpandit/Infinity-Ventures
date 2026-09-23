@@ -4,6 +4,15 @@
    tooltips, active indicator, mobile off-canvas drawer.
    ========================================================================== */
 
+/* Prevent animation/flicker during initial page mount */
+html.sidebar-no-transition,
+html.sidebar-no-transition *,
+body.sidebar-no-transition,
+body.sidebar-no-transition * {
+  transition: none !important;
+  animation: none !important;
+}
+
 .app-sidebar {
   position: fixed;
   top: 0;
@@ -202,28 +211,36 @@ body.sidebar-collapsed .sidebar-nav {
 /* ==========================================================================
    COLLAPSED STATE (desktop) — icons only, 70px
    ========================================================================== */
+html.sidebar-collapsed .app-sidebar,
 body.sidebar-collapsed .app-sidebar { width: var(--sidebar-collapsed); }
 
+html.sidebar-collapsed .sidebar-logo,
 body.sidebar-collapsed .sidebar-logo { justify-content: center; padding: 0; }
+html.sidebar-collapsed .sidebar-logo .logo-text,
 body.sidebar-collapsed .sidebar-logo .logo-text { opacity: 0; max-width: 0; }
 
+html.sidebar-collapsed .nav-section-label,
 body.sidebar-collapsed .nav-section-label { opacity: 0; height: 8px; padding: 4px 0; overflow: hidden; }
 
+html.sidebar-collapsed .snav-link,
 body.sidebar-collapsed .snav-link {
   gap: 0;
 }
+html.sidebar-collapsed .snav-link .snav-label,
+html.sidebar-collapsed .snav-link .snav-arrow,
 body.sidebar-collapsed .snav-link .snav-label,
 body.sidebar-collapsed .snav-link .snav-arrow { opacity: 0; max-width: 0; }
+html.sidebar-collapsed .snav-link .snav-icon,
 body.sidebar-collapsed .snav-link .snav-icon { font-size: 17px; }
 
 /* Hide submenu entirely when collapsed */
+html.sidebar-collapsed .snav-sub,
 body.sidebar-collapsed .snav-sub { display: none; }
+html.sidebar-collapsed .snav-item.open > .snav-link .snav-arrow,
 body.sidebar-collapsed .snav-item.open > .snav-link .snav-arrow { transform: none; }
 
-/* ---------- Tooltip (collapsed only) ---------- */
-body.sidebar-collapsed .snav-item { position: relative; }
-body.sidebar-collapsed .snav-item.has-sub .sb-tooltip { display: none !important; }
-body.sidebar-collapsed .snav-item .sb-tooltip {
+/* ---------- Tooltip ---------- */
+.snav-item .sb-tooltip {
   position: absolute;
   left: calc(100% + 12px);
   top: 50%;
@@ -241,7 +258,13 @@ body.sidebar-collapsed .snav-item .sb-tooltip {
   transition: opacity var(--transition);
   z-index: 2000;
   box-shadow: var(--shadow-lg);
+  display: none; /* Hidden by default in expanded state */
 }
+
+/* Tooltip is only active in collapsed state */
+body.sidebar-collapsed .snav-item { position: relative; }
+body.sidebar-collapsed .snav-item .sb-tooltip { display: block; }
+body.sidebar-collapsed .snav-item.has-sub .sb-tooltip { display: none !important; }
 body.sidebar-collapsed .snav-item .sb-tooltip::before {
   content: '';
   position: absolute;

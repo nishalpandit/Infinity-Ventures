@@ -42,6 +42,34 @@
     return m ? decodeURIComponent(m[1]) : null;
   }
 
+  function qsFromHref(href) {
+    var i = href.indexOf('?');
+    if (i === -1) return null;
+    var m = /[?&](?:status|view)=([^&#]*)/.exec(href);
+    return m ? m[1] : null;
+  }
+
+  function isItemActive(href) {
+    var cur = currentCanonical();
+    var isDash = ['admin-dashboard', 'dashboard', 'dashboard.html', 'admin-dashboard.html'].indexOf(cur) !== -1;
+    var cHref = canonical(href);
+
+    if (isDash && (cHref === 'admin-dashboard' || cHref === 'dashboard.html' || href === '/admin-dashboard')) {
+      return true;
+    }
+
+    var hrefStatus = qsFromHref(href);
+    var curStatus = qs('status') || (qs('view') ? qs('view') : null);
+
+    if (cHref === cur) {
+      if (hrefStatus) {
+        return hrefStatus === curStatus;
+      }
+      return !curStatus;
+    }
+    return false;
+  }
+
   /* ---------- Sidebar menu configuration ---------- */
   var MENU = [
     { label: 'Dashboard', icon: 'fa-gauge-high', href: '/admin-dashboard' },
@@ -58,7 +86,6 @@
         { label: 'Closed Quick Services', href: 'quick-services/index.html#closed' }
       ]
     },
-
     {
       label: 'Jobs', icon: 'fa-briefcase', children: [
         { label: 'Active Jobs', href: 'jobs/index.html#active' },
@@ -86,7 +113,7 @@
     { label: 'Admin Profile', icon: 'fa-user-shield', href: 'profile.html' }
   ];
 
-  /* ---------- Sidebar template ---------- */
+  /* ---------- Sidebar template (pre-computes active/open states with ZERO flash) ---------- */
   function buildSidebar() {
     var stateLabel = window.ADMIN_STATE ? '<div style="font-size:11px; color:#818cf8; font-weight:600; padding:2px 0 0 36px;"><i class="fa-solid fa-map-pin" style="margin-right:4px;"></i>' + window.ADMIN_STATE + '</div>' : '';
     var html = '';
@@ -101,8 +128,12 @@
 
     MENU.forEach(function (item) {
       if (item.children) {
-        html += '<div class="snav-item has-sub" data-menu="' + item.label + '">';
-        html += '  <div class="snav-link" role="button" tabindex="0">';
+        var hasActiveChild = item.children.some(function (c) { return isItemActive(c.href); });
+        var itemClass = 'snav-item has-sub' + (hasActiveChild ? ' open' : '');
+        var linkClass = 'snav-link' + (hasActiveChild ? ' parent-active' : '');
+
+        html += '<div class="' + itemClass + '" data-menu="' + item.label + '">';
+        html += '  <div class="' + linkClass + '" role="button" tabindex="0">';
         html += '    <span class="snav-icon"><i class="fa-solid ' + item.icon + '"></i></span>';
         html += '    <span class="snav-label">' + item.label + '</span>';
         html += '    <span class="snav-arrow"><i class="fa-solid fa-chevron-right"></i></span>';
@@ -110,18 +141,24 @@
         html += '  <div class="sb-tooltip">' + item.label + '</div>';
         html += '  <div class="sb-flyout"><div class="flyout-title">' + item.label + '</div>';
         item.children.forEach(function (c) {
-          html += '<a href="' + resolveHref(c.href) + '" data-canon="' + canonical(c.href) + '" data-status="' + (qsFromHref(c.href) || '') + '">' + c.label + '</a>';
+          var isAct = isItemActive(c.href);
+          var aClass = isAct ? ' class="active"' : '';
+          html += '<a href="' + resolveHref(c.href) + '" data-canon="' + canonical(c.href) + '" data-status="' + (qsFromHref(c.href) || '') + '"' + aClass + '>' + c.label + '</a>';
         });
         html += '  </div>';
         html += '  <ul class="snav-sub">';
         item.children.forEach(function (c) {
-          html += '<li><a class="snav-sublink" href="' + resolveHref(c.href) + '" data-canon="' + canonical(c.href) + '" data-status="' + (qsFromHref(c.href) || '') + '">' + c.label + '</a></li>';
+          var isAct = isItemActive(c.href);
+          var subClass = 'snav-sublink' + (isAct ? ' active' : '');
+          html += '<li><a class="' + subClass + '" href="' + resolveHref(c.href) + '" data-canon="' + canonical(c.href) + '" data-status="' + (qsFromHref(c.href) || '') + '">' + c.label + '</a></li>';
         });
         html += '  </ul>';
         html += '</div>';
       } else {
+        var isAct = isItemActive(item.href);
+        var linkClass = 'snav-link' + (isAct ? ' active' : '');
         html += '<div class="snav-item" data-menu="' + item.label + '">';
-        html += '  <a class="snav-link" href="' + resolveHref(item.href) + '" data-canon="' + canonical(item.href) + '">';
+        html += '  <a class="' + linkClass + '" href="' + resolveHref(item.href) + '" data-canon="' + canonical(item.href) + '">';
         html += '    <span class="snav-icon"><i class="fa-solid ' + item.icon + '"></i></span>';
         html += '    <span class="snav-label">' + item.label + '</span>';
         html += '  </a>';
@@ -143,13 +180,6 @@
     html += '</aside>';
     html += '<div class="sidebar-overlay" id="sidebarOverlay"></div>';
     return html;
-  }
-
-  function qsFromHref(href) {
-    var i = href.indexOf('?');
-    if (i === -1) return null;
-    var m = /[?&]status=([^&]*)/.exec(href);
-    return m ? m[1] : null;
   }
 
   /* ---------- Header template ---------- */
@@ -190,35 +220,6 @@
     return html;
   }
 
-  /* ---------- Active menu detection ---------- */
-  function setActive() {
-    var cur = currentCanonical();
-    var isDash = ['admin-dashboard', 'dashboard', 'dashboard.html', 'admin-dashboard.html'].indexOf(cur) !== -1;
-
-    document.querySelectorAll('.snav-sublink, .sb-flyout a').forEach(function (a) {
-      var canon = a.getAttribute('data-canon');
-      var st = a.getAttribute('data-status');
-      var isMatch = canon === cur && (st ? st === qs('status') : !qs('status'));
-      if (isMatch) a.classList.add('active');
-    });
-
-    document.querySelectorAll('.snav-item').forEach(function (item) {
-      var activeInside = item.querySelector('.snav-sublink.active');
-      var direct = item.querySelector('.snav-link[data-canon]');
-      var menuLabel = item.getAttribute('data-menu');
-      if (isDash && menuLabel === 'Dashboard') {
-        if (direct) direct.classList.add('active');
-      } else if (direct && direct.getAttribute('data-canon') === cur) {
-        direct.classList.add('active');
-      }
-      if (activeInside) {
-        item.classList.add('open');
-        var parent = item.querySelector(':scope > .snav-link');
-        if (parent) parent.classList.add('parent-active');
-      }
-    });
-  }
-
   /* ---------- Breadcrumb renderer ---------- */
   function renderBreadcrumb(items) {
     var el = document.getElementById('breadcrumb');
@@ -247,21 +248,32 @@
       if (profileDd) profileDd.classList.remove('open');
     }
 
-    if (notifBtn) notifBtn.addEventListener('click', function (e) {
-      e.stopPropagation();
-      var open = notifDd.classList.contains('open');
-      closeAll();
-      if (!open) notifDd.classList.add('open');
-    });
-    if (profileBtn) profileBtn.addEventListener('click', function (e) {
-      e.stopPropagation();
-      var open = profileDd.classList.contains('open');
-      closeAll();
-      if (!open) profileDd.classList.add('open');
-    });
-    document.addEventListener('click', function (e) {
-      if (!e.target.closest('.header-dropdown')) closeAll();
-    });
+    if (notifBtn && !notifBtn.dataset.bound) {
+      notifBtn.dataset.bound = 'true';
+      notifBtn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        var open = notifDd.classList.contains('open');
+        closeAll();
+        if (!open) notifDd.classList.add('open');
+      });
+    }
+
+    if (profileBtn && !profileBtn.dataset.bound) {
+      profileBtn.dataset.bound = 'true';
+      profileBtn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        var open = profileDd.classList.contains('open');
+        closeAll();
+        if (!open) profileDd.classList.add('open');
+      });
+    }
+
+    if (!document.body.dataset.headerClickBound) {
+      document.body.dataset.headerClickBound = 'true';
+      document.addEventListener('click', function (e) {
+        if (!e.target.closest('.header-dropdown')) closeAll();
+      });
+    }
 
     function doLogout() {
       if (window.AdminUI && AdminUI.confirm) {
@@ -277,23 +289,52 @@
             }, 500);
           }
         });
+      } else {
+        window.location.href = '/logout/';
       }
     }
+
     var hl = document.getElementById('headerLogout');
-    if (hl) hl.addEventListener('click', doLogout);
+    if (hl && !hl.dataset.bound) {
+      hl.dataset.bound = 'true';
+      hl.addEventListener('click', doLogout);
+    }
+
     var sl = document.getElementById('sidebarLogout');
-    if (sl) sl.addEventListener('click', doLogout);
+    if (sl && !sl.dataset.bound) {
+      sl.dataset.bound = 'true';
+      sl.addEventListener('click', doLogout);
+    }
   }
 
-  /* ---------- Init ---------- */
+  /* ---------- Init (Smooth immediate mounting with zero flicker) ---------- */
   function init() {
     var sm = document.getElementById('sidebar-mount');
     var hm = document.getElementById('header-mount');
-    if (sm) sm.innerHTML = buildSidebar();
-    if (hm) hm.innerHTML = buildHeader();
-    setActive();
+    if (!sm && !hm) return;
+
+    document.documentElement.classList.add('sidebar-no-transition');
+    if (document.body) document.body.classList.add('sidebar-no-transition');
+
+    if (sm && !sm.dataset.mounted) {
+      sm.innerHTML = buildSidebar();
+      sm.dataset.mounted = 'true';
+    }
+    if (hm && !hm.dataset.mounted) {
+      hm.innerHTML = buildHeader();
+      hm.dataset.mounted = 'true';
+    }
+
     bindHeader();
     if (window.AdminSidebar) window.AdminSidebar.init();
+
+    // Re-enable smooth transitions on subsequent interactions
+    requestAnimationFrame(function () {
+      requestAnimationFrame(function () {
+        document.documentElement.classList.remove('sidebar-no-transition');
+        if (document.body) document.body.classList.remove('sidebar-no-transition');
+      });
+    });
   }
 
   window.AdminComponents = {
@@ -302,9 +343,10 @@
     prefix: function () { return P; }
   };
 
+  // Mount immediately to eliminate any blank frame or pop-in
+  init();
+
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init);
-  } else {
-    init();
   }
 })();

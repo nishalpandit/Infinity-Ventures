@@ -18,9 +18,11 @@
     try {
       var saved = localStorage.getItem(STORAGE_KEY);
       if (saved === 'collapsed') {
-        document.body.classList.add('sidebar-collapsed');
+        document.documentElement.classList.add('sidebar-collapsed');
+        if (document.body) document.body.classList.add('sidebar-collapsed');
       } else {
-        document.body.classList.remove('sidebar-collapsed');
+        document.documentElement.classList.remove('sidebar-collapsed');
+        if (document.body) document.body.classList.remove('sidebar-collapsed');
       }
     } catch (e) {
       console.warn('localStorage not available', e);
@@ -28,9 +30,10 @@
   }
 
   function toggleDesktop() {
-    var collapsed = document.body.classList.toggle('sidebar-collapsed');
+    var isColl = document.body.classList.toggle('sidebar-collapsed');
+    document.documentElement.classList.toggle('sidebar-collapsed', isColl);
     try {
-      localStorage.setItem(STORAGE_KEY, collapsed ? 'collapsed' : 'expanded');
+      localStorage.setItem(STORAGE_KEY, isColl ? 'collapsed' : 'expanded');
     } catch (e) {
       console.warn('localStorage not available', e);
     }
@@ -52,20 +55,26 @@
 
   function bindSubmenus() {
     document.querySelectorAll('.snav-item.has-sub > .snav-link').forEach(function (link) {
+      if (link.dataset.boundSub) return;
+      link.dataset.boundSub = 'true';
+
       link.addEventListener('click', function (e) {
         e.preventDefault();
+        e.stopPropagation();
         if (document.body.classList.contains('sidebar-collapsed') && !isMobile()) {
           // Collapsed desktop: flyout handles submenus on hover; do nothing on click
           return;
         }
-        var item = link.parentElement;
+        var item = link.closest('.snav-item');
+        if (!item) return;
         var wasOpen = item.classList.contains('open');
-        // Accordion: close siblings
+        // Accordion: close sibling submenus
         document.querySelectorAll('.snav-item.has-sub.open').forEach(function (o) {
           if (o !== item) o.classList.remove('open');
         });
         item.classList.toggle('open', !wasOpen);
       });
+
       link.addEventListener('keydown', function (e) {
         if (e.key === 'Enter' || e.key === ' ') {
           e.preventDefault();
@@ -80,18 +89,29 @@
 
     // Desktop toggle button (header)
     var toggleBtn = document.getElementById('sidebarToggle');
-    if (toggleBtn) toggleBtn.addEventListener('click', toggleDesktop);
+    if (toggleBtn && !toggleBtn.dataset.bound) {
+      toggleBtn.dataset.bound = 'true';
+      toggleBtn.addEventListener('click', toggleDesktop);
+    }
 
     // Mobile hamburger
     var mobileBtn = document.getElementById('mobileMenuBtn');
-    if (mobileBtn) mobileBtn.addEventListener('click', openMobile);
+    if (mobileBtn && !mobileBtn.dataset.bound) {
+      mobileBtn.dataset.bound = 'true';
+      mobileBtn.addEventListener('click', openMobile);
+    }
 
     // Overlay click closes drawer
     var overlay = document.getElementById('sidebarOverlay');
-    if (overlay) overlay.addEventListener('click', closeMobile);
+    if (overlay && !overlay.dataset.bound) {
+      overlay.dataset.bound = 'true';
+      overlay.addEventListener('click', closeMobile);
+    }
 
-    // Selecting a page inside the drawer closes it
+    // Selecting a page inside the drawer closes it on mobile
     document.querySelectorAll('.app-sidebar a').forEach(function (a) {
+      if (a.dataset.boundMobileNav) return;
+      a.dataset.boundMobileNav = 'true';
       a.addEventListener('click', function () {
         if (isMobile()) closeMobile();
       });
@@ -121,6 +141,6 @@
     closeMobile: closeMobile
   };
 
-  // Apply persisted state as early as possible (before components inject markup)
+  // Apply persisted state immediately
   applyState();
 })();
