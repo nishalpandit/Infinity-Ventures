@@ -1,0 +1,92 @@
+{% extends 'superadmin/base.html' %}
+{% block title %}Testimonials - CMS{% endblock %}
+{% block header_title %}Client Reviews & Testimonials{% endblock %}
+
+{% block content %}
+<div style="margin-bottom: 24px; display: flex; justify-content: space-between; align-items: center;">
+  <div>
+    <h2 style="font-size: 24px; font-weight: 700; margin-bottom: 6px;">Customer Testimonials & Reviews</h2>
+    <p style="color: var(--text-muted);">Manage real customer quotes, ratings, photos, and roles displayed in the trust and review sections.</p>
+  </div>
+  <div style="display: flex; gap: 10px;">
+    <a href="{% url 'super_admin_landing_overview' %}" class="btn btn-outline" style="background: white;">
+      <i class="fa-solid fa-arrow-left"></i> CMS Hub
+    </a>
+    <a href="{% url 'super_admin_landing_testimonial_create' %}" class="btn btn-primary">
+      <i class="fa-solid fa-plus"></i> Add Testimonial
+    </a>
+  </div>
+</div>
+
+<div class="card" style="padding: 0; overflow: hidden;">
+  <div class="table-container">
+    <table>
+      <thead>
+        <tr>
+          <th style="width: 60px;">Avatar</th>
+          <th>Client Name & Role</th>
+          <th>Rating</th>
+          <th>Service Taken</th>
+          <th>Review Snippet</th>
+          <th>Order</th>
+          <th>Status</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in testimonials %}
+        <tr>
+          <td>
+            {% if item.avatar %}
+              <img src="{{ item.avatar.url }}" alt="{{ item.client_name }}" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover; border: 1px solid var(--border);">
+            {% else %}
+              <div style="width: 40px; height: 40px; border-radius: 50%; background: #e5e7eb; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 14px; color: var(--text-muted);">
+                {{ item.client_name|slice:":2"|upper }}
+              </div>
+            {% endif %}
+          </td>
+          <td>
+            <strong>{{ item.client_name }}</strong>
+            <div style="font-size: 12px; color: var(--text-muted);">{{ item.client_role_or_company }}</div>
+          </td>
+          <td>
+            <span style="color: #f59e0b; font-weight: 700;">★ {{ item.rating }}</span>
+          </td>
+          <td style="font-size: 13px; color: var(--accent); font-weight: 600;">
+            {{ item.service_taken }}
+          </td>
+          <td style="font-size: 12px; color: var(--text-muted); max-width: 240px;">
+            "{{ item.review_text|truncatewords:10 }}"
+          </td>
+          <td>{{ item.order }}</td>
+          <td>
+            <a href="{% url 'super_admin_landing_testimonial_toggle' item.id %}" style="text-decoration: none;">
+              <span class="badge {% if item.is_active %}active{% else %}inactive{% endif %}">
+                {% if item.is_active %}<i class="fa-solid fa-circle-check"></i> Active{% else %}<i class="fa-solid fa-circle-xmark"></i> Inactive{% endif %}
+              </span>
+            </a>
+          </td>
+          <td>
+            <div style="display: flex; gap: 8px;">
+              <a href="{% url 'super_admin_landing_testimonial_edit' item.id %}" class="btn btn-outline btn-sm">
+                <i class="fa-solid fa-pen-to-square"></i> Edit
+              </a>
+              <a href="{% url 'super_admin_landing_testimonial_delete' item.id %}" class="btn btn-outline btn-sm" style="border-color: rgba(239,68,68,0.3); color: var(--danger);" onclick="return confirm('Delete this review?');">
+                <i class="fa-solid fa-trash"></i>
+              </a>
+            </div>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="8" style="text-align: center; padding: 48px; color: var(--text-muted);">
+            <i class="fa-solid fa-comments" style="font-size: 32px; margin-bottom: 12px; display: block;"></i>
+            No testimonials found. Click "Add Testimonial" to create one.
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

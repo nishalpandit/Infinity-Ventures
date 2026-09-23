@@ -1,0 +1,48 @@
+{% extends 'superadmin/base.html' %}
+{% block title %}Vendors{% endblock %}
+{% block header_title %}Vendor Management{% endblock %}
+
+{% block content %}
+<div style="margin-bottom: 24px;">
+  <h2 style="font-size: 24px; font-weight: 700; margin-bottom: 8px;">Service Providers</h2>
+  <p style="color: var(--text-muted);">Manage all registered vendors and companies on the platform.</p>
+</div>
+
+<div class="card" style="padding: 0;">
+  <div class="table-container">
+    <table>
+      <thead>
+        <tr>
+          <th>Company / Name</th>
+          <th>Type</th>
+          <th>Category</th>
+          <th>Location</th>
+          <th>Rating</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for v in vendors %}
+        <tr>
+          <td><strong>{{ v.company_name|default:v.user.username }}</strong></td>
+          <td><span class="badge" style="background: rgba(168,85,247,0.12); color: #7c3aed;">{{ v.get_vendor_type_display }}</span></td>
+          <td>{{ v.category }}</td>
+          <td style="color: var(--text-muted);">{{ v.location }}</td>
+          <td><i class="fa-solid fa-star" style="color: var(--warning);"></i> {{ v.rating }}</td>
+          <td>
+            <div style="display: flex; gap: 8px;">
+              <a href="{% url 'super_admin_vendor_edit' v.id %}" class="btn btn-outline btn-sm"><i class="fa-solid fa-pen-to-square"></i> Edit</a>
+              <a href="{% url 'super_admin_vendor_delete' v.id %}" class="btn btn-outline btn-sm" style="border-color: rgba(239,68,68,0.3);" onclick="return confirm('Delete vendor {{ v }}? This will also delete their user account.')">
+                <i class="fa-solid fa-trash" style="color: var(--danger);"></i>
+              </a>
+            </div>
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="6" style="text-align: center; padding: 40px; color: var(--text-muted);">No vendors found.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

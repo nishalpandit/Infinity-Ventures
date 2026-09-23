@@ -1,0 +1,48 @@
+{% extends 'superadmin/base.html' %}
+{% block title %}Jobs{% endblock %}
+{% block header_title %}Jobs Engine{% endblock %}
+
+{% block content %}
+<div style="margin-bottom: 24px;">
+  <h2 style="font-size: 24px; font-weight: 700; margin-bottom: 8px;">Customer Jobs</h2>
+  <p style="color: var(--text-muted);">Full oversight of all projects posted by customers.</p>
+</div>
+
+<div class="card" style="padding: 0;">
+  <div class="table-container">
+    <table>
+      <thead>
+        <tr>
+          <th>Title</th>
+          <th>Customer</th>
+          <th>Category</th>
+          <th>Budget</th>
+          <th>Status</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for job in jobs %}
+        <tr>
+          <td><strong>{{ job.title }}</strong></td>
+          <td>{{ job.user.username }}</td>
+          <td>{{ job.category.name|default:"—" }}</td>
+          <td style="color: var(--success); font-weight: 600;">₹{{ job.budget }}</td>
+          <td><span class="badge {% if job.status == 'open' %}active{% elif job.status == 'cancelled' or job.status == 'closed' %}inactive{% else %}warn{% endif %}">{{ job.get_status_display }}</span></td>
+          <td>
+            <div style="display: flex; gap: 8px;">
+              <a href="{% url 'super_admin_job_edit' job.id %}" class="btn btn-outline btn-sm"><i class="fa-solid fa-pen-to-square"></i> Edit</a>
+              <a href="{% url 'super_admin_job_delete' job.id %}" class="btn btn-outline btn-sm" style="border-color: rgba(239,68,68,0.3);" onclick="return confirm('Delete this job?')">
+                <i class="fa-solid fa-trash" style="color: var(--danger);"></i>
+              </a>
+            </div>
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="6" style="text-align: center; padding: 40px; color: var(--text-muted);">No jobs found.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

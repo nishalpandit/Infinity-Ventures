@@ -1,0 +1,45 @@
+{% extends 'superadmin/base.html' %}
+{% block title %}Subscriptions{% endblock %}
+{% block header_title %}Subscription Management{% endblock %}
+
+{% block content %}
+<div style="margin-bottom: 24px;">
+  <h2 style="font-size: 24px; font-weight: 700; margin-bottom: 8px;">Vendor Packages</h2>
+  <p style="color: var(--text-muted);">View and manage all purchased vendor subscription packages.</p>
+</div>
+
+<div class="card" style="padding: 0;">
+  <div class="table-container">
+    <table>
+      <thead>
+        <tr>
+          <th>Vendor</th>
+          <th>Package</th>
+          <th>Amount</th>
+          <th>Status</th>
+          <th>Purchased</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for sub in subscriptions %}
+        <tr>
+          <td><strong>{{ sub.vendor.username }}</strong></td>
+          <td>{{ sub.package_name }}</td>
+          <td style="color: var(--success); font-weight: 600;">₹{{ sub.amount }}</td>
+          <td><span class="badge {% if sub.status == 'success' %}active{% elif sub.status == 'failed' %}inactive{% else %}warn{% endif %}">{{ sub.get_status_display }}</span></td>
+          <td style="color: var(--text-muted);">{{ sub.created_at|date:"M d, Y" }}</td>
+          <td>
+            <a href="{% url 'super_admin_subscription_delete' sub.id %}" class="btn btn-outline btn-sm" style="border-color: rgba(239,68,68,0.3);" onclick="return confirm('Delete this subscription record?')">
+              <i class="fa-solid fa-trash" style="color: var(--danger);"></i>
+            </a>
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="6" style="text-align: center; padding: 40px; color: var(--text-muted);">No subscriptions found.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

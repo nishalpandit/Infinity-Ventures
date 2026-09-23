@@ -1,0 +1,95 @@
+{% extends 'superadmin/base.html' %}
+{% block title %}Content & CMS{% endblock %}
+{% block header_title %}Content Management System{% endblock %}
+
+{% block content %}
+<!-- CATEGORIES SECTION -->
+<div style="margin-bottom: 24px; display: flex; justify-content: space-between; align-items: center;">
+  <div>
+    <h2 style="font-size: 24px; font-weight: 700; margin-bottom: 8px;">Service Categories</h2>
+    <p style="color: var(--text-muted);">Manage the core service categories offered on the platform.</p>
+  </div>
+  <a href="{% url 'super_admin_category_create' %}" class="btn btn-primary"><i class="fa-solid fa-plus"></i> Add Category</a>
+</div>
+
+<div class="card" style="padding: 0;">
+  <div class="table-container">
+    <table>
+      <thead>
+        <tr>
+          <th>Category Name</th>
+          <th>Service Type</th>
+          <th>Status</th>
+          <th>Created</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for cat in categories %}
+        <tr>
+          <td><strong>{{ cat.name }}</strong></td>
+          <td>{{ cat.get_service_type_display }}</td>
+          <td><span class="badge {% if cat.status == 'active' %}active{% else %}inactive{% endif %}">{{ cat.get_status_display }}</span></td>
+          <td style="color: var(--text-muted);">{{ cat.created_at|date:"M d, Y" }}</td>
+          <td>
+            <div style="display: flex; gap: 8px;">
+              <a href="{% url 'super_admin_category_edit' cat.id %}" class="btn btn-outline btn-sm"><i class="fa-solid fa-pen-to-square"></i> Edit</a>
+              <a href="{% url 'super_admin_category_delete' cat.id %}" class="btn btn-outline btn-sm" style="border-color: rgba(239,68,68,0.3);" onclick="return confirm('Delete category {{ cat.name }}?')">
+                <i class="fa-solid fa-trash" style="color: var(--danger);"></i>
+              </a>
+            </div>
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="5" style="text-align: center; padding: 40px; color: var(--text-muted);">No categories found.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- LOCATIONS SECTION -->
+<div style="margin-bottom: 24px; margin-top: 40px; display: flex; justify-content: space-between; align-items: center;">
+  <div>
+    <h2 style="font-size: 24px; font-weight: 700; margin-bottom: 8px;">Service Locations</h2>
+    <p style="color: var(--text-muted);">Manage cities and states where the platform is operational.</p>
+  </div>
+  <a href="{% url 'super_admin_location_create' %}" class="btn btn-primary"><i class="fa-solid fa-plus"></i> Add Location</a>
+</div>
+
+<div class="card" style="padding: 0;">
+  <div class="table-container">
+    <table>
+      <thead>
+        <tr>
+          <th>City</th>
+          <th>State</th>
+          <th>Status</th>
+          <th>Created</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for loc in locations %}
+        <tr>
+          <td><strong>{{ loc.city }}</strong></td>
+          <td>{{ loc.state }}</td>
+          <td><span class="badge {% if loc.status == 'active' %}active{% else %}inactive{% endif %}">{{ loc.get_status_display }}</span></td>
+          <td style="color: var(--text-muted);">{{ loc.created_at|date:"M d, Y" }}</td>
+          <td>
+            <div style="display: flex; gap: 8px;">
+              <a href="{% url 'super_admin_location_edit' loc.id %}" class="btn btn-outline btn-sm"><i class="fa-solid fa-pen-to-square"></i> Edit</a>
+              <a href="{% url 'super_admin_location_delete' loc.id %}" class="btn btn-outline btn-sm" style="border-color: rgba(239,68,68,0.3);" onclick="return confirm('Delete location {{ loc }}?')">
+                <i class="fa-solid fa-trash" style="color: var(--danger);"></i>
+              </a>
+            </div>
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="5" style="text-align: center; padding: 40px; color: var(--text-muted);">No locations found.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,47 @@
+{% extends 'superadmin/base.html' %}
+{% block title %}{{ mode|title }} Location{% endblock %}
+{% block header_title %}{{ mode|title }} Location{% endblock %}
+
+{% block content %}
+<div style="margin-bottom: 24px;">
+  <a href="{% url 'super_admin_cms' %}" style="color: var(--accent); text-decoration: none; font-weight: 600; font-size: 14px;">
+    <i class="fa-solid fa-arrow-left"></i> Back to CMS
+  </a>
+</div>
+
+<div class="card form-card">
+  <h3 style="font-size: 20px; font-weight: 700; margin-bottom: 24px;">
+    {% if mode == 'create' %}Add New Location{% else %}Edit: {{ loc }}{% endif %}
+  </h3>
+  
+  <form method="POST">
+    {% csrf_token %}
+    
+    <div class="form-row">
+      <div class="form-group">
+        <label>State</label>
+        <input type="text" name="state" class="form-control" value="{{ loc.state|default:'' }}" required>
+      </div>
+      <div class="form-group">
+        <label>City</label>
+        <input type="text" name="city" class="form-control" value="{{ loc.city|default:'' }}" required>
+      </div>
+    </div>
+    
+    <div class="form-group">
+      <label>Status</label>
+      <select name="status" class="form-control">
+        <option value="active" {% if loc.status == 'active' %}selected{% endif %}>Active</option>
+        <option value="inactive" {% if loc.status == 'inactive' %}selected{% endif %}>Inactive</option>
+      </select>
+    </div>
+    
+    <div class="form-actions">
+      <button type="submit" class="btn btn-primary">
+        <i class="fa-solid fa-check"></i> {% if mode == 'create' %}Create Location{% else %}Save Changes{% endif %}
+      </button>
+      <a href="{% url 'super_admin_cms' %}" class="btn btn-outline">Cancel</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

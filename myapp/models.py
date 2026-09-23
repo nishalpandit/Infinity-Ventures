@@ -230,3 +230,168 @@ class AuthToken(models.Model):
 
 
 
+class GlobalSettings(models.Model):
+    site_title = models.CharField(max_length=255, default='Infinity Ventures')
+    contact_email = models.EmailField(default='support@infinityventures.com')
+    support_phone = models.CharField(max_length=20, default='+91 0000000000')
+    maintenance_mode = models.BooleanField(default=False)
+    platform_commission_percent = models.DecimalField(max_digits=5, decimal_places=2, default=10.00)
+
+    class Meta:
+        verbose_name_plural = "Global Settings"
+
+    def __str__(self):
+        return "Platform Settings"
+
+
+# ==============================================================================
+# LANDING PAGE CMS & DYNAMIC CONTENT MODELS
+# ==============================================================================
+
+class SiteBranding(models.Model):
+    site_title = models.CharField(max_length=255, default='Infinity Ventures')
+    tagline = models.CharField(max_length=255, default='Instant Home Services & Custom Project Bidding Marketplace')
+    logo = models.ImageField(upload_to='cms/branding/', null=True, blank=True)
+    favicon = models.ImageField(upload_to='cms/branding/', null=True, blank=True)
+    contact_email = models.EmailField(default='support@infinityventures.com')
+    support_phone = models.CharField(max_length=50, default='+91 98765 43210')
+    address = models.CharField(max_length=255, default='Main Road, Ranchi, Jharkhand, India')
+    facebook_url = models.URLField(blank=True, null=True, default='https://facebook.com')
+    instagram_url = models.URLField(blank=True, null=True, default='https://instagram.com')
+    linkedin_url = models.URLField(blank=True, null=True, default='https://linkedin.com')
+    twitter_url = models.URLField(blank=True, null=True, default='https://twitter.com')
+    youtube_url = models.URLField(blank=True, null=True, default='https://youtube.com')
+    copyright_text = models.CharField(max_length=255, default='© 2026 Infinity Ventures. All rights reserved.')
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name_plural = "Site Branding"
+
+    def __str__(self):
+        return self.site_title
+
+
+class HeroSection(models.Model):
+    badge_text = models.CharField(max_length=100, default='DUAL-ENGINE MARKETPLACE')
+    headline = models.CharField(max_length=255, default='Book instant home pros or get competitive bids for custom projects.')
+    subtext = models.TextField(default="India's smartest service network. Book verified technicians at upfront prices in 60 seconds, or post major contracting jobs and compare bids side-by-side.")
+    hero_image = models.ImageField(upload_to='cms/hero/', null=True, blank=True)
+    cta_primary_text = models.CharField(max_length=100, default='Post a Quick Service')
+    cta_primary_url = models.CharField(max_length=255, default='/user/quick-services/create.html')
+    cta_secondary_text = models.CharField(max_length=100, default='Post a Custom Job')
+    cta_secondary_url = models.CharField(max_length=255, default='/user/jobs/create.html')
+    
+    # Key Stats
+    stat1_number = models.CharField(max_length=50, default='60s')
+    stat1_label = models.CharField(max_length=100, default='Instant Pro Matching')
+    stat2_number = models.CharField(max_length=50, default='15k+')
+    stat2_label = models.CharField(max_length=100, default='Verified Technicians')
+    stat3_number = models.CharField(max_length=50, default='100%')
+    stat3_label = models.CharField(max_length=100, default='Price Protection')
+    
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name_plural = "Hero Section"
+
+    def __str__(self):
+        return self.headline[:50]
+
+
+class QuickServiceCard(models.Model):
+    title = models.CharField(max_length=255)
+    subtitle = models.CharField(max_length=255, blank=True, null=True)
+    image = models.ImageField(upload_to='cms/quick_services/', null=True, blank=True)
+    price = models.DecimalField(max_digits=10, decimal_places=2, default=299.00)
+    discount_price = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    duration = models.CharField(max_length=100, default='45 Mins')
+    category_tag = models.CharField(max_length=100, default='Plumbing')
+    badge_text = models.CharField(max_length=100, default='Instant', blank=True, null=True)
+    order = models.IntegerField(default=0)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        ordering = ['order', '-created_at']
+
+    def __str__(self):
+        return self.title
+
+
+class FeaturedProjectCard(models.Model):
+    title = models.CharField(max_length=255)
+    category_name = models.CharField(max_length=100, default='Renovation')
+    budget_range = models.CharField(max_length=100, default='₹45,000 - ₹60,000')
+    location = models.CharField(max_length=100, default='Ranchi, Jharkhand')
+    timeline = models.CharField(max_length=100, default='30 Days')
+    vendor_quote_preview = models.CharField(max_length=255, default='Lowest bid: ₹42,500 · 3 Verified Contractors quoted')
+    bids_count = models.IntegerField(default=5)
+    status_tag = models.CharField(max_length=50, default='Active Bidding')
+    image = models.ImageField(upload_to='cms/featured_projects/', null=True, blank=True)
+    order = models.IntegerField(default=0)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        ordering = ['order', '-created_at']
+
+    def __str__(self):
+        return self.title
+
+
+class PackageCard(models.Model):
+    title = models.CharField(max_length=255)
+    subtitle = models.CharField(max_length=255, blank=True, null=True)
+    price = models.DecimalField(max_digits=10, decimal_places=2, default=999.00)
+    price_unit = models.CharField(max_length=50, default='/ Project')
+    original_price = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    feature_bullets = models.TextField(help_text="Enter features separated by newlines", default="Complete deep inspection\nStandard warranty included\nVerified background-checked pros")
+    filter_tag = models.CharField(max_length=50, default='All', help_text="e.g. All, Plumbing, Electrical, Cleaning")
+    cta_label = models.CharField(max_length=100, default='Book Package')
+    cta_url = models.CharField(max_length=255, default='/user/quick-services/create.html')
+    is_popular = models.BooleanField(default=False)
+    order = models.IntegerField(default=0)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        ordering = ['order', '-created_at']
+
+    def get_features_list(self):
+        return [f.strip() for f in self.feature_bullets.split('\n') if f.strip()]
+
+    def __str__(self):
+        return self.title
+
+
+class Testimonial(models.Model):
+    client_name = models.CharField(max_length=255)
+    client_role_or_company = models.CharField(max_length=255, default='Homeowner, Ranchi')
+    avatar = models.ImageField(upload_to='cms/testimonials/', null=True, blank=True)
+    rating = models.DecimalField(max_digits=3, decimal_places=1, default=5.0)
+    review_text = models.TextField(default='Amazing experience! The technician arrived in under 30 minutes and resolved our electrical issue with full transparent pricing.')
+    service_taken = models.CharField(max_length=100, default='Emergency Electrical Repair')
+    order = models.IntegerField(default=0)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        ordering = ['order', '-created_at']
+
+    def __str__(self):
+        return f"{self.client_name} - {self.rating}★"
+
+
+class TrustMetric(models.Model):
+    icon_class = models.CharField(max_length=100, default='fa-solid fa-shield-halved', help_text='FontAwesome icon class')
+    stat_number = models.CharField(max_length=50, default='100%')
+    label = models.CharField(max_length=100, default='Verified & Background Checked')
+    order = models.IntegerField(default=0)
+    is_active = models.BooleanField(default=True)
+
+    class Meta:
+        ordering = ['order']
+
+    def __str__(self):
+        return f"{self.stat_number} {self.label}"
+

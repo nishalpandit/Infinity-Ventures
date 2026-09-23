@@ -1,0 +1,87 @@
+{% extends 'superadmin/base.html' %}
+{% block title %}Featured Projects (Bidding) - CMS{% endblock %}
+{% block header_title %}Featured Bidding Project Cards{% endblock %}
+
+{% block content %}
+<div style="margin-bottom: 24px; display: flex; justify-content: space-between; align-items: center;">
+  <div>
+    <h2 style="font-size: 24px; font-weight: 700; margin-bottom: 6px;">Bidding Showcase Projects</h2>
+    <p style="color: var(--text-muted);">Manage the contracting project cards, estimated budgets, bidding previews, and tags shown in the bidding engine section.</p>
+  </div>
+  <div style="display: flex; gap: 10px;">
+    <a href="{% url 'super_admin_landing_overview' %}" class="btn btn-outline" style="background: white;">
+      <i class="fa-solid fa-arrow-left"></i> CMS Hub
+    </a>
+    <a href="{% url 'super_admin_landing_featured_project_create' %}" class="btn btn-primary">
+      <i class="fa-solid fa-plus"></i> Add Project Card
+    </a>
+  </div>
+</div>
+
+<div class="card" style="padding: 0; overflow: hidden;">
+  <div class="table-container">
+    <table>
+      <thead>
+        <tr>
+          <th>Project Title & Category</th>
+          <th>Budget Range</th>
+          <th>Location & Timeline</th>
+          <th>Vendor Teaser / Quotes</th>
+          <th>Status Tag</th>
+          <th>Order</th>
+          <th>Status</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for card in cards %}
+        <tr>
+          <td>
+            <strong>{{ card.title }}</strong>
+            <div style="font-size: 12px; color: var(--accent); font-weight: 600;">{{ card.category_name }}</div>
+          </td>
+          <td>
+            <strong style="color: var(--text-main);">{{ card.budget_range }}</strong>
+          </td>
+          <td style="color: var(--text-muted); font-size: 13px;">
+            <div>{{ card.location }}</div>
+            <div style="font-size: 11px;">⏱ {{ card.timeline }}</div>
+          </td>
+          <td style="font-size: 12px; color: var(--text-muted); max-width: 200px;">
+            {{ card.vendor_quote_preview|truncatewords:8 }}
+          </td>
+          <td>
+            <span class="badge" style="background: rgba(16,185,129,0.1); color: var(--success);">{{ card.status_tag }}</span>
+          </td>
+          <td>{{ card.order }}</td>
+          <td>
+            <a href="{% url 'super_admin_landing_featured_project_toggle' card.id %}" style="text-decoration: none;">
+              <span class="badge {% if card.is_active %}active{% else %}inactive{% endif %}">
+                {% if card.is_active %}<i class="fa-solid fa-circle-check"></i> Active{% else %}<i class="fa-solid fa-circle-xmark"></i> Inactive{% endif %}
+              </span>
+            </a>
+          </td>
+          <td>
+            <div style="display: flex; gap: 8px;">
+              <a href="{% url 'super_admin_landing_featured_project_edit' card.id %}" class="btn btn-outline btn-sm">
+                <i class="fa-solid fa-pen-to-square"></i> Edit
+              </a>
+              <a href="{% url 'super_admin_landing_featured_project_delete' card.id %}" class="btn btn-outline btn-sm" style="border-color: rgba(239,68,68,0.3); color: var(--danger);" onclick="return confirm('Delete this project card?');">
+                <i class="fa-solid fa-trash"></i>
+              </a>
+            </div>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="8" style="text-align: center; padding: 48px; color: var(--text-muted);">
+            <i class="fa-solid fa-briefcase" style="font-size: 32px; margin-bottom: 12px; display: block;"></i>
+            No featured project cards found. Click "Add Project Card" to create one.
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

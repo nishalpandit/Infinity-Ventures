@@ -1,0 +1,158 @@
+{% extends 'superadmin/base.html' %}
+
+{% block title %}Dashboard{% endblock %}
+{% block header_title %}Dashboard Overview{% endblock %}
+
+{% block content %}
+<div style="margin-bottom: 24px;">
+  <h2 style="font-size: 24px; font-weight: 700; margin-bottom: 8px;">Welcome back, {{ request.user.username }}</h2>
+  <p style="color: var(--text-muted);">Here is what is happening across the Infinity Ventures platform.</p>
+</div>
+
+<!-- Primary Stats -->
+<div class="grid-4">
+  <div class="stat-card">
+    <div class="stat-icon blue"><i class="fa-solid fa-users"></i></div>
+    <div class="stat-info">
+      <div class="label">Customers</div>
+      <div class="value">{{ total_users }}</div>
+    </div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon purple"><i class="fa-solid fa-user-tie"></i></div>
+    <div class="stat-info">
+      <div class="label">Vendors</div>
+      <div class="value">{{ total_vendors }}</div>
+    </div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon green"><i class="fa-solid fa-briefcase"></i></div>
+    <div class="stat-info">
+      <div class="label">Active Jobs</div>
+      <div class="value">{{ active_jobs }}</div>
+    </div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon orange"><i class="fa-solid fa-shield-halved"></i></div>
+    <div class="stat-info">
+      <div class="label">Area Admins</div>
+      <div class="value">{{ total_admins }}</div>
+    </div>
+  </div>
+</div>
+
+<!-- Secondary Stats -->
+<div class="grid-4">
+  <div class="stat-card">
+    <div class="stat-icon" style="background: rgba(236,72,153,0.12); color: #ec4899;"><i class="fa-solid fa-file-invoice-dollar"></i></div>
+    <div class="stat-info">
+      <div class="label">Total Bids</div>
+      <div class="value">{{ total_bids }}</div>
+    </div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon" style="background: rgba(14,165,233,0.12); color: #0ea5e9;"><i class="fa-solid fa-bolt"></i></div>
+    <div class="stat-info">
+      <div class="label">Quick Services</div>
+      <div class="value">{{ total_qs }}</div>
+    </div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon" style="background: rgba(139,92,246,0.12); color: #8b5cf6;"><i class="fa-solid fa-layer-group"></i></div>
+    <div class="stat-info">
+      <div class="label">Categories</div>
+      <div class="value">{{ total_categories }}</div>
+    </div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon" style="background: rgba(20,184,166,0.12); color: #14b8a6;"><i class="fa-solid fa-map-pin"></i></div>
+    <div class="stat-info">
+      <div class="label">Locations</div>
+      <div class="value">{{ total_locations }}</div>
+    </div>
+  </div>
+</div>
+
+<!-- Charts -->
+<div class="grid-2">
+  <div class="card" style="height: 380px; display: flex; flex-direction: column;">
+    <h3 style="font-size: 16px; margin-bottom: 20px; font-weight: 700;">Platform Growth</h3>
+    <div style="flex: 1; position: relative;"><canvas id="growthChart"></canvas></div>
+  </div>
+  <div class="card" style="height: 380px; display: flex; flex-direction: column;">
+    <h3 style="font-size: 16px; margin-bottom: 20px; font-weight: 700;">Job Distribution by Category</h3>
+    <div style="flex: 1; position: relative;"><canvas id="categoryChart"></canvas></div>
+  </div>
+</div>
+
+<!-- Quick Actions -->
+<div class="card">
+  <h3 style="font-size: 16px; margin-bottom: 20px; font-weight: 700;">Quick Actions</h3>
+  <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+    <a href="{% url 'super_admin_user_create' %}" class="btn btn-primary"><i class="fa-solid fa-user-plus"></i> Add User</a>
+    <a href="{% url 'super_admin_category_create' %}" class="btn btn-outline"><i class="fa-solid fa-plus"></i> Add Category</a>
+    <a href="{% url 'super_admin_location_create' %}" class="btn btn-outline"><i class="fa-solid fa-map-pin"></i> Add Location</a>
+    <a href="{% url 'super_admin_settings' %}" class="btn btn-outline"><i class="fa-solid fa-sliders"></i> Platform Settings</a>
+  </div>
+</div>
+
+<script>
+  // Growth Chart
+  const growthCtx = document.getElementById('growthChart').getContext('2d');
+  let gradient = growthCtx.createLinearGradient(0, 0, 0, 400);
+  gradient.addColorStop(0, 'rgba(79, 70, 229, 0.4)');
+  gradient.addColorStop(1, 'rgba(79, 70, 229, 0.0)');
+  
+  new Chart(growthCtx, {
+    type: 'line',
+    data: {
+      labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
+      datasets: [{
+        label: 'Active Users',
+        data: [120, 190, 300, 500, 800, 1200],
+        borderColor: '#4f46e5',
+        backgroundColor: gradient,
+        borderWidth: 3,
+        pointBackgroundColor: '#fff',
+        pointBorderColor: '#4f46e5',
+        pointBorderWidth: 2,
+        pointRadius: 5,
+        fill: true,
+        tension: 0.4
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        y: { beginAtZero: true, grid: { color: '#f3f4f6', drawBorder: false }, border: { display: false } },
+        x: { grid: { display: false }, border: { display: false } }
+      }
+    }
+  });
+
+  // Category Doughnut Chart
+  const catCtx = document.getElementById('categoryChart').getContext('2d');
+  new Chart(catCtx, {
+    type: 'doughnut',
+    data: {
+      labels: ['Plumbing', 'Electrical', 'Cleaning', 'IT Services', 'Other'],
+      datasets: [{
+        data: [35, 25, 20, 15, 5],
+        backgroundColor: ['#4f46e5', '#3b82f6', '#0ea5e9', '#ec4899', '#e5e7eb'],
+        borderWidth: 0, hoverOffset: 6
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      cutout: '70%',
+      plugins: {
+        legend: {
+          position: 'right',
+          labels: { usePointStyle: true, padding: 20, font: { family: "'Inter', sans-serif", size: 12 } }
+        }
+      }
+    }
+  });
+</script>
+{% endblock %}

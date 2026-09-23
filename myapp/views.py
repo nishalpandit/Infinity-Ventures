@@ -1,13 +1,15 @@
 from django.shortcuts import render, redirect
-from django.contrib.auth import authenticate, login, logout
+from django.contrib.auth import authenticate, login, logout, get_user_model
 import os
 import mimetypes
 from django.conf import settings
 from django.http import Http404, HttpResponse, JsonResponse
 from django.template import TemplateDoesNotExist
-from django.db.models import Sum, Q, Max
-from .models import VendorProfile, QuickService, Job, Bid, Subscription, Category, Location, UserProfile, Message
-from django.contrib.auth import get_user_model
+from .models import (
+    VendorProfile, QuickService, Job, Bid, Subscription, Category, Location, 
+    UserProfile, Message, GlobalSettings, SiteBranding, HeroSection, 
+    QuickServiceCard, FeaturedProjectCard, PackageCard, Testimonial, TrustMetric
+)
 
 User = get_user_model()
 
@@ -1329,8 +1331,23 @@ def home_view(request):
             "type": "bid"
         })
 
+    branding = SiteBranding.objects.first()
+    hero = HeroSection.objects.first()
+    cms_quick_services = QuickServiceCard.objects.filter(is_active=True).order_by('order', '-created_at')
+    cms_featured_projects = FeaturedProjectCard.objects.filter(is_active=True).order_by('order', '-created_at')
+    cms_packages = PackageCard.objects.filter(is_active=True).order_by('order', '-created_at')
+    cms_testimonials = Testimonial.objects.filter(is_active=True).order_by('order', '-created_at')
+    cms_trust_metrics = TrustMetric.objects.filter(is_active=True).order_by('order')
+
     context = {
         'error': error,
+        'branding': branding,
+        'hero': hero,
+        'cms_quick_services': cms_quick_services,
+        'cms_featured_projects': cms_featured_projects,
+        'cms_packages': cms_packages,
+        'cms_testimonials': cms_testimonials,
+        'cms_trust_metrics': cms_trust_metrics,
         'categories': categories,
         'locations': locations,
         'recent_bids': recent_bids,

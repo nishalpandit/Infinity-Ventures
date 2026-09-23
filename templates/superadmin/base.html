@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}Super Admin{% endblock %} - Infinity Ventures</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  
+  <style>
+    :root {
+      /* Rich Light Theme Palette */
+      --bg-main: #f3f4f6;
+      --bg-surface: #ffffff;
+      --bg-surface-hover: #f9fafb;
+      --accent: #4f46e5;
+      --accent-hover: #4338ca;
+      --text-main: #111827;
+      --text-muted: #6b7280;
+      --border: #e5e7eb;
+      
+      --success: #10b981;
+      --danger: #ef4444;
+      --warning: #f59e0b;
+      --info: #3b82f6;
+      
+      --font-family: 'Inter', sans-serif;
+      --r-md: 16px;
+      --r-sm: 10px;
+      --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+      --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+      --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    }
+    
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    
+    body {
+      font-family: var(--font-family);
+      background-color: var(--bg-main);
+      color: var(--text-main);
+      display: flex;
+      height: 100vh;
+      overflow: hidden;
+    }
+    
+    /* Sidebar */
+    .sidebar {
+      width: 260px;
+      background-color: var(--bg-surface);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      flex: none;
+      box-shadow: var(--shadow-sm);
+      z-index: 10;
+    }
+    
+    .sidebar-brand {
+      padding: 24px;
+      font-size: 22px;
+      font-weight: 800;
+      color: var(--text-main);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      border-bottom: 1px solid var(--border);
+      letter-spacing: -0.5px;
+    }
+    
+    .sidebar-brand i { 
+      color: white; 
+      background: linear-gradient(135deg, #4f46e5, #ec4899);
+      padding: 8px;
+      border-radius: 8px;
+      font-size: 16px;
+    }
+    
+    .sidebar-nav {
+      padding: 20px 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      flex: 1;
+      overflow-y: auto;
+    }
+    
+    .nav-section {
+      font-size: 11px; 
+      font-weight: 700; 
+      color: var(--text-muted); 
+      text-transform: uppercase; 
+      letter-spacing: 0.8px; 
+      padding: 16px 16px 8px 16px;
+    }
+    
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 16px;
+      color: var(--text-muted);
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 14px;
+      border-radius: var(--r-sm);
+      transition: all 0.2s ease;
+    }
+    
+    .nav-item:hover {
+      background-color: var(--bg-surface-hover);
+      color: var(--text-main);
+    }
+    
+    .nav-item.active {
+      background-color: rgba(79, 70, 229, 0.1);
+      color: var(--accent);
+    }
+    
+    .nav-item i { width: 20px; text-align: center; font-size: 16px; }
+    
+    /* Main Content */
+    .main-area {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    
+    /* Header */
+    .header {
+      height: 72px;
+      background-color: var(--bg-surface);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 32px;
+      box-shadow: var(--shadow-sm);
+      z-index: 5;
+    }
+    
+    .header-title { font-size: 20px; font-weight: 700; color: var(--text-main); }
+    
+    .header-actions { display: flex; align-items: center; gap: 20px; }
+    
+    .admin-profile {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 6px 12px;
+      background: var(--bg-main);
+      border-radius: 50px;
+      border: 1px solid var(--border);
+    }
+    
+    .avatar {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--accent), #ec4899);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      color: #fff;
+      font-size: 14px;
+    }
+    
+    /* Content wrapper */
+    .content-wrapper {
+      flex: 1;
+      overflow-y: auto;
+      padding: 32px;
+    }
+    
+    /* Cards and UI Elements */
+    .card {
+      background-color: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: var(--r-md);
+      padding: 24px;
+      margin-bottom: 24px;
+      box-shadow: var(--shadow-sm);
+    }
+    
+    .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 24px; margin-bottom: 24px; }
+    .grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 24px; margin-bottom: 24px; }
+    
+    .stat-card {
+      background-color: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: var(--r-md);
+      padding: 24px;
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      box-shadow: var(--shadow-sm);
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    .stat-card:hover { transform: translateY(-4px); box-shadow: var(--shadow-md); }
+    
+    .stat-icon {
+      width: 54px;
+      height: 54px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+    }
+    .stat-icon.blue { background: rgba(59, 130, 246, 0.15); color: #3b82f6; }
+    .stat-icon.purple { background: rgba(168, 85, 247, 0.15); color: #a855f7; }
+    .stat-icon.green { background: rgba(16, 185, 129, 0.15); color: #10b981; }
+    .stat-icon.orange { background: rgba(245, 158, 11, 0.15); color: #f59e0b; }
+    
+    .stat-info .label { color: var(--text-muted); font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
+    .stat-info .value { font-size: 28px; font-weight: 800; color: var(--text-main); }
+    
+    /* Tables */
+    .table-container { width: 100%; overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; }
+    th { text-align: left; padding: 16px 24px; border-bottom: 1px solid var(--border); background-color: var(--bg-surface-hover); color: var(--text-muted); font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; }
+    td { padding: 16px 24px; border-bottom: 1px solid var(--border); font-size: 14px; font-weight: 500; }
+    tr:hover td { background-color: rgba(249,250,251,0.5); }
+    
+    .badge {
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+    .badge.active { background: rgba(16, 185, 129, 0.15); color: #047857; }
+    .badge.inactive { background: rgba(239, 68, 68, 0.15); color: #b91c1c; }
+    .badge.warn { background: rgba(245, 158, 11, 0.15); color: #b45309; }
+    
+    /* Buttons */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 18px;
+      border-radius: var(--r-sm);
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      border: none;
+      transition: all 0.2s;
+      text-decoration: none;
+    }
+    .btn-primary { background-color: var(--accent); color: white; box-shadow: var(--shadow-sm); }
+    .btn-primary:hover { background-color: var(--accent-hover); box-shadow: var(--shadow-md); }
+    .btn-outline { background-color: var(--bg-surface); border: 1px solid var(--border); color: var(--text-main); font-weight: 600; }
+    .btn-outline:hover { background-color: var(--bg-main); }
+    .btn-danger { background-color: var(--danger); color: white; }
+    .btn-danger:hover { background-color: #dc2626; }
+    .btn-sm { padding: 6px 12px; font-size: 13px; }
+    
+    /* Forms */
+    .form-card { max-width: 640px; }
+    .form-group { margin-bottom: 20px; }
+    .form-group label { display: block; font-size: 13px; font-weight: 600; color: var(--text-muted); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px; }
+    .form-control {
+      width: 100%;
+      background-color: #fff;
+      border: 1px solid var(--border);
+      color: var(--text-main);
+      padding: 12px 16px;
+      border-radius: var(--r-sm);
+      font-size: 14px;
+      font-family: inherit;
+      transition: all 0.2s;
+    }
+    .form-control:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.15); }
+    select.form-control { cursor: pointer; }
+    textarea.form-control { min-height: 100px; resize: vertical; }
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .form-actions { display: flex; gap: 12px; margin-top: 24px; }
+    
+    /* Toggle Switch */
+    .toggle-switch { position: relative; display: inline-block; width: 44px; height: 24px; }
+    .toggle-switch input { opacity: 0; width: 0; height: 0; }
+    .toggle-slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #d1d5db; transition: 0.3s; border-radius: 24px; }
+    .toggle-slider:before { position: absolute; content: ""; height: 18px; width: 18px; left: 3px; bottom: 3px; background-color: white; transition: 0.3s; border-radius: 50%; }
+    .toggle-switch input:checked + .toggle-slider { background-color: var(--success); }
+    .toggle-switch input:checked + .toggle-slider:before { transform: translateX(20px); }
+    
+    /* Toast messages */
+    .toast-container { position: fixed; top: 20px; right: 20px; z-index: 9999; display: flex; flex-direction: column; gap: 8px; }
+    .toast { padding: 14px 20px; border-radius: var(--r-sm); font-size: 14px; font-weight: 600; box-shadow: var(--shadow-md); animation: slideIn 0.3s ease; min-width: 300px; display: flex; align-items: center; gap: 10px; }
+    .toast.success { background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0; }
+    .toast.error { background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca; }
+    @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+    
+  </style>
+</head>
+<body>
+  
+  <aside class="sidebar">
+    <div class="sidebar-brand">
+      <i class="fa-solid fa-infinity"></i> <span>Infinity OS</span>
+    </div>
+    <nav class="sidebar-nav">
+      <a href="{% url 'super_admin_dashboard' %}" class="nav-item {% if request.path == '/super-admin/' %}active{% endif %}">
+        <i class="fa-solid fa-chart-pie"></i> Dashboard
+      </a>
+      
+      <!-- Users & Vendors -->
+      <div class="nav-section">People</div>
+      <a href="{% url 'super_admin_users' %}" class="nav-item {% if '/users' in request.path %}active{% endif %}">
+        <i class="fa-solid fa-users"></i> All Users
+      </a>
+      <a href="{% url 'super_admin_vendors' %}" class="nav-item {% if '/vendors' in request.path %}active{% endif %}">
+        <i class="fa-solid fa-user-tie"></i> Vendors
+      </a>
+      
+      <!-- Operations -->
+      <div class="nav-section">Operations</div>
+      <a href="{% url 'super_admin_jobs' %}" class="nav-item {% if '/jobs' in request.path %}active{% endif %}">
+        <i class="fa-solid fa-briefcase"></i> Jobs
+      </a>
+      <a href="{% url 'super_admin_quick_services' %}" class="nav-item {% if '/quick-services' in request.path %}active{% endif %}">
+        <i class="fa-solid fa-bolt"></i> Quick Services
+      </a>
+      <a href="{% url 'super_admin_bids' %}" class="nav-item {% if '/bids' in request.path %}active{% endif %}">
+        <i class="fa-solid fa-file-invoice-dollar"></i> Bids
+      </a>
+      <a href="{% url 'super_admin_subscriptions' %}" class="nav-item {% if '/subscriptions' in request.path %}active{% endif %}">
+        <i class="fa-solid fa-crown"></i> Subscriptions
+      </a>
+      <a href="{% url 'super_admin_messages' %}" class="nav-item {% if '/messages' in request.path %}active{% endif %}">
+        <i class="fa-solid fa-messages"></i> Messages
+      </a>
+
+      <!-- Landing Page CMS -->
+      <div class="nav-section">Landing Page CMS</div>
+      <a href="{% url 'super_admin_landing_overview' %}" class="nav-item {% if request.path == '/super-admin/landing/' %}active{% endif %}">
+        <i class="fa-solid fa-house-laptop"></i> CMS Overview
+      </a>
+      <a href="{% url 'super_admin_landing_branding' %}" class="nav-item {% if '/landing/branding' in request.path %}active{% endif %}">
+        <i class="fa-solid fa-globe"></i> Site Branding
+      </a>
+      <a href="{% url 'super_admin_landing_hero' %}" class="nav-item {% if '/landing/hero' in request.path %}active{% endif %}">
+        <i class="fa-solid fa-bullhorn"></i> Hero & Headline
+      </a>
+      <a href="{% url 'super_admin_landing_quick_services' %}" class="nav-item {% if '/landing/quick-services' in request.path %}active{% endif %}">
+        <i class="fa-solid fa-bolt"></i> Quick Service Cards
+      </a>
+      <a href="{% url 'super_admin_landing_featured_projects' %}" class="nav-item {% if '/landing/featured-projects' in request.path %}active{% endif %}">
+        <i class="fa-solid fa-briefcase"></i> Featured Projects
+      </a>
+      <a href="{% url 'super_admin_landing_packages' %}" class="nav-item {% if '/landing/packages' in request.path %}active{% endif %}">
+        <i class="fa-solid fa-cubes"></i> Service Packages
+      </a>
+      <a href="{% url 'super_admin_landing_testimonials' %}" class="nav-item {% if '/landing/testimonials' in request.path %}active{% endif %}">
+        <i class="fa-solid fa-comments"></i> Testimonials
+      </a>
+      <a href="{% url 'super_admin_landing_trust_metrics' %}" class="nav-item {% if '/landing/trust-metrics' in request.path %}active{% endif %}">
+        <i class="fa-solid fa-shield-halved"></i> Trust Bar
+      </a>
+
+      <!-- System & Master Data -->
+      <div class="nav-section">Master Data</div>
+      <a href="{% url 'super_admin_cms' %}" class="nav-item {% if request.path == '/super-admin/cms/' or '/cms/category' in request.path or '/cms/location' in request.path %}active{% endif %}">
+        <i class="fa-solid fa-tags"></i> Categories & Cities
+      </a>
+      <a href="{% url 'super_admin_settings' %}" class="nav-item {% if '/settings' in request.path %}active{% endif %}">
+        <i class="fa-solid fa-sliders"></i> Global Settings
+      </a>
+    </nav>
+    <div style="padding: 24px; border-top: 1px solid var(--border);">
+      <a href="/logout/" class="btn btn-outline" style="width: 100%; justify-content: center; color: var(--danger); border-color: rgba(239,68,68,0.2); background: rgba(239,68,68,0.05);">
+        <i class="fa-solid fa-arrow-right-from-bracket"></i> Sign Out
+      </a>
+    </div>
+  </aside>
+
+  <main class="main-area">
+    <header class="header">
+      <div class="header-title">{% block header_title %}Command Center{% endblock %}</div>
+      <div class="header-actions">
+        <div class="admin-profile">
+          <div class="avatar">
+            {{ request.user.username|make_list|first|upper }}
+          </div>
+          <div>
+            <div style="font-weight: 700; font-size: 13px; color: var(--text-main);">{{ request.user.username }}</div>
+            <div style="font-size: 11px; color: var(--accent); font-weight: 600; text-transform: uppercase;">Super Admin</div>
+          </div>
+        </div>
+      </div>
+    </header>
+    
+    <div class="content-wrapper">
+      {% if messages %}
+      <div class="toast-container">
+        {% for message in messages %}
+        <div class="toast {% if message.tags == 'success' %}success{% else %}error{% endif %}">
+          <i class="fa-solid {% if message.tags == 'success' %}fa-circle-check{% else %}fa-circle-exclamation{% endif %}"></i>
+          {{ message }}
+        </div>
+        {% endfor %}
+      </div>
+      {% endif %}
+      {% block content %}
+      {% endblock %}
+    </div>
+  </main>
+
+  <script>
+    // Auto-dismiss toasts
+    setTimeout(() => {
+      document.querySelectorAll('.toast').forEach(t => {
+        t.style.transition = 'opacity 0.3s ease';
+        t.style.opacity = '0';
+        setTimeout(() => t.remove(), 300);
+      });
+    }, 4000);
+  </script>
+
+</body>
+</html>

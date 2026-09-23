@@ -1,0 +1,49 @@
+{% extends 'superadmin/base.html' %}
+{% block title %}Messages{% endblock %}
+{% block header_title %}Message Oversight{% endblock %}
+
+{% block content %}
+<div style="margin-bottom: 24px;">
+  <h2 style="font-size: 24px; font-weight: 700; margin-bottom: 8px;">Platform Messaging</h2>
+  <p style="color: var(--text-muted);">Global oversight of all communications for safety and auditing.</p>
+</div>
+
+<div class="card" style="padding: 0;">
+  <div class="table-container">
+    <table>
+      <thead>
+        <tr>
+          <th>From</th>
+          <th>To</th>
+          <th>Context</th>
+          <th>Message</th>
+          <th>Date</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for msg in messages %}
+        <tr>
+          <td><strong style="color: var(--accent);">{{ msg.sender.username }}</strong></td>
+          <td><strong>{{ msg.receiver.username }}</strong></td>
+          <td>
+            {% if msg.job %}Job: {{ msg.job.title }}
+            {% elif msg.quick_service %}QS: {{ msg.quick_service.title }}
+            {% else %}General{% endif %}
+          </td>
+          <td><span style="display: inline-block; max-width: 250px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--text-muted);">{{ msg.content }}</span></td>
+          <td style="color: var(--text-muted);">{{ msg.created_at|date:"M d, Y H:i" }}</td>
+          <td>
+            <a href="{% url 'super_admin_message_delete' msg.id %}" class="btn btn-outline btn-sm" style="border-color: rgba(239,68,68,0.3);" onclick="return confirm('Delete this message?')">
+              <i class="fa-solid fa-trash" style="color: var(--danger);"></i>
+            </a>
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="6" style="text-align: center; padding: 40px; color: var(--text-muted);">No messages found.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,121 @@
+{% extends 'superadmin/base.html' %}
+{% block title %}Hero Section CMS{% endblock %}
+{% block header_title %}Hero Section & Headlines{% endblock %}
+
+{% block content %}
+<div style="margin-bottom: 24px; display: flex; justify-content: space-between; align-items: center;">
+  <div>
+    <h2 style="font-size: 24px; font-weight: 700; margin-bottom: 6px;">Hero Banner, Headline & CTAs</h2>
+    <p style="color: var(--text-muted);">Manage the topmost above-the-fold banner, main value proposition headline, CTAs, and counter stats.</p>
+  </div>
+  <a href="{% url 'super_admin_landing_overview' %}" class="btn btn-outline" style="background: white;">
+    <i class="fa-solid fa-arrow-left"></i> Back to CMS Hub
+  </a>
+</div>
+
+<div class="card" style="max-width: 900px;">
+  <form method="POST" enctype="multipart/form-data">
+    {% csrf_token %}
+    
+    <div style="font-size: 16px; font-weight: 700; margin-bottom: 16px; padding-bottom: 8px; border-bottom: 1px solid var(--border);">
+      <i class="fa-solid fa-heading"></i> Main Headline & Text
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Top Pill Badge Text</label>
+      {{ form.badge_text }}
+    </div>
+
+    <div class="form-group" style="margin-top: 16px;">
+      <label class="form-label">Main Hero Headline (H1)</label>
+      {{ form.headline }}
+    </div>
+
+    <div class="form-group" style="margin-top: 16px;">
+      <label class="form-label">Subtext / Explainer Paragraph</label>
+      {{ form.subtext }}
+    </div>
+
+    <div class="form-group" style="margin-top: 16px;">
+      <label class="form-label">Upload Hero Right-Side Image / Banner</label>
+      {% if hero.hero_image %}
+        <div style="margin-bottom: 8px;">
+          <img src="{{ hero.hero_image.url }}" alt="Hero Image" style="max-height: 120px; border-radius: 8px; border: 1px solid var(--border);">
+        </div>
+      {% endif %}
+      {{ form.hero_image }}
+    </div>
+
+    <div style="font-size: 16px; font-weight: 700; margin-top: 32px; margin-bottom: 16px; padding-bottom: 8px; border-bottom: 1px solid var(--border);">
+      <i class="fa-solid fa-hand-pointer"></i> Call-To-Action (CTA) Buttons
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Primary Button Label</label>
+        {{ form.cta_primary_text }}
+      </div>
+      <div class="form-group">
+        <label class="form-label">Primary Button Target URL</label>
+        {{ form.cta_primary_url }}
+      </div>
+    </div>
+
+    <div class="form-row" style="margin-top: 16px;">
+      <div class="form-group">
+        <label class="form-label">Secondary Button Label</label>
+        {{ form.cta_secondary_text }}
+      </div>
+      <div class="form-group">
+        <label class="form-label">Secondary Button Target URL</label>
+        {{ form.cta_secondary_url }}
+      </div>
+    </div>
+
+    <div style="font-size: 16px; font-weight: 700; margin-top: 32px; margin-bottom: 16px; padding-bottom: 8px; border-bottom: 1px solid var(--border);">
+      <i class="fa-solid fa-chart-simple"></i> Hero Key Stats & Callouts
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Stat #1 Value (e.g. 60s)</label>
+        {{ form.stat1_number }}
+      </div>
+      <div class="form-group">
+        <label class="form-label">Stat #1 Label</label>
+        {{ form.stat1_label }}
+      </div>
+    </div>
+
+    <div class="form-row" style="margin-top: 16px;">
+      <div class="form-group">
+        <label class="form-label">Stat #2 Value (e.g. 15k+)</label>
+        {{ form.stat2_number }}
+      </div>
+      <div class="form-group">
+        <label class="form-label">Stat #2 Label</label>
+        {{ form.stat2_label }}
+      </div>
+    </div>
+
+    <div class="form-row" style="margin-top: 16px;">
+      <div class="form-group">
+        <label class="form-label">Stat #3 Value (e.g. 100%)</label>
+        {{ form.stat3_number }}
+      </div>
+      <div class="form-group">
+        <label class="form-label">Stat #3 Label</label>
+        {{ form.stat3_label }}
+      </div>
+    </div>
+
+    <div class="form-actions" style="margin-top: 32px;">
+      <button type="submit" class="btn btn-primary" style="padding: 12px 28px;">
+        <i class="fa-solid fa-floppy-disk"></i> Save Hero Section
+      </button>
+      <a href="{% url 'super_admin_landing_overview' %}" class="btn btn-outline">Cancel</a>
+    </div>
+
+  </form>
+</div>
+{% endblock %}

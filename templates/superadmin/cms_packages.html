@@ -1,0 +1,92 @@
+{% extends 'superadmin/base.html' %}
+{% block title %}Service Packages - CMS{% endblock %}
+{% block header_title %}Service Packages & Pricing Plans{% endblock %}
+
+{% block content %}
+<div style="margin-bottom: 24px; display: flex; justify-content: space-between; align-items: center;">
+  <div>
+    <h2 style="font-size: 24px; font-weight: 700; margin-bottom: 6px;">Service Packages & Pricing Tiers</h2>
+    <p style="color: var(--text-muted);">Manage package cards, bundled service features, pricing tags, and popular badges.</p>
+  </div>
+  <div style="display: flex; gap: 10px;">
+    <a href="{% url 'super_admin_landing_overview' %}" class="btn btn-outline" style="background: white;">
+      <i class="fa-solid fa-arrow-left"></i> CMS Hub
+    </a>
+    <a href="{% url 'super_admin_landing_package_create' %}" class="btn btn-primary">
+      <i class="fa-solid fa-plus"></i> Add Package
+    </a>
+  </div>
+</div>
+
+<div class="card" style="padding: 0; overflow: hidden;">
+  <div class="table-container">
+    <table>
+      <thead>
+        <tr>
+          <th>Package Title</th>
+          <th>Price & Unit</th>
+          <th>Filter Category</th>
+          <th>Popular Badge</th>
+          <th>Features Included</th>
+          <th>Order</th>
+          <th>Status</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for pkg in packages %}
+        <tr>
+          <td>
+            <strong>{{ pkg.title }}</strong>
+            {% if pkg.subtitle %}<div style="font-size: 12px; color: var(--text-muted);">{{ pkg.subtitle }}</div>{% endif %}
+          </td>
+          <td>
+            <strong style="color: var(--text-main);">₹{{ pkg.price }}</strong>
+            <span style="font-size: 11px; color: var(--text-muted);">{{ pkg.price_unit }}</span>
+            {% if pkg.original_price %}
+              <div style="font-size: 11px; text-decoration: line-through; color: var(--text-muted);">₹{{ pkg.original_price }}</div>
+            {% endif %}
+          </td>
+          <td><span class="badge" style="background: var(--bg-main); color: var(--text-main);">{{ pkg.filter_tag }}</span></td>
+          <td>
+            {% if pkg.is_popular %}
+              <span class="badge" style="background: rgba(245,158,11,0.15); color: var(--warning);"><i class="fa-solid fa-star"></i> Featured</span>
+            {% else %}
+              <span style="color: var(--text-muted); font-size: 12px;">Standard</span>
+            {% endif %}
+          </td>
+          <td style="font-size: 12px; color: var(--text-muted);">
+            {{ pkg.get_features_list|length }} bullet points
+          </td>
+          <td>{{ pkg.order }}</td>
+          <td>
+            <a href="{% url 'super_admin_landing_package_toggle' pkg.id %}" style="text-decoration: none;">
+              <span class="badge {% if pkg.is_active %}active{% else %}inactive{% endif %}">
+                {% if pkg.is_active %}<i class="fa-solid fa-circle-check"></i> Active{% else %}<i class="fa-solid fa-circle-xmark"></i> Inactive{% endif %}
+              </span>
+            </a>
+          </td>
+          <td>
+            <div style="display: flex; gap: 8px;">
+              <a href="{% url 'super_admin_landing_package_edit' pkg.id %}" class="btn btn-outline btn-sm">
+                <i class="fa-solid fa-pen-to-square"></i> Edit
+              </a>
+              <a href="{% url 'super_admin_landing_package_delete' pkg.id %}" class="btn btn-outline btn-sm" style="border-color: rgba(239,68,68,0.3); color: var(--danger);" onclick="return confirm('Delete this package?');">
+                <i class="fa-solid fa-trash"></i>
+              </a>
+            </div>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="8" style="text-align: center; padding: 48px; color: var(--text-muted);">
+            <i class="fa-solid fa-cubes" style="font-size: 32px; margin-bottom: 12px; display: block;"></i>
+            No packages found. Click "Add Package" to create one.
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

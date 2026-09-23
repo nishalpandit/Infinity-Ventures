@@ -1,0 +1,48 @@
+{% extends 'superadmin/base.html' %}
+{% block title %}Quick Services{% endblock %}
+{% block header_title %}Quick Services{% endblock %}
+
+{% block content %}
+<div style="margin-bottom: 24px;">
+  <h2 style="font-size: 24px; font-weight: 700; margin-bottom: 8px;">Instant Services</h2>
+  <p style="color: var(--text-muted);">Manage instant service requests from customers.</p>
+</div>
+
+<div class="card" style="padding: 0;">
+  <div class="table-container">
+    <table>
+      <thead>
+        <tr>
+          <th>Title</th>
+          <th>Customer</th>
+          <th>Category</th>
+          <th>Budget</th>
+          <th>Status</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for qs in qservices %}
+        <tr>
+          <td><strong>{{ qs.title }}</strong></td>
+          <td>{{ qs.user.username }}</td>
+          <td>{{ qs.category.name|default:"—" }}</td>
+          <td style="color: var(--success); font-weight: 600;">₹{{ qs.budget }}</td>
+          <td><span class="badge {% if qs.status == 'open' %}active{% elif qs.status == 'cancelled' or qs.status == 'closed' %}inactive{% else %}warn{% endif %}">{{ qs.get_status_display }}</span></td>
+          <td>
+            <div style="display: flex; gap: 8px;">
+              <a href="{% url 'super_admin_qs_edit' qs.id %}" class="btn btn-outline btn-sm"><i class="fa-solid fa-pen-to-square"></i> Edit</a>
+              <a href="{% url 'super_admin_qs_delete' qs.id %}" class="btn btn-outline btn-sm" style="border-color: rgba(239,68,68,0.3);" onclick="return confirm('Delete this quick service?')">
+                <i class="fa-solid fa-trash" style="color: var(--danger);"></i>
+              </a>
+            </div>
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="6" style="text-align: center; padding: 40px; color: var(--text-muted);">No quick services found.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

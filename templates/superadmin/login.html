@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Super Admin Login - Infinity OS</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+  
+  <style>
+    :root {
+      --bg-main: #f3f4f6;
+      --bg-surface: #ffffff;
+      --accent: #4f46e5;
+      --accent-hover: #4338ca;
+      --text-main: #111827;
+      --text-muted: #6b7280;
+      --border: #e5e7eb;
+      --danger: #ef4444;
+      --font-family: 'Inter', sans-serif;
+      --r-md: 16px;
+      --r-sm: 8px;
+      --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    }
+    
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    
+    body {
+      font-family: var(--font-family);
+      background-color: var(--bg-main);
+      color: var(--text-main);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      background-image: radial-gradient(circle at 50% -20%, #e0e7ff, var(--bg-main) 60%);
+    }
+    
+    .login-container {
+      background-color: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: var(--r-md);
+      padding: 40px;
+      width: 100%;
+      max-width: 420px;
+      box-shadow: var(--shadow-lg);
+    }
+    
+    .brand {
+      text-align: center;
+      margin-bottom: 32px;
+    }
+    .brand-icon {
+      font-size: 32px;
+      margin-bottom: 12px;
+      color: white; 
+      background: linear-gradient(135deg, #4f46e5, #ec4899);
+      display: inline-block;
+      padding: 12px;
+      border-radius: 12px;
+    }
+    .brand h1 { font-size: 24px; font-weight: 800; letter-spacing: -0.5px; }
+    .brand p { color: var(--text-muted); font-size: 14px; margin-top: 4px; }
+    
+    .form-group { margin-bottom: 20px; }
+    .form-group label { display: block; font-size: 13px; font-weight: 600; color: var(--text-muted); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px; }
+    .form-control {
+      width: 100%;
+      background-color: #ffffff;
+      border: 1px solid var(--border);
+      color: var(--text-main);
+      padding: 14px 16px;
+      border-radius: var(--r-sm);
+      font-size: 15px;
+      font-family: inherit;
+      transition: all 0.2s;
+    }
+    .form-control:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.2); }
+    
+    .btn-submit {
+      width: 100%;
+      background-color: var(--accent);
+      color: white;
+      border: none;
+      padding: 14px;
+      border-radius: var(--r-sm);
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background-color 0.2s;
+      margin-top: 12px;
+    }
+    .btn-submit:hover { background-color: var(--accent-hover); }
+    
+    .error-msg {
+      background-color: rgba(239, 68, 68, 0.1);
+      color: var(--danger);
+      padding: 12px;
+      border-radius: var(--r-sm);
+      font-size: 13.5px;
+      margin-bottom: 24px;
+      border: 1px solid rgba(239, 68, 68, 0.2);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="login-container">
+    <div class="brand">
+      <div class="brand-icon"><i class="fa-solid fa-infinity"></i></div>
+      <h1>Infinity OS</h1>
+      <p>Super Administrator Portal</p>
+    </div>
+    
+    {% if error %}
+    <div class="error-msg">
+      <i class="fa-solid fa-circle-exclamation"></i> {{ error }}
+    </div>
+    {% endif %}
+    
+    <form method="POST" action="">
+      {% csrf_token %}
+      <input type="hidden" name="next" value="{{ next|default:'/super-admin/' }}">
+      <div class="form-group">
+        <label>Username</label>
+        <input type="text" name="username" class="form-control" required placeholder="Enter super admin username" autocomplete="username">
+      </div>
+      <div class="form-group">
+        <label>Password</label>
+        <input type="password" name="password" class="form-control" required placeholder="••••••••" autocomplete="current-password">
+      </div>
+      <button type="submit" class="btn-submit">Secure Login</button>
+    </form>
+  </div>
+
+</body>
+</html>

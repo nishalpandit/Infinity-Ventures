@@ -1,0 +1,97 @@
+{% extends 'superadmin/base.html' %}
+{% block title %}Quick Service Cards - CMS{% endblock %}
+{% block header_title %}Quick Services Homepage Cards{% endblock %}
+
+{% block content %}
+<div style="margin-bottom: 24px; display: flex; justify-content: space-between; align-items: center;">
+  <div>
+    <h2 style="font-size: 24px; font-weight: 700; margin-bottom: 6px;">Instant Booking Service Cards</h2>
+    <p style="color: var(--text-muted);">Manage the quick service cards, photos, titles, starting prices, tags, and badges displayed on the homepage.</p>
+  </div>
+  <div style="display: flex; gap: 10px;">
+    <a href="{% url 'super_admin_landing_overview' %}" class="btn btn-outline" style="background: white;">
+      <i class="fa-solid fa-arrow-left"></i> CMS Hub
+    </a>
+    <a href="{% url 'super_admin_landing_quick_service_create' %}" class="btn btn-primary">
+      <i class="fa-solid fa-plus"></i> Add New Card
+    </a>
+  </div>
+</div>
+
+<div class="card" style="padding: 0; overflow: hidden;">
+  <div class="table-container">
+    <table>
+      <thead>
+        <tr>
+          <th style="width: 70px;">Photo</th>
+          <th>Card Title & Tag</th>
+          <th>Price & Discount</th>
+          <th>Duration</th>
+          <th>Badge</th>
+          <th>Order</th>
+          <th>Status</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for card in cards %}
+        <tr>
+          <td>
+            {% if card.image %}
+              <img src="{{ card.image.url }}" alt="{{ card.title }}" style="width: 50px; height: 38px; object-fit: cover; border-radius: 6px; border: 1px solid var(--border);">
+            {% else %}
+              <div style="width: 50px; height: 38px; background: #e5e7eb; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 16px; color: var(--text-muted);">
+                <i class="fa-solid fa-image"></i>
+              </div>
+            {% endif %}
+          </td>
+          <td>
+            <strong>{{ card.title }}</strong>
+            <div style="font-size: 12px; color: var(--accent); font-weight: 600;">{{ card.category_tag }}</div>
+          </td>
+          <td>
+            <strong style="color: var(--text-main);">₹{{ card.price }}</strong>
+            {% if card.discount_price %}
+              <span style="font-size: 11px; text-decoration: line-through; color: var(--text-muted); margin-left: 4px;">₹{{ card.discount_price }}</span>
+            {% endif %}
+          </td>
+          <td style="color: var(--text-muted); font-size: 13px;">{{ card.duration }}</td>
+          <td>
+            {% if card.badge_text %}
+              <span class="badge" style="background: rgba(79,70,229,0.1); color: var(--accent);">{{ card.badge_text }}</span>
+            {% else %}
+              <span style="color: var(--text-muted); font-size: 12px;">—</span>
+            {% endif %}
+          </td>
+          <td>{{ card.order }}</td>
+          <td>
+            <a href="{% url 'super_admin_landing_quick_service_toggle' card.id %}" style="text-decoration: none;">
+              <span class="badge {% if card.is_active %}active{% else %}inactive{% endif %}">
+                {% if card.is_active %}<i class="fa-solid fa-circle-check"></i> Active{% else %}<i class="fa-solid fa-circle-xmark"></i> Inactive{% endif %}
+              </span>
+            </a>
+          </td>
+          <td>
+            <div style="display: flex; gap: 8px;">
+              <a href="{% url 'super_admin_landing_quick_service_edit' card.id %}" class="btn btn-outline btn-sm">
+                <i class="fa-solid fa-pen-to-square"></i> Edit
+              </a>
+              <a href="{% url 'super_admin_landing_quick_service_delete' card.id %}" class="btn btn-outline btn-sm" style="border-color: rgba(239,68,68,0.3); color: var(--danger);" onclick="return confirm('Delete this card permanently?');">
+                <i class="fa-solid fa-trash"></i>
+              </a>
+            </div>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="8" style="text-align: center; padding: 48px; color: var(--text-muted);">
+            <i class="fa-solid fa-box-open" style="font-size: 32px; margin-bottom: 12px; display: block;"></i>
+            No quick service cards found. Click "Add New Card" to publish your first one.
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

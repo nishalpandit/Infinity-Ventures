@@ -1,0 +1,62 @@
+{% extends 'superadmin/base.html' %}
+{% block title %}Edit Job{% endblock %}
+{% block header_title %}Edit Job{% endblock %}
+
+{% block content %}
+<div style="margin-bottom: 24px;">
+  <a href="{% url 'super_admin_jobs' %}" style="color: var(--accent); text-decoration: none; font-weight: 600; font-size: 14px;">
+    <i class="fa-solid fa-arrow-left"></i> Back to Jobs
+  </a>
+</div>
+
+<div class="card form-card">
+  <h3 style="font-size: 20px; font-weight: 700; margin-bottom: 24px;">Edit: {{ job.title }}</h3>
+  
+  <form method="POST">
+    {% csrf_token %}
+    
+    <div class="form-group">
+      <label>Title</label>
+      <input type="text" name="title" class="form-control" value="{{ job.title }}" required>
+    </div>
+    
+    <div class="form-row">
+      <div class="form-group">
+        <label>Category</label>
+        <select name="category" class="form-control">
+          <option value="">-- None --</option>
+          {% for cat in categories %}
+          <option value="{{ cat.id }}" {% if job.category_id == cat.id %}selected{% endif %}>{{ cat.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Status</label>
+        <select name="status" class="form-control">
+          <option value="open" {% if job.status == 'open' %}selected{% endif %}>Open</option>
+          <option value="progress" {% if job.status == 'progress' %}selected{% endif %}>In Progress</option>
+          <option value="selected" {% if job.status == 'selected' %}selected{% endif %}>Vendor Selected</option>
+          <option value="completed" {% if job.status == 'completed' %}selected{% endif %}>Completed</option>
+          <option value="cancelled" {% if job.status == 'cancelled' %}selected{% endif %}>Cancelled</option>
+          <option value="closed" {% if job.status == 'closed' %}selected{% endif %}>Closed</option>
+        </select>
+      </div>
+    </div>
+    
+    <div class="form-group">
+      <label>Budget (₹)</label>
+      <input type="number" step="0.01" name="budget" class="form-control" value="{{ job.budget }}">
+    </div>
+    
+    <div class="form-group">
+      <label>Description</label>
+      <textarea name="description" class="form-control">{{ job.description|default:'' }}</textarea>
+    </div>
+    
+    <div class="form-actions">
+      <button type="submit" class="btn btn-primary"><i class="fa-solid fa-check"></i> Save Changes</button>
+      <a href="{% url 'super_admin_jobs' %}" class="btn btn-outline">Cancel</a>
+    </div>
+  </form>
+</div>
+{% endblock %}
