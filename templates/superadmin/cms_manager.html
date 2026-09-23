@@ -1,19 +1,21 @@
 {% extends 'superadmin/base.html' %}
-{% block title %}Content & CMS{% endblock %}
-{% block header_title %}Content Management System{% endblock %}
+{% block title %}Categories & Cities{% endblock %}
+{% block header_title %}Categories &amp; City Locations{% endblock %}
 
 {% block content %}
 <!-- CATEGORIES SECTION -->
-<div style="margin-bottom: 24px; display: flex; justify-content: space-between; align-items: center;">
+<div style="margin-bottom: 24px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 14px;">
   <div>
-    <h2 style="font-size: 24px; font-weight: 700; margin-bottom: 8px;">Service Categories</h2>
-    <p style="color: var(--text-muted);">Manage the core service categories offered on the platform.</p>
+    <h2 style="font-size: 24px; font-weight: 700; margin-bottom: 6px;">Service Categories</h2>
+    <p style="color: var(--text-muted);">Manage all service domains, contracting categories, and quick booking specialties.</p>
   </div>
-  <a href="{% url 'super_admin_category_create' %}" class="btn btn-primary"><i class="fa-solid fa-plus"></i> Add Category</a>
+  <a href="{% url 'super_admin_category_create' %}" class="btn btn-primary">
+    <i class="fa-solid fa-plus"></i> Add Category
+  </a>
 </div>
 
-<div class="card" style="padding: 0;">
-  <div class="table-container">
+<div class="card" style="padding: 0; overflow: hidden;">
+  <div class="table-container" style="border: none; border-radius: 0; box-shadow: none;">
     <table>
       <thead>
         <tr>
@@ -33,9 +35,11 @@
           <td style="color: var(--text-muted);">{{ cat.created_at|date:"M d, Y" }}</td>
           <td>
             <div style="display: flex; gap: 8px;">
-              <a href="{% url 'super_admin_category_edit' cat.id %}" class="btn btn-outline btn-sm"><i class="fa-solid fa-pen-to-square"></i> Edit</a>
-              <a href="{% url 'super_admin_category_delete' cat.id %}" class="btn btn-outline btn-sm" style="border-color: rgba(239,68,68,0.3);" onclick="return confirm('Delete category {{ cat.name }}?')">
-                <i class="fa-solid fa-trash" style="color: var(--danger);"></i>
+              <a href="{% url 'super_admin_category_edit' cat.id %}" class="btn btn-outline btn-sm">
+                <i class="fa-solid fa-pen-to-square"></i> Edit
+              </a>
+              <a href="{% url 'super_admin_category_delete' cat.id %}" class="btn btn-outline btn-sm" style="border-color: rgba(239,68,68,0.3); color: var(--danger);" onclick="return confirm('Delete category {{ cat.name }}?');">
+                <i class="fa-solid fa-trash"></i>
               </a>
             </div>
           </td>
@@ -46,19 +50,51 @@
       </tbody>
     </table>
   </div>
+
+  <!-- CATEGORIES PAGINATION BAR -->
+  {% if categories.has_other_pages %}
+  <div class="pagination-wrap">
+    <div>
+      Showing Page <strong>{{ categories.number }}</strong> of <strong>{{ categories.paginator.num_pages }}</strong> ({{ total_categories }} total categories)
+    </div>
+    <div class="pagination-nav">
+      {% if categories.has_previous %}
+        <a href="?cat_page={{ categories.previous_page_number }}&loc_page={{ loc_page }}" class="page-link" title="Previous"><i class="fa-solid fa-chevron-left"></i></a>
+      {% else %}
+        <span class="page-link disabled"><i class="fa-solid fa-chevron-left"></i></span>
+      {% endif %}
+
+      {% for p in categories.paginator.page_range %}
+        {% if p == categories.number %}
+          <span class="page-link active">{{ p }}</span>
+        {% elif p > categories.number|add:"-3" and p < categories.number|add:"3" %}
+          <a href="?cat_page={{ p }}&loc_page={{ loc_page }}" class="page-link">{{ p }}</a>
+        {% endif %}
+      {% endfor %}
+
+      {% if categories.has_next %}
+        <a href="?cat_page={{ categories.next_page_number }}&loc_page={{ loc_page }}" class="page-link" title="Next"><i class="fa-solid fa-chevron-right"></i></a>
+      {% else %}
+        <span class="page-link disabled"><i class="fa-solid fa-chevron-right"></i></span>
+      {% endif %}
+    </div>
+  </div>
+  {% endif %}
 </div>
 
 <!-- LOCATIONS SECTION -->
-<div style="margin-bottom: 24px; margin-top: 40px; display: flex; justify-content: space-between; align-items: center;">
+<div style="margin-bottom: 24px; margin-top: 44px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 14px;">
   <div>
-    <h2 style="font-size: 24px; font-weight: 700; margin-bottom: 8px;">Service Locations</h2>
-    <p style="color: var(--text-muted);">Manage cities and states where the platform is operational.</p>
+    <h2 style="font-size: 24px; font-weight: 700; margin-bottom: 6px;">Service Locations &amp; Cities</h2>
+    <p style="color: var(--text-muted);">Manage active operating cities and states across the platform.</p>
   </div>
-  <a href="{% url 'super_admin_location_create' %}" class="btn btn-primary"><i class="fa-solid fa-plus"></i> Add Location</a>
+  <a href="{% url 'super_admin_location_create' %}" class="btn btn-primary">
+    <i class="fa-solid fa-plus"></i> Add Location
+  </a>
 </div>
 
-<div class="card" style="padding: 0;">
-  <div class="table-container">
+<div class="card" style="padding: 0; overflow: hidden;">
+  <div class="table-container" style="border: none; border-radius: 0; box-shadow: none;">
     <table>
       <thead>
         <tr>
@@ -78,9 +114,11 @@
           <td style="color: var(--text-muted);">{{ loc.created_at|date:"M d, Y" }}</td>
           <td>
             <div style="display: flex; gap: 8px;">
-              <a href="{% url 'super_admin_location_edit' loc.id %}" class="btn btn-outline btn-sm"><i class="fa-solid fa-pen-to-square"></i> Edit</a>
-              <a href="{% url 'super_admin_location_delete' loc.id %}" class="btn btn-outline btn-sm" style="border-color: rgba(239,68,68,0.3);" onclick="return confirm('Delete location {{ loc }}?')">
-                <i class="fa-solid fa-trash" style="color: var(--danger);"></i>
+              <a href="{% url 'super_admin_location_edit' loc.id %}" class="btn btn-outline btn-sm">
+                <i class="fa-solid fa-pen-to-square"></i> Edit
+              </a>
+              <a href="{% url 'super_admin_location_delete' loc.id %}" class="btn btn-outline btn-sm" style="border-color: rgba(239,68,68,0.3); color: var(--danger);" onclick="return confirm('Delete location {{ loc }}?');">
+                <i class="fa-solid fa-trash"></i>
               </a>
             </div>
           </td>
@@ -91,5 +129,35 @@
       </tbody>
     </table>
   </div>
+
+  <!-- LOCATIONS PAGINATION BAR -->
+  {% if locations.has_other_pages %}
+  <div class="pagination-wrap">
+    <div>
+      Showing Page <strong>{{ locations.number }}</strong> of <strong>{{ locations.paginator.num_pages }}</strong> ({{ total_locations }} total cities)
+    </div>
+    <div class="pagination-nav">
+      {% if locations.has_previous %}
+        <a href="?loc_page={{ locations.previous_page_number }}&cat_page={{ cat_page }}" class="page-link" title="Previous"><i class="fa-solid fa-chevron-left"></i></a>
+      {% else %}
+        <span class="page-link disabled"><i class="fa-solid fa-chevron-left"></i></span>
+      {% endif %}
+
+      {% for p in locations.paginator.page_range %}
+        {% if p == locations.number %}
+          <span class="page-link active">{{ p }}</span>
+        {% elif p > locations.number|add:"-3" and p < locations.number|add:"3" %}
+          <a href="?loc_page={{ p }}&cat_page={{ cat_page }}" class="page-link">{{ p }}</a>
+        {% endif %}
+      {% endfor %}
+
+      {% if locations.has_next %}
+        <a href="?loc_page={{ locations.next_page_number }}&cat_page={{ cat_page }}" class="page-link" title="Next"><i class="fa-solid fa-chevron-right"></i></a>
+      {% else %}
+        <span class="page-link disabled"><i class="fa-solid fa-chevron-right"></i></span>
+      {% endif %}
+    </div>
+  </div>
+  {% endif %}
 </div>
 {% endblock %}

@@ -187,15 +187,39 @@ def super_admin_vendor_delete(request, vendor_id):
     django_messages.success(request, f'Vendor "{name}" and their account deleted.')
     return redirect('super_admin_vendors')
 
+from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
+
 # ─────────────────────────────────────────────
 # CMS: CATEGORIES (List + Create + Edit + Delete)
 # ─────────────────────────────────────────────
 @sa_required
 def super_admin_cms(request):
-    categories = Category.objects.all().order_by('-created_at')
-    locations = Location.objects.all().order_by('-created_at')
+    cat_queryset = Category.objects.all().order_by('-created_at')
+    loc_queryset = Location.objects.all().order_by('-created_at')
+    
+    # 8 per page for categories
+    cat_paginator = Paginator(cat_queryset, 8)
+    cat_page = request.GET.get('cat_page', 1)
+    try:
+        categories = cat_paginator.page(cat_page)
+    except (EmptyPage, PageNotAnInteger):
+        categories = cat_paginator.page(1)
+        
+    # 8 per page for locations
+    loc_paginator = Paginator(loc_queryset, 8)
+    loc_page = request.GET.get('loc_page', 1)
+    try:
+        locations = loc_paginator.page(loc_page)
+    except (EmptyPage, PageNotAnInteger):
+        locations = loc_paginator.page(1)
+
     return render(request, 'superadmin/cms_manager.html', {
-        'categories': categories, 'locations': locations
+        'categories': categories,
+        'locations': locations,
+        'cat_page': categories.number,
+        'loc_page': locations.number,
+        'total_categories': cat_queryset.count(),
+        'total_locations': loc_queryset.count(),
     })
 
 @sa_required

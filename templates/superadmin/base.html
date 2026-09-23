@@ -349,6 +349,58 @@
     td { padding: 16px 20px; border-bottom: 1px solid var(--border); font-size: 13.5px; font-weight: 500; vertical-align: middle; }
     tr:last-child td { border-bottom: none; }
     tr:hover td { background-color: #f8fafc; }
+
+    /* ─────────────────────────────────────────────────────────────
+       PAGINATION
+       ───────────────────────────────────────────────────────────── */
+    .pagination-wrap {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 20px;
+      border-top: 1px solid var(--border);
+      background: #fafbfc;
+      font-size: 13px;
+      color: var(--text-muted);
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    .pagination-nav {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .page-link {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 32px;
+      height: 32px;
+      padding: 0 10px;
+      border: 1px solid var(--border);
+      border-radius: var(--r-xs);
+      background: white;
+      color: var(--text-main);
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 12.5px;
+      transition: all 0.15s ease;
+    }
+    .page-link:hover {
+      background: var(--bg-surface-hover);
+      border-color: #cbd5e1;
+      color: var(--accent);
+    }
+    .page-link.active {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: white;
+    }
+    .page-link.disabled {
+      opacity: 0.4;
+      pointer-events: none;
+      cursor: not-allowed;
+    }
     
     /* ─────────────────────────────────────────────────────────────
        BADGES & STATUS
