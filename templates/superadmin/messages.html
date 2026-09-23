@@ -22,7 +22,7 @@
         </tr>
       </thead>
       <tbody>
-        {% for msg in messages %}
+        {% for msg in chat_messages %}
         <tr>
           <td><strong style="color: var(--accent);">{{ msg.sender.username }}</strong></td>
           <td><strong>{{ msg.receiver.username }}</strong></td>

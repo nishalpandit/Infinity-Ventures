@@ -374,7 +374,7 @@ def super_admin_subscription_delete(request, sub_id):
 @sa_required
 def super_admin_messages(request):
     msgs = Message.objects.all().select_related('sender', 'receiver').order_by('-created_at')
-    return render(request, 'superadmin/messages.html', {'messages': msgs})
+    return render(request, 'superadmin/messages.html', {'chat_messages': msgs})
 
 @sa_required
 def super_admin_message_delete(request, msg_id):
