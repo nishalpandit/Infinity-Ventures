@@ -577,10 +577,6 @@
         <i class="fa-solid fa-envelope"></i>
         <span>Disputes & Inquiries</span>
       </a>
-      <a href="{% url 'super_admin_settings' %}" class="nav-item {% if 'settings' in request.path and 'landing' not in request.path %}active{% endif %}">
-        <i class="fa-solid fa-sliders"></i>
-        <span>Platform Settings</span>
-      </a>
       
       <div class="nav-section" style="color: var(--accent); font-weight: 800;">Landing Page CMS</div>
       <a href="{% url 'super_admin_landing_quick_services' %}" class="nav-item {% if '/landing/quick-services' in request.path %}active{% endif %}">
