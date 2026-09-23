@@ -127,6 +127,9 @@ def dashboard_view(request, path=''):
     if path.endswith('.html'):
         path = path[:-5]
 
+    if path in ['dashboard', 'admin-dashboard', 'admin-dashboard/dashboard', 'admin-dashboard/index']:
+        return admin_dashboard(request)
+
     if request.method == 'POST' and request.POST.get('action') == 'accept_vendor':
         bid_id = request.POST.get('bid_id')
         if bid_id:
@@ -1362,6 +1365,12 @@ def dashboard_view(request, path=''):
         raise Http404(f"Template {template_name} not found")
 
 def admin_dashboard(request):
+    if request.user.is_authenticated:
+        if request.user.role == 'VENDOR':
+            return redirect('vendor_dashboard')
+        elif request.user.role in ['USER', 'CUSTOMER']:
+            return redirect('user_dashboard')
+
     admin_state, is_area_admin, available_states, co_admins = get_admin_state_context(request)
 
     user_qs = User.objects.filter(role='USER')

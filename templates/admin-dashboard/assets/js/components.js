@@ -17,6 +17,14 @@
 
   var P = inSubfolder() ? '../' : './'; // prefix for links
 
+  function resolveHref(href) {
+    if (!href) return '#';
+    if (href.startsWith('/') || href.startsWith('http://') || href.startsWith('https://') || href.startsWith('#')) {
+      return href;
+    }
+    return P + href;
+  }
+
   function currentCanonical() {
     var segs = location.pathname.split('/').filter(Boolean);
     if (segs.length >= 2 && SUBFOLDERS.indexOf(segs[segs.length - 2]) !== -1) {
@@ -36,7 +44,7 @@
 
   /* ---------- Sidebar menu configuration ---------- */
   var MENU = [
-    { label: 'Dashboard', icon: 'fa-gauge-high', href: 'dashboard.html' },
+    { label: 'Dashboard', icon: 'fa-gauge-high', href: '/admin-dashboard' },
     {
       label: 'Users', icon: 'fa-users', children: [
         { label: 'User', href: 'users/users.html' },
@@ -84,7 +92,7 @@
     var html = '';
     html += '<aside class="app-sidebar" id="appSidebar">';
     html += '  <div class="sidebar-logo">';
-    html += '    <a href="' + P + 'dashboard.html" style="display:flex;align-items:center;gap:12px;text-decoration:none;">';
+    html += '    <a href="/admin-dashboard" style="display:flex;align-items:center;gap:12px;text-decoration:none;">';
     html += '      <span class="logo-mark"><i class="fa-solid fa-infinity"></i></span>';
     html += '      <div><span class="logo-text">Infinity <span>Admin</span></span>' + stateLabel + '</div>';
     html += '    </a>';
@@ -102,18 +110,18 @@
         html += '  <div class="sb-tooltip">' + item.label + '</div>';
         html += '  <div class="sb-flyout"><div class="flyout-title">' + item.label + '</div>';
         item.children.forEach(function (c) {
-          html += '<a href="' + P + c.href + '" data-canon="' + canonical(c.href) + '" data-status="' + (qsFromHref(c.href) || '') + '">' + c.label + '</a>';
+          html += '<a href="' + resolveHref(c.href) + '" data-canon="' + canonical(c.href) + '" data-status="' + (qsFromHref(c.href) || '') + '">' + c.label + '</a>';
         });
         html += '  </div>';
         html += '  <ul class="snav-sub">';
         item.children.forEach(function (c) {
-          html += '<li><a class="snav-sublink" href="' + P + c.href + '" data-canon="' + canonical(c.href) + '" data-status="' + (qsFromHref(c.href) || '') + '">' + c.label + '</a></li>';
+          html += '<li><a class="snav-sublink" href="' + resolveHref(c.href) + '" data-canon="' + canonical(c.href) + '" data-status="' + (qsFromHref(c.href) || '') + '">' + c.label + '</a></li>';
         });
         html += '  </ul>';
         html += '</div>';
       } else {
         html += '<div class="snav-item" data-menu="' + item.label + '">';
-        html += '  <a class="snav-link" href="' + P + item.href + '" data-canon="' + canonical(item.href) + '">';
+        html += '  <a class="snav-link" href="' + resolveHref(item.href) + '" data-canon="' + canonical(item.href) + '">';
         html += '    <span class="snav-icon"><i class="fa-solid ' + item.icon + '"></i></span>';
         html += '    <span class="snav-label">' + item.label + '</span>';
         html += '  </a>';
@@ -185,7 +193,7 @@
   /* ---------- Active menu detection ---------- */
   function setActive() {
     var cur = currentCanonical();
-    var curStatus = qs('status') || (qs('view') ? qs('view') : null);
+    var isDash = ['admin-dashboard', 'dashboard', 'dashboard.html', 'admin-dashboard.html'].indexOf(cur) !== -1;
 
     document.querySelectorAll('.snav-sublink, .sb-flyout a').forEach(function (a) {
       var canon = a.getAttribute('data-canon');
@@ -197,7 +205,10 @@
     document.querySelectorAll('.snav-item').forEach(function (item) {
       var activeInside = item.querySelector('.snav-sublink.active');
       var direct = item.querySelector('.snav-link[data-canon]');
-      if (direct && direct.getAttribute('data-canon') === cur) {
+      var menuLabel = item.getAttribute('data-menu');
+      if (isDash && menuLabel === 'Dashboard') {
+        if (direct) direct.classList.add('active');
+      } else if (direct && direct.getAttribute('data-canon') === cur) {
         direct.classList.add('active');
       }
       if (activeInside) {
@@ -212,7 +223,7 @@
   function renderBreadcrumb(items) {
     var el = document.getElementById('breadcrumb');
     if (!el) return;
-    var html = '<a href="' + P + 'dashboard.html"><i class="fa-solid fa-house" style="font-size:11px;"></i> Dashboard</a>';
+    var html = '<a href="/admin-dashboard"><i class="fa-solid fa-house" style="font-size:11px;"></i> Dashboard</a>';
     items.forEach(function (it, i) {
       html += '<span class="sep"><i class="fa-solid fa-chevron-right" style="font-size:9px;"></i></span>';
       if (i === items.length - 1 || !it.href) {

@@ -8,7 +8,7 @@
   'use strict';
 
   /* ---------- Path helpers (pages live at root or one level deep) ---------- */
-  var SUBFOLDERS = ['users', 'quick-services', 'jobs', 'bidding', 'subscriptions', 'payments', 'reviews', 'complaints', 'reports'];
+  var SUBFOLDERS = ['users', 'quick-services', 'jobs', 'bidding', 'subscriptions', 'payments', 'reviews', 'complaints', 'reports', 'master'];
 
   function inSubfolder() {
     var segs = location.pathname.split('/').filter(Boolean);
@@ -16,6 +16,14 @@
   }
 
   var P = inSubfolder() ? '../' : './'; // prefix for links
+
+  function resolveHref(href) {
+    if (!href) return '#';
+    if (href.startsWith('/') || href.startsWith('http://') || href.startsWith('https://') || href.startsWith('#')) {
+      return href;
+    }
+    return P + href;
+  }
 
   function currentCanonical() {
     var segs = location.pathname.split('/').filter(Boolean);
@@ -36,13 +44,12 @@
 
   /* ---------- Sidebar menu configuration ---------- */
   var MENU = [
-    { label: 'Dashboard', icon: 'fa-gauge-high', href: 'dashboard.html' },
+    { label: 'Dashboard', icon: 'fa-gauge-high', href: '/admin-dashboard' },
     {
       label: 'Users', icon: 'fa-users', children: [
-        { label: 'End Users', href: 'users/users.html' },
-        { label: 'Vendors', href: 'users/vendors.html' },
-        { label: 'Company Vendors', href: 'users/company-vendors.html' },
-        { label: 'Outsider Vendors', href: 'users/outsider-vendors.html' }
+        { label: 'User', href: 'users/users.html' },
+        { label: 'Vendor', href: 'users/vendors.html' },
+        { label: 'Company Vendor', href: 'users/company-vendors.html' }
       ]
     },
     {
@@ -51,14 +58,7 @@
         { label: 'Closed Quick Services', href: 'quick-services/index.html#closed' }
       ]
     },
-    {
-      label: 'Jobs', icon: 'fa-briefcase', children: [
-        { label: 'All Jobs', href: 'jobs/index.html' },
-        { label: 'Active', href: 'jobs/index.html?status=active' },
-        { label: 'Completed', href: 'jobs/index.html?status=completed' },
-        { label: 'Cancelled', href: 'jobs/index.html?status=cancelled' }
-      ]
-    },
+
     {
       label: 'Jobs', icon: 'fa-briefcase', children: [
         { label: 'Active Jobs', href: 'jobs/index.html#active' },
@@ -77,17 +77,24 @@
         { label: 'Transactions', href: 'payments/index.html?view=transactions' }
       ]
     },
+    {
+      label: 'Master', icon: 'fa-database', children: [
+        { label: 'Categories', href: 'master/categories.html' },
+        { label: 'Locations', href: 'master/locations.html' }
+      ]
+    },
     { label: 'Admin Profile', icon: 'fa-user-shield', href: 'profile.html' }
   ];
 
   /* ---------- Sidebar template ---------- */
   function buildSidebar() {
+    var stateLabel = window.ADMIN_STATE ? '<div style="font-size:11px; color:#818cf8; font-weight:600; padding:2px 0 0 36px;"><i class="fa-solid fa-map-pin" style="margin-right:4px;"></i>' + window.ADMIN_STATE + '</div>' : '';
     var html = '';
     html += '<aside class="app-sidebar" id="appSidebar">';
     html += '  <div class="sidebar-logo">';
-    html += '    <a href="' + P + 'dashboard.html" style="display:flex;align-items:center;gap:12px;text-decoration:none;">';
+    html += '    <a href="/admin-dashboard" style="display:flex;align-items:center;gap:12px;text-decoration:none;">';
     html += '      <span class="logo-mark"><i class="fa-solid fa-infinity"></i></span>';
-    html += '      <span class="logo-text">Infinity <span>Admin</span></span>';
+    html += '      <div><span class="logo-text">Infinity <span>Admin</span></span>' + stateLabel + '</div>';
     html += '    </a>';
     html += '  </div>';
     html += '  <nav class="sidebar-nav" id="sidebarNav">';
@@ -103,18 +110,18 @@
         html += '  <div class="sb-tooltip">' + item.label + '</div>';
         html += '  <div class="sb-flyout"><div class="flyout-title">' + item.label + '</div>';
         item.children.forEach(function (c) {
-          html += '<a href="' + P + c.href + '" data-canon="' + canonical(c.href) + '" data-status="' + (qsFromHref(c.href) || '') + '">' + c.label + '</a>';
+          html += '<a href="' + resolveHref(c.href) + '" data-canon="' + canonical(c.href) + '" data-status="' + (qsFromHref(c.href) || '') + '">' + c.label + '</a>';
         });
         html += '  </div>';
         html += '  <ul class="snav-sub">';
         item.children.forEach(function (c) {
-          html += '<li><a class="snav-sublink" href="' + P + c.href + '" data-canon="' + canonical(c.href) + '" data-status="' + (qsFromHref(c.href) || '') + '">' + c.label + '</a></li>';
+          html += '<li><a class="snav-sublink" href="' + resolveHref(c.href) + '" data-canon="' + canonical(c.href) + '" data-status="' + (qsFromHref(c.href) || '') + '">' + c.label + '</a></li>';
         });
         html += '  </ul>';
         html += '</div>';
       } else {
         html += '<div class="snav-item" data-menu="' + item.label + '">';
-        html += '  <a class="snav-link" href="' + P + item.href + '" data-canon="' + canonical(item.href) + '">';
+        html += '  <a class="snav-link" href="' + resolveHref(item.href) + '" data-canon="' + canonical(item.href) + '">';
         html += '    <span class="snav-icon"><i class="fa-solid ' + item.icon + '"></i></span>';
         html += '    <span class="snav-label">' + item.label + '</span>';
         html += '  </a>';
@@ -147,6 +154,11 @@
 
   /* ---------- Header template ---------- */
   function buildHeader() {
+    var uName = window.ADMIN_NAME || 'Area Admin';
+    var uRole = window.ADMIN_ROLE || 'Area Admin';
+    var uState = window.ADMIN_STATE ? ' (' + window.ADMIN_STATE + ')' : '';
+    var uInitials = window.ADMIN_INITIALS || 'AA';
+
     var html = '';
     html += '<header class="app-header">';
     html += '  <button class="header-toggle d-lg-none" id="mobileMenuBtn" aria-label="Open menu"><i class="fa-solid fa-bars"></i></button>';
@@ -155,17 +167,15 @@
     html += '    <div style="position:relative;">';
     html += '      <button class="header-icon-btn" id="notifBtn" aria-label="Notifications"><i class="fa-regular fa-bell"></i><span class="dot"></span></button>';
     html += '      <div class="header-dropdown" id="notifDropdown">';
-    html += '        <div class="hd-head"><span>Notifications</span><span class="badge badge-danger">3 new</span></div>';
-    html += '        <div class="hd-item"><span class="ic icon-indigo"><i class="fa-solid fa-gavel"></i></span><div class="txt"><div class="t">New bid submitted</div><div class="d">Sharma Enterprises bid ₹48,000 on JOB-1042</div><div class="time">5 minutes ago</div></div></div>';
-    html += '        <div class="hd-item"><span class="ic icon-green"><i class="fa-solid fa-indian-rupee-sign"></i></span><div class="txt"><div class="t">Subscription purchased</div><div class="d">Ravi Kumar bought 50 Bid Package (₹700)</div><div class="time">22 minutes ago</div></div></div>';
-    html += '        <div class="hd-item"><span class="ic icon-red"><i class="fa-solid fa-triangle-exclamation"></i></span><div class="txt"><div class="t">New complaint filed</div><div class="d">CMP-207 opened against vendor QuickFix Services</div><div class="time">1 hour ago</div></div></div>';
+    html += '        <div class="hd-head"><span>Notifications</span><span class="badge badge-danger">Live</span></div>';
+    html += '        <div class="hd-item"><span class="ic icon-indigo"><i class="fa-solid fa-map-pin"></i></span><div class="txt"><div class="t">Territory Active</div><div class="d">Managing area operations' + (window.ADMIN_STATE ? ' for ' + window.ADMIN_STATE : '') + '</div><div class="time">Just now</div></div></div>';
     html += '        <div class="hd-footer"><a href="' + P + 'notifications.html">View all notifications</a></div>';
     html += '      </div>';
     html += '    </div>';
     html += '    <div style="position:relative;">';
     html += '      <div class="header-profile" id="profileBtn">';
-    html += '        <span class="avatar">AD</span>';
-    html += '        <span class="meta"><span class="name d-block">Arjun Desai</span><span class="role d-block">Super Admin</span></span>';
+    html += '        <span class="avatar">' + uInitials + '</span>';
+    html += '        <span class="meta"><span class="name d-block">' + uName + '</span><span class="role d-block">' + uRole + uState + '</span></span>';
     html += '        <i class="fa-solid fa-chevron-down" style="font-size:10px;color:var(--text-light);"></i>';
     html += '      </div>';
     html += '      <div class="header-dropdown profile-menu" id="profileDropdown">';
@@ -183,7 +193,7 @@
   /* ---------- Active menu detection ---------- */
   function setActive() {
     var cur = currentCanonical();
-    var curStatus = qs('status') || (qs('view') ? qs('view') : null);
+    var isDash = ['admin-dashboard', 'dashboard', 'dashboard.html', 'admin-dashboard.html'].indexOf(cur) !== -1;
 
     document.querySelectorAll('.snav-sublink, .sb-flyout a').forEach(function (a) {
       var canon = a.getAttribute('data-canon');
@@ -195,7 +205,10 @@
     document.querySelectorAll('.snav-item').forEach(function (item) {
       var activeInside = item.querySelector('.snav-sublink.active');
       var direct = item.querySelector('.snav-link[data-canon]');
-      if (direct && direct.getAttribute('data-canon') === cur) {
+      var menuLabel = item.getAttribute('data-menu');
+      if (isDash && menuLabel === 'Dashboard') {
+        if (direct) direct.classList.add('active');
+      } else if (direct && direct.getAttribute('data-canon') === cur) {
         direct.classList.add('active');
       }
       if (activeInside) {
@@ -210,13 +223,13 @@
   function renderBreadcrumb(items) {
     var el = document.getElementById('breadcrumb');
     if (!el) return;
-    var html = '<a href="' + P + 'dashboard.html"><i class="fa-solid fa-house" style="font-size:11px;"></i> Dashboard</a>';
+    var html = '<a href="/admin-dashboard"><i class="fa-solid fa-house" style="font-size:11px;"></i> Dashboard</a>';
     items.forEach(function (it, i) {
       html += '<span class="sep"><i class="fa-solid fa-chevron-right" style="font-size:9px;"></i></span>';
       if (i === items.length - 1 || !it.href) {
         html += '<span class="current">' + it.label + '</span>';
       } else {
-        html += '<a href="' + it.href + '">' + it.label + '</a>';
+        html += '<a href="' + resolveHref(it.href) + '">' + it.label + '</a>';
       }
     });
     el.innerHTML = html;
