@@ -3,64 +3,160 @@
 {% block header_title %}{{ title }}{% endblock %}
 
 {% block content %}
-<div style="margin-bottom: 24px; display: flex; justify-content: space-between; align-items: center;">
+<div style="margin-bottom: 28px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;">
   <div>
-    <h2 style="font-size: 24px; font-weight: 700; margin-bottom: 6px;">{{ title }}</h2>
-    <p style="color: var(--text-muted);">Fill in the details below to publish or update this card on the homepage.</p>
+    <h2 style="font-family: var(--font-display); font-size: 24px; font-weight: 800; color: var(--text-main); margin-bottom: 6px;">
+      {{ title }}
+    </h2>
+    <p style="color: var(--text-muted); font-size: 14px;">
+      Fill in or update the card details below. All saved changes reflect in real-time on the public landing page.
+    </p>
   </div>
-  <a href="{% url back_url %}" class="btn btn-outline" style="background: white;">
+  <a href="{% url back_url %}" class="btn btn-outline">
     <i class="fa-solid fa-arrow-left"></i> Back to List
   </a>
 </div>
 
-<div class="card" style="max-width: 800px;">
-  <form method="POST" enctype="multipart/form-data">
-    {% csrf_token %}
+<form method="POST" enctype="multipart/form-data" id="cmsCardForm">
+  {% csrf_token %}
 
-    {% for field in form %}
-      <div class="form-group" style="margin-bottom: 20px;">
-        <label class="form-label" for="{{ field.id_for_label }}" style="display: flex; justify-content: space-between;">
-          <span>{{ field.label }}</span>
-          {% if field.field.required %}<span style="color: var(--danger); font-size: 11px;">* Required</span>{% endif %}
-        </label>
-        
-        {% if field.field.widget.input_type == 'file' %}
-          {% if card.image or card.avatar %}
-            <div style="margin-bottom: 10px; display: flex; align-items: center; gap: 12px;">
-              <img src="{% if card.image %}{{ card.image.url }}{% else %}{{ card.avatar.url }}{% endif %}" alt="Preview" style="max-height: 80px; max-width: 120px; object-fit: cover; border-radius: 8px; border: 1px solid var(--border);">
-              <span style="font-size: 12px; color: var(--text-muted);">Current Uploaded Image</span>
-            </div>
-          {% endif %}
-        {% endif %}
-
-        {% if field.field.widget.input_type == 'checkbox' %}
-          <div style="display: flex; align-items: center; gap: 10px; padding: 10px 0;">
-            {{ field }}
-            <span style="font-size: 14px; font-weight: 600; color: var(--text-main);">Enable / Set Active</span>
-          </div>
-        {% else %}
-          {{ field }}
-        {% endif %}
-
-        {% if field.help_text %}
-          <small style="display: block; margin-top: 4px; color: var(--text-muted); font-size: 12px;">{{ field.help_text }}</small>
-        {% endif %}
-
-        {% if field.errors %}
-          <div style="color: var(--danger); font-size: 12px; margin-top: 4px;">
-            {{ field.errors|striptags }}
-          </div>
-        {% endif %}
+  <div style="display: grid; grid-template-columns: 1.25fr 0.75fr; gap: 28px; align-items: start;">
+    
+    <!-- LEFT: FORM FIELDS -->
+    <div class="card" style="margin-bottom: 0;">
+      <div class="card-header">
+        <div class="card-title">
+          <i class="fa-solid fa-pen-to-square"></i>
+          <span>Card Attributes &amp; Content</span>
+        </div>
+        <span class="badge info">CMS Model Data</span>
       </div>
-    {% endfor %}
 
-    <div class="form-actions" style="margin-top: 32px; border-top: 1px solid var(--border); padding-top: 20px;">
-      <button type="submit" class="btn btn-primary" style="padding: 12px 28px;">
-        <i class="fa-solid fa-floppy-disk"></i> Save Card
-      </button>
-      <a href="{% url back_url %}" class="btn btn-outline">Cancel</a>
+      {% for field in form %}
+        {% if field.field.widget.input_type != 'file' and field.field.widget.input_type != 'checkbox' %}
+          <div class="form-group">
+            <label class="form-label" for="{{ field.id_for_label }}" style="display: flex; justify-content: space-between;">
+              <span>{{ field.label }}</span>
+              {% if field.field.required %}<span style="color: var(--danger); font-size: 11px;">* Required</span>{% endif %}
+            </label>
+            {{ field }}
+            {% if field.help_text %}
+              <small style="display: block; margin-top: 4px; color: var(--text-muted); font-size: 11.5px;">{{ field.help_text }}</small>
+            {% endif %}
+            {% if field.errors %}
+              <div style="color: var(--danger); font-size: 12px; margin-top: 4px;">
+                {{ field.errors|striptags }}
+              </div>
+            {% endif %}
+          </div>
+        {% endif %}
+      {% endfor %}
+
+      <!-- Checkbox fields (Active/Popular toggles) -->
+      {% for field in form %}
+        {% if field.field.widget.input_type == 'checkbox' %}
+          <div style="display: flex; align-items: center; justify-content: space-between; padding: 16px; background: #f8fafc; border: 1px solid var(--border); border-radius: var(--r-sm); margin-top: 14px;">
+            <div>
+              <div style="font-size: 14px; font-weight: 700; color: var(--text-main);">{{ field.label }}</div>
+              <div style="font-size: 12px; color: var(--text-muted);">Enable to display this item publicly on the website</div>
+            </div>
+            <label class="toggle-switch">
+              {{ field }}
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+        {% endif %}
+      {% endfor %}
+
+      <div style="margin-top: 32px; padding-top: 20px; border-top: 1px solid var(--border); display: flex; gap: 14px;">
+        <button type="submit" class="btn btn-primary btn-lg" style="flex: 1;">
+          <i class="fa-solid fa-floppy-disk"></i> Save Card Details
+        </button>
+        <a href="{% url back_url %}" class="btn btn-outline btn-lg">Cancel</a>
+      </div>
     </div>
 
-  </form>
-</div>
+    <!-- RIGHT: FILE UPLOAD & PREVIEW (IF ANY FILE FIELD EXISTS) -->
+    <div style="display: flex; flex-direction: column; gap: 24px;">
+      
+      {% for field in form %}
+        {% if field.field.widget.input_type == 'file' %}
+          <div class="card" style="margin-bottom: 0;">
+            <div class="card-header">
+              <div class="card-title">
+                <i class="fa-solid fa-image"></i>
+                <span>{{ field.label }}</span>
+              </div>
+              <span style="font-size: 11.5px; color: var(--text-muted);">Image Asset</span>
+            </div>
+
+            {% if card.image or card.avatar or card.hero_image %}
+              <div class="dropzone-preview-wrap" id="cardImgWrap">
+                <img src="{% if card.image %}{{ card.image.url }}{% elif card.avatar %}{{ card.avatar.url }}{% elif card.hero_image %}{{ card.hero_image.url }}{% endif %}" id="cardImgPreview" class="dropzone-thumb" style="width: 80px; height: 80px;" alt="Preview">
+                <div style="flex: 1; min-width: 0;">
+                  <div style="font-size: 13px; font-weight: 700; color: var(--text-main);">Current Uploaded Photo</div>
+                  <div style="font-size: 11.5px; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" id="cardImgText">
+                    {% if card.image %}{{ card.image.name }}{% elif card.avatar %}{{ card.avatar.name }}{% endif %}
+                  </div>
+                </div>
+              </div>
+            {% else %}
+              <div class="dropzone-preview-wrap" id="cardImgWrap" style="display: none;">
+                <img src="" id="cardImgPreview" class="dropzone-thumb" style="width: 80px; height: 80px;" alt="Preview">
+                <div style="flex: 1; min-width: 0;">
+                  <div style="font-size: 13px; font-weight: 700; color: var(--text-main);">Selected Image</div>
+                  <div style="font-size: 11.5px; color: var(--text-muted);" id="cardImgText">Ready to upload</div>
+                </div>
+              </div>
+            {% endif %}
+
+            <div class="dropzone-box" id="cardDropBox">
+              {{ field }}
+              <div class="dropzone-icon"><i class="fa-solid fa-cloud-arrow-up"></i></div>
+              <div class="dropzone-title">Click or drag image to upload</div>
+              <div class="dropzone-subtitle">JPG, PNG, or WEBP formats</div>
+            </div>
+            {% if field.errors %}
+              <div style="color: var(--danger); font-size: 12px; margin-top: 6px;">{{ field.errors|striptags }}</div>
+            {% endif %}
+          </div>
+        {% endif %}
+      {% endfor %}
+
+      <!-- Quick Tip Card -->
+      <div class="card" style="background: #fafbfc; border-left: 4px solid var(--accent); margin-bottom: 0;">
+        <div style="font-size: 13px; font-weight: 700; color: var(--text-main); margin-bottom: 6px;">
+          <i class="fa-solid fa-circle-info" style="color: var(--accent);"></i> Live Display Note
+        </div>
+        <p style="font-size: 12.5px; color: var(--text-muted); line-height: 1.55;">
+          The card order determines display sequence from left-to-right or top-to-bottom on the landing page (lower numbers display first).
+        </p>
+      </div>
+
+    </div>
+
+  </div>
+</form>
+
+<script>
+  // Setup file input live preview
+  var fileInputs = document.querySelectorAll('.dropzone-input');
+  fileInputs.forEach(function(inp) {
+    inp.addEventListener('change', function(e) {
+      var file = e.target.files[0];
+      if (file) {
+        var reader = new FileReader();
+        reader.onload = function(evt) {
+          var preview = document.getElementById('cardImgPreview');
+          var wrap = document.getElementById('cardImgWrap');
+          var text = document.getElementById('cardImgText');
+          if (preview) preview.src = evt.target.result;
+          if (wrap) wrap.style.display = 'flex';
+          if (text) text.textContent = file.name + ' (' + (file.size / 1024).toFixed(1) + ' KB)';
+        };
+        reader.readAsDataURL(file);
+      }
+    });
+  });
+</script>
 {% endblock %}

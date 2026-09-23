@@ -1,121 +1,282 @@
 {% extends 'superadmin/base.html' %}
-{% block title %}Hero Section CMS{% endblock %}
+{% block title %}Hero Section & Headlines{% endblock %}
 {% block header_title %}Hero Section & Headlines{% endblock %}
 
 {% block content %}
-<div style="margin-bottom: 24px; display: flex; justify-content: space-between; align-items: center;">
+<div style="margin-bottom: 28px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;">
   <div>
-    <h2 style="font-size: 24px; font-weight: 700; margin-bottom: 6px;">Hero Banner, Headline & CTAs</h2>
-    <p style="color: var(--text-muted);">Manage the topmost above-the-fold banner, main value proposition headline, CTAs, and counter stats.</p>
+    <h2 style="font-family: var(--font-display); font-size: 24px; font-weight: 800; color: var(--text-main); margin-bottom: 6px;">
+      Hero Banner, Headlines &amp; CTAs
+    </h2>
+    <p style="color: var(--text-muted); font-size: 14px;">
+      Configure the primary value proposition, background photo, CTA buttons, and real-time social proof stat counters.
+    </p>
   </div>
-  <a href="{% url 'super_admin_landing_overview' %}" class="btn btn-outline" style="background: white;">
-    <i class="fa-solid fa-arrow-left"></i> Back to CMS Hub
-  </a>
+  <div style="display: flex; gap: 12px;">
+    <a href="{% url 'super_admin_landing_overview' %}" class="btn btn-outline">
+      <i class="fa-solid fa-arrow-left"></i> Back to CMS Hub
+    </a>
+    <a href="/" target="_blank" class="btn btn-outline" style="background: white;">
+      <i class="fa-solid fa-arrow-up-right-from-square"></i> View Live Site
+    </a>
+  </div>
 </div>
 
-<div class="card" style="max-width: 900px;">
-  <form method="POST" enctype="multipart/form-data">
-    {% csrf_token %}
+<form method="POST" enctype="multipart/form-data" id="heroForm">
+  {% csrf_token %}
+
+  <div style="display: grid; grid-template-columns: 1.25fr 0.75fr; gap: 28px; align-items: start;">
     
-    <div style="font-size: 16px; font-weight: 700; margin-bottom: 16px; padding-bottom: 8px; border-bottom: 1px solid var(--border);">
-      <i class="fa-solid fa-heading"></i> Main Headline & Text
-    </div>
-
-    <div class="form-group">
-      <label class="form-label">Top Pill Badge Text</label>
-      {{ form.badge_text }}
-    </div>
-
-    <div class="form-group" style="margin-top: 16px;">
-      <label class="form-label">Main Hero Headline (H1)</label>
-      {{ form.headline }}
-    </div>
-
-    <div class="form-group" style="margin-top: 16px;">
-      <label class="form-label">Subtext / Explainer Paragraph</label>
-      {{ form.subtext }}
-    </div>
-
-    <div class="form-group" style="margin-top: 16px;">
-      <label class="form-label">Upload Hero Right-Side Image / Banner</label>
-      {% if hero.hero_image %}
-        <div style="margin-bottom: 8px;">
-          <img src="{{ hero.hero_image.url }}" alt="Hero Image" style="max-height: 120px; border-radius: 8px; border: 1px solid var(--border);">
+    <!-- LEFT COLUMN: COPY & CTAS & STATS -->
+    <div style="display: flex; flex-direction: column; gap: 24px;">
+      
+      <!-- Section 1: Headline & Subtext -->
+      <div class="card" style="margin-bottom: 0;">
+        <div class="card-header">
+          <div class="card-title">
+            <i class="fa-solid fa-heading"></i>
+            <span>Headlines &amp; Value Proposition</span>
+          </div>
+          <span class="badge info">Above the Fold</span>
         </div>
-      {% endif %}
-      {{ form.hero_image }}
+
+        <div class="form-group">
+          <label class="form-label" for="id_badge_text">Top Pill Badge Text</label>
+          {{ form.badge_text }}
+          {% if form.badge_text.errors %}<div style="color:var(--danger); font-size:12px; margin-top:4px;">{{ form.badge_text.errors|striptags }}</div>{% endif %}
+        </div>
+
+        <div class="form-group" style="margin-top: 16px;">
+          <label class="form-label" for="id_headline">Main Hero Headline (H1)</label>
+          {{ form.headline }}
+          <small style="color: var(--text-muted); font-size: 11.5px; display: block; margin-top: 4px;">Supports standard text or gradient highlights.</small>
+          {% if form.headline.errors %}<div style="color:var(--danger); font-size:12px; margin-top:4px;">{{ form.headline.errors|striptags }}</div>{% endif %}
+        </div>
+
+        <div class="form-group" style="margin-top: 16px; margin-bottom: 0;">
+          <label class="form-label" for="id_subtext">Subtext / Explainer Paragraph</label>
+          {{ form.subtext }}
+          {% if form.subtext.errors %}<div style="color:var(--danger); font-size:12px; margin-top:4px;">{{ form.subtext.errors|striptags }}</div>{% endif %}
+        </div>
+      </div>
+
+      <!-- Section 2: CTA Buttons -->
+      <div class="card" style="margin-bottom: 0;">
+        <div class="card-header">
+          <div class="card-title">
+            <i class="fa-solid fa-hand-pointer"></i>
+            <span>Call-to-Action (CTA) Buttons</span>
+          </div>
+          <span class="badge active">Conversion Triggers</span>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label" for="id_cta_primary_text">Primary Button Label</label>
+            {{ form.cta_primary_text }}
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="id_cta_primary_url">Primary Button Target URL / Modal</label>
+            {{ form.cta_primary_url }}
+          </div>
+        </div>
+
+        <div class="form-row" style="margin-top: 10px; margin-bottom: 0;">
+          <div class="form-group">
+            <label class="form-label" for="id_cta_secondary_text">Secondary Button Label</label>
+            {{ form.cta_secondary_text }}
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="id_cta_secondary_url">Secondary Button Target URL / Modal</label>
+            {{ form.cta_secondary_url }}
+          </div>
+        </div>
+      </div>
+
+      <!-- Section 3: Metric Counters -->
+      <div class="card" style="margin-bottom: 0;">
+        <div class="card-header">
+          <div class="card-title">
+            <i class="fa-solid fa-chart-line"></i>
+            <span>Live Social Proof Metric Counters</span>
+          </div>
+          <span class="badge active">Trust Strip</span>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label" for="id_stat1_number"><i class="fa-solid fa-star" style="color:#f59e0b;"></i> Counter 1 Value</label>
+            {{ form.stat1_number }}
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="id_stat1_label">Counter 1 Description</label>
+            {{ form.stat1_label }}
+          </div>
+        </div>
+
+        <div class="form-row" style="margin-top: 10px;">
+          <div class="form-group">
+            <label class="form-label" for="id_stat2_number"><i class="fa-solid fa-shield" style="color:#10b981;"></i> Counter 2 Value</label>
+            {{ form.stat2_number }}
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="id_stat2_label">Counter 2 Description</label>
+            {{ form.stat2_label }}
+          </div>
+        </div>
+
+        <div class="form-row" style="margin-top: 10px; margin-bottom: 0;">
+          <div class="form-group">
+            <label class="form-label" for="id_stat3_number"><i class="fa-solid fa-bolt" style="color:#6366f1;"></i> Counter 3 Value</label>
+            {{ form.stat3_number }}
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="id_stat3_label">Counter 3 Description</label>
+            {{ form.stat3_label }}
+          </div>
+        </div>
+      </div>
+
     </div>
 
-    <div style="font-size: 16px; font-weight: 700; margin-top: 32px; margin-bottom: 16px; padding-bottom: 8px; border-bottom: 1px solid var(--border);">
-      <i class="fa-solid fa-hand-pointer"></i> Call-To-Action (CTA) Buttons
+    <!-- RIGHT COLUMN: IMAGE UPLOAD & LIVE HERO MOCKUP -->
+    <div style="display: flex; flex-direction: column; gap: 24px;">
+      
+      <!-- Hero Banner Dropzone -->
+      <div class="card" style="margin-bottom: 0;">
+        <div class="card-header">
+          <div class="card-title">
+            <i class="fa-solid fa-image"></i>
+            <span>Hero Banner Image</span>
+          </div>
+          <span style="font-size: 11.5px; color: var(--text-muted);">High Resolution</span>
+        </div>
+
+        {% if hero.hero_image %}
+        <div class="dropzone-preview-wrap" id="heroCurrentWrap">
+          <img src="{{ hero.hero_image.url }}" id="heroImgPreview" class="dropzone-thumb" style="width: 80px; height: 60px;" alt="Hero Preview">
+          <div style="flex: 1; min-width: 0;">
+            <div style="font-size: 13px; font-weight: 700; color: var(--text-main);">Current Banner Photo</div>
+            <div style="font-size: 11.5px; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" id="heroFileText">{{ hero.hero_image.name }}</div>
+          </div>
+        </div>
+        {% else %}
+        <div class="dropzone-preview-wrap" id="heroCurrentWrap" style="display: none;">
+          <img src="" id="heroImgPreview" class="dropzone-thumb" style="width: 80px; height: 60px;" alt="Hero Preview">
+          <div style="flex: 1; min-width: 0;">
+            <div style="font-size: 13px; font-weight: 700; color: var(--text-main);">Selected Banner</div>
+            <div style="font-size: 11.5px; color: var(--text-muted);" id="heroFileText">Ready to upload</div>
+          </div>
+        </div>
+        {% endif %}
+
+        <div class="dropzone-box" id="heroDropBox">
+          {{ form.hero_image }}
+          <div class="dropzone-icon"><i class="fa-solid fa-cloud-arrow-up"></i></div>
+          <div class="dropzone-title">Click to upload hero banner</div>
+          <div class="dropzone-subtitle">JPG, PNG, or WEBP (Recommended 1200×800)</div>
+        </div>
+      </div>
+
+      <!-- Live Hero Visualizer Widget -->
+      <div class="card" style="background: linear-gradient(135deg, #0f172a, #1e293b); color: white; border: none; margin-bottom: 0;">
+        <div style="font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px; color: #a5b4fc; margin-bottom: 12px;">
+          <i class="fa-solid fa-eye"></i> Live Hero Section Visualizer
+        </div>
+        
+        <div style="padding: 16px; background: rgba(255,255,255,0.05); border-radius: 12px; border: 1px solid rgba(255,255,255,0.1);">
+          <div style="display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 20px; background: rgba(79,70,229,0.3); border: 1px solid rgba(99,102,241,0.4); font-size: 11px; font-weight: 700; color: #c7d2fe; margin-bottom: 10px;" id="mockupBadge">
+            <span style="width: 6px; height: 6px; border-radius: 50%; background: #22c55e;"></span>
+            <span id="mockupBadgeText">{{ hero.badge_text|default:"TWO ENGINES. ONE PLATFORM." }}</span>
+          </div>
+
+          <div id="mockupHeadline" style="font-size: 16px; font-weight: 800; line-height: 1.35; color: white; margin-bottom: 8px;">
+            {{ hero.headline|default:"India's Smartest Marketplace for Instant Services" }}
+          </div>
+
+          <div id="mockupSubtext" style="font-size: 12px; color: #94a3b8; line-height: 1.5; margin-bottom: 14px;">
+            {{ hero.subtext|default:"Book verified experts in 60 seconds or post custom requirements..."|truncatewords:20 }}
+          </div>
+
+          <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+            <div style="padding: 6px 12px; border-radius: 6px; background: #4f46e5; color: white; font-size: 11.5px; font-weight: 700;" id="mockupCta1">
+              {{ hero.cta_primary_text|default:"Book Instant Service" }}
+            </div>
+            <div style="padding: 6px 12px; border-radius: 6px; background: rgba(255,255,255,0.12); color: #e2e8f0; font-size: 11.5px; font-weight: 600;" id="mockupCta2">
+              {{ hero.cta_secondary_text|default:"Post a Project" }}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Save Actions Card -->
+      <div class="card" style="margin-bottom: 0; background: #f8fafc;">
+        <button type="submit" class="btn btn-primary btn-lg" style="width: 100%; font-size: 15px; font-weight: 700; box-shadow: 0 4px 14px rgba(79, 70, 229, 0.35);">
+          <i class="fa-solid fa-floppy-disk"></i> Save &amp; Publish Hero Section
+        </button>
+        <div style="text-align: center; margin-top: 10px;">
+          <a href="{% url 'super_admin_landing_overview' %}" style="font-size: 13px; color: var(--text-muted); text-decoration: none;">Cancel changes</a>
+        </div>
+      </div>
+
     </div>
 
-    <div class="form-row">
-      <div class="form-group">
-        <label class="form-label">Primary Button Label</label>
-        {{ form.cta_primary_text }}
-      </div>
-      <div class="form-group">
-        <label class="form-label">Primary Button Target URL</label>
-        {{ form.cta_primary_url }}
-      </div>
-    </div>
+  </div>
+</form>
 
-    <div class="form-row" style="margin-top: 16px;">
-      <div class="form-group">
-        <label class="form-label">Secondary Button Label</label>
-        {{ form.cta_secondary_text }}
-      </div>
-      <div class="form-group">
-        <label class="form-label">Secondary Button Target URL</label>
-        {{ form.cta_secondary_url }}
-      </div>
-    </div>
+<script>
+  // Live previews for Hero banner upload
+  var heroInput = document.getElementById('id_hero_image');
+  var heroPreview = document.getElementById('heroImgPreview');
+  var heroWrap = document.getElementById('heroCurrentWrap');
+  var heroText = document.getElementById('heroFileText');
 
-    <div style="font-size: 16px; font-weight: 700; margin-top: 32px; margin-bottom: 16px; padding-bottom: 8px; border-bottom: 1px solid var(--border);">
-      <i class="fa-solid fa-chart-simple"></i> Hero Key Stats & Callouts
-    </div>
+  if (heroInput) {
+    heroInput.addEventListener('change', function(e) {
+      var file = e.target.files[0];
+      if (file) {
+        var reader = new FileReader();
+        reader.onload = function(evt) {
+          heroPreview.src = evt.target.result;
+          heroWrap.style.display = 'flex';
+          heroText.textContent = file.name + ' (' + (file.size / 1024).toFixed(1) + ' KB)';
+        };
+        reader.readAsDataURL(file);
+      }
+    });
+  }
 
-    <div class="form-row">
-      <div class="form-group">
-        <label class="form-label">Stat #1 Value (e.g. 60s)</label>
-        {{ form.stat1_number }}
-      </div>
-      <div class="form-group">
-        <label class="form-label">Stat #1 Label</label>
-        {{ form.stat1_label }}
-      </div>
-    </div>
+  // Live text update on mockup
+  var badgeInp = document.getElementById('id_badge_text');
+  var headlineInp = document.getElementById('id_headline');
+  var subtextInp = document.getElementById('id_subtext');
+  var cta1Inp = document.getElementById('id_cta_primary_text');
+  var cta2Inp = document.getElementById('id_cta_secondary_text');
 
-    <div class="form-row" style="margin-top: 16px;">
-      <div class="form-group">
-        <label class="form-label">Stat #2 Value (e.g. 15k+)</label>
-        {{ form.stat2_number }}
-      </div>
-      <div class="form-group">
-        <label class="form-label">Stat #2 Label</label>
-        {{ form.stat2_label }}
-      </div>
-    </div>
-
-    <div class="form-row" style="margin-top: 16px;">
-      <div class="form-group">
-        <label class="form-label">Stat #3 Value (e.g. 100%)</label>
-        {{ form.stat3_number }}
-      </div>
-      <div class="form-group">
-        <label class="form-label">Stat #3 Label</label>
-        {{ form.stat3_label }}
-      </div>
-    </div>
-
-    <div class="form-actions" style="margin-top: 32px;">
-      <button type="submit" class="btn btn-primary" style="padding: 12px 28px;">
-        <i class="fa-solid fa-floppy-disk"></i> Save Hero Section
-      </button>
-      <a href="{% url 'super_admin_landing_overview' %}" class="btn btn-outline">Cancel</a>
-    </div>
-
-  </form>
-</div>
+  if (badgeInp) {
+    badgeInp.addEventListener('input', function() {
+      document.getElementById('mockupBadgeText').textContent = badgeInp.value || 'TWO ENGINES. ONE PLATFORM.';
+    });
+  }
+  if (headlineInp) {
+    headlineInp.addEventListener('input', function() {
+      document.getElementById('mockupHeadline').textContent = headlineInp.value || "India's Smartest Marketplace for Instant Services";
+    });
+  }
+  if (subtextInp) {
+    subtextInp.addEventListener('input', function() {
+      document.getElementById('mockupSubtext').textContent = subtextInp.value || "Book verified experts in 60 seconds...";
+    });
+  }
+  if (cta1Inp) {
+    cta1Inp.addEventListener('input', function() {
+      document.getElementById('mockupCta1').textContent = cta1Inp.value || 'Book Instant Service';
+    });
+  }
+  if (cta2Inp) {
+    cta2Inp.addEventListener('input', function() {
+      document.getElementById('mockupCta2').textContent = cta2Inp.value || 'Post a Project';
+    });
+  }
+</script>
 {% endblock %}
