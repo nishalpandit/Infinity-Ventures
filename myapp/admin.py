@@ -16,9 +16,9 @@ def activate_users(modeladmin, request, queryset):
     queryset.update(is_active=True)
 
 class CustomUserAdmin(admin.ModelAdmin):
-    list_display = ('username', 'email', 'role', 'is_active')
-    list_filter = ('role', 'is_active')
-    search_fields = ('username', 'email')
+    list_display = ('username', 'email', 'role', 'assigned_state', 'is_active')
+    list_filter = ('role', 'assigned_state', 'is_active')
+    search_fields = ('username', 'email', 'assigned_state', 'assigned_city')
     actions = [suspend_users, activate_users]
 
 admin.site.register(CustomUser, CustomUserAdmin)

@@ -18,6 +18,37 @@ import json
 from django.utils import timezone
 from datetime import datetime
 
+def get_admin_state_context(request):
+    """
+    Helper to extract State / Operational Territory context for Area Admin / Super Admin.
+    Supports multiple admins assigned to the same state.
+    """
+    db_states = list(Location.objects.values_list('state', flat=True).distinct().order_by('state'))
+    default_states = ['Jharkhand', 'Maharashtra', 'Delhi', 'Karnataka', 'Tamil Nadu', 'Uttar Pradesh', 'West Bengal', 'Gujarat', 'Bihar', 'Rajasthan', 'Madhya Pradesh', 'Telangana', 'Andhra Pradesh', 'Kerala', 'Punjab', 'Haryana', 'Odisha']
+    available_states = sorted(list(set([s for s in (db_states + default_states) if s])))
+
+    u = request.user
+    is_area_admin = False
+    admin_state = None
+    co_admins = User.objects.none()
+
+    if u.is_authenticated:
+        if u.role == 'ADMIN' and not u.is_superuser:
+            is_area_admin = True
+            admin_state = u.assigned_state or (available_states[0] if available_states else 'Jharkhand')
+            co_admins = User.objects.filter(role='ADMIN', assigned_state=admin_state).exclude(id=u.id)
+        elif u.is_superuser:
+            selected_state = request.GET.get('state')
+            if selected_state and selected_state != 'all':
+                admin_state = selected_state
+                co_admins = User.objects.filter(role='ADMIN', assigned_state=admin_state)
+            else:
+                admin_state = u.assigned_state or None
+                if admin_state:
+                    co_admins = User.objects.filter(role='ADMIN', assigned_state=admin_state)
+
+    return admin_state, is_area_admin, available_states, co_admins
+
 def get_user_dashboard_context(user):
     name = user.get_full_name() or user.username
     initials = (user.first_name[:1].upper() + user.last_name[:1].upper()) if (user.first_name and user.last_name) else (user.first_name[:2].upper() if user.first_name else user.username[:2].upper())
@@ -686,12 +717,27 @@ def dashboard_view(request, path=''):
         my_bids = Bid.objects.filter(vendor=request.user, quick_service__isnull=False).select_related('quick_service', 'quick_service__user').order_by('-created_at')
         context['my_bids'] = my_bids
     if 'master/locations' in path:
-        context['locations'] = Location.objects.all().order_by('-created_at')
-        context['states'] = Location.objects.values_list('state', flat=True).distinct().order_by('state')
+        admin_state, is_area_admin, available_states, co_admins = get_admin_state_context(request)
+        if admin_state:
+            context['locations'] = Location.objects.filter(state__iexact=admin_state).order_by('-created_at')
+        else:
+            context['locations'] = Location.objects.all().order_by('-created_at')
+        context['states'] = available_states
+        context['admin_state'] = admin_state
+        context['is_area_admin'] = is_area_admin
         
     if 'users/users' in path or 'users/customers' in path or 'users/vendors' in path or 'users/company-vendors' in path or 'users/outsider-vendors' in path:
+        admin_state, is_area_admin, available_states, co_admins = get_admin_state_context(request)
+        context['admin_state'] = admin_state
+        context['is_area_admin'] = is_area_admin
+
         if 'users' in path and 'vendors' not in path:
             users_qs = User.objects.filter(role='USER')
+            if admin_state:
+                job_uids = Job.objects.filter(Q(location__state__iexact=admin_state) | Q(address__icontains=admin_state)).values_list('user_id', flat=True)
+                qs_uids = QuickService.objects.filter(Q(location__state__iexact=admin_state) | Q(address__icontains=admin_state)).values_list('user_id', flat=True)
+                users_qs = users_qs.filter(Q(id__in=set(job_uids).union(set(qs_uids))) | Q(assigned_state__iexact=admin_state))
+
             users_data = []
             for u in users_qs:
                 try:
@@ -709,7 +755,7 @@ def dashboard_view(request, path=''):
                     'name': u.get_full_name() or u.username,
                     'email': u.email or '—',
                     'mobile': mobile,
-                    'location': 'Unknown',
+                    'location': admin_state or 'Unknown',
                     'quickServices': quick_services_count,
                     'jobs': jobs_count,
                     'completedJobs': completed_jobs,
@@ -717,9 +763,13 @@ def dashboard_view(request, path=''):
                     'registered': u.date_joined.strftime('%Y-%m-%d') if u.date_joined else 'Unknown'
                 })
             context['users_json'] = json.dumps(users_data)
+            context['customers'] = users_qs.select_related('user_profile').order_by('-date_joined')
             
         if 'vendors' in path:
             vendors = VendorProfile.objects.select_related('user').all()
+            if admin_state:
+                vendors = vendors.filter(Q(location__icontains=admin_state) | Q(user__assigned_state__iexact=admin_state))
+
             vendors_data = []
             for profile in vendors:
                 user = profile.user
@@ -734,7 +784,7 @@ def dashboard_view(request, path=''):
                     'type': v_type,
                     'contact': '—',
                     'category': profile.category or 'Uncategorized',
-                    'location': profile.location or 'Unknown',
+                    'location': profile.location or (admin_state or 'Unknown'),
                     'totalBids': total_bids,
                     'completedJobs': completed_jobs,
                     'bidCredits': 100, 
@@ -809,7 +859,12 @@ def dashboard_view(request, path=''):
 
     elif 'quick-services' in path:
         from django.db.models import Count, Prefetch
+        admin_state, is_area_admin, available_states, co_admins = get_admin_state_context(request)
+        context['admin_state'] = admin_state
+        context['is_area_admin'] = is_area_admin
         quick_services = QuickService.objects.exclude(category__service_type='job').select_related('user', 'category', 'location').annotate(vendor_requests_count=Count('bids')).prefetch_related(Prefetch('bids', queryset=Bid.objects.filter(status='selected').select_related('vendor', 'vendor__vendor_profile'), to_attr='selected_bids')).order_by('-created_at')
+        if admin_state:
+            quick_services = quick_services.filter(Q(location__state__iexact=admin_state) | Q(address__icontains=admin_state))
         qs_data = []
         for qs in quick_services:
             u = qs.user
@@ -835,7 +890,7 @@ def dashboard_view(request, path=''):
                 'avatar_class': f'av-{(u.id % 5) + 1}',
                 'title': qs.title,
                 'category': qs.category.name if getattr(qs, 'category', None) else 'Uncategorized',
-                'location': f"{qs.location.city}, {qs.location.state}" if getattr(qs, 'location', None) else 'Unknown',
+                'location': f"{qs.location.city}, {qs.location.state}" if getattr(qs, 'location', None) else (admin_state or 'Unknown'),
                 'budget': float(qs.budget) if qs.budget else 0,
                 'vendorRequests': getattr(qs, 'vendor_requests_count', 0),
                 'selectedVendor': selected_vendor_name,
@@ -853,7 +908,12 @@ def dashboard_view(request, path=''):
         
     elif 'jobs' in path:
         from django.db.models import Count, Prefetch
+        admin_state, is_area_admin, available_states, co_admins = get_admin_state_context(request)
+        context['admin_state'] = admin_state
+        context['is_area_admin'] = is_area_admin
         jobs = Job.objects.select_related('user', 'category', 'location').annotate(vendor_requests_count=Count('bids')).prefetch_related(Prefetch('bids', queryset=Bid.objects.filter(status='selected').select_related('vendor', 'vendor__vendor_profile'), to_attr='selected_bids')).order_by('-created_at')
+        if admin_state:
+            jobs = jobs.filter(Q(location__state__iexact=admin_state) | Q(address__icontains=admin_state))
         jobs_data = []
         for job in jobs:
             u = job.user
@@ -879,7 +939,7 @@ def dashboard_view(request, path=''):
                 'avatar_class': f'av-{(u.id % 5) + 1}',
                 'title': job.title,
                 'category': job.category.name if getattr(job, 'category', None) else 'Uncategorized',
-                'location': f"{job.location.city}, {job.location.state}" if getattr(job, 'location', None) else 'Unknown',
+                'location': f"{job.location.city}, {job.location.state}" if getattr(job, 'location', None) else (admin_state or 'Unknown'),
                 'budget': float(job.budget) if job.budget else 0,
                 'vendorRequests': getattr(job, 'vendor_requests_count', 0),
                 'selectedVendor': selected_vendor_name,
@@ -946,18 +1006,31 @@ def dashboard_view(request, path=''):
 
     elif 'profile' in path: # for user or admin profile
         u = request.user
+        admin_state, is_area_admin, available_states, co_admins = get_admin_state_context(request)
         if getattr(u, 'role', '') == 'ADMIN' or u.is_superuser:
             context['admin_name'] = u.get_full_name() or u.username
             context['admin_email'] = u.email
+            context['admin_state'] = admin_state or "All Territories (Global Platform)"
+            context['is_area_admin'] = is_area_admin
+            context['role_display'] = f"Area Admin ({admin_state})" if (is_area_admin and admin_state) else ("Super Admin" if u.is_superuser else "Admin")
             try:
                 context['admin_mobile'] = u.user_profile.phone_number or "Not Set"
             except Exception:
                 context['admin_mobile'] = "Not Set"
             
             context['admin_last_login'] = u.last_login.strftime('%Y-%m-%d %H:%M') if u.last_login else "Never"
-            context['actUsers'] = User.objects.exclude(is_superuser=True).count()
             
-            rev = Subscription.objects.filter(status='success').aggregate(Sum('amount'))['amount__sum']
+            users_qs = User.objects.exclude(is_superuser=True)
+            if admin_state:
+                job_uids = Job.objects.filter(Q(location__state__iexact=admin_state) | Q(address__icontains=admin_state)).values_list('user_id', flat=True)
+                qs_uids = QuickService.objects.filter(Q(location__state__iexact=admin_state) | Q(address__icontains=admin_state)).values_list('user_id', flat=True)
+                users_qs = users_qs.filter(Q(id__in=set(job_uids).union(set(qs_uids))) | Q(assigned_state__iexact=admin_state))
+            context['actUsers'] = users_qs.count()
+            
+            sub_qs = Subscription.objects.filter(status='success')
+            if admin_state:
+                sub_qs = sub_qs.filter(vendor__vendor_profile__location__icontains=admin_state)
+            rev = sub_qs.aggregate(Sum('amount'))['amount__sum']
             context['actRevenue'] = rev if rev else 0
         else:
             context['qs_count'] = QuickService.objects.filter(user=u).count()
@@ -1228,7 +1301,12 @@ def dashboard_view(request, path=''):
         context['total_spent'] = purchases.filter(status='success').aggregate(Sum('amount'))['amount__sum'] or 0
 
     if 'payments' in path or 'subscriptions' in path:
+        admin_state, is_area_admin, available_states, co_admins = get_admin_state_context(request)
+        context['admin_state'] = admin_state
+        context['is_area_admin'] = is_area_admin
         subscriptions = Subscription.objects.select_related('vendor', 'vendor__vendor_profile').all().order_by('-created_at')
+        if admin_state:
+            subscriptions = subscriptions.filter(Q(vendor__vendor_profile__location__icontains=admin_state) | Q(vendor__assigned_state__iexact=admin_state))
         purchases_data = []
         for s in subscriptions:
             v_user = s.vendor
@@ -1255,10 +1333,23 @@ def dashboard_view(request, path=''):
         context['total_revenue'] = context['total_payments_amount']
 
     if 'users/customers' in path:
-        context['customers'] = User.objects.filter(role='USER').select_related('user_profile').order_by('-date_joined')
+        admin_state, is_area_admin, available_states, co_admins = get_admin_state_context(request)
+        context['admin_state'] = admin_state
+        context['is_area_admin'] = is_area_admin
+        customers_qs = User.objects.filter(role='USER').select_related('user_profile')
+        if admin_state:
+            job_uids = Job.objects.filter(Q(location__state__iexact=admin_state) | Q(address__icontains=admin_state)).values_list('user_id', flat=True)
+            qs_uids = QuickService.objects.filter(Q(location__state__iexact=admin_state) | Q(address__icontains=admin_state)).values_list('user_id', flat=True)
+            customers_qs = customers_qs.filter(Q(id__in=set(job_uids).union(set(qs_uids))) | Q(assigned_state__iexact=admin_state))
+        context['customers'] = customers_qs.order_by('-date_joined')
 
     if 'reports/revenue' in path:
+        admin_state, is_area_admin, available_states, co_admins = get_admin_state_context(request)
+        context['admin_state'] = admin_state
+        context['is_area_admin'] = is_area_admin
         subscriptions = Subscription.objects.select_related('vendor', 'vendor__vendor_profile').all().order_by('-created_at')
+        if admin_state:
+            subscriptions = subscriptions.filter(Q(vendor__vendor_profile__location__icontains=admin_state) | Q(vendor__assigned_state__iexact=admin_state))
         total_revenue = subscriptions.filter(status='success').aggregate(Sum('amount'))['amount__sum'] or 0
         context['subscriptions'] = subscriptions
         context['total_revenue'] = total_revenue
@@ -1271,22 +1362,55 @@ def dashboard_view(request, path=''):
         raise Http404(f"Template {template_name} not found")
 
 def admin_dashboard(request):
-    total_users = User.objects.filter(role='USER').count()
-    total_vendors = VendorProfile.objects.count()
-    active_jobs = Job.objects.filter(status='active').count()
-    
-    revenue = Subscription.objects.filter(status='success').aggregate(Sum('amount'))['amount__sum'] or 0
+    admin_state, is_area_admin, available_states, co_admins = get_admin_state_context(request)
 
-    recent_quick_services = QuickService.objects.order_by('-created_at')[:5]
-    recent_jobs = Job.objects.order_by('-created_at')[:5]
-    recent_bids = Bid.objects.order_by('-created_at')[:5]
-    recent_vendors = VendorProfile.objects.order_by('-registered_date')[:5]
-    recent_subscriptions = Subscription.objects.order_by('-created_at')[:5]
+    user_qs = User.objects.filter(role='USER')
+    vendor_qs = VendorProfile.objects.select_related('user')
+    job_qs = Job.objects.select_related('user', 'category', 'location')
+    qs_qs = QuickService.objects.select_related('user', 'category', 'location')
+    bid_qs = Bid.objects.select_related('vendor', 'job', 'quick_service', 'vendor__vendor_profile')
+    sub_qs = Subscription.objects.select_related('vendor', 'vendor__vendor_profile')
+
+    if admin_state:
+        job_qs = job_qs.filter(Q(location__state__iexact=admin_state) | Q(address__icontains=admin_state))
+        qs_qs = qs_qs.filter(Q(location__state__iexact=admin_state) | Q(address__icontains=admin_state))
+        vendor_qs = vendor_qs.filter(Q(location__icontains=admin_state) | Q(user__assigned_state__iexact=admin_state))
+        
+        state_customer_ids = set(job_qs.values_list('user_id', flat=True)).union(
+            set(qs_qs.values_list('user_id', flat=True))
+        )
+        user_qs = user_qs.filter(Q(id__in=state_customer_ids) | Q(assigned_state__iexact=admin_state))
+        
+        bid_qs = bid_qs.filter(
+            Q(job__in=job_qs) | Q(quick_service__in=qs_qs) | Q(vendor__vendor_profile__in=vendor_qs)
+        ).distinct()
+        
+        sub_qs = sub_qs.filter(vendor__vendor_profile__in=vendor_qs)
+
+    total_users = user_qs.count()
+    total_vendors = vendor_qs.count()
+    active_jobs = job_qs.filter(status__in=['active', 'open', 'progress', 'selected']).count()
+    active_quick_services = qs_qs.filter(status__in=['active', 'open', 'progress', 'selected']).count()
+    
+    revenue = sub_qs.filter(status='success').aggregate(Sum('amount'))['amount__sum'] or 0
+
+    recent_quick_services = qs_qs.order_by('-created_at')[:5]
+    recent_jobs = job_qs.order_by('-created_at')[:5]
+    recent_bids = bid_qs.order_by('-created_at')[:5]
+    recent_vendors = vendor_qs.order_by('-registered_date')[:5]
+    recent_subscriptions = sub_qs.order_by('-created_at')[:5]
 
     context = {
+        'admin_state': admin_state,
+        'is_area_admin': is_area_admin,
+        'available_states': available_states,
+        'co_admins': co_admins,
+        'co_admins_count': co_admins.count(),
         'total_users': total_users,
+        'total_customers': total_users,
         'total_vendors': total_vendors,
         'active_jobs': active_jobs,
+        'active_quick_services': active_quick_services,
         'revenue': revenue,
         'recent_quick_services': recent_quick_services,
         'recent_jobs': recent_jobs,

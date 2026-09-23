@@ -42,15 +42,30 @@
     <div class="form-row">
       <div class="form-group">
         <label>Role</label>
-        <select name="role" class="form-control">
+        <select name="role" id="roleSelect" class="form-control">
           <option value="USER" {% if user_obj.role == 'USER' %}selected{% endif %}>Customer</option>
           <option value="VENDOR" {% if user_obj.role == 'VENDOR' %}selected{% endif %}>Vendor</option>
-          <option value="ADMIN" {% if user_obj.role == 'ADMIN' %}selected{% endif %}>Area Admin</option>
+          <option value="ADMIN" {% if user_obj.role == 'ADMIN' %}selected{% endif %}>Area Admin (State Admin)</option>
         </select>
       </div>
       <div class="form-group">
         <label>Password {% if mode == 'edit' %}<span style="font-weight: 400; text-transform: none;">(leave blank to keep)</span>{% endif %}</label>
         <input type="password" name="password" class="form-control" {% if mode == 'create' %}required{% endif %}>
+      </div>
+    </div>
+
+    <div class="form-row" id="assignedStateRow">
+      <div class="form-group">
+        <label>Assigned State / Territory <span style="font-weight: 400; color: var(--text-muted);">(Required for Area Admin — Multiple Admins allowed per state)</span></label>
+        <select name="assigned_state" class="form-control">
+          <option value="">-- Select Assigned State / Area --</option>
+          {% for s in states %}
+            <option value="{{ s }}" {% if user_obj.assigned_state == s %}selected{% endif %}>{{ s }}</option>
+          {% endfor %}
+        </select>
+        <small style="color: var(--text-muted); font-size: 12px; margin-top: 4px; display: block;">
+          <i class="fa-solid fa-circle-info"></i> When role is Area Admin, they will only manage operations, jobs, vendors, and revenue for this designated State.
+        </small>
       </div>
     </div>
     

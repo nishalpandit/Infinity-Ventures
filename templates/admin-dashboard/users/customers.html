@@ -26,6 +26,12 @@
     </main>
   </div>
 
+  <script>
+    window.ADMIN_NAME = "{{ request.user.get_full_name|default:request.user.username }}";
+    window.ADMIN_ROLE = "{% if request.user.is_superuser %}Super Admin{% elif request.user.role == 'ADMIN' %}Area Admin{% else %}Admin{% endif %}";
+    window.ADMIN_STATE = "{{ admin_state|default:request.user.assigned_state|default:'' }}";
+    window.ADMIN_INITIALS = "{{ request.user.username|make_list|first|upper }}";
+  </script>
   <script src="/admin-dashboard/assets/js/sidebar.js"></script>
   <script src="/admin-dashboard/assets/js/components.js"></script>
   <script src="/admin-dashboard/assets/js/admin.js"></script>

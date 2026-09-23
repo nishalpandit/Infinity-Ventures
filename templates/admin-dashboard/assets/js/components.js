@@ -80,12 +80,13 @@
 
   /* ---------- Sidebar template ---------- */
   function buildSidebar() {
+    var stateLabel = window.ADMIN_STATE ? '<div style="font-size:11px; color:#818cf8; font-weight:600; padding:2px 0 0 36px;"><i class="fa-solid fa-map-pin" style="margin-right:4px;"></i>' + window.ADMIN_STATE + '</div>' : '';
     var html = '';
     html += '<aside class="app-sidebar" id="appSidebar">';
     html += '  <div class="sidebar-logo">';
     html += '    <a href="' + P + 'dashboard.html" style="display:flex;align-items:center;gap:12px;text-decoration:none;">';
     html += '      <span class="logo-mark"><i class="fa-solid fa-infinity"></i></span>';
-    html += '      <span class="logo-text">Infinity <span>Admin</span></span>';
+    html += '      <div><span class="logo-text">Infinity <span>Admin</span></span>' + stateLabel + '</div>';
     html += '    </a>';
     html += '  </div>';
     html += '  <nav class="sidebar-nav" id="sidebarNav">';
@@ -145,6 +146,11 @@
 
   /* ---------- Header template ---------- */
   function buildHeader() {
+    var uName = window.ADMIN_NAME || 'Area Admin';
+    var uRole = window.ADMIN_ROLE || 'Area Admin';
+    var uState = window.ADMIN_STATE ? ' (' + window.ADMIN_STATE + ')' : '';
+    var uInitials = window.ADMIN_INITIALS || 'AA';
+
     var html = '';
     html += '<header class="app-header">';
     html += '  <button class="header-toggle d-lg-none" id="mobileMenuBtn" aria-label="Open menu"><i class="fa-solid fa-bars"></i></button>';
@@ -153,17 +159,15 @@
     html += '    <div style="position:relative;">';
     html += '      <button class="header-icon-btn" id="notifBtn" aria-label="Notifications"><i class="fa-regular fa-bell"></i><span class="dot"></span></button>';
     html += '      <div class="header-dropdown" id="notifDropdown">';
-    html += '        <div class="hd-head"><span>Notifications</span><span class="badge badge-danger">3 new</span></div>';
-    html += '        <div class="hd-item"><span class="ic icon-indigo"><i class="fa-solid fa-gavel"></i></span><div class="txt"><div class="t">New bid submitted</div><div class="d">Sharma Enterprises bid ₹48,000 on JOB-1042</div><div class="time">5 minutes ago</div></div></div>';
-    html += '        <div class="hd-item"><span class="ic icon-green"><i class="fa-solid fa-indian-rupee-sign"></i></span><div class="txt"><div class="t">Subscription purchased</div><div class="d">Ravi Kumar bought 50 Bid Package (₹700)</div><div class="time">22 minutes ago</div></div></div>';
-    html += '        <div class="hd-item"><span class="ic icon-red"><i class="fa-solid fa-triangle-exclamation"></i></span><div class="txt"><div class="t">New complaint filed</div><div class="d">CMP-207 opened against vendor QuickFix Services</div><div class="time">1 hour ago</div></div></div>';
+    html += '        <div class="hd-head"><span>Notifications</span><span class="badge badge-danger">Live</span></div>';
+    html += '        <div class="hd-item"><span class="ic icon-indigo"><i class="fa-solid fa-map-pin"></i></span><div class="txt"><div class="t">Territory Active</div><div class="d">Managing area operations' + (window.ADMIN_STATE ? ' for ' + window.ADMIN_STATE : '') + '</div><div class="time">Just now</div></div></div>';
     html += '        <div class="hd-footer"><a href="' + P + 'notifications.html">View all notifications</a></div>';
     html += '      </div>';
     html += '    </div>';
     html += '    <div style="position:relative;">';
     html += '      <div class="header-profile" id="profileBtn">';
-    html += '        <span class="avatar">AD</span>';
-    html += '        <span class="meta"><span class="name d-block">Arjun Desai</span><span class="role d-block">Super Admin</span></span>';
+    html += '        <span class="avatar">' + uInitials + '</span>';
+    html += '        <span class="meta"><span class="name d-block">' + uName + '</span><span class="role d-block">' + uRole + uState + '</span></span>';
     html += '        <i class="fa-solid fa-chevron-down" style="font-size:10px;color:var(--text-light);"></i>';
     html += '      </div>';
     html += '      <div class="header-dropdown profile-menu" id="profileDropdown">';

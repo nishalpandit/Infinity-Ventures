@@ -93,6 +93,10 @@ def super_admin_users(request):
 
 @sa_required
 def super_admin_user_create(request):
+    active_states = list(Location.objects.values_list('state', flat=True).distinct().order_by('state'))
+    default_states = ['Jharkhand', 'Maharashtra', 'Delhi', 'Karnataka', 'Tamil Nadu', 'Uttar Pradesh', 'West Bengal', 'Gujarat', 'Bihar', 'Rajasthan', 'Madhya Pradesh', 'Telangana', 'Andhra Pradesh', 'Kerala', 'Punjab', 'Haryana', 'Odisha']
+    states = sorted(list(set([s for s in (active_states + default_states) if s])))
+
     if request.method == 'POST':
         username = request.POST.get('username')
         email = request.POST.get('email', '')
@@ -100,6 +104,7 @@ def super_admin_user_create(request):
         role = request.POST.get('role', 'USER')
         first_name = request.POST.get('first_name', '')
         last_name = request.POST.get('last_name', '')
+        assigned_state = request.POST.get('assigned_state', '').strip()
         
         if CustomUser.objects.filter(username=username).exists():
             django_messages.error(request, f'Username "{username}" already exists.')
@@ -109,21 +114,27 @@ def super_admin_user_create(request):
             username=username, email=email, password=password,
             role=role, first_name=first_name, last_name=last_name
         )
+        user.assigned_state = assigned_state
         if role == 'ADMIN':
             user.is_staff = True
-            user.save()
+        user.save()
         django_messages.success(request, f'User "{username}" created successfully.')
         return redirect('super_admin_users')
-    return render(request, 'superadmin/user_form.html', {'mode': 'create'})
+    return render(request, 'superadmin/user_form.html', {'mode': 'create', 'states': states})
 
 @sa_required
 def super_admin_user_edit(request, user_id):
     user_obj = get_object_or_404(CustomUser, pk=user_id)
+    active_states = list(Location.objects.values_list('state', flat=True).distinct().order_by('state'))
+    default_states = ['Jharkhand', 'Maharashtra', 'Delhi', 'Karnataka', 'Tamil Nadu', 'Uttar Pradesh', 'West Bengal', 'Gujarat', 'Bihar', 'Rajasthan', 'Madhya Pradesh', 'Telangana', 'Andhra Pradesh', 'Kerala', 'Punjab', 'Haryana', 'Odisha']
+    states = sorted(list(set([s for s in (active_states + default_states) if s])))
+
     if request.method == 'POST':
         user_obj.first_name = request.POST.get('first_name', '')
         user_obj.last_name = request.POST.get('last_name', '')
         user_obj.email = request.POST.get('email', '')
         user_obj.role = request.POST.get('role', user_obj.role)
+        user_obj.assigned_state = request.POST.get('assigned_state', '').strip()
         user_obj.is_active = request.POST.get('is_active') == 'on'
         new_pass = request.POST.get('password', '')
         if new_pass:
@@ -133,7 +144,7 @@ def super_admin_user_edit(request, user_id):
         user_obj.save()
         django_messages.success(request, f'User "{user_obj.username}" updated.')
         return redirect('super_admin_users')
-    return render(request, 'superadmin/user_form.html', {'mode': 'edit', 'user_obj': user_obj})
+    return render(request, 'superadmin/user_form.html', {'mode': 'edit', 'user_obj': user_obj, 'states': states})
 
 @sa_required
 def super_admin_user_delete(request, user_id):

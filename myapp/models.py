@@ -10,6 +10,8 @@ class CustomUser(AbstractUser):
         ('USER', 'User'),
     )
     role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='USER')
+    assigned_state = models.CharField(max_length=100, blank=True, null=True, help_text="Assigned State/Territory for Area Admin")
+    assigned_city = models.CharField(max_length=100, blank=True, null=True, help_text="Assigned City (optional) for Area Admin")
 
 class VendorProfile(models.Model):
     user = models.OneToOneField(CustomUser, on_delete=models.CASCADE, related_name='vendor_profile')
