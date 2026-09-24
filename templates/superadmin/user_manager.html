@@ -17,48 +17,48 @@
 <!-- Quick Role Filter Pills / Summary Cards -->
 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 24px;">
   <a href="{% url 'super_admin_users' %}" style="text-decoration: none; color: inherit;">
-    <div class="card" style="padding: 16px 20px; margin-bottom: 0; display: flex; align-items: center; justify-content: space-between; border-left: 4px solid var(--accent); transition: all 0.2s; {% if not role_filter or role_filter == 'all' %}box-shadow: 0 0 0 2px var(--accent); background: #fdfefe;{% endif %}">
+    <div class="card" style="padding: 18px 20px; margin-bottom: 0; display: flex; align-items: center; justify-content: space-between; border: 1px solid {% if not role_filter or role_filter == 'all' %}var(--accent){% else %}var(--border){% endif %}; background: {% if not role_filter or role_filter == 'all' %}var(--accent-light){% else %}#ffffff{% endif %}; transition: all 0.2s ease;">
       <div>
-        <div style="font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;">All Users</div>
-        <div style="font-size: 22px; font-weight: 800; color: var(--text-main); margin-top: 2px;">{{ all_count }}</div>
+        <div style="font-size: 12px; font-weight: 700; color: {% if not role_filter or role_filter == 'all' %}var(--accent){% else %}var(--text-muted){% endif %}; text-transform: uppercase; letter-spacing: 0.5px;">All Users</div>
+        <div style="font-size: 24px; font-weight: 800; color: var(--text-main); margin-top: 4px;">{{ all_count }}</div>
       </div>
-      <div style="width: 40px; height: 40px; border-radius: 10px; background: var(--accent-light); color: var(--accent); display: flex; align-items: center; justify-content: center; font-size: 18px;">
+      <div style="width: 44px; height: 44px; border-radius: 12px; background: {% if not role_filter or role_filter == 'all' %}var(--accent){% else %}#f1f5f9{% endif %}; color: {% if not role_filter or role_filter == 'all' %}#ffffff{% else %}var(--text-muted){% endif %}; display: flex; align-items: center; justify-content: center; font-size: 18px;">
         <i class="fa-solid fa-users"></i>
       </div>
     </div>
   </a>
 
   <a href="{% url 'super_admin_users' %}?role=ADMIN" style="text-decoration: none; color: inherit;">
-    <div class="card" style="padding: 16px 20px; margin-bottom: 0; display: flex; align-items: center; justify-content: space-between; border-left: 4px solid #4f46e5; transition: all 0.2s; {% if role_filter == 'ADMIN' %}box-shadow: 0 0 0 2px #4f46e5; background: #fbfbfe;{% endif %}">
+    <div class="card" style="padding: 18px 20px; margin-bottom: 0; display: flex; align-items: center; justify-content: space-between; border: 1px solid {% if role_filter == 'ADMIN' %}var(--accent){% else %}var(--border){% endif %}; background: {% if role_filter == 'ADMIN' %}var(--accent-light){% else %}#ffffff{% endif %}; transition: all 0.2s ease;">
       <div>
-        <div style="font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;">Area Admins</div>
-        <div style="font-size: 22px; font-weight: 800; color: #4338ca; margin-top: 2px;">{{ admin_count }}</div>
+        <div style="font-size: 12px; font-weight: 700; color: {% if role_filter == 'ADMIN' %}var(--accent){% else %}var(--text-muted){% endif %}; text-transform: uppercase; letter-spacing: 0.5px;">Area Admins</div>
+        <div style="font-size: 24px; font-weight: 800; color: var(--text-main); margin-top: 4px;">{{ admin_count }}</div>
       </div>
-      <div style="width: 40px; height: 40px; border-radius: 10px; background: rgba(79,70,229,0.12); color: #4f46e5; display: flex; align-items: center; justify-content: center; font-size: 18px;">
+      <div style="width: 44px; height: 44px; border-radius: 12px; background: {% if role_filter == 'ADMIN' %}var(--accent){% else %}#f1f5f9{% endif %}; color: {% if role_filter == 'ADMIN' %}#ffffff{% else %}var(--text-muted){% endif %}; display: flex; align-items: center; justify-content: center; font-size: 18px;">
         <i class="fa-solid fa-map-location-dot"></i>
       </div>
     </div>
   </a>
 
   <a href="{% url 'super_admin_users' %}?role=USER" style="text-decoration: none; color: inherit;">
-    <div class="card" style="padding: 16px 20px; margin-bottom: 0; display: flex; align-items: center; justify-content: space-between; border-left: 4px solid #2563eb; transition: all 0.2s; {% if role_filter == 'USER' %}box-shadow: 0 0 0 2px #2563eb; background: #fbfdff;{% endif %}">
+    <div class="card" style="padding: 18px 20px; margin-bottom: 0; display: flex; align-items: center; justify-content: space-between; border: 1px solid {% if role_filter == 'USER' %}var(--accent){% else %}var(--border){% endif %}; background: {% if role_filter == 'USER' %}var(--accent-light){% else %}#ffffff{% endif %}; transition: all 0.2s ease;">
       <div>
-        <div style="font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;">Customers</div>
-        <div style="font-size: 22px; font-weight: 800; color: #1d4ed8; margin-top: 2px;">{{ customer_count }}</div>
+        <div style="font-size: 12px; font-weight: 700; color: {% if role_filter == 'USER' %}var(--accent){% else %}var(--text-muted){% endif %}; text-transform: uppercase; letter-spacing: 0.5px;">Customers</div>
+        <div style="font-size: 24px; font-weight: 800; color: var(--text-main); margin-top: 4px;">{{ customer_count }}</div>
       </div>
-      <div style="width: 40px; height: 40px; border-radius: 10px; background: rgba(37,99,235,0.12); color: #2563eb; display: flex; align-items: center; justify-content: center; font-size: 18px;">
+      <div style="width: 44px; height: 44px; border-radius: 12px; background: {% if role_filter == 'USER' %}var(--accent){% else %}#f1f5f9{% endif %}; color: {% if role_filter == 'USER' %}#ffffff{% else %}var(--text-muted){% endif %}; display: flex; align-items: center; justify-content: center; font-size: 18px;">
         <i class="fa-solid fa-user-tag"></i>
       </div>
     </div>
   </a>
 
   <a href="{% url 'super_admin_users' %}?role=VENDOR" style="text-decoration: none; color: inherit;">
-    <div class="card" style="padding: 16px 20px; margin-bottom: 0; display: flex; align-items: center; justify-content: space-between; border-left: 4px solid #9333ea; transition: all 0.2s; {% if role_filter == 'VENDOR' %}box-shadow: 0 0 0 2px #9333ea; background: #fdfbff;{% endif %}">
+    <div class="card" style="padding: 18px 20px; margin-bottom: 0; display: flex; align-items: center; justify-content: space-between; border: 1px solid {% if role_filter == 'VENDOR' %}var(--accent){% else %}var(--border){% endif %}; background: {% if role_filter == 'VENDOR' %}var(--accent-light){% else %}#ffffff{% endif %}; transition: all 0.2s ease;">
       <div>
-        <div style="font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;">Vendors</div>
-        <div style="font-size: 22px; font-weight: 800; color: #7e22ce; margin-top: 2px;">{{ vendor_count }}</div>
+        <div style="font-size: 12px; font-weight: 700; color: {% if role_filter == 'VENDOR' %}var(--accent){% else %}var(--text-muted){% endif %}; text-transform: uppercase; letter-spacing: 0.5px;">Vendors</div>
+        <div style="font-size: 24px; font-weight: 800; color: var(--text-main); margin-top: 4px;">{{ vendor_count }}</div>
       </div>
-      <div style="width: 40px; height: 40px; border-radius: 10px; background: rgba(147,51,234,0.12); color: #9333ea; display: flex; align-items: center; justify-content: center; font-size: 18px;">
+      <div style="width: 44px; height: 44px; border-radius: 12px; background: {% if role_filter == 'VENDOR' %}var(--accent){% else %}#f1f5f9{% endif %}; color: {% if role_filter == 'VENDOR' %}#ffffff{% else %}var(--text-muted){% endif %}; display: flex; align-items: center; justify-content: center; font-size: 18px;">
         <i class="fa-solid fa-briefcase"></i>
       </div>
     </div>
