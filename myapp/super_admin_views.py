@@ -83,13 +83,122 @@ def super_admin_dashboard(request):
     }
     return render(request, 'superadmin/dashboard.html', context)
 
+from django.db.models import Q
+from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
+
 # ─────────────────────────────────────────────
-# USERS  (List + Create + Edit + Delete + Toggle)
+# USERS  (List + Filter + Paginate + Create + Edit + Delete + Toggle)
 # ─────────────────────────────────────────────
 @sa_required
 def super_admin_users(request):
-    users = CustomUser.objects.all().order_by('-date_joined')
-    return render(request, 'superadmin/user_manager.html', {'users': users})
+    q = request.GET.get('q', '').strip()
+    role_filter = request.GET.get('role', '').strip()
+    state_filter = request.GET.get('state', '').strip()
+    status_filter = request.GET.get('status', '').strip()
+    sort = request.GET.get('sort', 'newest').strip()
+    page = request.GET.get('page', 1)
+
+    users_qs = CustomUser.objects.all().select_related('user_profile', 'vendor_profile')
+
+    # 1. Search Query (q)
+    if q:
+        users_qs = users_qs.filter(
+            Q(username__icontains=q) |
+            Q(email__icontains=q) |
+            Q(first_name__icontains=q) |
+            Q(last_name__icontains=q) |
+            Q(assigned_state__icontains=q) |
+            Q(user_profile__phone_number__icontains=q) |
+            Q(vendor_profile__company_name__icontains=q) |
+            Q(vendor_profile__location__icontains=q)
+        ).distinct()
+
+    # 2. Role Filter
+    if role_filter and role_filter != 'all':
+        if role_filter == 'superuser':
+            users_qs = users_qs.filter(is_superuser=True)
+        elif role_filter == 'ADMIN':
+            users_qs = users_qs.filter(role='ADMIN', is_superuser=False)
+        elif role_filter == 'USER':
+            users_qs = users_qs.filter(role='USER')
+        elif role_filter == 'VENDOR':
+            users_qs = users_qs.filter(role='VENDOR')
+
+    # 3. State / Territory Filter
+    if state_filter and state_filter != 'all':
+        users_qs = users_qs.filter(
+            Q(assigned_state__iexact=state_filter) |
+            Q(vendor_profile__location__icontains=state_filter)
+        ).distinct()
+
+    # 4. Status Filter (Active / Disabled)
+    if status_filter and status_filter != 'all':
+        if status_filter == 'active':
+            users_qs = users_qs.filter(is_active=True)
+        elif status_filter == 'inactive':
+            users_qs = users_qs.filter(is_active=False)
+
+    # 5. Sorting
+    if sort == 'oldest':
+        users_qs = users_qs.order_by('date_joined')
+    elif sort == 'name_asc':
+        users_qs = users_qs.order_by('username')
+    elif sort == 'name_desc':
+        users_qs = users_qs.order_by('-username')
+    else:  # newest
+        users_qs = users_qs.order_by('-date_joined')
+
+    # Total matching count before pagination
+    total_matching_users = users_qs.count()
+
+    # Available states for territory dropdown
+    active_states = list(Location.objects.values_list('state', flat=True).distinct().order_by('state'))
+    default_states = ['Jharkhand', 'Maharashtra', 'Delhi', 'Karnataka', 'Tamil Nadu', 'Uttar Pradesh', 'West Bengal', 'Gujarat', 'Bihar', 'Rajasthan', 'Madhya Pradesh', 'Telangana', 'Andhra Pradesh', 'Kerala', 'Punjab', 'Haryana', 'Odisha']
+    states = sorted(list(set([s for s in (active_states + default_states) if s])))
+
+    # Pagination (10 users per page)
+    paginator = Paginator(users_qs, 10)
+    try:
+        users = paginator.page(page)
+    except (EmptyPage, PageNotAnInteger):
+        users = paginator.page(1)
+
+    # Construct extra query string for pagination links (preserves all filters)
+    get_copy = request.GET.copy()
+    if 'page' in get_copy:
+        del get_copy['page']
+    extra_query_params = get_copy.urlencode()
+
+    # Quick overview counters
+    all_count = CustomUser.objects.count()
+    admin_count = CustomUser.objects.filter(role='ADMIN', is_superuser=False).count()
+    customer_count = CustomUser.objects.filter(role='USER').count()
+    vendor_count = CustomUser.objects.filter(role='VENDOR').count()
+
+    # Check if any active filters are applied
+    has_active_filters = bool(q or (role_filter and role_filter != 'all') or (state_filter and state_filter != 'all') or (status_filter and status_filter != 'all') or (sort and sort != 'newest'))
+
+    # Elided page range for pagination controls
+    page_range = paginator.get_elided_page_range(users.number, on_each_side=2, on_ends=1)
+
+    context = {
+        'users': users,
+        'page_range': page_range,
+        'q': q,
+        'role_filter': role_filter,
+        'state_filter': state_filter,
+        'status_filter': status_filter,
+        'sort': sort,
+        'states': states,
+        'total_matching_users': total_matching_users,
+        'all_count': all_count,
+        'admin_count': admin_count,
+        'customer_count': customer_count,
+        'vendor_count': vendor_count,
+        'extra_query_params': extra_query_params,
+        'has_active_filters': has_active_filters,
+    }
+    return render(request, 'superadmin/user_manager.html', context)
 
 @sa_required
 def super_admin_user_create(request):

@@ -1,27 +1,195 @@
 {% extends 'superadmin/base.html' %}
-{% block title %}All Users{% endblock %}
+{% block title %}All Users - Super Admin{% endblock %}
 {% block header_title %}User Management{% endblock %}
 
 {% block content %}
-<div style="margin-bottom: 24px; display: flex; justify-content: space-between; align-items: center;">
+<!-- Top Header & Primary Action -->
+<div style="margin-bottom: 24px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;">
   <div>
-    <h2 style="font-size: 24px; font-weight: 700; margin-bottom: 8px;">Platform Users</h2>
-    <p style="color: var(--text-muted);">Manage all registered users, vendors, and area administrators.</p>
+    <h2 style="font-size: 24px; font-weight: 800; color: var(--text-main); margin-bottom: 4px; letter-spacing: -0.3px;">Platform Users</h2>
+    <p style="color: var(--text-muted); font-size: 14px;">Manage, filter, and control all registered users, vendors, and area administrators.</p>
   </div>
-  <a href="{% url 'super_admin_user_create' %}" class="btn btn-primary"><i class="fa-solid fa-user-plus"></i> Add User</a>
+  <a href="{% url 'super_admin_user_create' %}" class="btn btn-primary" style="padding: 10px 20px; font-weight: 700;">
+    <i class="fa-solid fa-user-plus"></i> Add User
+  </a>
 </div>
 
-<div class="card" style="padding: 0;">
-  <div class="table-container">
+<!-- Quick Role Filter Pills / Summary Cards -->
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 24px;">
+  <a href="{% url 'super_admin_users' %}" style="text-decoration: none; color: inherit;">
+    <div class="card" style="padding: 16px 20px; margin-bottom: 0; display: flex; align-items: center; justify-content: space-between; border-left: 4px solid var(--accent); transition: all 0.2s; {% if not role_filter or role_filter == 'all' %}box-shadow: 0 0 0 2px var(--accent); background: #fdfefe;{% endif %}">
+      <div>
+        <div style="font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;">All Users</div>
+        <div style="font-size: 22px; font-weight: 800; color: var(--text-main); margin-top: 2px;">{{ all_count }}</div>
+      </div>
+      <div style="width: 40px; height: 40px; border-radius: 10px; background: var(--accent-light); color: var(--accent); display: flex; align-items: center; justify-content: center; font-size: 18px;">
+        <i class="fa-solid fa-users"></i>
+      </div>
+    </div>
+  </a>
+
+  <a href="{% url 'super_admin_users' %}?role=ADMIN" style="text-decoration: none; color: inherit;">
+    <div class="card" style="padding: 16px 20px; margin-bottom: 0; display: flex; align-items: center; justify-content: space-between; border-left: 4px solid #4f46e5; transition: all 0.2s; {% if role_filter == 'ADMIN' %}box-shadow: 0 0 0 2px #4f46e5; background: #fbfbfe;{% endif %}">
+      <div>
+        <div style="font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;">Area Admins</div>
+        <div style="font-size: 22px; font-weight: 800; color: #4338ca; margin-top: 2px;">{{ admin_count }}</div>
+      </div>
+      <div style="width: 40px; height: 40px; border-radius: 10px; background: rgba(79,70,229,0.12); color: #4f46e5; display: flex; align-items: center; justify-content: center; font-size: 18px;">
+        <i class="fa-solid fa-map-location-dot"></i>
+      </div>
+    </div>
+  </a>
+
+  <a href="{% url 'super_admin_users' %}?role=USER" style="text-decoration: none; color: inherit;">
+    <div class="card" style="padding: 16px 20px; margin-bottom: 0; display: flex; align-items: center; justify-content: space-between; border-left: 4px solid #2563eb; transition: all 0.2s; {% if role_filter == 'USER' %}box-shadow: 0 0 0 2px #2563eb; background: #fbfdff;{% endif %}">
+      <div>
+        <div style="font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;">Customers</div>
+        <div style="font-size: 22px; font-weight: 800; color: #1d4ed8; margin-top: 2px;">{{ customer_count }}</div>
+      </div>
+      <div style="width: 40px; height: 40px; border-radius: 10px; background: rgba(37,99,235,0.12); color: #2563eb; display: flex; align-items: center; justify-content: center; font-size: 18px;">
+        <i class="fa-solid fa-user-tag"></i>
+      </div>
+    </div>
+  </a>
+
+  <a href="{% url 'super_admin_users' %}?role=VENDOR" style="text-decoration: none; color: inherit;">
+    <div class="card" style="padding: 16px 20px; margin-bottom: 0; display: flex; align-items: center; justify-content: space-between; border-left: 4px solid #9333ea; transition: all 0.2s; {% if role_filter == 'VENDOR' %}box-shadow: 0 0 0 2px #9333ea; background: #fdfbff;{% endif %}">
+      <div>
+        <div style="font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;">Vendors</div>
+        <div style="font-size: 22px; font-weight: 800; color: #7e22ce; margin-top: 2px;">{{ vendor_count }}</div>
+      </div>
+      <div style="width: 40px; height: 40px; border-radius: 10px; background: rgba(147,51,234,0.12); color: #9333ea; display: flex; align-items: center; justify-content: center; font-size: 18px;">
+        <i class="fa-solid fa-briefcase"></i>
+      </div>
+    </div>
+  </a>
+</div>
+
+<!-- Django-Powered Server-Side Filter Form (No heavy JS needed) -->
+<div class="card" style="padding: 20px 24px; margin-bottom: 24px; background: #ffffff;">
+  <form method="GET" action="{% url 'super_admin_users' %}" id="usersFilterForm">
+    <div style="display: grid; grid-template-columns: 2fr 1.2fr 1.2fr 1fr 1.2fr auto; gap: 14px; align-items: flex-end;">
+      
+      <!-- Search Input -->
+      <div>
+        <label class="form-label" style="margin-bottom: 6px; font-size: 12px;">
+          <i class="fa-solid fa-magnifying-glass" style="margin-right: 4px;"></i> Search
+        </label>
+        <input 
+          type="text" 
+          name="q" 
+          value="{{ q }}" 
+          class="form-control" 
+          placeholder="Username, email, name, state..." 
+          style="padding: 9px 14px; font-size: 13.5px;"
+        >
+      </div>
+
+      <!-- Role Filter -->
+      <div>
+        <label class="form-label" style="margin-bottom: 6px; font-size: 12px;">
+          <i class="fa-solid fa-user-shield" style="margin-right: 4px;"></i> Role
+        </label>
+        <select name="role" class="form-control" style="padding: 9px 12px; font-size: 13.5px; height: 42px;">
+          <option value="all" {% if not role_filter or role_filter == 'all' %}selected{% endif %}>All Roles</option>
+          <option value="superuser" {% if role_filter == 'superuser' %}selected{% endif %}>Super Admin</option>
+          <option value="ADMIN" {% if role_filter == 'ADMIN' %}selected{% endif %}>Area Admin</option>
+          <option value="USER" {% if role_filter == 'USER' %}selected{% endif %}>Customer</option>
+          <option value="VENDOR" {% if role_filter == 'VENDOR' %}selected{% endif %}>Vendor / Pro</option>
+        </select>
+      </div>
+
+      <!-- State / Territory Filter -->
+      <div>
+        <label class="form-label" style="margin-bottom: 6px; font-size: 12px;">
+          <i class="fa-solid fa-location-dot" style="margin-right: 4px;"></i> Territory / State
+        </label>
+        <select name="state" class="form-control" style="padding: 9px 12px; font-size: 13.5px; height: 42px;">
+          <option value="all" {% if not state_filter or state_filter == 'all' %}selected{% endif %}>All Territories</option>
+          {% for st in states %}
+            <option value="{{ st }}" {% if state_filter == st %}selected{% endif %}>{{ st }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <!-- Status Filter -->
+      <div>
+        <label class="form-label" style="margin-bottom: 6px; font-size: 12px;">
+          <i class="fa-solid fa-toggle-on" style="margin-right: 4px;"></i> Status
+        </label>
+        <select name="status" class="form-control" style="padding: 9px 12px; font-size: 13.5px; height: 42px;">
+          <option value="all" {% if not status_filter or status_filter == 'all' %}selected{% endif %}>All Status</option>
+          <option value="active" {% if status_filter == 'active' %}selected{% endif %}>Active Only</option>
+          <option value="inactive" {% if status_filter == 'inactive' %}selected{% endif %}>Disabled Only</option>
+        </select>
+      </div>
+
+      <!-- Sort Filter -->
+      <div>
+        <label class="form-label" style="margin-bottom: 6px; font-size: 12px;">
+          <i class="fa-solid fa-arrow-down-short-wide" style="margin-right: 4px;"></i> Sort By
+        </label>
+        <select name="sort" class="form-control" style="padding: 9px 12px; font-size: 13.5px; height: 42px;">
+          <option value="newest" {% if not sort or sort == 'newest' %}selected{% endif %}>Newest Joined</option>
+          <option value="oldest" {% if sort == 'oldest' %}selected{% endif %}>Oldest Joined</option>
+          <option value="name_asc" {% if sort == 'name_asc' %}selected{% endif %}>Username (A-Z)</option>
+          <option value="name_desc" {% if sort == 'name_desc' %}selected{% endif %}>Username (Z-A)</option>
+        </select>
+      </div>
+
+      <!-- Submit & Reset Action Buttons -->
+      <div style="display: flex; gap: 8px; align-items: flex-end;">
+        <button type="submit" class="btn btn-primary" style="padding: 9px 18px; height: 42px; font-size: 13.5px; white-space: nowrap;">
+          <i class="fa-solid fa-filter"></i> Filter
+        </button>
+        {% if has_active_filters %}
+          <a href="{% url 'super_admin_users' %}" class="btn btn-outline" style="padding: 9px 14px; height: 42px; font-size: 13.5px; color: var(--danger); border-color: rgba(239,68,68,0.25);" title="Clear all filters">
+            <i class="fa-solid fa-rotate-left"></i> Reset
+          </a>
+        {% endif %}
+      </div>
+
+    </div>
+  </form>
+</div>
+
+<!-- Active Filter Information Badge Bar -->
+{% if has_active_filters %}
+<div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; padding: 10px 16px; background: #f1f5f9; border-radius: var(--r-sm); font-size: 13px;">
+  <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+    <span style="font-weight: 700; color: var(--text-main);"><i class="fa-solid fa-sliders" style="margin-right: 4px; color: var(--accent);"></i> Filtered Results:</span>
+    <span style="color: var(--text-muted);">Found <strong>{{ total_matching_users }}</strong> user{{ total_matching_users|pluralize }}</span>
+    {% if q %}
+      <span class="badge info" style="font-weight: 600;">Search: "{{ q }}"</span>
+    {% endif %}
+    {% if role_filter and role_filter != 'all' %}
+      <span class="badge" style="background: rgba(79,70,229,0.1); color: #4338ca; font-weight: 600;">Role: {{ role_filter }}</span>
+    {% endif %}
+    {% if state_filter and state_filter != 'all' %}
+      <span class="badge" style="background: rgba(14,165,233,0.1); color: #0284c7; font-weight: 600;">State: {{ state_filter }}</span>
+    {% endif %}
+    {% if status_filter and status_filter != 'all' %}
+      <span class="badge {% if status_filter == 'active' %}active{% else %}inactive{% endif %}" style="font-weight: 600;">Status: {{ status_filter|title }}</span>
+    {% endif %}
+  </div>
+  <a href="{% url 'super_admin_users' %}" style="color: var(--danger); font-weight: 600; text-decoration: none; font-size: 12.5px;">
+    <i class="fa-solid fa-xmark"></i> Clear Filters
+  </a>
+</div>
+{% endif %}
+
+<!-- Users Table Card -->
+<div class="card" style="padding: 0; overflow: hidden; border-radius: var(--r-md); box-shadow: var(--shadow-xs);">
+  <div class="table-container" style="border: none; border-radius: 0;">
     <table>
       <thead>
         <tr>
-          <th>User</th>
-          <th>Email</th>
-          <th>Role</th>
+          <th style="min-width: 220px;">User</th>
+          <th>Contact & Email</th>
+          <th>Role / Jurisdiction</th>
           <th>Status</th>
           <th>Joined</th>
-          <th>Actions</th>
+          <th style="text-align: right; padding-right: 24px;">Actions</th>
         </tr>
       </thead>
       <tbody>
@@ -29,40 +197,75 @@
         <tr>
           <td>
             <div style="display: flex; align-items: center; gap: 12px;">
-              <div class="avatar" style="width: 32px; height: 32px; font-size: 13px;">{{ u.username|make_list|first|upper }}</div>
-              <strong>{{ u.username }}</strong>
+              <div class="avatar" style="width: 36px; height: 36px; font-size: 14px; font-weight: 700; flex-shrink: 0; background: {% if u.is_superuser %}linear-gradient(135deg, #ef4444, #b91c1c){% elif u.role == 'ADMIN' %}linear-gradient(135deg, #4f46e5, #7c3aed){% elif u.role == 'VENDOR' %}linear-gradient(135deg, #9333ea, #c026d3){% else %}linear-gradient(135deg, #2563eb, #38bdf8){% endif %};">
+                {{ u.username|make_list|first|upper }}
+              </div>
+              <div>
+                <div style="font-weight: 700; color: var(--text-main); font-size: 14px;">{{ u.username }}</div>
+                {% if u.first_name or u.last_name %}
+                  <div style="font-size: 12px; color: var(--text-muted);">{{ u.first_name }} {{ u.last_name }}</div>
+                {% elif u.vendor_profile.company_name %}
+                  <div style="font-size: 12px; color: #7c3aed; font-weight: 600;">{{ u.vendor_profile.company_name }}</div>
+                {% endif %}
+              </div>
             </div>
           </td>
-          <td style="color: var(--text-muted);">{{ u.email|default:"—" }}</td>
+
+          <td>
+            <div style="color: var(--text-main); font-size: 13.5px;">{{ u.email|default:"—" }}</div>
+            {% if u.user_profile.phone_number %}
+              <div style="font-size: 12px; color: var(--text-muted);"><i class="fa-solid fa-phone" style="font-size: 10px; margin-right: 4px;"></i>{{ u.user_profile.phone_number }}</div>
+            {% endif %}
+          </td>
+
           <td>
             {% if u.is_superuser %}
-              <span class="badge" style="background: rgba(239,68,68,0.12); color: #b91c1c;">Super Admin</span>
+              <span class="badge" style="background: rgba(239,68,68,0.12); color: #b91c1c; border: 1px solid rgba(239,68,68,0.25);">
+                <i class="fa-solid fa-shield-halved" style="font-size: 10px; margin-right: 4px;"></i>Super Admin
+              </span>
             {% elif u.role == 'ADMIN' %}
-              <span class="badge" style="background: rgba(79,70,229,0.12); color: #4338ca;">
-                <i class="fa-solid fa-map-pin" style="font-size: 10px; margin-right: 4px;"></i>Area Admin {% if u.assigned_state %}({{ u.assigned_state }}){% else %}(Unassigned){% endif %}
+              <span class="badge" style="background: rgba(79,70,229,0.12); color: #4338ca; border: 1px solid rgba(79,70,229,0.25);">
+                <i class="fa-solid fa-map-pin" style="font-size: 10px; margin-right: 4px;"></i>Area Admin 
+                {% if u.assigned_state %}
+                  <strong style="margin-left: 2px;">({{ u.assigned_state }})</strong>
+                {% else %}
+                  <em style="opacity: 0.7;">(Unassigned)</em>
+                {% endif %}
               </span>
             {% elif u.role == 'VENDOR' %}
-              <span class="badge" style="background: rgba(168,85,247,0.12); color: #7c3aed;">Vendor</span>
+              <span class="badge" style="background: rgba(168,85,247,0.12); color: #7c3aed; border: 1px solid rgba(168,85,247,0.25);">
+                <i class="fa-solid fa-briefcase" style="font-size: 10px; margin-right: 4px;"></i>Vendor
+                {% if u.vendor_profile.location %}
+                  <span style="font-size: 11px; opacity: 0.85;">· {{ u.vendor_profile.location }}</span>
+                {% endif %}
+              </span>
             {% else %}
-              <span class="badge" style="background: rgba(59,130,246,0.12); color: #1d4ed8;">Customer</span>
+              <span class="badge" style="background: rgba(59,130,246,0.12); color: #1d4ed8; border: 1px solid rgba(59,130,246,0.25);">
+                <i class="fa-solid fa-user" style="font-size: 10px; margin-right: 4px;"></i>Customer
+              </span>
             {% endif %}
           </td>
+
           <td>
             {% if u.is_active %}
-              <span class="badge active">Active</span>
+              <span class="badge active"><i class="fa-solid fa-circle-check" style="font-size: 10px; margin-right: 3px;"></i>Active</span>
             {% else %}
-              <span class="badge inactive">Disabled</span>
+              <span class="badge inactive"><i class="fa-solid fa-circle-xmark" style="font-size: 10px; margin-right: 3px;"></i>Disabled</span>
             {% endif %}
           </td>
-          <td style="color: var(--text-muted);">{{ u.date_joined|date:"M d, Y" }}</td>
-          <td>
-            <div style="display: flex; gap: 8px;">
-              <a href="{% url 'super_admin_user_edit' u.id %}" class="btn btn-outline btn-sm"><i class="fa-solid fa-pen-to-square"></i></a>
-              <a href="{% url 'super_admin_user_toggle' u.id %}" class="btn btn-outline btn-sm" title="Toggle Active">
-                <i class="fa-solid {% if u.is_active %}fa-toggle-on{% else %}fa-toggle-off{% endif %}" style="color: {% if u.is_active %}var(--success){% else %}var(--text-muted){% endif %};"></i>
+
+          <td style="color: var(--text-muted); font-size: 13px;">{{ u.date_joined|date:"M d, Y" }}</td>
+
+          <td style="text-align: right; padding-right: 24px;">
+            <div style="display: inline-flex; gap: 6px; align-items: center;">
+              <a href="{% url 'super_admin_user_edit' u.id %}" class="btn btn-outline btn-sm" title="Edit User">
+                <i class="fa-solid fa-pen-to-square"></i>
+              </a>
+              <a href="{% url 'super_admin_user_toggle' u.id %}" class="btn btn-outline btn-sm" title="{% if u.is_active %}Deactivate User{% else %}Activate User{% endif %}">
+                <i class="fa-solid {% if u.is_active %}fa-toggle-on{% else %}fa-toggle-off{% endif %}" style="font-size: 14px; color: {% if u.is_active %}var(--success){% else %}var(--text-muted){% endif %};"></i>
               </a>
               {% if not u.is_superuser %}
-              <a href="{% url 'super_admin_user_delete' u.id %}" class="btn btn-outline btn-sm" style="border-color: rgba(239,68,68,0.3);" onclick="return confirm('Delete user {{ u.username }}?')">
+              <a href="{% url 'super_admin_user_delete' u.id %}" class="btn btn-outline btn-sm" style="border-color: rgba(239,68,68,0.3);" onclick="return confirm('Are you sure you want to permanently delete user &quot;{{ u.username }}&quot;?')" title="Delete User">
                 <i class="fa-solid fa-trash" style="color: var(--danger);"></i>
               </a>
               {% endif %}
@@ -70,10 +273,79 @@
           </td>
         </tr>
         {% empty %}
-        <tr><td colspan="6" style="text-align: center; padding: 40px; color: var(--text-muted);">No users found.</td></tr>
+        <tr>
+          <td colspan="6" style="text-align: center; padding: 50px 20px; color: var(--text-muted);">
+            <div style="font-size: 36px; color: #cbd5e1; margin-bottom: 12px;"><i class="fa-solid fa-user-slash"></i></div>
+            <div style="font-size: 16px; font-weight: 700; color: var(--text-main); margin-bottom: 6px;">No users found</div>
+            <p style="font-size: 13.5px; max-width: 400px; margin: 0 auto 16px;">We couldn't find any users matching your search or filter criteria.</p>
+            {% if has_active_filters %}
+              <a href="{% url 'super_admin_users' %}" class="btn btn-outline btn-sm">
+                <i class="fa-solid fa-rotate-left"></i> Reset Filters
+              </a>
+            {% endif %}
+          </td>
+        </tr>
         {% endfor %}
       </tbody>
     </table>
+  </div>
+
+  <!-- Django Server-Side Pagination Bar -->
+  <div class="pagination-wrap">
+    <div>
+      Showing <strong>{{ users.start_index|default:0 }}</strong> to <strong>{{ users.end_index|default:0 }}</strong> of <strong>{{ users.paginator.count }}</strong> user{{ users.paginator.count|pluralize }}
+    </div>
+
+    {% if users.has_other_pages %}
+    <nav class="pagination-nav" aria-label="Page navigation">
+      <!-- First Page -->
+      {% if users.number > 1 %}
+        <a href="?{% if extra_query_params %}{{ extra_query_params }}&{% endif %}page=1" class="page-link" title="First Page">
+          <i class="fa-solid fa-angles-left"></i>
+        </a>
+      {% else %}
+        <span class="page-link disabled"><i class="fa-solid fa-angles-left"></i></span>
+      {% endif %}
+
+      <!-- Previous Page -->
+      {% if users.has_previous %}
+        <a href="?{% if extra_query_params %}{{ extra_query_params }}&{% endif %}page={{ users.previous_page_number }}" class="page-link" title="Previous Page">
+          <i class="fa-solid fa-chevron-left"></i>
+        </a>
+      {% else %}
+        <span class="page-link disabled"><i class="fa-solid fa-chevron-left"></i></span>
+      {% endif %}
+
+      <!-- Page Numbers with Elided Ellipsis -->
+      {% for p in page_range %}
+        {% if p == users.paginator.ELLIPSIS %}
+          <span class="page-link disabled" style="cursor: default;">…</span>
+        {% elif p == users.number %}
+          <span class="page-link active">{{ p }}</span>
+        {% else %}
+          <a href="?{% if extra_query_params %}{{ extra_query_params }}&{% endif %}page={{ p }}" class="page-link">{{ p }}</a>
+        {% endif %}
+      {% endfor %}
+
+      <!-- Next Page -->
+      {% if users.has_next %}
+        <a href="?{% if extra_query_params %}{{ extra_query_params }}&{% endif %}page={{ users.next_page_number }}" class="page-link" title="Next Page">
+          <i class="fa-solid fa-chevron-right"></i>
+        </a>
+      {% else %}
+        <span class="page-link disabled"><i class="fa-solid fa-chevron-right"></i></span>
+      {% endif %}
+
+      <!-- Last Page -->
+      {% if users.number < users.paginator.num_pages %}
+        <a href="?{% if extra_query_params %}{{ extra_query_params }}&{% endif %}page={{ users.paginator.num_pages }}" class="page-link" title="Last Page">
+          <i class="fa-solid fa-angles-right"></i>
+        </a>
+      {% else %}
+        <span class="page-link disabled"><i class="fa-solid fa-angles-right"></i></span>
+      {% endif %}
+    </nav>
+    {% endif %}
   </div>
 </div>
 {% endblock %}
