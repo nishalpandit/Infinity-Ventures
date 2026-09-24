@@ -1431,7 +1431,7 @@ img[data-live]:not([src]){opacity:0}                   /* only hide a slot that 
         </a>
 
         <!-- Guest state -->
-        <div id="guestActions" class="row">
+        <div id="guestActions" class="row{% if user.is_authenticated %} hide{% endif %}">
           <button class="btn btn-outline btn-sm" type="button" data-open-modal="authModal">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4M10 17l5-5-5-5M15 12H3"/></svg>
             Sign In
@@ -1439,7 +1439,7 @@ img[data-live]:not([src]){opacity:0}                   /* only hide a slot that 
         </div>
 
         <!-- Authenticated state (rendered from {{ user }}) -->
-        <div class="profile hide" id="authActions">
+        <div class="profile{% if not user.is_authenticated %} hide{% endif %}" id="authActions">
           <button class="profile-btn" id="profileBtn" type="button" aria-haspopup="true" aria-expanded="false">
             <span class="avatar" id="avatarInitial">U</span>
             <span class="profile-meta">
@@ -2586,7 +2586,7 @@ img[data-live]:not([src]){opacity:0}                   /* only hide a slot that 
     <div class="drawer-sep"></div>
 
     <!-- Authenticated drawer block -->
-    <div class="hide" id="drawerAuth">
+    <div class="{% if not user.is_authenticated %}hide{% endif %}" id="drawerAuth">
       <div class="card card-pad" style="padding:16px;display:grid;gap:10px">
         <div class="row" style="gap:11px">
           <span class="avatar" id="drawerAvatar">U</span>
@@ -2595,15 +2595,15 @@ img[data-live]:not([src]){opacity:0}                   /* only hide a slot that 
             <span style="font-size:11.5px;color:var(--muted)" id="drawerRole">Customer</span>
           </span>
         </div>
-        <a class="btn btn-white btn-block btn-sm" href="/user/dashboard">Customer Dashboard</a>
-        <a class="btn btn-white btn-block btn-sm" href="/vendor/dashboard">Vendor Dashboard</a>
-        <a class="btn btn-white btn-block btn-sm" href="/admin-dashboard">Admin Panel</a>
+        <a class="btn btn-white btn-block btn-sm" href="/user/dashboard" id="drawerCustDash">Customer Dashboard</a>
+        <a class="btn btn-white btn-block btn-sm" href="/vendor/dashboard" id="drawerVendDash">Vendor Dashboard</a>
+        <a class="btn btn-white btn-block btn-sm" href="/admin-dashboard" id="drawerAdminDash">Admin Panel</a>
         <a class="btn btn-outline btn-block btn-sm" href="/logout/">Logout</a>
       </div>
     </div>
 
     <!-- Guest drawer block -->
-    <div class="stack" id="drawerGuest" style="gap:9px">
+    <div class="stack{% if user.is_authenticated %} hide{% endif %}" id="drawerGuest" style="gap:9px">
       <button class="btn btn-outline btn-block" type="button" data-open-modal="authModal" data-close-drawer>Sign In / Register</button>
       <a class="btn btn-emerald btn-block" href="/register/vendor/" data-close-drawer>Become a Partner</a>
       <button class="btn btn-primary btn-block" type="button" data-open-modal="postRequirementModal" data-close-drawer>Post Requirement</button>
@@ -2633,6 +2633,7 @@ img[data-live]:not([src]){opacity:0}                   /* only hide a slot that 
     </div>
 
     <div class="modal-body">
+      <span class="csrf-slot">{% csrf_token %}</span>
       <!-- Role selector -->
       <div class="seg" id="roleSeg">
         <button class="is-active" type="button" data-role="customer">
@@ -2673,9 +2674,10 @@ img[data-live]:not([src]){opacity:0}                   /* only hide a slot that 
           </div>
           <div class="otp-meta">
             <span id="otpSentTo">Code sent to +91 —</span>
+            <button class="link-btn" type="button" id="changePhoneBtn" style="margin-left:auto;margin-right:8px">Change</button>
             <button class="link-btn" type="button" id="resendOtp" disabled>Resend in 30s</button>
           </div>
-          <span class="hint">Demo mode: enter any 6 digits to continue.</span>
+          <span class="hint">Enter the 6-digit verification code sent to your phone (Demo: 123456).</span>
         </div>
 
         <button class="btn btn-primary btn-block" type="button" id="otpPrimary">Request OTP</button>
@@ -2689,14 +2691,19 @@ img[data-live]:not([src]){opacity:0}                   /* only hide a slot that 
       <!-- Tab: Password -->
       <div class="tab-panel" data-auth-panel="password">
         <div class="field">
-          <label for="authUser">Username or Email <em>*</em></label>
-          <input class="inp" type="text" id="authUser" placeholder="e.g. rakesh.verma or you@example.com" autocomplete="username" />
+          <label for="authUser">Username, Email or Mobile <em>*</em></label>
+          <input class="inp" type="text" id="authUser" placeholder="e.g. username, you@example.com or 9876543210" autocomplete="username" />
         </div>
         <div class="field">
           <label for="authPass">Password <em>*</em></label>
-          <input class="inp" type="password" id="authPass" placeholder="Enter your password" autocomplete="current-password" />
+          <div style="position:relative">
+            <input class="inp" type="password" id="authPass" placeholder="Enter your password" autocomplete="current-password" style="padding-right:42px" />
+            <button type="button" id="togglePassVisibility" aria-label="Toggle password visibility" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--muted);padding:4px;display:flex;align-items:center;">
+              <svg id="eyeIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:18px;height:18px"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            </button>
+          </div>
           <div class="spread">
-            <span class="hint">Accounts are provisioned by role on the backend.</span>
+            <span class="hint">Instant access to your verified dashboard.</span>
             <a class="link-btn" href="/password-reset/">Forgot password?</a>
           </div>
         </div>
@@ -3297,7 +3304,24 @@ img[data-live]:not([src]){opacity:0}                   /* only hide a slot that 
      --------------------------------------------------------------- */
   var TOAST_ICON = { ok:"✓", info:"i", warn:"!", err:"✕" };
   function toast(title, body, type) {
-    return;
+    var host = $("#toasts");
+    if (!host) {
+      host = document.createElement("div");
+      host.id = "toasts";
+      host.className = "toasts";
+      document.body.appendChild(host);
+    }
+    type = type || "info";
+    var el = document.createElement("div");
+    el.className = "toast " + type;
+    el.innerHTML = '<span class="toast-ic">' + (TOAST_ICON[type] || "•") + '</span>' +
+      '<div class="toast-txt"><strong>' + (title || "") + '</strong>' +
+      (body ? '<span>' + body + '</span>' : '') + '</div>';
+    host.appendChild(el);
+    setTimeout(function () {
+      el.classList.add("is-out");
+      setTimeout(function () { if (el.parentNode) el.parentNode.removeChild(el); }, 320);
+    }, 4000);
   }
 
   /* ---------------------------------------------------------------
@@ -4103,6 +4127,19 @@ img[data-live]:not([src]){opacity:0}                   /* only hide a slot that 
       b.addEventListener("click", function () { setAuthTab(b.getAttribute("data-auth-tab-btn")); });
     });
 
+    // Password visibility toggle
+    var togglePass = $("#togglePassVisibility");
+    var passInp = $("#authPass");
+    if (togglePass && passInp) {
+      togglePass.addEventListener("click", function () {
+        var isPass = passInp.type === "password";
+        passInp.type = isPass ? "text" : "password";
+        togglePass.innerHTML = isPass
+          ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:18px;height:18px"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>'
+          : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:18px;height:18px"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>';
+      });
+    }
+
     var otpInputs = $$("#otpRow .otp-inp");
     otpInputs.forEach(function (inp, idx) {
       inp.addEventListener("input", function () {
@@ -4111,7 +4148,12 @@ img[data-live]:not([src]){opacity:0}                   /* only hide a slot that 
         if (this.value && otpInputs[idx + 1]) otpInputs[idx + 1].focus();
       });
       inp.addEventListener("keydown", function (e) {
-        if (e.key === "Backspace" && !this.value && otpInputs[idx - 1]) otpInputs[idx - 1].focus();
+        if (e.key === "Backspace" && !this.value && otpInputs[idx - 1]) {
+          otpInputs[idx - 1].focus();
+        } else if (e.key === "Enter") {
+          e.preventDefault();
+          if (primary) primary.click();
+        }
       });
       inp.addEventListener("paste", function (e) {
         var clip = (e.clipboardData || window.clipboardData);
@@ -4126,21 +4168,86 @@ img[data-live]:not([src]){opacity:0}                   /* only hide a slot that 
     });
 
     var resend = $("#resendOtp");
+    var resendTimer = null;
     function startResendTimer() {
       if (!resend) return;
       var left = 30;
+      clearInterval(resendTimer);
       resend.setAttribute("disabled", "disabled");
       resend.textContent = "Resend in " + left + "s";
-      var t = setInterval(function () {
+      resendTimer = setInterval(function () {
         left--;
-        if (left <= 0) { clearInterval(t); resend.removeAttribute("disabled"); resend.textContent = "Resend OTP"; }
-        else resend.textContent = "Resend in " + left + "s";
+        if (left <= 0) {
+          clearInterval(resendTimer);
+          resend.removeAttribute("disabled");
+          resend.textContent = "Resend OTP";
+        } else {
+          resend.textContent = "Resend in " + left + "s";
+        }
       }, 1000);
     }
-    if (resend) resend.addEventListener("click", function () {
-      toast("OTP resent", "A fresh 6-digit code was sent to +91 " + ($("#authPhone").value || "your number") + ".", "info");
-      startResendTimer();
-    });
+
+    function resetOtpStep() {
+      authState.step = 1;
+      $("#otpStep2").classList.add("hide");
+      var step1 = $("#otpStep1");
+      if (step1) step1.classList.remove("hide");
+      otpInputs.forEach(function (x) { x.value = ""; x.classList.remove("is-filled"); });
+      clearInterval(resendTimer);
+      if (resend) {
+        resend.setAttribute("disabled", "disabled");
+        resend.textContent = "Resend in 30s";
+      }
+      if (primary) {
+        primary.removeAttribute("disabled");
+        primary.textContent = "Request OTP";
+      }
+      var phoneInp = $("#authPhone");
+      if (phoneInp) {
+        phoneInp.removeAttribute("disabled");
+        phoneInp.focus();
+      }
+    }
+
+    var changePhoneBtn = $("#changePhoneBtn");
+    if (changePhoneBtn) {
+      changePhoneBtn.addEventListener("click", resetOtpStep);
+    }
+
+    if (resend) {
+      resend.addEventListener("click", function () {
+        if (resend.hasAttribute("disabled")) return;
+        var phone = ($("#authPhone").value || "").replace(/\D/g, "");
+        if (!/^[6-9]\d{9}$/.test(phone)) {
+          toast("Invalid mobile number", "Enter a valid 10-digit mobile number.", "warn");
+          return;
+        }
+        resend.setAttribute("disabled", "disabled");
+        resend.textContent = "Sending…";
+        postJSON("/api/auth/send-otp/", {
+          mobile: phone,
+          purpose: "general",
+          role: authState.role === "vendor" ? "VENDOR" : "USER"
+        })
+        .then(function (res) { return res.json(); })
+        .then(function (data) {
+          if (data.status === "success") {
+            toast("OTP resent", data.message || ("A fresh 6-digit code was sent to +91 " + phone + "."), "ok");
+            startResendTimer();
+            if (otpInputs[0]) otpInputs[0].focus();
+          } else {
+            resend.removeAttribute("disabled");
+            resend.textContent = "Resend OTP";
+            toast("Failed to resend", data.message || "Please try again later.", "err");
+          }
+        })
+        .catch(function () {
+          resend.removeAttribute("disabled");
+          resend.textContent = "Resend OTP";
+          toast("Network error", "Unable to send OTP. Please check your internet connection.", "err");
+        });
+      });
+    }
 
     var primary = $("#otpPrimary");
     if (primary) primary.addEventListener("click", function () {
@@ -4148,19 +4255,43 @@ img[data-live]:not([src]){opacity:0}                   /* only hide a slot that 
       var phone = ($("#authPhone").value || "").replace(/\D/g, "");
 
       if (authState.step === 1) {
-        if (!/^[6-9]\d{9}$/.test(phone)) { toast("Invalid mobile number", "Enter a valid 10-digit Indian mobile number to receive the OTP.", "warn"); $("#authPhone").focus(); return; }
+        if (!/^[6-9]\d{9}$/.test(phone)) {
+          toast("Invalid mobile number", "Enter a valid 10-digit Indian mobile number to receive the OTP.", "warn");
+          $("#authPhone").focus();
+          return;
+        }
         primary.innerHTML = '<span class="spin" style="border-color:rgba(255,255,255,.45);border-top-color:#fff"></span> Sending OTP…';
         primary.setAttribute("disabled", "disabled");
-        setTimeout(function () {
-          primary.textContent = "Verify & Continue";
+
+        postJSON("/api/auth/send-otp/", {
+          mobile: phone,
+          purpose: "general",
+          role: authState.role === "vendor" ? "VENDOR" : "USER"
+        })
+        .then(function (res) { return res.json().then(function (data) { return { ok: res.ok, data: data }; }); })
+        .then(function (result) {
           primary.removeAttribute("disabled");
-          $("#otpStep2").classList.remove("hide");
-          $("#otpSentTo").textContent = "Code sent to +91 " + phone;
-          authState.step = 2;
-          if (otpInputs[0]) otpInputs[0].focus();
-          startResendTimer();
-          toast("OTP sent", "Demo mode: enter any 6 digits to continue.", "info");
-        }, 1200);
+          if (result.ok && result.data.status === "success") {
+            primary.textContent = "Verify & Continue";
+            $("#otpStep2").classList.remove("hide");
+            $("#otpSentTo").textContent = "Code sent to +91 " + phone;
+            authState.step = 2;
+            if (otpInputs[0]) otpInputs[0].focus();
+            startResendTimer();
+            var successMsg = result.data.otp
+              ? "OTP sent! (Use code: " + result.data.otp + " or 123456)"
+              : "Verification code sent to +91 " + phone + ".";
+            toast("OTP sent", successMsg, "ok");
+          } else {
+            primary.textContent = "Request OTP";
+            toast("Could not send OTP", (result.data && result.data.message) || "Unable to send OTP. Please check your mobile number.", "err");
+          }
+        })
+        .catch(function () {
+          primary.removeAttribute("disabled");
+          primary.textContent = "Request OTP";
+          toast("Network error", "Unable to reach server. Please check your internet connection.", "err");
+        });
       } else {
         var code = otpInputs.map(function (x) { return x.value; }).join("");
         if (code.length < 6) {
@@ -4170,30 +4301,105 @@ img[data-live]:not([src]){opacity:0}                   /* only hide a slot that 
         }
         primary.innerHTML = '<span class="spin" style="border-color:rgba(255,255,255,.45);border-top-color:#fff"></span> Verifying…';
         primary.setAttribute("disabled", "disabled");
-        setTimeout(function () {
-          primary.textContent = "Verified ✓";
-          toast("Login successful", "Signed in as " + (authState.role === "vendor" ? "Service Provider" : "Customer") + ". Redirecting to your dashboard…", "ok");
-          setTimeout(function () {
-            window.location.href = ROLE_REDIRECT[authState.role] || "/user/dashboard";
-          }, 1400);
-        }, 1300);
+
+        postJSON("/api/auth/otp-login/", {
+          mobile: phone,
+          otp: code,
+          role: authState.role === "vendor" ? "VENDOR" : "USER"
+        })
+        .then(function (res) { return res.json().then(function (data) { return { ok: res.ok, data: data }; }); })
+        .then(function (result) {
+          if (result.ok && result.data.status === "success") {
+            primary.textContent = "Verified ✓";
+            if (result.data.token) {
+              try { localStorage.setItem("iv_auth_token", result.data.token); } catch (e) {}
+            }
+            toast("Login successful", result.data.message || ("Signed in as " + (authState.role === "vendor" ? "Service Provider" : "Customer") + "."), "ok");
+            var dest = result.data.redirect_url || (ROLE_REDIRECT[authState.role] || "/user/dashboard");
+            setTimeout(function () {
+              window.location.href = dest;
+            }, 600);
+          } else {
+            primary.removeAttribute("disabled");
+            primary.textContent = "Verify & Continue";
+            toast("Verification failed", (result.data && result.data.message) || "Invalid OTP code. Please check and try again.", "err");
+            if (otpInputs[0]) otpInputs[0].focus();
+          }
+        })
+        .catch(function () {
+          primary.removeAttribute("disabled");
+          primary.textContent = "Verify & Continue";
+          toast("Network error", "Unable to verify OTP. Please check your internet connection.", "err");
+        });
       }
     });
 
+    var authPhoneInput = $("#authPhone");
+    if (authPhoneInput) {
+      authPhoneInput.addEventListener("keydown", function (e) {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          if (primary) primary.click();
+        }
+      });
+    }
+
     var passBtn = $("#passPrimary");
-    if (passBtn) passBtn.addEventListener("click", function () {
+    function handlePasswordLogin() {
       if (passBtn.hasAttribute("disabled")) return;
-      var u = $("#authUser").value.trim(), p = $("#authPass").value;
-      if (!u) { toast("Username required", "Enter your registered username or email address.", "warn"); $("#authUser").focus(); return; }
-      if (p.length < 4) { toast("Password too short", "Enter your account password to continue.", "warn"); $("#authPass").focus(); return; }
+      var u = ($("#authUser").value || "").trim();
+      var p = ($("#authPass").value || "").trim();
+      if (!u) {
+        toast("Username required", "Enter your username, email or mobile number.", "warn");
+        $("#authUser").focus();
+        return;
+      }
+      if (!p) {
+        toast("Password required", "Please enter your password to continue.", "warn");
+        $("#authPass").focus();
+        return;
+      }
       passBtn.innerHTML = '<span class="spin" style="border-color:rgba(255,255,255,.45);border-top-color:#fff"></span> Signing in…';
       passBtn.setAttribute("disabled", "disabled");
-      setTimeout(function () {
-        passBtn.innerHTML = "Signed in ✓";
-        var role = /admin/i.test(u) ? "admin" : authState.role;
-        toast("Welcome back", "Redirecting to the " + role + " dashboard…", "ok");
-        setTimeout(function () { window.location.href = ROLE_REDIRECT[role] || "/user/dashboard"; }, 1300);
-      }, 1100);
+
+      postJSON("/api/auth/login/", { username: u, password: p })
+      .then(function (res) { return res.json().then(function (data) { return { ok: res.ok, data: data }; }); })
+      .then(function (result) {
+        if (result.ok && result.data.status === "success") {
+          passBtn.innerHTML = "Signed in ✓";
+          if (result.data.token) {
+            try { localStorage.setItem("iv_auth_token", result.data.token); } catch (e) {}
+          }
+          toast("Welcome back", result.data.message || "Signed in successfully!", "ok");
+          var dest = result.data.redirect_url || (ROLE_REDIRECT[authState.role] || "/user/dashboard");
+          setTimeout(function () {
+            window.location.href = dest;
+          }, 600);
+        } else {
+          passBtn.removeAttribute("disabled");
+          passBtn.innerHTML = "Sign In Securely";
+          toast("Authentication failed", (result.data && result.data.message) || "Invalid username or password. Please try again.", "err");
+        }
+      })
+      .catch(function () {
+        passBtn.removeAttribute("disabled");
+        passBtn.innerHTML = "Sign In Securely";
+        toast("Network error", "Unable to connect to authentication server. Please check your connection.", "err");
+      });
+    }
+
+    if (passBtn) passBtn.addEventListener("click", handlePasswordLogin);
+
+    ["#authUser", "#authPass"].forEach(function (s) {
+      var el = $(s);
+      if (el) {
+        el.addEventListener("keydown", function (e) {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            handlePasswordLogin();
+          }
+        });
+      }
     });
   }
 
@@ -4339,29 +4545,43 @@ img[data-live]:not([src]){opacity:0}                   /* only hide a slot that 
      19. AUTH STATE RENDER ({{ user }})
      --------------------------------------------------------------- */
   function applyUser() {
-    var u = CTX.user, authed = !!u.authenticated, role = u.role || "customer";
+    var u = CTX.user, authed = !!u.authenticated;
+    var rawRole = (u.role || "").toUpperCase();
+    var role = "customer";
+    if (rawRole === "VENDOR") role = "vendor";
+    else if (rawRole === "ADMIN") role = "admin";
+    else role = "customer";
+
     var display = u.firstName || u.username || "Account";
     var initials = (display.split(" ").map(function (w) { return w.charAt(0); }).join("").slice(0, 2) || "U").toUpperCase();
 
-    $("#guestActions").classList.toggle("hide", authed);
-    $("#authActions").classList.toggle("hide", !authed);
-    $("#drawerGuest").classList.toggle("hide", authed);
-    $("#drawerAuth").classList.toggle("hide", !authed);
+    var guestEl = $("#guestActions"), authEl = $("#authActions");
+    var dGuestEl = $("#drawerGuest"), dAuthEl = $("#drawerAuth");
+    if (guestEl) guestEl.classList.toggle("hide", authed);
+    if (authEl) authEl.classList.toggle("hide", !authed);
+    if (dGuestEl) dGuestEl.classList.toggle("hide", authed);
+    if (dAuthEl) dAuthEl.classList.toggle("hide", !authed);
     if (!authed) return;
 
-    $("#userDisplayName").textContent = display;
-    $("#userRoleLabel").textContent = role === "vendor" ? "Service Provider" : (role === "admin" ? "Administrator" : "Customer");
-    ["#avatarInitial", "#drawerAvatar"].forEach(function (s) { $(s).textContent = initials; });
-    ["#pmName", "#drawerName"].forEach(function (s) { $(s).textContent = display; });
-    $("#pmEmail").textContent = "@" + (u.username || "user") + " · " + role;
-    $("#drawerRole").textContent = role === "vendor" ? "Service Provider account" : "Customer account";
+    var nameEl = $("#userDisplayName"); if (nameEl) nameEl.textContent = display;
+    var roleEl = $("#userRoleLabel"); if (roleEl) roleEl.textContent = role === "vendor" ? "Service Provider" : (role === "admin" ? "Administrator" : "Customer");
+    ["#avatarInitial", "#drawerAvatar"].forEach(function (s) { var el = $(s); if (el) el.textContent = initials; });
+    ["#pmName", "#drawerName"].forEach(function (s) { var el = $(s); if (el) el.textContent = display; });
+    var emailEl = $("#pmEmail"); if (emailEl) emailEl.textContent = "@" + (u.username || "user") + " · " + (role === "vendor" ? "Service Provider" : (role === "admin" ? "Admin" : "Customer"));
+    var dRoleEl = $("#drawerRole"); if (dRoleEl) dRoleEl.textContent = role === "vendor" ? "Service Provider account" : (role === "admin" ? "Admin account" : "Customer account");
 
-    if (role === "vendor") $("#pmCustomerDash").classList.add("hide");
-    if (role === "customer") $("#pmVendorDash").classList.add("hide");
-    if (role !== "admin") $("#pmAdminDash").classList.add("hide");
-    if (role === "admin") $("#pmAdminDash").classList.remove("hide");
-    $("#avatarInitial").classList.toggle("em", role === "vendor");
-    $("#drawerAvatar").classList.toggle("em", role === "vendor");
+    var cd = $("#pmCustomerDash"), vd = $("#pmVendorDash"), ad = $("#pmAdminDash");
+    if (cd) cd.classList.toggle("hide", role === "vendor");
+    if (vd) vd.classList.toggle("hide", role === "customer");
+    if (ad) ad.classList.toggle("hide", role !== "admin");
+
+    var dcd = $("#drawerCustDash"), dvd = $("#drawerVendDash"), dad = $("#drawerAdminDash");
+    if (dcd) dcd.classList.toggle("hide", role === "vendor");
+    if (dvd) dvd.classList.toggle("hide", role === "customer");
+    if (dad) dad.classList.toggle("hide", role !== "admin");
+
+    var ai = $("#avatarInitial"); if (ai) ai.classList.toggle("em", role === "vendor");
+    var da = $("#drawerAvatar"); if (da) da.classList.toggle("em", role === "vendor");
   }
 
   /* ---------------------------------------------------------------

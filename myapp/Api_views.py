@@ -85,6 +85,11 @@ def _resolve_user_identifier(identifier):
     if u_prof and u_prof.user:
         return u_prof.user
 
+    if norm_phone and len(norm_phone) >= 10:
+        user = User.objects.filter(Q(username__endswith=norm_phone) | Q(email__startswith=norm_phone)).first()
+        if user:
+            return user
+
     return None
 
 
@@ -800,24 +805,64 @@ def unified_otp_login_api(request):
         if not otp:
             return JsonResponse({'status': 'error', 'message': "Field 'otp' is required."}, status=400)
 
-        # 1. Verify OTP (allows already verified active OTP)
-        is_valid, msg = _verify_otp_code(mobile, otp, purpose='login', allow_already_verified=True)
+        # 1. Verify OTP (allows active OTP regardless of purpose tag or master demo 123456)
+        is_valid, msg = _verify_otp_code(mobile, otp, purpose=None, allow_already_verified=True)
         if not is_valid:
             return JsonResponse({'status': 'error', 'message': msg}, status=400)
 
-        # 2. Find user by mobile
+        # 2. Find user by mobile or auto-provision if new
         user = _resolve_user_identifier(mobile)
+        norm_phone = _normalize_phone(mobile) or str(mobile).strip()
         if not user:
-            return JsonResponse({
-                'status': 'error',
-                'message': f"No account found with mobile number '{mobile}'. Please sign up first."
-            }, status=404)
+            req_role = (data.get('role') or 'USER').strip().upper()
+            if req_role in ['VENDOR', 'SERVICE PROVIDER']:
+                base_username = f"ven_{norm_phone}"
+                uname = base_username
+                c = 1
+                while User.objects.filter(username=uname).exists():
+                    uname = f"{base_username}_{c}"
+                    c += 1
+                email = f"{uname}@infinityventures.local"
+                user = User.objects.create_user(
+                    username=uname,
+                    email=email,
+                    first_name=f"Partner {norm_phone[-4:]}",
+                    role='VENDOR'
+                )
+                user.set_unusable_password()
+                user.save()
+                VendorProfile.objects.create(
+                    user=user,
+                    company_name=f"Partner {norm_phone[-4:]}",
+                    category="General Services",
+                    location="Local",
+                    vendor_type="vendor"
+                )
+            else:
+                base_username = f"usr_{norm_phone}"
+                uname = base_username
+                c = 1
+                while User.objects.filter(username=uname).exists():
+                    uname = f"{base_username}_{c}"
+                    c += 1
+                email = f"{uname}@infinityventures.local"
+                user = User.objects.create_user(
+                    username=uname,
+                    email=email,
+                    first_name=f"Customer {norm_phone[-4:]}",
+                    role='USER'
+                )
+                user.set_unusable_password()
+                user.save()
+                UserProfile.objects.create(
+                    user=user,
+                    phone_number=mobile
+                )
 
         if not user.is_active:
             return JsonResponse({'status': 'error', 'message': "Account is suspended or inactive."}, status=403)
 
         # Invalidate the OTP so it cannot be reused
-        norm_phone = _normalize_phone(mobile)
         OTPVerification.objects.filter(
             Q(mobile=norm_phone) | Q(mobile=str(mobile).strip()),
             otp=otp
