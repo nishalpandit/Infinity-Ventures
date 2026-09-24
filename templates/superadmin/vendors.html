@@ -3,11 +3,7 @@
 {% block header_title %}Vendor Management{% endblock %}
 
 {% block content %}
-<div style="margin-bottom: 24px; display: flex; justify-content: space-between; align-items: center;">
-  <div>
-    <h2 style="font-size: 24px; font-weight: 700; margin-bottom: 8px;">Service Providers</h2>
-    <p style="color: var(--text-muted);">Manage all registered vendors and companies on the platform.</p>
-  </div>
+<div style="margin-bottom: 20px; display: flex; justify-content: flex-end; align-items: center;">
   <a href="{% url 'super_admin_vendor_create' %}" class="btn btn-primary"><i class="fa-solid fa-plus"></i> Add Vendor</a>
 </div>
 

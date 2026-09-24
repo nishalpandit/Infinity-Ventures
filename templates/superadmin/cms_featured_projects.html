@@ -3,19 +3,13 @@
 {% block header_title %}Featured Bidding Project Cards{% endblock %}
 
 {% block content %}
-<div style="margin-bottom: 24px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;">
-  <div>
-    <h2 style="font-size: 24px; font-weight: 700; margin-bottom: 6px;">Bidding Showcase Projects</h2>
-    <p style="color: var(--text-muted);">Manage the contracting project cards, estimated budgets, bidding previews, and tags shown in the bidding engine section.</p>
-  </div>
-  <div style="display: flex; gap: 10px;">
-    <a href="{% url 'super_admin_landing_overview' %}" class="btn btn-outline" style="background: white;">
-      <i class="fa-solid fa-arrow-left"></i> CMS Hub
-    </a>
-    <a href="{% url 'super_admin_landing_featured_project_create' %}" class="btn btn-primary">
-      <i class="fa-solid fa-plus"></i> Add Project Card
-    </a>
-  </div>
+<div style="margin-bottom: 20px; display: flex; justify-content: flex-end; align-items: center; gap: 10px;">
+  <a href="{% url 'super_admin_landing_overview' %}" class="btn btn-outline" style="background: white;">
+    <i class="fa-solid fa-arrow-left"></i> CMS Hub
+  </a>
+  <a href="{% url 'super_admin_landing_featured_project_create' %}" class="btn btn-primary">
+    <i class="fa-solid fa-plus"></i> Add Project Card
+  </a>
 </div>
 
 <div class="card" style="padding: 0; overflow: hidden;">

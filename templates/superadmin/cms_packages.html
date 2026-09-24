@@ -3,19 +3,13 @@
 {% block header_title %}Service Packages & Pricing Plans{% endblock %}
 
 {% block content %}
-<div style="margin-bottom: 24px; display: flex; justify-content: space-between; align-items: center;">
-  <div>
-    <h2 style="font-size: 24px; font-weight: 700; margin-bottom: 6px;">Service Packages & Pricing Tiers</h2>
-    <p style="color: var(--text-muted);">Manage package cards, bundled service features, pricing tags, and popular badges.</p>
-  </div>
-  <div style="display: flex; gap: 10px;">
-    <a href="{% url 'super_admin_dashboard' %}" class="btn btn-outline" style="background: white;">
-      <i class="fa-solid fa-arrow-left"></i> Dashboard
-    </a>
-    <a href="{% url 'super_admin_landing_package_create' %}" class="btn btn-primary">
-      <i class="fa-solid fa-plus"></i> Add Package
-    </a>
-  </div>
+<div style="margin-bottom: 20px; display: flex; justify-content: flex-end; align-items: center; gap: 10px;">
+  <a href="{% url 'super_admin_dashboard' %}" class="btn btn-outline" style="background: white;">
+    <i class="fa-solid fa-arrow-left"></i> Dashboard
+  </a>
+  <a href="{% url 'super_admin_landing_package_create' %}" class="btn btn-primary">
+    <i class="fa-solid fa-plus"></i> Add Package
+  </a>
 </div>
 
 <div class="card" style="padding: 0; overflow: hidden;">

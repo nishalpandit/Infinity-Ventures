@@ -3,11 +3,6 @@
 {% block header_title %}Global Platform Settings{% endblock %}
 
 {% block content %}
-<div style="margin-bottom: 24px;">
-  <h2 style="font-size: 24px; font-weight: 700; margin-bottom: 8px;">Platform Configuration</h2>
-  <p style="color: var(--text-muted);">Control core platform-wide settings, branding, and operational parameters.</p>
-</div>
-
 <div class="card form-card">
   <form method="POST">
     {% csrf_token %}

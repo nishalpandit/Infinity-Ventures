@@ -4,11 +4,10 @@
 
 {% block content %}
 <!-- CATEGORIES SECTION -->
-<div style="margin-bottom: 24px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 14px;">
-  <div>
-    <h2 style="font-size: 24px; font-weight: 700; margin-bottom: 6px;">Service Categories</h2>
-    <p style="color: var(--text-muted);">Manage all service domains, contracting categories, and quick booking specialties.</p>
-  </div>
+<div style="margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 14px;">
+  <h3 style="font-size: 18px; font-weight: 700; color: var(--text-main); margin: 0;">
+    <i class="fa-solid fa-shapes" style="color: var(--accent); margin-right: 8px;"></i>Service Categories
+  </h3>
   <a href="{% url 'super_admin_category_create' %}" class="btn btn-primary">
     <i class="fa-solid fa-plus"></i> Add Category
   </a>
@@ -83,11 +82,10 @@
 </div>
 
 <!-- LOCATIONS SECTION -->
-<div style="margin-bottom: 24px; margin-top: 44px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 14px;">
-  <div>
-    <h2 style="font-size: 24px; font-weight: 700; margin-bottom: 6px;">Service Locations &amp; Cities</h2>
-    <p style="color: var(--text-muted);">Manage active operating cities and states across the platform.</p>
-  </div>
+<div style="margin-bottom: 16px; margin-top: 36px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 14px;">
+  <h3 style="font-size: 18px; font-weight: 700; color: var(--text-main); margin: 0;">
+    <i class="fa-solid fa-city" style="color: var(--accent); margin-right: 8px;"></i>Service Locations &amp; Cities
+  </h3>
   <a href="{% url 'super_admin_location_create' %}" class="btn btn-primary">
     <i class="fa-solid fa-plus"></i> Add Location
   </a>
