@@ -2,13 +2,14 @@
 {% block title %}Add Subscription{% endblock %}
 {% block header_title %}Add Subscription{% endblock %}
 
-{% block content %}
-<div style="margin-bottom: 24px;">
-  <a href="{% url 'super_admin_subscriptions' %}" style="color: var(--accent); text-decoration: none; font-weight: 600; font-size: 14px;">
-    <i class="fa-solid fa-arrow-left"></i> Back to Subscriptions
-  </a>
-</div>
+{% block header_actions %}
+<a href="{% url 'super_admin_subscriptions' %}" class="btn btn-outline btn-sm">
+  <i class="fa-solid fa-arrow-left"></i>
+  <span>Back to Subscriptions</span>
+</a>
+{% endblock %}
 
+{% block content %}
 <div class="card form-card">
   <h3 style="font-size: 20px; font-weight: 700; margin-bottom: 24px;">
     Add Subscription / Credit Top-up for Vendor

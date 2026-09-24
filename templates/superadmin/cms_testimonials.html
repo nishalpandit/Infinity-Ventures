@@ -2,16 +2,18 @@
 {% block title %}Testimonials - CMS{% endblock %}
 {% block header_title %}Client Reviews & Testimonials{% endblock %}
 
-{% block content %}
-<div style="margin-bottom: 20px; display: flex; justify-content: flex-end; align-items: center; gap: 10px;">
-  <a href="{% url 'super_admin_dashboard' %}" class="btn btn-outline" style="background: white;">
-    <i class="fa-solid fa-arrow-left"></i> Dashboard
-  </a>
-  <a href="{% url 'super_admin_landing_testimonial_create' %}" class="btn btn-primary">
-    <i class="fa-solid fa-plus"></i> Add Testimonial
-  </a>
-</div>
+{% block header_actions %}
+<a href="{% url 'super_admin_landing_overview' %}" class="btn btn-outline btn-sm">
+  <i class="fa-solid fa-arrow-left"></i>
+  <span>CMS Hub</span>
+</a>
+<a href="{% url 'super_admin_landing_testimonial_create' %}" class="btn btn-primary btn-sm">
+  <i class="fa-solid fa-plus"></i>
+  <span>Add Testimonial</span>
+</a>
+{% endblock %}
 
+{% block content %}
 <div class="card" style="padding: 0; overflow: hidden;">
   <div class="table-container">
     <table>

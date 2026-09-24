@@ -2,13 +2,14 @@
 {% block title %}{{ mode|title }} Category{% endblock %}
 {% block header_title %}{{ mode|title }} Category{% endblock %}
 
-{% block content %}
-<div style="margin-bottom: 24px;">
-  <a href="{% url 'super_admin_cms' %}" style="color: var(--accent); text-decoration: none; font-weight: 600; font-size: 14px;">
-    <i class="fa-solid fa-arrow-left"></i> Back to CMS
-  </a>
-</div>
+{% block header_actions %}
+<a href="{% url 'super_admin_cms' %}" class="btn btn-outline btn-sm">
+  <i class="fa-solid fa-arrow-left"></i>
+  <span>Back to Categories</span>
+</a>
+{% endblock %}
 
+{% block content %}
 <div class="card form-card">
   <h3 style="font-size: 20px; font-weight: 700; margin-bottom: 24px;">
     {% if mode == 'create' %}Add New Category{% else %}Edit: {{ cat.name }}{% endif %}

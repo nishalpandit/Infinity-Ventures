@@ -2,13 +2,14 @@
 {% block title %}{% if mode == 'create' %}Create Job{% else %}Edit Job{% endif %}{% endblock %}
 {% block header_title %}{% if mode == 'create' %}Create Job{% else %}Edit Job{% endif %}{% endblock %}
 
-{% block content %}
-<div style="margin-bottom: 24px;">
-  <a href="{% url 'super_admin_jobs' %}" style="color: var(--accent); text-decoration: none; font-weight: 600; font-size: 14px;">
-    <i class="fa-solid fa-arrow-left"></i> Back to Jobs
-  </a>
-</div>
+{% block header_actions %}
+<a href="{% url 'super_admin_jobs' %}" class="btn btn-outline btn-sm">
+  <i class="fa-solid fa-arrow-left"></i>
+  <span>Back to Jobs</span>
+</a>
+{% endblock %}
 
+{% block content %}
 <div class="card form-card">
   <h3 style="font-size: 20px; font-weight: 700; margin-bottom: 24px;">
     {% if mode == 'create' %}Post New Project / Job{% else %}Edit: {{ job.title }}{% endif %}

@@ -2,13 +2,14 @@
 {% block title %}{{ title }} - CMS{% endblock %}
 {% block header_title %}{{ title }}{% endblock %}
 
-{% block content %}
-<div style="margin-bottom: 20px; display: flex; justify-content: flex-end; align-items: center;">
-  <a href="{% url back_url %}" class="btn btn-outline">
-    <i class="fa-solid fa-arrow-left"></i> Back to List
-  </a>
-</div>
+{% block header_actions %}
+<a href="{% url back_url %}" class="btn btn-outline btn-sm">
+  <i class="fa-solid fa-arrow-left"></i>
+  <span>Back to List</span>
+</a>
+{% endblock %}
 
+{% block content %}
 <form method="POST" enctype="multipart/form-data" id="cmsCardForm">
   {% csrf_token %}
 

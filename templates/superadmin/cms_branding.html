@@ -2,16 +2,14 @@
 {% block title %}Site Branding & Identity{% endblock %}
 {% block header_title %}Site Branding & Identity{% endblock %}
 
-{% block content %}
-<div style="margin-bottom: 20px; display: flex; justify-content: flex-end; align-items: center; gap: 12px;">
-  <a href="{% url 'super_admin_landing_overview' %}" class="btn btn-outline">
-    <i class="fa-solid fa-arrow-left"></i> Back to CMS Hub
-  </a>
-  <a href="/" target="_blank" class="btn btn-outline" style="background: white;">
-    <i class="fa-solid fa-arrow-up-right-from-square"></i> View Live Site
-  </a>
-</div>
+{% block header_actions %}
+<a href="{% url 'super_admin_landing_overview' %}" class="btn btn-outline btn-sm">
+  <i class="fa-solid fa-arrow-left"></i>
+  <span>CMS Hub</span>
+</a>
+{% endblock %}
 
+{% block content %}
 <form method="POST" enctype="multipart/form-data" id="brandingForm">
   {% csrf_token %}
 

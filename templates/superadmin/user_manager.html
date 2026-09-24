@@ -2,14 +2,14 @@
 {% block title %}All Users - Super Admin{% endblock %}
 {% block header_title %}User Management{% endblock %}
 
-{% block content %}
-<!-- Top Primary Action -->
-<div style="margin-bottom: 20px; display: flex; justify-content: flex-end; align-items: center;">
-  <a href="{% url 'super_admin_user_create' %}" class="btn btn-primary" style="padding: 10px 20px; font-weight: 700;">
-    <i class="fa-solid fa-user-plus"></i> Add User
-  </a>
-</div>
+{% block header_actions %}
+<a href="{% url 'super_admin_user_create' %}" class="btn btn-primary btn-sm">
+  <i class="fa-solid fa-user-plus"></i>
+  <span>Add User</span>
+</a>
+{% endblock %}
 
+{% block content %}
 <!-- Quick Role Filter Pills / Summary Cards -->
 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 24px;">
   <a href="{% url 'super_admin_users' %}" style="text-decoration: none; color: inherit;">
