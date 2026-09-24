@@ -42,6 +42,38 @@
         {% endfor %}
       </tbody>
     </table>
+    {% if subscriptions.has_other_pages %}
+    <div class="pagination-wrap">
+      <div>Showing <strong>{{ subscriptions.start_index|default:0 }}</strong> to <strong>{{ subscriptions.end_index|default:0 }}</strong> of <strong>{{ subscriptions.paginator.count }}</strong> subscriptions</div>
+      <nav class="pagination-nav" aria-label="Page navigation">
+        {% if subscriptions.has_previous %}
+          <a href="?page=1" class="page-link" title="First Page"><i class="fa-solid fa-angles-left"></i></a>
+          <a href="?page={{ subscriptions.previous_page_number }}" class="page-link" title="Previous Page"><i class="fa-solid fa-chevron-left"></i></a>
+        {% else %}
+          <span class="page-link disabled"><i class="fa-solid fa-angles-left"></i></span>
+          <span class="page-link disabled"><i class="fa-solid fa-chevron-left"></i></span>
+        {% endif %}
+
+        {% for p in page_range %}
+          {% if p == subscriptions.paginator.ELLIPSIS %}
+            <span class="page-link disabled">…</span>
+          {% elif p == subscriptions.number %}
+            <span class="page-link active">{{ p }}</span>
+          {% else %}
+            <a href="?page={{ p }}" class="page-link">{{ p }}</a>
+          {% endif %}
+        {% endfor %}
+
+        {% if subscriptions.has_next %}
+          <a href="?page={{ subscriptions.next_page_number }}" class="page-link" title="Next Page"><i class="fa-solid fa-chevron-right"></i></a>
+          <a href="?page={{ subscriptions.paginator.num_pages }}" class="page-link" title="Last Page"><i class="fa-solid fa-angles-right"></i></a>
+        {% else %}
+          <span class="page-link disabled"><i class="fa-solid fa-chevron-right"></i></span>
+          <span class="page-link disabled"><i class="fa-solid fa-chevron-right"></i></span>
+        {% endif %}
+      </nav>
+    </div>
+    {% endif %}
   </div>
 </div>
 {% endblock %}

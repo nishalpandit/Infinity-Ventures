@@ -280,8 +280,15 @@ def super_admin_user_toggle(request, user_id):
 # ─────────────────────────────────────────────
 @sa_required
 def super_admin_vendors(request):
-    vendors = VendorProfile.objects.all().select_related('user')
-    return render(request, 'superadmin/vendors.html', {'vendors': vendors})
+    vendors_qs = VendorProfile.objects.all().select_related('user').order_by('-registered_date')
+    paginator = Paginator(vendors_qs, 10)
+    page_num = request.GET.get('page', 1)
+    try:
+        vendors = paginator.page(page_num)
+    except (EmptyPage, PageNotAnInteger):
+        vendors = paginator.page(1)
+    page_range = paginator.get_elided_page_range(vendors.number, on_each_side=2, on_ends=1)
+    return render(request, 'superadmin/vendors.html', {'vendors': vendors, 'page_range': page_range})
 
 @sa_required
 def super_admin_vendor_create(request):
@@ -470,8 +477,15 @@ def super_admin_location_delete(request, loc_id):
 # ─────────────────────────────────────────────
 @sa_required
 def super_admin_jobs(request):
-    jobs = Job.objects.all().select_related('user', 'category').order_by('-created_at')
-    return render(request, 'superadmin/jobs.html', {'jobs': jobs})
+    jobs_qs = Job.objects.all().select_related('user', 'category', 'location').order_by('-created_at')
+    paginator = Paginator(jobs_qs, 10)
+    page_num = request.GET.get('page', 1)
+    try:
+        jobs = paginator.page(page_num)
+    except (EmptyPage, PageNotAnInteger):
+        jobs = paginator.page(1)
+    page_range = paginator.get_elided_page_range(jobs.number, on_each_side=2, on_ends=1)
+    return render(request, 'superadmin/jobs.html', {'jobs': jobs, 'page_range': page_range})
 
 @sa_required
 def super_admin_job_create(request):
@@ -548,8 +562,15 @@ def super_admin_job_delete(request, job_id):
 # ─────────────────────────────────────────────
 @sa_required
 def super_admin_quick_services(request):
-    qservices = QuickService.objects.all().select_related('user', 'category').order_by('-created_at')
-    return render(request, 'superadmin/quick_services.html', {'qservices': qservices})
+    qs_list = QuickService.objects.all().select_related('user', 'category', 'location').order_by('-created_at')
+    paginator = Paginator(qs_list, 10)
+    page_num = request.GET.get('page', 1)
+    try:
+        qservices = paginator.page(page_num)
+    except (EmptyPage, PageNotAnInteger):
+        qservices = paginator.page(1)
+    page_range = paginator.get_elided_page_range(qservices.number, on_each_side=2, on_ends=1)
+    return render(request, 'superadmin/quick_services.html', {'qservices': qservices, 'page_range': page_range})
 
 @sa_required
 def super_admin_qs_create(request):
@@ -626,8 +647,15 @@ def super_admin_qs_delete(request, qs_id):
 # ─────────────────────────────────────────────
 @sa_required
 def super_admin_bids(request):
-    bids = Bid.objects.all().select_related('vendor', 'job', 'quick_service').order_by('-created_at')
-    return render(request, 'superadmin/bids.html', {'bids': bids})
+    bids_qs = Bid.objects.all().select_related('vendor', 'job', 'quick_service').order_by('-created_at')
+    paginator = Paginator(bids_qs, 10)
+    page_num = request.GET.get('page', 1)
+    try:
+        bids = paginator.page(page_num)
+    except (EmptyPage, PageNotAnInteger):
+        bids = paginator.page(1)
+    page_range = paginator.get_elided_page_range(bids.number, on_each_side=2, on_ends=1)
+    return render(request, 'superadmin/bids.html', {'bids': bids, 'page_range': page_range})
 
 @sa_required
 def super_admin_bid_create(request):
@@ -693,8 +721,15 @@ def super_admin_bid_delete(request, bid_id):
 # ─────────────────────────────────────────────
 @sa_required
 def super_admin_subscriptions(request):
-    subscriptions = Subscription.objects.all().select_related('vendor').order_by('-created_at')
-    return render(request, 'superadmin/subscriptions.html', {'subscriptions': subscriptions})
+    subscriptions_qs = Subscription.objects.all().select_related('vendor').order_by('-created_at')
+    paginator = Paginator(subscriptions_qs, 10)
+    page_num = request.GET.get('page', 1)
+    try:
+        subscriptions = paginator.page(page_num)
+    except (EmptyPage, PageNotAnInteger):
+        subscriptions = paginator.page(1)
+    page_range = paginator.get_elided_page_range(subscriptions.number, on_each_side=2, on_ends=1)
+    return render(request, 'superadmin/subscriptions.html', {'subscriptions': subscriptions, 'page_range': page_range})
 
 @sa_required
 def super_admin_subscription_create(request):
@@ -740,8 +775,15 @@ def super_admin_subscription_delete(request, sub_id):
 # ─────────────────────────────────────────────
 @sa_required
 def super_admin_messages(request):
-    msgs = Message.objects.all().select_related('sender', 'receiver').order_by('-created_at')
-    return render(request, 'superadmin/messages.html', {'chat_messages': msgs})
+    msgs_qs = Message.objects.all().select_related('sender', 'receiver').order_by('-created_at')
+    paginator = Paginator(msgs_qs, 10)
+    page_num = request.GET.get('page', 1)
+    try:
+        msgs = paginator.page(page_num)
+    except (EmptyPage, PageNotAnInteger):
+        msgs = paginator.page(1)
+    page_range = paginator.get_elided_page_range(msgs.number, on_each_side=2, on_ends=1)
+    return render(request, 'superadmin/messages.html', {'chat_messages': msgs, 'page_range': page_range})
 
 @sa_required
 def super_admin_message_delete(request, msg_id):
@@ -819,8 +861,15 @@ def super_admin_landing_hero(request):
 # ── QUICK SERVICES CARDS ──────────────────────────────────────────────────────
 @sa_required
 def super_admin_landing_quick_services(request):
-    cards = QuickServiceCard.objects.all().order_by('order', '-created_at')
-    return render(request, 'superadmin/cms_quick_services.html', {'cards': cards})
+    cards_qs = QuickServiceCard.objects.all().order_by('order', '-created_at')
+    paginator = Paginator(cards_qs, 10)
+    page_num = request.GET.get('page', 1)
+    try:
+        cards = paginator.page(page_num)
+    except (EmptyPage, PageNotAnInteger):
+        cards = paginator.page(1)
+    page_range = paginator.get_elided_page_range(cards.number, on_each_side=2, on_ends=1)
+    return render(request, 'superadmin/cms_quick_services.html', {'cards': cards, 'page_range': page_range})
 
 @sa_required
 def super_admin_landing_quick_service_create(request):
@@ -875,8 +924,15 @@ def super_admin_landing_quick_service_toggle(request, card_id):
 # ── FEATURED PROJECTS (BIDDING SHOWCASE) ──────────────────────────────────────
 @sa_required
 def super_admin_landing_featured_projects(request):
-    cards = FeaturedProjectCard.objects.all().order_by('order', '-created_at')
-    return render(request, 'superadmin/cms_featured_projects.html', {'cards': cards})
+    cards_qs = FeaturedProjectCard.objects.all().order_by('order', '-created_at')
+    paginator = Paginator(cards_qs, 10)
+    page_num = request.GET.get('page', 1)
+    try:
+        cards = paginator.page(page_num)
+    except (EmptyPage, PageNotAnInteger):
+        cards = paginator.page(1)
+    page_range = paginator.get_elided_page_range(cards.number, on_each_side=2, on_ends=1)
+    return render(request, 'superadmin/cms_featured_projects.html', {'cards': cards, 'page_range': page_range})
 
 @sa_required
 def super_admin_landing_featured_project_create(request):
@@ -931,8 +987,15 @@ def super_admin_landing_featured_project_toggle(request, card_id):
 # ── PACKAGES & PRICING ────────────────────────────────────────────────────────
 @sa_required
 def super_admin_landing_packages(request):
-    packages = PackageCard.objects.all().order_by('order', '-created_at')
-    return render(request, 'superadmin/cms_packages.html', {'packages': packages})
+    packages_qs = PackageCard.objects.all().order_by('order', '-created_at')
+    paginator = Paginator(packages_qs, 10)
+    page_num = request.GET.get('page', 1)
+    try:
+        packages = paginator.page(page_num)
+    except (EmptyPage, PageNotAnInteger):
+        packages = paginator.page(1)
+    page_range = paginator.get_elided_page_range(packages.number, on_each_side=2, on_ends=1)
+    return render(request, 'superadmin/cms_packages.html', {'packages': packages, 'page_range': page_range})
 
 @sa_required
 def super_admin_landing_package_create(request):
@@ -987,8 +1050,15 @@ def super_admin_landing_package_toggle(request, card_id):
 # ── TESTIMONIALS ──────────────────────────────────────────────────────────────
 @sa_required
 def super_admin_landing_testimonials(request):
-    testimonials = Testimonial.objects.all().order_by('order', '-created_at')
-    return render(request, 'superadmin/cms_testimonials.html', {'testimonials': testimonials})
+    testimonials_qs = Testimonial.objects.all().order_by('order', '-created_at')
+    paginator = Paginator(testimonials_qs, 10)
+    page_num = request.GET.get('page', 1)
+    try:
+        testimonials = paginator.page(page_num)
+    except (EmptyPage, PageNotAnInteger):
+        testimonials = paginator.page(1)
+    page_range = paginator.get_elided_page_range(testimonials.number, on_each_side=2, on_ends=1)
+    return render(request, 'superadmin/cms_testimonials.html', {'testimonials': testimonials, 'page_range': page_range})
 
 @sa_required
 def super_admin_landing_testimonial_create(request):
