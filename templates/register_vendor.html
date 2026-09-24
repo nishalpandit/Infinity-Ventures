@@ -3,417 +3,648 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Register as Vendor - Infinity Dashboard</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Register as Partner - Infinity Ventures</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
   <style>
     :root {
-      --primary: #6366f1;
-      --primary-hover: #4f46e5;
-      --bg-gradient: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%);
-      --glass-bg: rgba(255, 255, 255, 0.05);
-      --glass-border: rgba(255, 255, 255, 0.1);
-      --text-main: #f8fafc;
-      --text-muted: #94a3b8;
+      --indigo: #4F46E5;
+      --indigo-dark: #4338CA;
+      --indigo-light: #EEF2FF;
+      --indigo-border: #C7D2FE;
+
+      --emerald: #059669;
+      --emerald-dark: #047857;
+      --emerald-light: #ECFDF5;
+      --emerald-border: #A7F3D0;
+
+      --amber: #D97706;
+      --amber-light: #FEF3C7;
+      --amber-border: #FDE68A;
+
+      --rose: #E11D48;
+      --rose-light: #FFF1F2;
+      --rose-border: #FECDD3;
+
+      --ink: #111827;
+      --navy: #1F2937;
+      --slate: #374151;
+      --muted: #4B5563;
+      --subtle: #6B7280;
+      --line: #E5E7EB;
+      --line-soft: #F3F4F6;
+      --bg: #F9FAFB;
+      --card-bg: #FFFFFF;
+
+      --radius-sm: 8px;
+      --radius-md: 12px;
+      --radius-lg: 20px;
     }
-    body {
+
+    * {
+      box-sizing: border-box;
       margin: 0;
       padding: 0;
-      font-family: 'Inter', sans-serif;
-      background: linear-gradient(rgba(15, 23, 42, 0.7), rgba(30, 27, 75, 0.7)), url("{% static 'assets/images/image.png' %}") no-repeat center center fixed;
-      background-size: cover;
-      color: var(--text-main);
-      height: 100vh;
+    }
+
+    body {
+      font-family: 'Plus Jakarta Sans', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: #F3F4F6;
+      color: var(--slate);
+      min-height: 100vh;
       display: flex;
       align-items: center;
       justify-content: center;
-      overflow: hidden;
-    }
-    
-    .blob {
-      position: absolute;
-      border-radius: 50%;
-      filter: blur(80px);
-      z-index: 0;
-      animation: float 10s ease-in-out infinite alternate;
-    }
-    .blob-1 { width: 400px; height: 400px; background: rgba(99, 102, 241, 0.4); top: -100px; left: -100px; animation-delay: 0s; }
-    .blob-2 { width: 300px; height: 300px; background: rgba(236, 72, 153, 0.3); bottom: -50px; right: -50px; animation-delay: 2s; }
-    
-    @keyframes float {
-      0% { transform: translate(0, 0); }
-      100% { transform: translate(30px, 30px); }
+      padding: 36px 16px;
     }
 
-    .login-wrapper {
-      position: relative;
-      z-index: 1;
-      background: rgba(30, 27, 75, 0.4);
-      backdrop-filter: blur(12px);
-      border: 1px solid var(--glass-border);
-      border-radius: 24px;
-      padding: 24px;
-      width: 90%;
-      max-width: 800px;
-      transform: translateY(20px);
-      opacity: 0;
-      animation: slideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-      max-height: 90vh;
-      overflow-y: auto;
-    }
-     
-    @keyframes slideUp {
-      to { transform: translateY(0); opacity: 1; }
+    /* Main Form Container */
+    .vendor-card {
+      width: 100%;
+      max-width: 820px;
+      background: var(--card-bg);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-lg);
+      padding: 36px 32px;
+      box-shadow: 0 16px 40px -10px rgba(15, 23, 42, 0.08), 0 2px 6px rgba(15, 23, 42, 0.03);
     }
 
-    .login-wrapper::-webkit-scrollbar { width: 6px; }
-    .login-wrapper::-webkit-scrollbar-track { background: transparent; }
-    .login-wrapper::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 10px; }
-
-    .logo-area {
-      text-align: center;
+    /* Top Nav */
+    .nav-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
       margin-bottom: 24px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--line);
     }
-    .logo-area .icon {
-      font-size: 32px;
-      background: -webkit-linear-gradient(45deg, #c084fc, #818cf8);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
+    .back-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--muted);
+      text-decoration: none;
+      font-size: 13.5px;
+      font-weight: 600;
+      padding: 6px 14px;
+      background: var(--bg);
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      transition: all 0.2s ease;
+    }
+    .back-btn:hover {
+      background: var(--line-soft);
+      color: var(--ink);
+      border-color: #D1D5DB;
+    }
+    .brand-mark {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--indigo);
+      letter-spacing: -0.2px;
+    }
+
+    /* Header */
+    .header-area {
+      text-align: center;
+      margin-bottom: 28px;
+    }
+    .partner-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      background: var(--emerald-light);
+      border: 1px solid var(--emerald-border);
+      color: var(--emerald);
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      padding: 5px 14px;
+      border-radius: 999px;
+      margin-bottom: 14px;
+    }
+    .header-area h1 {
+      font-size: 26px;
+      font-weight: 800;
+      color: var(--ink);
+      letter-spacing: -0.6px;
       margin-bottom: 8px;
     }
-    .logo-area h1 {
-      margin: 0;
-      font-size: 24px;
-      font-weight: 700;
-      letter-spacing: -0.5px;
-    }
-    .logo-area p {
-      margin: 8px 0 0;
-      color: var(--text-muted);
-      font-size: 14px;
+    .header-area p {
+      color: var(--subtle);
+      font-size: 14.5px;
+      max-width: 540px;
+      margin: 0 auto;
+      line-height: 1.55;
     }
 
+    /* Trust Chips */
+    .perks-row {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 18px;
+    }
+    .perk-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 14px;
+      border-radius: 999px;
+      font-size: 12.5px;
+      font-weight: 600;
+    }
+    .perk-leads {
+      background: var(--indigo-light);
+      border: 1px solid var(--indigo-border);
+      color: #3730A3;
+    }
+    .perk-escrow {
+      background: var(--emerald-light);
+      border: 1px solid var(--emerald-border);
+      color: #065F46;
+    }
+    .perk-fee {
+      background: var(--amber-light);
+      border: 1px solid var(--amber-border);
+      color: #92400E;
+    }
+
+    /* Alert messages */
+    .alert-box {
+      padding: 12px 16px;
+      border-radius: var(--radius-md);
+      font-size: 13.5px;
+      font-weight: 600;
+      margin-bottom: 22px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .alert-error {
+      background: var(--rose-light);
+      border: 1px solid var(--rose-border);
+      color: var(--rose);
+    }
+    .alert-success {
+      background: var(--emerald-light);
+      border: 1px solid var(--emerald-border);
+      color: var(--emerald);
+    }
+
+    /* Section Headers */
+    .section-heading {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      font-size: 13px;
+      font-weight: 800;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      margin: 26px 0 16px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--line);
+    }
+    .sec-personal { color: var(--indigo); border-color: var(--indigo-border); }
+    .sec-work { color: var(--emerald); border-color: var(--emerald-border); }
+    .sec-security { color: var(--slate); border-color: var(--line); }
+
+    /* Form Grid */
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 16px 18px;
+    }
+    .form-group.full-width {
+      grid-column: 1 / -1;
+    }
+    @media (max-width: 680px) {
+      .form-grid {
+        grid-template-columns: 1fr;
+      }
+      .vendor-card {
+        padding: 26px 18px;
+        border-radius: 16px;
+      }
+      .header-area h1 {
+        font-size: 22px;
+      }
+    }
+
+    /* Inputs */
     .form-group {
-      margin-bottom: 12px;
       position: relative;
     }
     .form-group label {
       display: block;
       margin-bottom: 6px;
-      font-size: 13px;
-      font-weight: 500;
-      color: var(--text-muted);
-      transition: color 0.3s ease;
+      font-size: 12.5px;
+      font-weight: 700;
+      color: var(--navy);
+    }
+    .form-group label em {
+      color: var(--rose);
+      font-style: normal;
+      margin-left: 2px;
+    }
+    .input-wrap {
+      position: relative;
     }
     .form-control {
       width: 100%;
-      box-sizing: border-box;
-      background: rgba(0, 0, 0, 0.2);
-      border: 1px solid var(--glass-border);
-      color: var(--text-main);
-      padding: 12px 16px 12px 48px;
-      border-radius: 12px;
+      background: var(--bg);
+      border: 1px solid var(--line);
+      color: var(--ink);
+      padding: 12px 14px 12px 42px;
+      border-radius: var(--radius-md);
       font-family: inherit;
       font-size: 14px;
-      transition: all 0.3s ease;
+      font-weight: 500;
       outline: none;
+      transition: all 0.15s ease;
+    }
+    .form-control::placeholder {
+      color: #9CA3AF;
+      font-weight: 400;
+    }
+    .form-control:hover {
+      border-color: #D1D5DB;
+      background: #FFFFFF;
     }
     .form-control:focus {
-      border-color: var(--primary);
-      background: rgba(0, 0, 0, 0.4);
-      box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.1);
+      border-color: var(--indigo);
+      background: #FFFFFF;
+      box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.12);
     }
-    .form-group .icon-left {
+
+    /* Icons */
+    .icon-left {
       position: absolute;
       left: 14px;
-      top: 36px;
-      color: var(--text-muted);
+      top: 50%;
+      transform: translateY(-50%);
+      color: #9CA3AF;
       font-size: 14px;
-      transition: color 0.3s ease;
+      pointer-events: none;
+      transition: color 0.15s ease;
     }
-    .form-control:focus + .icon-left, .form-control:focus ~ .icon-left {
-      color: var(--primary);
+    .form-control:focus + .icon-left,
+    .form-control:focus ~ .icon-left {
+      color: var(--indigo);
     }
-    
-    .form-group .icon-right {
+
+    .icon-right {
       position: absolute;
       right: 14px;
-      top: 36px;
-      color: var(--text-muted);
+      top: 50%;
+      transform: translateY(-50%);
+      color: #9CA3AF;
       font-size: 14px;
       cursor: pointer;
-      transition: color 0.3s ease;
-      z-index: 10;
+      padding: 4px;
+      transition: color 0.15s ease;
     }
-    .form-group .icon-right:hover {
-      color: var(--text-main);
+    .icon-right:hover {
+      color: var(--ink);
     }
-    
+
+    /* Select */
     select.form-control {
       appearance: none;
       -webkit-appearance: none;
       -moz-appearance: none;
+      cursor: pointer;
+      padding-right: 38px;
     }
     select.form-control option {
-      background: #1e1b4b;
-      color: #fff;
+      background: #FFFFFF;
+      color: var(--ink);
     }
-    .form-group i.icon-chevron {
+    select.form-control:disabled {
+      background: #F3F4F6;
+      color: #9CA3AF;
+      cursor: not-allowed;
+    }
+    .icon-chevron {
       position: absolute;
       right: 14px;
-      top: 36px;
-      color: var(--text-muted);
+      top: 50%;
+      transform: translateY(-50%);
+      color: #9CA3AF;
       pointer-events: none;
       font-size: 12px;
     }
-    
-    .form-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-      gap: 12px;
+
+    /* File upload */
+    input[type="file"].form-control {
+      padding: 8px 12px 8px 42px;
+      font-size: 13px;
+      cursor: pointer;
     }
-    .form-group.full-width {
-      grid-column: 1 / -1;
+    input[type="file"]::file-selector-button {
+      background: var(--indigo-light);
+      border: 1px solid var(--indigo-border);
+      color: var(--indigo);
+      padding: 5px 12px;
+      border-radius: 6px;
+      font-family: inherit;
+      font-size: 12px;
+      font-weight: 700;
+      margin-right: 10px;
+      cursor: pointer;
+      transition: all 0.15s ease;
     }
-    .form-group {
-      margin-bottom: 12px;
-    }
-    @media (max-width: 600px) {
-      .form-grid {
-        grid-template-columns: 1fr;
-      }
+    input[type="file"]::file-selector-button:hover {
+      background: var(--indigo);
+      color: #FFFFFF;
+      border-color: var(--indigo);
     }
 
+    /* Submit Button */
     .btn-submit {
       width: 100%;
-      background: var(--primary);
-      color: white;
+      background: var(--indigo);
+      color: #FFFFFF;
       border: none;
-      padding: 14px;
-      border-radius: 12px;
+      padding: 14px 20px;
+      border-radius: var(--radius-md);
       font-family: inherit;
-      font-size: 16px;
-      font-weight: 600;
+      font-size: 15.5px;
+      font-weight: 700;
+      letter-spacing: 0.2px;
       cursor: pointer;
-      transition: all 0.3s ease;
-      margin-top: 10px;
+      transition: all 0.2s ease;
+      margin-top: 26px;
       display: flex;
       justify-content: center;
       align-items: center;
       gap: 10px;
+      box-shadow: 0 4px 14px rgba(79, 70, 229, 0.25);
     }
     .btn-submit:hover {
-      background: var(--primary-hover);
-      transform: translateY(-2px);
-      box-shadow: 0 10px 20px -10px var(--primary);
+      background: var(--indigo-dark);
+      transform: translateY(-1px);
+      box-shadow: 0 8px 20px -2px rgba(79, 70, 229, 0.35);
     }
     .btn-submit:active {
       transform: translateY(0);
     }
-    
-    .error-msg {
-      background: rgba(239, 68, 68, 0.1);
-      border: 1px solid rgba(239, 68, 68, 0.2);
-      color: #fca5a5;
-      padding: 12px;
-      border-radius: 8px;
-      font-size: 14px;
-      margin-bottom: 16px;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-    
-    .success-msg {
-      background: rgba(34, 197, 94, 0.1);
-      border: 1px solid rgba(34, 197, 94, 0.2);
-      color: #86efac;
-      padding: 12px;
-      border-radius: 8px;
-      font-size: 14px;
-      margin-bottom: 16px;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
 
-    .demo-creds {
+    /* Footer */
+    .footer-auth {
       margin-top: 24px;
       text-align: center;
-      font-size: 14px;
-      color: var(--text-muted);
-      border-top: 1px solid var(--glass-border);
-      padding-top: 16px;
+      font-size: 13.5px;
+      color: var(--subtle);
+      border-top: 1px solid var(--line);
+      padding-top: 18px;
     }
-    .demo-creds a {
-      color: var(--primary);
+    .footer-auth a {
+      color: var(--indigo);
       text-decoration: none;
-      font-weight: 600;
-      transition: color 0.2s;
+      font-weight: 700;
+      margin-left: 4px;
     }
-    .demo-creds a:hover {
-      color: var(--primary-hover);
+    .footer-auth a:hover {
+      text-decoration: underline;
     }
   </style>
 </head>
 <body>
-  <div class="blob blob-1"></div>
-  <div class="blob blob-2"></div>
 
-  <div class="login-wrapper">
-    <div class="logo-area">
-      <div class="icon"><i class="fa-solid fa-store"></i></div>
-      <h1>Create Vendor Account</h1>
-      <p>Offer services and grow your business</p>
+  <div class="vendor-card">
+    <!-- Top Navigation -->
+    <div class="nav-bar">
+      <a href="/" class="back-btn">
+        <i class="fa-solid fa-arrow-left"></i> Home
+      </a>
+      <span class="brand-mark">Infinity Ventures</span>
     </div>
 
+    <!-- Header area -->
+    <div class="header-area">
+      <div class="partner-pill">
+        <i class="fa-solid fa-shield-halved"></i> Service Partner Onboarding
+      </div>
+      <h1>Create Vendor Account</h1>
+      <p>Join our marketplace as a verified service provider. Receive customer leads, post bids, and grow your service business.</p>
+
+      <!-- Trust perks -->
+      <div class="perks-row">
+        <div class="perk-chip perk-leads">
+          <i class="fa-solid fa-bolt"></i> Verified Job Leads
+        </div>
+        <div class="perk-chip perk-escrow">
+          <i class="fa-solid fa-shield-check"></i> Escrow Protection
+        </div>
+        <div class="perk-chip perk-fee">
+          <i class="fa-solid fa-coins"></i> 0% Listing Fee
+        </div>
+      </div>
+    </div>
+
+    <!-- Error/Success Alerts -->
     {% if error %}
-    <div class="error-msg">
+    <div class="alert-box alert-error">
       <i class="fa-solid fa-circle-exclamation"></i>
-      {{ error }}
+      <span>{{ error }}</span>
     </div>
     {% endif %}
     {% if success %}
-    <div class="success-msg">
+    <div class="alert-box alert-success">
       <i class="fa-solid fa-circle-check"></i>
-      {{ success }}
+      <span>{{ success }}</span>
     </div>
     {% endif %}
 
+    <!-- Registration Form -->
     <form method="POST" action="" enctype="multipart/form-data">
       {% csrf_token %}
-      
+
+      <!-- Section 1: Personal & Contact Details -->
+      <div class="section-heading sec-personal">
+        <i class="fa-solid fa-user"></i> Personal &amp; Contact Details
+      </div>
+
       <div class="form-grid">
         <div class="form-group full-width">
-          <label for="name">Full Name</label>
-          <input type="text" id="name" name="name" class="form-control" placeholder="Enter your full name" required value="{{ request.POST.name }}">
-          <i class="fa-solid fa-user icon-left"></i>
-        </div>
-        
-        <div class="form-group">
-          <label for="email">Email Address</label>
-          <input type="email" id="email" name="email" class="form-control" placeholder="Enter your email address" required value="{{ request.POST.email }}">
-          <i class="fa-solid fa-envelope icon-left"></i>
-        </div>
-        
-        <div class="form-group">
-          <label for="mobile">Mobile Number</label>
-          <input type="text" id="mobile" name="mobile" class="form-control" placeholder="Enter your mobile number" required value="{{ request.POST.mobile }}">
-          <i class="fa-solid fa-phone icon-left"></i>
-        </div>
-        
-        <div class="form-group">
-          <label for="dob">Date of Birth</label>
-          <input type="date" id="dob" name="dob" class="form-control" required value="{{ request.POST.dob }}">
-          <i class="fa-solid fa-calendar icon-left"></i>
-        </div>
-        
-        <div class="form-group">
-          <label for="gender">Gender</label>
-          <select id="gender" name="gender" class="form-control" required>
-            <option value="" disabled selected>Select gender</option>
-            <option value="Male">Male</option>
-            <option value="Female">Female</option>
-            <option value="Other">Other</option>
-          </select>
-          <i class="fa-solid fa-venus-mars icon-left"></i>
-          <i class="fa-solid fa-chevron-down icon-chevron"></i>
+          <label for="name">Full Name <em>*</em></label>
+          <div class="input-wrap">
+            <input type="text" id="name" name="name" class="form-control" placeholder="Enter your full name" required value="{{ request.POST.name }}">
+            <i class="fa-solid fa-user icon-left"></i>
+          </div>
         </div>
 
         <div class="form-group">
-          <label for="experience">Years of Experience</label>
-          <input type="number" id="experience" name="experience" class="form-control" placeholder="E.g., 5" min="0" required value="{{ request.POST.experience }}">
-          <i class="fa-solid fa-briefcase icon-left"></i>
+          <label for="email">Email Address <em>*</em></label>
+          <div class="input-wrap">
+            <input type="email" id="email" name="email" class="form-control" placeholder="e.g. rajesh@example.com" required value="{{ request.POST.email }}">
+            <i class="fa-solid fa-envelope icon-left"></i>
+          </div>
         </div>
 
         <div class="form-group">
-          <label for="id_proof">Aadhaar / ID Proof No.</label>
-          <input type="text" id="id_proof" name="id_proof" class="form-control" placeholder="Enter ID proof number" required value="{{ request.POST.id_proof }}">
-          <i class="fa-solid fa-id-card-clip icon-left"></i>
+          <label for="mobile">Mobile Number <em>*</em></label>
+          <div class="input-wrap">
+            <input type="tel" id="mobile" name="mobile" class="form-control" placeholder="10-digit mobile number" required value="{{ request.POST.mobile }}">
+            <i class="fa-solid fa-phone icon-left"></i>
+          </div>
         </div>
 
+        <div class="form-group">
+          <label for="dob">Date of Birth <em>*</em></label>
+          <div class="input-wrap">
+            <input type="date" id="dob" name="dob" class="form-control" required value="{{ request.POST.dob }}">
+            <i class="fa-solid fa-calendar icon-left"></i>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="gender">Gender <em>*</em></label>
+          <div class="input-wrap">
+            <select id="gender" name="gender" class="form-control" required>
+              <option value="" disabled selected>Select gender</option>
+              <option value="Male" {% if request.POST.gender == 'Male' %}selected{% endif %}>Male</option>
+              <option value="Female" {% if request.POST.gender == 'Female' %}selected{% endif %}>Female</option>
+              <option value="Other" {% if request.POST.gender == 'Other' %}selected{% endif %}>Other</option>
+            </select>
+            <i class="fa-solid fa-venus-mars icon-left"></i>
+            <i class="fa-solid fa-chevron-down icon-chevron"></i>
+          </div>
+        </div>
+      </div>
+
+      <!-- Section 2: Experience & Verification -->
+      <div class="section-heading sec-work">
+        <i class="fa-solid fa-briefcase"></i> Experience &amp; Verification
+      </div>
+
+      <div class="form-grid">
+        <div class="form-group">
+          <label for="experience">Years of Experience <em>*</em></label>
+          <div class="input-wrap">
+            <input type="number" id="experience" name="experience" class="form-control" placeholder="E.g., 5" min="0" required value="{{ request.POST.experience }}">
+            <i class="fa-solid fa-briefcase icon-left"></i>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="id_proof">Aadhaar / ID Proof No. <em>*</em></label>
+          <div class="input-wrap">
+            <input type="text" id="id_proof" name="id_proof" class="form-control" placeholder="Enter ID proof number" required value="{{ request.POST.id_proof }}">
+            <i class="fa-solid fa-id-card-clip icon-left"></i>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="category">Main Service Category <em>*</em></label>
+          <div class="input-wrap">
+            <select id="category" name="category" class="form-control" required>
+              <option value="" disabled selected>Select a category</option>
+              {% for cat in categories %}
+              <option value="{{ cat.name }}" {% if request.POST.category == cat.name %}selected{% endif %}>{{ cat.name }}</option>
+              {% endfor %}
+              <option value="Other" {% if request.POST.category == 'Other' %}selected{% endif %}>Other / General Services</option>
+            </select>
+            <i class="fa-solid fa-tags icon-left"></i>
+            <i class="fa-solid fa-chevron-down icon-chevron"></i>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="profile_image">Profile Photo / Logo (Optional)</label>
+          <div class="input-wrap">
+            <input type="file" id="profile_image" name="profile_image" class="form-control" accept="image/*">
+            <i class="fa-solid fa-image icon-left"></i>
+          </div>
+        </div>
+      </div>
+
+      <!-- Section 3: Location & Account Security -->
+      <div class="section-heading sec-security">
+        <i class="fa-solid fa-map-pin"></i> Location &amp; Account Security
+      </div>
+
+      <div class="form-grid">
         <div class="form-group full-width">
-          <label for="address">Full Address</label>
-          <input type="text" id="address" name="address" class="form-control" placeholder="Enter your street address" required value="{{ request.POST.address }}">
-          <i class="fa-solid fa-home icon-left"></i>
+          <label for="address">Full Street Address <em>*</em></label>
+          <div class="input-wrap">
+            <input type="text" id="address" name="address" class="form-control" placeholder="Flat / Office No., Street, Landmark" required value="{{ request.POST.address }}">
+            <i class="fa-solid fa-location-dot icon-left"></i>
+          </div>
         </div>
 
-        <div class="form-group full-width">
-          <label for="profile_image">Profile Image (Optional)</label>
-          <input type="file" id="profile_image" name="profile_image" class="form-control" accept="image/*" style="padding-left:45px; padding-top:10px;">
-          <i class="fa-solid fa-image icon-left"></i>
-        </div>
-        
-        <div class="form-group full-width">
-          <label for="category">Main Service Category</label>
-          <select id="category" name="category" class="form-control" required>
-            <option value="" disabled selected>Select a category</option>
-            {% for cat in categories %}
-            <option value="{{ cat.name }}">{{ cat.name }}</option>
-            {% endfor %}
-            <option value="Other">Other / Multiple</option>
-          </select>
-          <i class="fa-solid fa-tags icon-left"></i>
-          <i class="fa-solid fa-chevron-down icon-chevron"></i>
-        </div>
-        
         <div class="form-group">
-          <label for="state">State</label>
-          <select id="state" name="state" class="form-control" required onchange="updateCities()">
-            <option value="" disabled selected>Select your state</option>
-            {% for state in states %}
-            <option value="{{ state }}">{{ state }}</option>
-            {% endfor %}
-          </select>
-          <i class="fa-solid fa-map icon-left"></i>
-          <i class="fa-solid fa-chevron-down icon-chevron"></i>
+          <label for="state">State <em>*</em></label>
+          <div class="input-wrap">
+            <select id="state" name="state" class="form-control" required onchange="updateCities()">
+              <option value="" disabled selected>Select your state</option>
+              {% for state in states %}
+              <option value="{{ state }}" {% if request.POST.state == state %}selected{% endif %}>{{ state }}</option>
+              {% endfor %}
+            </select>
+            <i class="fa-solid fa-map icon-left"></i>
+            <i class="fa-solid fa-chevron-down icon-chevron"></i>
+          </div>
         </div>
-        
+
         <div class="form-group">
-          <label for="city">City</label>
-          <select id="city" name="city" class="form-control" required disabled>
-            <option value="" disabled selected>Select your city</option>
-          </select>
-          <i class="fa-solid fa-location-dot icon-left"></i>
-          <i class="fa-solid fa-chevron-down icon-chevron"></i>
+          <label for="city">City <em>*</em></label>
+          <div class="input-wrap">
+            <select id="city" name="city" class="form-control" required disabled>
+              <option value="" disabled selected>Select state first</option>
+            </select>
+            <i class="fa-solid fa-city icon-left"></i>
+            <i class="fa-solid fa-chevron-down icon-chevron"></i>
+          </div>
         </div>
-        
+
         <div class="form-group">
-          <label for="password">Password</label>
-          <input type="password" id="password" name="password" class="form-control" placeholder="Create password" required>
-          <i class="fa-solid fa-lock icon-left"></i>
-          <i class="fa-solid fa-eye icon-right" onclick="togglePassword('password', this)"></i>
+          <label for="password">Password <em>*</em></label>
+          <div class="input-wrap">
+            <input type="password" id="password" name="password" class="form-control" placeholder="Create strong password" required>
+            <i class="fa-solid fa-lock icon-left"></i>
+            <i class="fa-solid fa-eye icon-right" onclick="togglePassword('password', this)" title="Toggle password visibility"></i>
+          </div>
         </div>
-        
+
         <div class="form-group">
-          <label for="confirm_password">Confirm Password</label>
-          <input type="password" id="confirm_password" name="confirm_password" class="form-control" placeholder="Confirm password" required>
-          <i class="fa-solid fa-lock-open icon-left"></i>
-          <i class="fa-solid fa-eye icon-right" onclick="togglePassword('confirm_password', this)"></i>
+          <label for="confirm_password">Confirm Password <em>*</em></label>
+          <div class="input-wrap">
+            <input type="password" id="confirm_password" name="confirm_password" class="form-control" placeholder="Re-enter password" required>
+            <i class="fa-solid fa-lock-open icon-left"></i>
+            <i class="fa-solid fa-eye icon-right" onclick="togglePassword('confirm_password', this)" title="Toggle password visibility"></i>
+          </div>
         </div>
       </div>
 
       <button type="submit" class="btn-submit">
-        Create Vendor Account <i class="fa-solid fa-arrow-right"></i>
+        <span>Complete Partner Registration</span>
+        <i class="fa-solid fa-arrow-right"></i>
       </button>
     </form>
-    
-    <div class="demo-creds">
-      Already have an account? <a href="{% url 'login' %}">Sign in</a>
+
+    <!-- Footer -->
+    <div class="footer-auth">
+      Already registered as a partner?
+      <a href="{% url 'login' %}">Sign in to Partner Dashboard</a>
     </div>
   </div>
 
   <script>
     const locationsData = {{ locations_json|safe }};
-    
+
     function updateCities() {
       const stateSelect = document.getElementById('state');
       const citySelect = document.getElementById('city');
       const selectedState = stateSelect.value;
-      
+
       citySelect.innerHTML = '<option value="" disabled selected>Select your city</option>';
-      
+
       if (selectedState && locationsData[selectedState]) {
         citySelect.disabled = false;
         locationsData[selectedState].forEach(city => {
@@ -426,7 +657,7 @@
         citySelect.disabled = true;
       }
     }
-    
+
     function togglePassword(inputId, icon) {
       const input = document.getElementById(inputId);
       if (input.type === "password") {
@@ -439,6 +670,19 @@
         icon.classList.add("fa-eye");
       }
     }
+
+    // Auto-populate cities if state was previously selected on validation error
+    window.addEventListener('DOMContentLoaded', () => {
+      const stateSelect = document.getElementById('state');
+      if (stateSelect && stateSelect.value) {
+        updateCities();
+        const prevCity = "{{ request.POST.city|default:'' }}";
+        if (prevCity) {
+          const citySelect = document.getElementById('city');
+          citySelect.value = prevCity;
+        }
+      }
+    });
   </script>
 </body>
 </html>
