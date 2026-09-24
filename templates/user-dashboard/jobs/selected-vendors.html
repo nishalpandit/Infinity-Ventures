@@ -53,10 +53,21 @@
             <div class="assignment-head">
               <span class="avatar md vendor">{{ bid.vendor.first_name|slice:":2"|upper|default:"VN" }}</span>
               <div>
-                <h3>{{ bid.vendor.vendor_profile.company_name|default:bid.vendor.get_full_name|default:bid.vendor.username }}</h3>
+                <h3 style="display:flex;align-items:center;gap:8px;">
+                  {{ bid.vendor.vendor_profile.company_name|default:bid.vendor.get_full_name|default:bid.vendor.username }}
+                  {% if bid.vendor.kyc_document and bid.vendor.kyc_document.status == 'approved' %}
+                  <span class="badge" style="background:#ecfdf5; color:#065f46; border:1px solid #a7f3d0; font-size:10px; padding:2px 7px;" title="KYC Verified Pro Vendor">
+                    <span data-icon="award"></span> Verified Pro
+                  </span>
+                  {% endif %}
+                </h3>
                 <div class="small muted">{{ bid.vendor.vendor_profile.category|default:"Contractor" }} · Quotation: <strong>₹{{ bid.amount|floatformat:0 }}</strong> · ★ {{ bid.vendor.vendor_profile.rating|default:"4.8" }}</div>
               </div>
+              {% if bid.status == 'completed' %}
+              <span class="badge badge-completed"><span data-icon="check"></span> Completed</span>
+              {% else %}
               <span class="badge assignment-status badge-selected">Selected</span>
+              {% endif %}
             </div>
 
             <div class="assignment-grid" style="padding: 16px 0;">
@@ -74,8 +85,23 @@
               </div>
             </div>
 
-            <div class="actions" style="justify-content:flex-end;margin-top:14px">
-              <a class="btn btn-primary" href="../messages/chat.html?vendor_id={{ bid.vendor.id }}"><span data-icon="chat"></span> Chat with Vendor</a>
+            <div class="actions" style="justify-content:flex-end;margin-top:14px;gap:8px;">
+              {% if bid.status == 'selected' %}
+              <form method="POST" style="display:inline;" onsubmit="return confirm('Confirm project completion and release payment settlement to vendor wallet?');">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="complete_and_settle">
+                {% if bid.job %}<input type="hidden" name="job_id" value="{{ bid.job.id }}">{% endif %}
+                {% if bid.quick_service %}<input type="hidden" name="quick_service_id" value="{{ bid.quick_service.id }}">{% endif %}
+                <button type="submit" class="btn btn-primary" style="background:#059669; border-color:#059669; color:#fff;">
+                  <span data-icon="check"></span> Mark as Completed &amp; Settle Payment
+                </button>
+              </form>
+              {% elif bid.status == 'completed' %}
+              <span class="badge badge-completed" style="background:rgba(16,185,129,0.12); color:#059669; border:1px solid rgba(16,185,129,0.3); padding:7px 14px; border-radius:8px; font-weight:650; display:inline-flex; align-items:center; gap:6px;">
+                <span data-icon="check"></span> Payment Settled via Wallet
+              </span>
+              {% endif %}
+              <a class="btn btn-secondary" href="../messages/chat.html?vendor_id={{ bid.vendor.id }}"><span data-icon="chat"></span> Chat with Vendor</a>
             </div>
           </article>
           {% empty %}

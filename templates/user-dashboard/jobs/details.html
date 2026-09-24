@@ -148,7 +148,14 @@
                         <div class="cell-user">
                           <span class="avatar sm vendor">{{ b.vendor.first_name|slice:":2"|upper|default:"VN" }}</span>
                           <div>
-                            <strong>{{ b.vendor.vendor_profile.company_name|default:b.vendor.get_full_name|default:b.vendor.username }}</strong>
+                            <div style="display:flex; align-items:center; gap:6px;">
+                              <strong>{{ b.vendor.vendor_profile.company_name|default:b.vendor.get_full_name|default:b.vendor.username }}</strong>
+                              {% if b.vendor.kyc_document and b.vendor.kyc_document.status == 'approved' %}
+                              <span class="badge" style="background:#ecfdf5; color:#065f46; border:1px solid #a7f3d0; font-size:9px; padding:2px 6px;" title="KYC Verified Pro">
+                                <span data-icon="award"></span> Verified Pro
+                              </span>
+                              {% endif %}
+                            </div>
                             <div class="small muted">★ {{ b.vendor.vendor_profile.rating|default:"4.8" }} · {{ b.vendor.vendor_profile.category|default:"Contractor" }}</div>
                           </div>
                         </div>
@@ -159,20 +166,32 @@
                       <td>
                         {% if b.status == 'selected' %}
                         <span class="badge badge-success">Selected</span>
+                        {% elif b.status == 'completed' %}
+                        <span class="badge badge-completed"><span data-icon="check"></span> Completed</span>
                         {% else %}
                         <span class="badge badge-open">{{ b.get_status_display }}</span>
                         {% endif %}
                       </td>
                       <td>
-                        {% if b.status != 'selected' %}
+                        {% if b.status == 'selected' %}
+                        <div style="display:flex; gap:6px; align-items:center;">
+                          <form method="POST" style="display:inline;" onsubmit="return confirm('Confirm project completion and release payment settlement to vendor wallet?');">
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="complete_and_settle">
+                            <input type="hidden" name="job_id" value="{{ job.id }}">
+                            <button class="btn btn-sm" type="submit" style="background:#059669; border-color:#059669; color:#fff;" title="Release settlement to vendor wallet">Complete &amp; Settle</button>
+                          </form>
+                          <a class="btn btn-soft btn-sm" href="../messages/chat.html?vendor_id={{ b.vendor.id }}">Chat</a>
+                        </div>
+                        {% elif b.status == 'completed' %}
+                        <span class="badge badge-completed" style="color:#059669; font-weight:600;"><span data-icon="check"></span> Settled</span>
+                        {% else %}
                         <form method="POST" style="display:inline;">
                           {% csrf_token %}
                           <input type="hidden" name="action" value="accept_vendor">
                           <input type="hidden" name="bid_id" value="{{ b.id }}">
                           <button class="btn btn-primary btn-sm" type="submit">Select Vendor</button>
                         </form>
-                        {% else %}
-                        <a class="btn btn-soft btn-sm" href="../messages/chat.html?vendor_id={{ b.vendor.id }}">Chat</a>
                         {% endif %}
                       </td>
                     </tr>

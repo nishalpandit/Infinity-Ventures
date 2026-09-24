@@ -36,11 +36,11 @@ def settle_job_completion(job=None, quick_service=None, vendor=None, custom_amou
         if is_job:
             vendor = target.assigned_vendor
             if not vendor:
-                sel_bid = Bid.objects.filter(job=job, status='selected').first()
+                sel_bid = Bid.objects.filter(job=job, status__in=['selected', 'completed']).first()
                 if sel_bid:
                     vendor = sel_bid.vendor
         else:
-            sel_bid = Bid.objects.filter(quick_service=quick_service, status='selected').first()
+            sel_bid = Bid.objects.filter(quick_service=quick_service, status__in=['selected', 'completed']).first()
             if sel_bid:
                 vendor = sel_bid.vendor
 
@@ -69,9 +69,9 @@ def settle_job_completion(job=None, quick_service=None, vendor=None, custom_amou
         # Check winning bid first
         sel_bid = None
         if is_job:
-            sel_bid = Bid.objects.filter(job=job, status='selected').first()
+            sel_bid = Bid.objects.filter(job=job, status__in=['selected', 'completed']).first()
         else:
-            sel_bid = Bid.objects.filter(quick_service=quick_service, status='selected').first()
+            sel_bid = Bid.objects.filter(quick_service=quick_service, status__in=['selected', 'completed']).first()
 
         if sel_bid and sel_bid.amount:
             gross_amount = Decimal(str(sel_bid.amount))

@@ -9,7 +9,8 @@ from django.template import TemplateDoesNotExist
 from .models import (
     VendorProfile, QuickService, Job, Bid, Subscription, Category, Location, 
     UserProfile, Message, GlobalSettings, SiteBranding, HeroSection, 
-    QuickServiceCard, FeaturedProjectCard, PackageCard, Testimonial, TrustMetric
+    QuickServiceCard, FeaturedProjectCard, PackageCard, Testimonial, TrustMetric,
+    VendorWallet, WalletTransaction, PayoutRequest, VendorKYC
 )
 
 User = get_user_model()
@@ -70,21 +71,32 @@ def get_user_dashboard_context(user):
     selected_vendors_jobs = Bid.objects.filter(job__user=user, status='selected').count()
     selected_vendors = selected_vendors_qs + selected_vendors_jobs
     
+    from .models import VendorKYC
+    approved_kyc_vendor_ids = set(VendorKYC.objects.filter(status='approved').values_list('vendor_id', flat=True))
+
     recent_qs = qs_list.select_related('category', 'location').order_by('-created_at')[:5]
     for qs in recent_qs:
         sel_bid = qs.bids.filter(status='selected').select_related('vendor', 'vendor__vendor_profile').first()
         if sel_bid:
             qs.selected_vendor_name = sel_bid.vendor.vendor_profile.company_name if hasattr(sel_bid.vendor, 'vendor_profile') and sel_bid.vendor.vendor_profile.company_name else (sel_bid.vendor.get_full_name() or sel_bid.vendor.username)
+            qs.is_vendor_verified = sel_bid.vendor_id in approved_kyc_vendor_ids
         else:
             qs.selected_vendor_name = None
+            qs.is_vendor_verified = False
 
     recent_jobs = job_list.select_related('category', 'location').order_by('-created_at')[:5]
     for j in recent_jobs:
-        sel_bid = j.bids.filter(status='selected').select_related('vendor', 'vendor__vendor_profile').first()
-        if sel_bid:
-            j.selected_vendor_name = sel_bid.vendor.vendor_profile.company_name if hasattr(sel_bid.vendor, 'vendor_profile') and sel_bid.vendor.vendor_profile.company_name else (sel_bid.vendor.get_full_name() or sel_bid.vendor.username)
+        sel_vendor = j.assigned_vendor
+        if not sel_vendor:
+            sel_bid = j.bids.filter(status='selected').select_related('vendor', 'vendor__vendor_profile').first()
+            if sel_bid:
+                sel_vendor = sel_bid.vendor
+        if sel_vendor:
+            j.selected_vendor_name = sel_vendor.vendor_profile.company_name if hasattr(sel_vendor, 'vendor_profile') and sel_vendor.vendor_profile.company_name else (sel_vendor.get_full_name() or sel_vendor.username)
+            j.is_vendor_verified = sel_vendor.id in approved_kyc_vendor_ids
         else:
             j.selected_vendor_name = None
+            j.is_vendor_verified = False
 
     activity_items = []
     bids = Bid.objects.filter(Q(job__user=user) | Q(quick_service__user=user)).select_related('vendor', 'vendor__vendor_profile', 'job', 'quick_service').order_by('-created_at')[:5]
@@ -127,8 +139,32 @@ def dashboard_view(request, path=''):
     if path.endswith('.html'):
         path = path[:-5]
 
-    if path in ['dashboard', 'admin-dashboard', 'admin-dashboard/dashboard', 'admin-dashboard/index']:
-        return admin_dashboard(request)
+    if request.method == 'POST' and request.POST.get('action') == 'complete_and_settle':
+        from .wallet_services import settle_job_completion
+        job_id = request.POST.get('job_id')
+        qs_id = request.POST.get('quick_service_id')
+        if job_id:
+            try:
+                j_obj = Job.objects.get(id=job_id)
+                if request.user.is_authenticated and (request.user == j_obj.user or request.user.role == 'ADMIN' or request.user == j_obj.assigned_vendor):
+                    settle_job_completion(job=j_obj)
+                    j_obj.status = 'completed'
+                    j_obj.save()
+                    Bid.objects.filter(job=j_obj, status='selected').update(status='completed')
+            except Job.DoesNotExist:
+                pass
+        elif qs_id:
+            try:
+                qs_obj = QuickService.objects.get(id=qs_id)
+                if request.user.is_authenticated and (request.user == qs_obj.user or request.user.role == 'ADMIN'):
+                    settle_job_completion(quick_service=qs_obj)
+                    qs_obj.status = 'completed'
+                    qs_obj.save()
+                    Bid.objects.filter(quick_service=qs_obj, status='selected').update(status='completed')
+            except QuickService.DoesNotExist:
+                pass
+        referer = request.META.get('HTTP_REFERER')
+        return redirect(referer if referer else '/user/dashboard')
 
     if request.method == 'POST' and request.POST.get('action') == 'accept_vendor':
         bid_id = request.POST.get('bid_id')
@@ -141,10 +177,22 @@ def dashboard_view(request, path=''):
                     b_obj.quick_service.status = 'selected'
                     b_obj.quick_service.save()
                 if b_obj.job:
+                    b_obj.job.assigned_vendor = b_obj.vendor
                     b_obj.job.status = 'selected'
                     b_obj.job.save()
             except Bid.DoesNotExist:
                 pass
+        referer = request.META.get('HTTP_REFERER')
+        return redirect(referer if referer else '/user/dashboard')
+
+    if path in ['dashboard', 'admin-dashboard', 'admin-dashboard/dashboard', 'admin-dashboard/index']:
+        return admin_dashboard(request)
+
+    if path in ['vendor/dashboard', 'vendor/index', 'vendor', 'infinity-vendor-dashboard/dashboard', 'infinity-vendor-dashboard/index', 'infinity-vendor-dashboard']:
+        return vendor_dashboard(request)
+
+    if path in ['user/dashboard', 'user/index', 'user', 'user-dashboard/dashboard', 'user-dashboard/index', 'user-dashboard']:
+        return user_dashboard(request)
         
     if request.method == 'POST' and path == 'user/quick-services/create':
         qs = QuickService(
@@ -568,7 +616,6 @@ def dashboard_view(request, path=''):
             context['kyc'] = kyc
 
     if path in ['vendor/wallet/index', 'vendor/wallet', 'vendor/wallet.html']:
-        from .models import VendorWallet, WalletTransaction, PayoutRequest, Job, QuickService
         from .wallet_services import get_or_create_wallet, request_payout, get_platform_commission_percent, settle_job_completion
         
         if not request.user.is_authenticated:
@@ -1584,9 +1631,9 @@ def dashboard_view(request, path=''):
     if 'user/jobs/selected-vendors' in path or 'jobs/selected-vendors' in mapped_path:
         job_id = request.GET.get('job_id') or request.GET.get('id')
         if job_id:
-            bids = Bid.objects.filter(job_id=job_id, status='selected').select_related('vendor', 'vendor__vendor_profile')
+            bids = Bid.objects.filter(job_id=job_id, status__in=['selected', 'completed']).select_related('vendor', 'vendor__vendor_profile', 'job')
         else:
-            bids = Bid.objects.filter(job__user=request.user, status='selected').select_related('vendor', 'vendor__vendor_profile', 'job')
+            bids = Bid.objects.filter(Q(job__user=request.user) | Q(quick_service__user=request.user), status__in=['selected', 'completed']).select_related('vendor', 'vendor__vendor_profile', 'job', 'quick_service')
         context['selected_bids'] = bids
 
     if 'user/vendors' in path or 'user-dashboard/vendors' in mapped_path:
@@ -1981,7 +2028,9 @@ def create_company_vendor_view(request):
     return redirect('/admin-dashboard/users/company-vendors.html')
 
 from datetime import datetime
+from django.contrib.auth.decorators import login_required
 
+@login_required
 def vendor_dashboard(request):
     user = request.user
     vendor_profile = getattr(user, 'vendor_profile', None)
@@ -2014,8 +2063,12 @@ def vendor_dashboard(request):
         })
 
     # Calculate dynamic stats
-    from .models import QuickService, Job, Bid
+    from .wallet_services import get_or_create_wallet
     from django.db.models import Sum
+
+    wallet = get_or_create_wallet(user)
+    kyc = VendorKYC.objects.filter(vendor=user).first()
+    pending_payouts_sum = PayoutRequest.objects.filter(vendor=user, status='pending').aggregate(total=Sum('amount'))['total'] or 0
 
     available_qs = QuickService.objects.filter(status='open').count()
     available_jobs = Job.objects.filter(status='open').count()
@@ -2042,6 +2095,14 @@ def vendor_dashboard(request):
         'selected_jobs': selected_bids_count,
         'completed_work': completed_bids_count,
         'total_earnings': float(earnings) if earnings else 0.0,
+        'wallet': wallet,
+        'wallet_balance': f"{wallet.available_balance:.2f}",
+        'total_earned': wallet.total_earned,
+        'total_withdrawn': wallet.total_withdrawn,
+        'pending_payouts_sum': pending_payouts_sum,
+        'kyc': kyc,
+        'is_kyc_verified': bool(kyc and kyc.status == 'approved'),
+        'recent_transactions': wallet.transactions.all().order_by('-created_at')[:4],
     })
 
     # Fetch recent items
@@ -2054,6 +2115,50 @@ from django.contrib.auth.decorators import login_required
 
 @login_required
 def user_dashboard(request):
+    if request.method == 'POST' and request.POST.get('action') == 'complete_and_settle':
+        from .wallet_services import settle_job_completion
+        job_id = request.POST.get('job_id')
+        qs_id = request.POST.get('quick_service_id')
+        if job_id:
+            try:
+                j_obj = Job.objects.get(id=job_id)
+                if request.user == j_obj.user or request.user.role == 'ADMIN' or request.user == j_obj.assigned_vendor:
+                    settle_job_completion(job=j_obj)
+                    j_obj.status = 'completed'
+                    j_obj.save()
+                    Bid.objects.filter(job=j_obj, status='selected').update(status='completed')
+            except Job.DoesNotExist:
+                pass
+        elif qs_id:
+            try:
+                qs_obj = QuickService.objects.get(id=qs_id)
+                if request.user == qs_obj.user or request.user.role == 'ADMIN':
+                    settle_job_completion(quick_service=qs_obj)
+                    qs_obj.status = 'completed'
+                    qs_obj.save()
+                    Bid.objects.filter(quick_service=qs_obj, status='selected').update(status='completed')
+            except QuickService.DoesNotExist:
+                pass
+        return redirect('/user/dashboard')
+
+    if request.method == 'POST' and request.POST.get('action') == 'accept_vendor':
+        bid_id = request.POST.get('bid_id')
+        if bid_id:
+            try:
+                b_obj = Bid.objects.get(id=bid_id)
+                b_obj.status = 'selected'
+                b_obj.save()
+                if b_obj.quick_service:
+                    b_obj.quick_service.status = 'selected'
+                    b_obj.quick_service.save()
+                if b_obj.job:
+                    b_obj.job.assigned_vendor = b_obj.vendor
+                    b_obj.job.status = 'selected'
+                    b_obj.job.save()
+            except Bid.DoesNotExist:
+                pass
+        return redirect('/user/dashboard')
+
     context = get_user_dashboard_context(request.user)
     return render(request, 'user-dashboard/dashboard.html', context)
 
