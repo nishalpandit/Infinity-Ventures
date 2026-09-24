@@ -8,7 +8,7 @@ from .models import (
     CustomUser, VendorProfile, UserProfile, Job, QuickService, 
     Category, GlobalSettings, Location, Bid, Subscription, Message,
     SiteBranding, HeroSection, QuickServiceCard, FeaturedProjectCard,
-    PackageCard, Testimonial, TrustMetric
+    PackageCard, Testimonial, TrustMetric, VendorKYC
 )
 from .cms_forms import (
     SiteBrandingForm, HeroSectionForm, QuickServiceCardForm,
@@ -1301,3 +1301,63 @@ def super_admin_landing_testimonial_toggle(request, card_id):
     django_messages.success(request, f'Testimonial for "{item.client_name}" status updated.')
     return redirect('super_admin_landing_testimonials')
 
+# ─────────────────────────────────────────────
+# KYC MANAGEMENT
+# ─────────────────────────────────────────────
+@sa_required
+def super_admin_kyc(request):
+    q = request.GET.get('q', '').strip()
+    status_filter = request.GET.get('status', '').strip()
+    page = request.GET.get('page', 1)
+
+    queryset = VendorKYC.objects.select_related('vendor', 'vendor__vendor_profile').all().order_by('-submitted_at')
+
+    if q:
+        queryset = queryset.filter(
+            Q(vendor__username__icontains=q) | 
+            Q(vendor__first_name__icontains=q) | 
+            Q(vendor__vendor_profile__company_name__icontains=q)
+        )
+    if status_filter:
+        queryset = queryset.filter(status=status_filter)
+
+    paginator = Paginator(queryset, 20)
+    try:
+        items = paginator.page(page)
+    except PageNotAnInteger:
+        items = paginator.page(1)
+    except EmptyPage:
+        items = paginator.page(paginator.num_pages)
+
+    context = {
+        'kyc_list': items,
+        'q': q,
+        'status_filter': status_filter,
+    }
+    return render(request, 'superadmin/kyc.html', context)
+
+@sa_required
+@require_POST
+def super_admin_kyc_approve(request, kyc_id):
+    kyc = get_object_or_404(VendorKYC, pk=kyc_id)
+    kyc.status = 'approved'
+    kyc.reviewed_by = request.user
+    from django.utils import timezone
+    kyc.reviewed_at = timezone.now()
+    kyc.save()
+    django_messages.success(request, f'KYC approved for {kyc.vendor.username}.')
+    return redirect('super_admin_kyc')
+
+@sa_required
+@require_POST
+def super_admin_kyc_reject(request, kyc_id):
+    kyc = get_object_or_404(VendorKYC, pk=kyc_id)
+    notes = request.POST.get('admin_notes', '').strip()
+    kyc.status = 'rejected'
+    kyc.admin_notes = notes
+    kyc.reviewed_by = request.user
+    from django.utils import timezone
+    kyc.reviewed_at = timezone.now()
+    kyc.save()
+    django_messages.success(request, f'KYC rejected for {kyc.vendor.username}.')
+    return redirect('super_admin_kyc')

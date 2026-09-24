@@ -42,6 +42,28 @@ class VendorProfile(models.Model):
     def __str__(self):
         return self.company_name or self.user.username
 
+class VendorKYC(models.Model):
+    STATUS_CHOICES = (
+        ('pending', 'Pending Review'),
+        ('approved', 'Verified & Approved'),
+        ('rejected', 'Rejected / Re-upload Required'),
+    )
+    vendor = models.OneToOneField(CustomUser, on_delete=models.CASCADE, related_name='kyc_document')
+    id_type = models.CharField(max_length=50, choices=[('aadhaar', 'Aadhaar Card'), ('pan', 'PAN Card'), ('voter_id', 'Voter ID')])
+    id_number = models.CharField(max_length=50)
+    id_document_front = models.FileField(upload_to='kyc/id_docs/')
+    id_document_back = models.FileField(upload_to='kyc/id_docs/', null=True, blank=True)
+    business_license = models.FileField(upload_to='kyc/licenses/', null=True, blank=True)
+    gst_certificate = models.FileField(upload_to='kyc/gst/', null=True, blank=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+    admin_notes = models.TextField(blank=True, null=True)
+    reviewed_by = models.ForeignKey(CustomUser, on_delete=models.SET_NULL, null=True, blank=True, related_name='reviewed_kycs')
+    submitted_at = models.DateTimeField(default=timezone.now)
+    reviewed_at = models.DateTimeField(null=True, blank=True)
+
+    def __str__(self):
+        return f"{self.vendor.username} - KYC ({self.get_status_display()})"
+
 class UserProfile(models.Model):
     user = models.OneToOneField(CustomUser, on_delete=models.CASCADE, related_name='user_profile')
     phone_number = models.CharField(max_length=20, blank=True, null=True)

@@ -39,6 +39,7 @@
     ]},
     
     {key:'profile', icon:'user', label:'Profile', path:'profile/index.html'},
+    {key:'kyc', icon:'shield', label:'KYC Verification', path:'kyc/index.html'},
     {key:'settings', icon:'settings', label:'Settings', path:'settings/index.html'}
   ];
   function route(path){ return root + path; }
@@ -54,6 +55,7 @@
     if(k==='messages' && pageKey.startsWith('message')) return true;
     if(k==='reviews' && pageKey.startsWith('review')) return true;
     if(k==='profile' && pageKey.startsWith('profile')) return true;
+    if(k==='kyc' && pageKey==='kyc') return true;
     if(k==='settings' && pageKey.startsWith('setting')) return true;
     return false;
   }

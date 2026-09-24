@@ -1,0 +1,135 @@
+{% extends 'superadmin/base.html' %}
+{% block title %}KYC Verifications{% endblock %}
+{% block header_title %}KYC Document Verification Center{% endblock %}
+
+{% block content %}
+<div class="card" style="padding: 15px; margin-bottom: 20px;">
+  <form method="get" style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+    <div style="flex: 1; min-width: 250px;">
+      <input type="text" name="q" class="form-control" placeholder="Search vendor name..." value="{{ q }}">
+    </div>
+    <div style="width: 200px;">
+      <select name="status" class="form-control" onchange="this.form.submit()">
+        <option value="">All Statuses</option>
+        <option value="pending" {% if status_filter == 'pending' %}selected{% endif %}>Pending Review</option>
+        <option value="approved" {% if status_filter == 'approved' %}selected{% endif %}>Approved</option>
+        <option value="rejected" {% if status_filter == 'rejected' %}selected{% endif %}>Rejected</option>
+      </select>
+    </div>
+    <button type="submit" class="btn btn-primary"><i class="fa-solid fa-search"></i> Search</button>
+  </form>
+</div>
+
+<div class="card" style="padding: 0;">
+  <div class="table-container">
+    <table>
+      <thead>
+        <tr>
+          <th>Vendor</th>
+          <th>ID Type</th>
+          <th>ID Number</th>
+          <th>Documents</th>
+          <th>Status</th>
+          <th>Submitted At</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for kyc in kyc_list %}
+        <tr>
+          <td><strong>{{ kyc.vendor.vendor_profile.company_name|default:kyc.vendor.username }}</strong></td>
+          <td><span class="badge" style="background: rgba(14,165,233,0.12); color: #0284c7;">{{ kyc.get_id_type_display }}</span></td>
+          <td>{{ kyc.id_number }}</td>
+          <td>
+            <div style="display: flex; gap: 4px; flex-wrap: wrap;">
+                {% if kyc.id_document_front %}
+                <a href="{{ kyc.id_document_front.url }}" target="_blank" class="badge" style="background: #f1f5f9; color: #475569; text-decoration: none;"><i class="fa-solid fa-file-image"></i> ID Front</a>
+                {% endif %}
+                {% if kyc.id_document_back %}
+                <a href="{{ kyc.id_document_back.url }}" target="_blank" class="badge" style="background: #f1f5f9; color: #475569; text-decoration: none;"><i class="fa-solid fa-file-image"></i> ID Back</a>
+                {% endif %}
+                {% if kyc.business_license %}
+                <a href="{{ kyc.business_license.url }}" target="_blank" class="badge" style="background: #f1f5f9; color: #475569; text-decoration: none;"><i class="fa-solid fa-file-contract"></i> License</a>
+                {% endif %}
+                {% if kyc.gst_certificate %}
+                <a href="{{ kyc.gst_certificate.url }}" target="_blank" class="badge" style="background: #f1f5f9; color: #475569; text-decoration: none;"><i class="fa-solid fa-file-invoice"></i> GST</a>
+                {% endif %}
+            </div>
+          </td>
+          <td>
+            {% if kyc.status == 'pending' %}
+              <span class="badge" style="background: rgba(245,158,11,0.12); color: #d97706;">Pending</span>
+            {% elif kyc.status == 'approved' %}
+              <span class="badge" style="background: rgba(16,185,129,0.12); color: #059669;">Approved</span>
+            {% else %}
+              <span class="badge" style="background: rgba(239,68,68,0.12); color: #dc2626;">Rejected</span>
+            {% endif %}
+          </td>
+          <td style="color: var(--text-muted);">{{ kyc.submitted_at|date:"M d, Y" }}</td>
+          <td>
+            {% if kyc.status == 'pending' %}
+            <div style="display: flex; gap: 8px;">
+              <form method="post" action="{% url 'super_admin_kyc_approve' kyc.id %}" onsubmit="return confirm('Approve this KYC?');" style="display:inline;">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-primary btn-sm"><i class="fa-solid fa-check"></i> Approve</button>
+              </form>
+              <button type="button" class="btn btn-outline btn-sm" style="border-color: rgba(239,68,68,0.3); color: var(--danger);" onclick="document.getElementById('reject-form-{{ kyc.id }}').style.display='block';"><i class="fa-solid fa-xmark"></i> Reject</button>
+            </div>
+            
+            <div id="reject-form-{{ kyc.id }}" style="display:none; margin-top:10px; background: #f8fafc; padding: 10px; border-radius: 6px;">
+                <form method="post" action="{% url 'super_admin_kyc_reject' kyc.id %}">
+                    {% csrf_token %}
+                    <textarea name="admin_notes" class="form-control" placeholder="Reason for rejection..." required rows="2" style="margin-bottom: 5px;"></textarea>
+                    <div style="display:flex; gap:5px; justify-content: flex-end;">
+                        <button type="button" class="btn btn-outline btn-sm" onclick="document.getElementById('reject-form-{{ kyc.id }}').style.display='none';">Cancel</button>
+                        <button type="submit" class="btn btn-primary btn-sm" style="background:var(--danger); border-color:var(--danger); color: white;">Submit Rejection</button>
+                    </div>
+                </form>
+            </div>
+            {% else %}
+                {% if kyc.reviewed_by %}
+                <div style="font-size: 0.8em; color: var(--text-muted);">By {{ kyc.reviewed_by.username }}<br>{{ kyc.reviewed_at|date:"M d, Y" }}</div>
+                {% endif %}
+            {% endif %}
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="7" style="text-align: center; padding: 40px; color: var(--text-muted);">No KYC submissions found.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% if kyc_list.has_other_pages %}
+    <div class="pagination-wrap">
+      <div>Showing <strong>{{ kyc_list.start_index|default:0 }}</strong> to <strong>{{ kyc_list.end_index|default:0 }}</strong> of <strong>{{ kyc_list.paginator.count }}</strong> records</div>
+      <nav class="pagination-nav" aria-label="Page navigation">
+        {% if kyc_list.has_previous %}
+          <a href="?page=1{% if q %}&q={{ q }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}" class="page-link" title="First Page"><i class="fa-solid fa-angles-left"></i></a>
+          <a href="?page={{ kyc_list.previous_page_number }}{% if q %}&q={{ q }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}" class="page-link" title="Previous Page"><i class="fa-solid fa-chevron-left"></i></a>
+        {% else %}
+          <span class="page-link disabled"><i class="fa-solid fa-angles-left"></i></span>
+          <span class="page-link disabled"><i class="fa-solid fa-chevron-left"></i></span>
+        {% endif %}
+
+        {% for p in kyc_list.paginator.page_range %}
+          {% if p >= kyc_list.number|add:"-2" and p <= kyc_list.number|add:"2" %}
+            {% if p == kyc_list.number %}
+              <span class="page-link active">{{ p }}</span>
+            {% else %}
+              <a href="?page={{ p }}{% if q %}&q={{ q }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}" class="page-link">{{ p }}</a>
+            {% endif %}
+          {% endif %}
+        {% endfor %}
+
+        {% if kyc_list.has_next %}
+          <a href="?page={{ kyc_list.next_page_number }}{% if q %}&q={{ q }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}" class="page-link" title="Next Page"><i class="fa-solid fa-chevron-right"></i></a>
+          <a href="?page={{ kyc_list.paginator.num_pages }}{% if q %}&q={{ q }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}" class="page-link" title="Last Page"><i class="fa-solid fa-angles-right"></i></a>
+        {% else %}
+          <span class="page-link disabled"><i class="fa-solid fa-chevron-right"></i></span>
+          <span class="page-link disabled"><i class="fa-solid fa-angles-right"></i></span>
+        {% endif %}
+      </nav>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

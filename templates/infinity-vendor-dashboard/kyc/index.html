@@ -1,0 +1,75 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="description" content="Infinity Ventures Vendor Portal — KYC Verification"><title>KYC Verification · Infinity Ventures Vendor</title><link rel="stylesheet" href="/infinity-vendor-dashboard/assets/styles.css"><script defer src="/infinity-vendor-dashboard/assets/app.js"></script></head><body data-page="kyc" data-title="KYC Verification" data-root="../"><div class="app-shell"><div id="sidebar-root"></div><div class="workspace"><div id="topbar-root"></div><main class="page">
+<div class="page-head">
+    <h1>Document Verification</h1>
+    <p class="muted">Upload your identity and business documents to unlock full bidding privileges.</p>
+</div>
+
+{% if kyc.status == 'pending' %}
+<div class="alert alert-warning" style="background:#fff4e5; padding:15px; border-radius:10px; margin-bottom:20px; border-left:4px solid #f79009;">
+    <strong>Under Review:</strong> Your documents have been submitted and are currently being verified.
+</div>
+{% elif kyc.status == 'approved' %}
+<div class="alert alert-success" style="background:#edfcf8; padding:15px; border-radius:10px; margin-bottom:20px; border-left:4px solid #12b76a;">
+    <strong>Approved:</strong> Your KYC is fully verified. You have unrestricted access to all features.
+</div>
+{% elif kyc.status == 'rejected' %}
+<div class="alert alert-danger" style="background:#fef3f2; padding:15px; border-radius:10px; margin-bottom:20px; border-left:4px solid #f04438;">
+    <strong>Rejected:</strong> Your verification failed. Please review the admin notes and re-upload your documents.
+    {% if kyc.admin_notes %}<br><br><em>Admin Notes: {{ kyc.admin_notes }}</em>{% endif %}
+</div>
+{% else %}
+<div class="alert alert-info" style="background:#f0f9ff; padding:15px; border-radius:10px; margin-bottom:20px; border-left:4px solid #2e90fa;">
+    <strong>Action Required:</strong> Please submit your KYC documents for approval.
+</div>
+{% endif %}
+
+<section class="card">
+    <div class="card-head">
+        <h2>Submit Documents</h2>
+    </div>
+    <div class="card-body">
+        <form method="post" action="/vendor/kyc/index" enctype="multipart/form-data">
+            {% csrf_token %}
+            <div class="form-grid grid-2">
+                <div class="form-group">
+                    <label>Document Type *</label>
+                    <select name="id_type" class="form-control select" required {% if kyc.status == 'pending' or kyc.status == 'approved' %}disabled{% endif %}>
+                        <option value="aadhaar" {% if kyc.id_type == 'aadhaar' %}selected{% endif %}>Aadhaar Card</option>
+                        <option value="pan" {% if kyc.id_type == 'pan' %}selected{% endif %}>PAN Card</option>
+                        <option value="voter_id" {% if kyc.id_type == 'voter_id' %}selected{% endif %}>Voter ID</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>ID Number *</label>
+                    <input type="text" name="id_number" class="form-control" value="{{ kyc.id_number|default:'' }}" required {% if kyc.status == 'pending' or kyc.status == 'approved' %}disabled{% endif %}>
+                </div>
+                <div class="form-group">
+                    <label>ID Document (Front) *</label>
+                    <input type="file" name="id_document_front" class="form-control" {% if not kyc.id_document_front %}required{% endif %} {% if kyc.status == 'pending' or kyc.status == 'approved' %}disabled{% endif %}>
+                    {% if kyc.id_document_front %}<p class="small muted" style="margin-top:5px">Current: <a href="{{ kyc.id_document_front.url }}" target="_blank">View File</a></p>{% endif %}
+                </div>
+                <div class="form-group">
+                    <label>ID Document (Back)</label>
+                    <input type="file" name="id_document_back" class="form-control" {% if kyc.status == 'pending' or kyc.status == 'approved' %}disabled{% endif %}>
+                    {% if kyc.id_document_back %}<p class="small muted" style="margin-top:5px">Current: <a href="{{ kyc.id_document_back.url }}" target="_blank">View File</a></p>{% endif %}
+                </div>
+                <div class="form-group">
+                    <label>Business / Trade License</label>
+                    <input type="file" name="business_license" class="form-control" {% if kyc.status == 'pending' or kyc.status == 'approved' %}disabled{% endif %}>
+                    {% if kyc.business_license %}<p class="small muted" style="margin-top:5px">Current: <a href="{{ kyc.business_license.url }}" target="_blank">View File</a></p>{% endif %}
+                </div>
+                <div class="form-group">
+                    <label>GST Certificate (if applicable)</label>
+                    <input type="file" name="gst_certificate" class="form-control" {% if kyc.status == 'pending' or kyc.status == 'approved' %}disabled{% endif %}>
+                    {% if kyc.gst_certificate %}<p class="small muted" style="margin-top:5px">Current: <a href="{{ kyc.gst_certificate.url }}" target="_blank">View File</a></p>{% endif %}
+                </div>
+            </div>
+            {% if kyc.status == 'rejected' or not kyc.id_document_front %}
+            <div class="form-actions" style="margin-top:20px">
+                <button type="submit" class="btn btn-primary">Submit Documents</button>
+            </div>
+            {% endif %}
+        </form>
+    </div>
+</section>
+</main></div></div></body></html>

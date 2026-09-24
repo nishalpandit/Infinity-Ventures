@@ -603,6 +603,10 @@
         <i class="fa-solid fa-user-tie"></i>
         <span>Vendors & Pros</span>
       </a>
+      <a href="{% url 'super_admin_kyc' %}" class="nav-item {% if 'kyc' in request.path %}active{% endif %}">
+        <i class="fa-solid fa-id-card"></i>
+        <span>KYC Approvals</span>
+      </a>
       <a href="{% url 'super_admin_cms' %}" class="nav-item {% if '/cms/' in request.path and 'landing' not in request.path %}active{% endif %}">
         <i class="fa-solid fa-layer-group"></i>
         <span>Categories &amp; Cities</span>

@@ -536,6 +536,33 @@ def dashboard_view(request, path=''):
                 pass
             return redirect('/vendor/profile/index.html')
 
+    if path == 'vendor/kyc/index' or path == 'vendor/kyc':
+        from .models import VendorKYC
+        if request.user.is_authenticated:
+            kyc = VendorKYC.objects.filter(vendor=request.user).first()
+            if not kyc:
+                kyc = VendorKYC(vendor=request.user)
+                
+            if request.method == 'POST':
+                kyc.id_type = request.POST.get('id_type', 'aadhaar')
+                kyc.id_number = request.POST.get('id_number')
+                
+                if 'id_document_front' in request.FILES:
+                    kyc.id_document_front = request.FILES['id_document_front']
+                if 'id_document_back' in request.FILES:
+                    kyc.id_document_back = request.FILES['id_document_back']
+                if 'business_license' in request.FILES:
+                    kyc.business_license = request.FILES['business_license']
+                if 'gst_certificate' in request.FILES:
+                    kyc.gst_certificate = request.FILES['gst_certificate']
+                
+                kyc.status = 'pending'
+                kyc.save()
+                
+                return redirect('/vendor/kyc/index.html')
+            
+            context['kyc'] = kyc
+
     if path == 'user/messages/index' or path == 'user/messages':
         if request.user.is_authenticated:
             # Get distinct users the current user has chatted with
