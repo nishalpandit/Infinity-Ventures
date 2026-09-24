@@ -1,6 +1,6 @@
 {% extends 'superadmin/base.html' %}
-{% block title %}Edit Quick Service{% endblock %}
-{% block header_title %}Edit Quick Service{% endblock %}
+{% block title %}{% if mode == 'create' %}Create Quick Service{% else %}Edit Quick Service{% endif %}{% endblock %}
+{% block header_title %}{% if mode == 'create' %}Create Quick Service{% else %}Edit Quick Service{% endif %}{% endblock %}
 
 {% block content %}
 <div style="margin-bottom: 24px;">
@@ -10,14 +10,39 @@
 </div>
 
 <div class="card form-card">
-  <h3 style="font-size: 20px; font-weight: 700; margin-bottom: 24px;">Edit: {{ qs.title }}</h3>
+  <h3 style="font-size: 20px; font-weight: 700; margin-bottom: 24px;">
+    {% if mode == 'create' %}Post Instant Service Booking{% else %}Edit: {{ qs.title }}{% endif %}
+  </h3>
   
   <form method="POST">
     {% csrf_token %}
     
+    {% if mode == 'create' %}
+    <div class="form-row">
+      <div class="form-group">
+        <label>Customer Account</label>
+        <select name="user" class="form-control" required>
+          <option value="">-- Select Customer --</option>
+          {% for u in users %}
+          <option value="{{ u.id }}">{{ u.username }} ({{ u.get_full_name|default:u.email }})</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Service Location</label>
+        <select name="location" class="form-control">
+          <option value="">-- Select Location --</option>
+          {% for loc in locations %}
+          <option value="{{ loc.id }}">{{ loc.city }}, {{ loc.state }}</option>
+          {% endfor %}
+        </select>
+      </div>
+    </div>
+    {% endif %}
+
     <div class="form-group">
-      <label>Title</label>
-      <input type="text" name="title" class="form-control" value="{{ qs.title }}" required>
+      <label>Service Title</label>
+      <input type="text" name="title" class="form-control" value="{{ qs.title|default:'' }}" placeholder="e.g. Emergency Plumbing Repair" required>
     </div>
     
     <div class="form-row">
@@ -43,18 +68,24 @@
       </div>
     </div>
     
-    <div class="form-group">
-      <label>Budget (₹)</label>
-      <input type="number" step="0.01" name="budget" class="form-control" value="{{ qs.budget }}">
+    <div class="form-row">
+      <div class="form-group">
+        <label>Estimated Budget (₹)</label>
+        <input type="number" step="0.01" name="budget" class="form-control" value="{{ qs.budget|default:0 }}" required>
+      </div>
+      <div class="form-group">
+        <label>Service Address / Landmark</label>
+        <input type="text" name="address" class="form-control" value="{{ qs.address|default:'' }}" placeholder="e.g. Circular Road, Ranchi">
+      </div>
     </div>
     
     <div class="form-group">
-      <label>Description</label>
-      <textarea name="description" class="form-control">{{ qs.description|default:'' }}</textarea>
+      <label>Description & Requirements</label>
+      <textarea name="description" class="form-control" placeholder="Describe the instant service needed...">{{ qs.description|default:'' }}</textarea>
     </div>
     
     <div class="form-actions">
-      <button type="submit" class="btn btn-primary"><i class="fa-solid fa-check"></i> Save Changes</button>
+      <button type="submit" class="btn btn-primary"><i class="fa-solid fa-check"></i> {% if mode == 'create' %}Create Quick Service{% else %}Save Changes{% endif %}</button>
       <a href="{% url 'super_admin_quick_services' %}" class="btn btn-outline">Cancel</a>
     </div>
   </form>

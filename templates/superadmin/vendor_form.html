@@ -1,6 +1,6 @@
 {% extends 'superadmin/base.html' %}
-{% block title %}Edit Vendor{% endblock %}
-{% block header_title %}Edit Vendor{% endblock %}
+{% block title %}{% if mode == 'create' %}Add Vendor{% else %}Edit Vendor{% endif %}{% endblock %}
+{% block header_title %}{% if mode == 'create' %}Add Vendor{% else %}Edit Vendor{% endif %}{% endblock %}
 
 {% block content %}
 <div style="margin-bottom: 24px;">
@@ -10,15 +10,46 @@
 </div>
 
 <div class="card form-card">
-  <h3 style="font-size: 20px; font-weight: 700; margin-bottom: 24px;">Edit: {{ vendor.company_name|default:vendor.user.username }}</h3>
+  <h3 style="font-size: 20px; font-weight: 700; margin-bottom: 24px;">
+    {% if mode == 'create' %}Add New Vendor / Service Provider{% else %}Edit: {{ vendor.company_name|default:vendor.user.username }}{% endif %}
+  </h3>
   
   <form method="POST">
     {% csrf_token %}
     
+    {% if mode == 'create' %}
     <div class="form-row">
       <div class="form-group">
-        <label>Company Name</label>
-        <input type="text" name="company_name" class="form-control" value="{{ vendor.company_name|default:'' }}">
+        <label>Username / Login ID</label>
+        <input type="text" name="username" class="form-control" placeholder="e.g. buildpro_ranchi" required>
+      </div>
+      <div class="form-group">
+        <label>Email Address</label>
+        <input type="email" name="email" class="form-control" placeholder="vendor@example.com">
+      </div>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label>Password</label>
+        <input type="password" name="password" class="form-control" placeholder="Minimum 6 characters" required>
+      </div>
+      <div class="form-group">
+        <label>Assigned Operational State</label>
+        <select name="state" class="form-control">
+          <option value="">-- Select State --</option>
+          {% for s in states %}
+          <option value="{{ s }}">{{ s }}</option>
+          {% endfor %}
+        </select>
+      </div>
+    </div>
+    {% endif %}
+
+    <div class="form-row">
+      <div class="form-group">
+        <label>Company / Provider Name</label>
+        <input type="text" name="company_name" class="form-control" value="{{ vendor.company_name|default:'' }}" required>
       </div>
       <div class="form-group">
         <label>Vendor Type</label>
@@ -32,32 +63,37 @@
     <div class="form-row">
       <div class="form-group">
         <label>Category</label>
-        <input type="text" name="category" class="form-control" value="{{ vendor.category }}">
+        <select name="category" class="form-control">
+          <option value="">-- Select Category --</option>
+          {% for c in categories %}
+          <option value="{{ c.name }}" {% if vendor.category == c.name %}selected{% endif %}>{{ c.name }}</option>
+          {% endfor %}
+        </select>
       </div>
       <div class="form-group">
-        <label>Location</label>
-        <input type="text" name="location" class="form-control" value="{{ vendor.location }}">
+        <label>Location (City, State)</label>
+        <input type="text" name="location" class="form-control" value="{{ vendor.location|default:'' }}" placeholder="e.g. Ranchi, Jharkhand">
       </div>
     </div>
     
     <div class="form-row">
       <div class="form-group">
         <label>Experience (years)</label>
-        <input type="number" name="experience" class="form-control" value="{{ vendor.experience }}">
+        <input type="number" name="experience" class="form-control" value="{{ vendor.experience|default:0 }}">
       </div>
       <div class="form-group">
-        <label>Rating</label>
-        <input type="number" step="0.1" min="0" max="5" name="rating" class="form-control" value="{{ vendor.rating }}">
+        <label>Rating (0.0 to 5.0)</label>
+        <input type="number" step="0.1" min="0" max="5" name="rating" class="form-control" value="{{ vendor.rating|default:5.0 }}">
       </div>
     </div>
     
     <div class="form-group">
-      <label>About</label>
-      <textarea name="about" class="form-control">{{ vendor.about|default:'' }}</textarea>
+      <label>About / Bio</label>
+      <textarea name="about" class="form-control" placeholder="Company profile or description...">{{ vendor.about|default:'' }}</textarea>
     </div>
     
     <div class="form-actions">
-      <button type="submit" class="btn btn-primary"><i class="fa-solid fa-check"></i> Save Changes</button>
+      <button type="submit" class="btn btn-primary"><i class="fa-solid fa-check"></i> {% if mode == 'create' %}Create Vendor{% else %}Save Changes{% endif %}</button>
       <a href="{% url 'super_admin_vendors' %}" class="btn btn-outline">Cancel</a>
     </div>
   </form>

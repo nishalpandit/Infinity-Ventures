@@ -25,6 +25,12 @@
     </main>
   </div>
 
+  <script>
+    window.ADMIN_NAME = "{{ request.user.get_full_name|default:request.user.username }}";
+    window.ADMIN_ROLE = "{% if request.user.is_superuser %}Super Admin{% elif request.user.role == 'ADMIN' %}Area Admin{% else %}Admin{% endif %}";
+    window.ADMIN_STATE = "{{ admin_state|default:'' }}";
+    window.ADMIN_INITIALS = "{{ request.user.username|make_list|first|upper }}";
+  </script>
   <script src="/admin-dashboard/assets/js/sidebar.js"></script>
   <script src="/admin-dashboard/assets/js/components.js"></script>
   <script src="/admin-dashboard/assets/js/admin.js"></script>
@@ -33,21 +39,24 @@
     (function () {
       'use strict';
       var D = window.AdminData, U = window.AdminUI;
-      var id = U.qs('id') || 'USR-1001';
-      var cust = D.find(D.Users, id) || D.Users[0];
+      var serverCust = {{ customer_json|safe|default:"null" }};
+      var id = U.qs('id') || (serverCust ? serverCust.id : 'USR-1001');
+      var cust = serverCust || D.find(D.Users, id) || D.Users[0];
 
       AdminComponents.renderBreadcrumb([
         { label: 'Users', href: '#' },
-        { label: 'Users', href: 'Users.html' },
+        { label: 'Users', href: 'users.html' },
         { label: cust.name }
       ]);
 
-      var myQS = D.quickServices.filter(function (s) { return s.UserId === cust.id; });
-      var myJobs = D.jobs.filter(function (j) { return j.UserId === cust.id; });
-      var myReviews = D.UserReviews.filter(function (r) { return r.User === cust.name; });
-      var myComplaints = D.complaints.filter(function (c) { return c.raisedBy === cust.name; });
-      var vendorsSelected = myQS.filter(function (s) { return s.selectedVendor !== '—'; }).length +
-        myJobs.reduce(function (s, j) { return s + j.selectedVendors; }, 0);
+      var serverQS = {{ customer_qs_json|safe|default:"null" }};
+      var serverJobs = {{ customer_jobs_json|safe|default:"null" }};
+      var myQS = serverQS || D.quickServices.filter(function (s) { return s.UserId === cust.id; });
+      var myJobs = serverJobs || D.jobs.filter(function (j) { return j.UserId === cust.id; });
+      var myReviews = D.UserReviews ? D.UserReviews.filter(function (r) { return r.User === cust.name; }) : [];
+      var myComplaints = D.complaints ? D.complaints.filter(function (c) { return c.raisedBy === cust.name; }) : [];
+      var vendorsSelected = myQS.filter(function (s) { return s.selectedVendor && s.selectedVendor !== '—'; }).length +
+        myJobs.reduce(function (s, j) { return s + (j.selectedVendors || 0); }, 0);
 
       function render() {
         var html = '';

@@ -729,12 +729,202 @@ def dashboard_view(request, path=''):
         context['admin_state'] = admin_state
         context['is_area_admin'] = is_area_admin
         
-    if 'users/users' in path or 'users/customers' in path or 'users/vendors' in path or 'users/company-vendors' in path or 'users/outsider-vendors' in path:
+    if 'users/users' in path or 'users/customers' in path or 'users/vendors' in path or 'users/company-vendors' in path or 'users/outsider-vendors' in path or 'users/user-details' in path or 'users/vendor-details' in path:
         admin_state, is_area_admin, available_states, co_admins = get_admin_state_context(request)
         context['admin_state'] = admin_state
         context['is_area_admin'] = is_area_admin
 
-        if 'users' in path and 'vendors' not in path:
+        if 'users/user-details' in path:
+            uid_raw = request.GET.get('id') or ''
+            target_uid = None
+            if uid_raw:
+                digits = ''.join([c for c in str(uid_raw) if c.isdigit()])
+                if digits:
+                    target_uid = int(digits)
+
+            target_user = None
+            if target_uid:
+                target_user = User.objects.filter(id=target_uid, role='USER').select_related('user_profile').first()
+            if not target_user:
+                cust_qs = User.objects.filter(role='USER')
+                if admin_state:
+                    job_uids = Job.objects.filter(Q(location__state__iexact=admin_state) | Q(address__icontains=admin_state)).values_list('user_id', flat=True)
+                    qs_uids = QuickService.objects.filter(Q(location__state__iexact=admin_state) | Q(address__icontains=admin_state)).values_list('user_id', flat=True)
+                    cust_qs = cust_qs.filter(Q(id__in=set(job_uids).union(set(qs_uids))) | Q(assigned_state__iexact=admin_state))
+                target_user = cust_qs.first()
+
+            if target_user:
+                # Strict territory authorization check for Area Admin
+                if is_area_admin and admin_state:
+                    user_matches_state = bool(target_user.assigned_state and target_user.assigned_state.lower() == admin_state.lower())
+                    has_job_in_state = Job.objects.filter(user=target_user).filter(Q(location__state__iexact=admin_state) | Q(address__icontains=admin_state)).exists()
+                    has_qs_in_state = QuickService.objects.filter(user=target_user).filter(Q(location__state__iexact=admin_state) | Q(address__icontains=admin_state)).exists()
+
+                    if not (user_matches_state or has_job_in_state or has_qs_in_state):
+                        from django.contrib import messages
+                        messages.error(request, f"Access Denied: Customer '{target_user.get_full_name() or target_user.username}' is outside your assigned territory ({admin_state}).")
+                        return redirect('/admin-dashboard/users/users.html')
+
+                mobile = '—'
+                try:
+                    if hasattr(target_user, 'user_profile') and target_user.user_profile.phone_number:
+                        mobile = target_user.user_profile.phone_number
+                except Exception:
+                    pass
+
+                cust_qs_list = QuickService.objects.filter(user=target_user).select_related('category', 'location').order_by('-created_at')
+                cust_jobs_list = Job.objects.filter(user=target_user).select_related('category', 'location').order_by('-created_at')
+                if admin_state:
+                    cust_qs_list = cust_qs_list.filter(Q(location__state__iexact=admin_state) | Q(address__icontains=admin_state))
+                    cust_jobs_list = cust_jobs_list.filter(Q(location__state__iexact=admin_state) | Q(address__icontains=admin_state))
+
+                completed_jobs = cust_jobs_list.filter(status='completed').count()
+
+                cust_data = {
+                    'id': f'USR-{target_user.id:04d}',
+                    'name': target_user.get_full_name() or target_user.username,
+                    'email': target_user.email or '—',
+                    'mobile': mobile,
+                    'location': target_user.assigned_state or (admin_state or 'Unknown'),
+                    'quickServices': cust_qs_list.count(),
+                    'jobs': cust_jobs_list.count(),
+                    'completedJobs': completed_jobs,
+                    'status': 'active' if target_user.is_active else 'suspended',
+                    'registered': target_user.date_joined.strftime('%Y-%m-%d') if target_user.date_joined else 'Unknown'
+                }
+
+                qs_items = []
+                for s in cust_qs_list:
+                    qs_items.append({
+                        'id': f'QS-{s.id:04d}',
+                        'title': s.title,
+                        'category': s.category.name if s.category else 'General',
+                        'budget': float(s.budget) if s.budget else 0,
+                        'status': s.status,
+                        'created': s.created_at.strftime('%Y-%m-%d') if s.created_at else 'Unknown'
+                    })
+
+                job_items = []
+                for j in cust_jobs_list:
+                    bids_cnt = Bid.objects.filter(job=j).count()
+                    loc_str = f"{j.location.city}, {j.location.state}" if j.location else (admin_state or 'Unknown')
+                    job_items.append({
+                        'id': f'JOB-{j.id:04d}',
+                        'title': j.title,
+                        'location': loc_str,
+                        'budget': float(j.budget) if j.budget else 0,
+                        'bids': bids_cnt,
+                        'status': j.status,
+                        'created': j.created_at.strftime('%Y-%m-%d') if j.created_at else 'Unknown'
+                    })
+
+                context['customer_json'] = json.dumps(cust_data)
+                context['customer_qs_json'] = json.dumps(qs_items)
+                context['customer_jobs_json'] = json.dumps(job_items)
+                context['customer_reviews_json'] = json.dumps([])
+                context['customer_complaints_json'] = json.dumps([])
+                context['target_user'] = target_user
+
+        elif 'users/vendor-details' in path:
+            vid_raw = request.GET.get('id') or ''
+            target_vid = None
+            if vid_raw:
+                digits = ''.join([c for c in str(vid_raw) if c.isdigit()])
+                if digits:
+                    target_vid = int(digits)
+
+            target_vendor = None
+            if target_vid:
+                target_vendor = VendorProfile.objects.select_related('user').filter(Q(id=target_vid) | Q(user_id=target_vid)).first()
+
+            if not target_vendor:
+                v_qs = VendorProfile.objects.select_related('user').all()
+                if admin_state:
+                    v_qs = v_qs.filter(Q(location__icontains=admin_state) | Q(user__assigned_state__iexact=admin_state))
+                target_vendor = v_qs.first()
+
+            if target_vendor:
+                # Strict territory authorization check for Area Admin
+                if is_area_admin and admin_state:
+                    vendor_in_state = (admin_state.lower() in (target_vendor.location or '').lower()) or (bool(target_vendor.user.assigned_state and target_vendor.user.assigned_state.lower() == admin_state.lower()))
+                    if not vendor_in_state:
+                        from django.contrib import messages
+                        messages.error(request, f"Access Denied: Vendor '{target_vendor}' is outside your assigned territory ({admin_state}).")
+                        return redirect('/admin-dashboard/users/vendors.html')
+
+                u = target_vendor.user
+                total_bids = Bid.objects.filter(vendor=u)
+                if admin_state:
+                    total_bids = total_bids.filter(Q(job__location__state__iexact=admin_state) | Q(quick_service__location__state__iexact=admin_state) | Q(job__address__icontains=admin_state) | Q(quick_service__address__icontains=admin_state))
+
+                successful_bids = total_bids.filter(status='selected').count()
+                completed_jobs = Job.objects.filter(bids__vendor=u, status='completed').distinct()
+                if admin_state:
+                    completed_jobs = completed_jobs.filter(Q(location__state__iexact=admin_state) | Q(address__icontains=admin_state))
+
+                active_jobs = Job.objects.filter(bids__vendor=u, status__in=['open', 'progress', 'selected']).distinct()
+                if admin_state:
+                    active_jobs = active_jobs.filter(Q(location__state__iexact=admin_state) | Q(address__icontains=admin_state))
+
+                vendor_contact = '—'
+                try:
+                    if hasattr(u, 'user_profile') and u.user_profile.phone_number:
+                        vendor_contact = u.user_profile.phone_number
+                except Exception:
+                    pass
+
+                vendor_data = {
+                    'id': f'VEN-{u.id:04d}',
+                    'name': target_vendor.company_name or u.get_full_name() or u.username,
+                    'email': u.email or '—',
+                    'type': target_vendor.vendor_type,
+                    'contact': vendor_contact,
+                    'category': target_vendor.category or 'Uncategorized',
+                    'location': target_vendor.location or (admin_state or 'Unknown'),
+                    'totalBids': total_bids.count(),
+                    'successfulBids': successful_bids,
+                    'withdrawnBids': 0,
+                    'rejectedBids': total_bids.filter(status='rejected').count(),
+                    'completedJobs': completed_jobs.count(),
+                    'activeJobs': active_jobs.count(),
+                    'bidCredits': getattr(target_vendor, 'bid_credits', 100),
+                    'rating': float(target_vendor.rating or 4.5),
+                    'status': 'active' if u.is_active else 'suspended',
+                    'registered': target_vendor.registered_date.strftime('%Y-%m-%d') if target_vendor.registered_date else 'Unknown'
+                }
+
+                bids_list = []
+                for b in total_bids.select_related('job', 'quick_service'):
+                    target_item = b.job or b.quick_service
+                    bids_list.append({
+                        'id': f'BID-{b.id:04d}',
+                        'jobId': f'JOB-{b.job.id:04d}' if b.job else (f'QS-{b.quick_service.id:04d}' if b.quick_service else '—'),
+                        'vendorId': f'VEN-{u.id:04d}',
+                        'job': target_item.title if target_item else 'Service',
+                        'amount': float(b.amount),
+                        'status': b.status,
+                        'created': b.created_at.strftime('%Y-%m-%d') if b.created_at else 'Unknown'
+                    })
+
+                purchases_list = []
+                for sub in Subscription.objects.filter(vendor=u).order_by('-created_at'):
+                    purchases_list.append({
+                        'id': f'TXN-{sub.id:04d}',
+                        'package': sub.package_name,
+                        'amount': float(sub.amount),
+                        'paymentStatus': sub.status,
+                        'date': sub.created_at.strftime('%Y-%m-%d') if sub.created_at else 'Unknown'
+                    })
+
+                context['vendor_json'] = json.dumps(vendor_data)
+                context['vendor_bids_json'] = json.dumps(bids_list)
+                context['vendor_jobs_json'] = json.dumps([])
+                context['vendor_qs_json'] = json.dumps([])
+                context['vendor_purchases_json'] = json.dumps(purchases_list)
+                context['vendor_reviews_json'] = json.dumps([])
+                context['target_vendor'] = target_vendor
+
+        elif 'users' in path and 'vendors' not in path:
             users_qs = User.objects.filter(role='USER')
             if admin_state:
                 job_uids = Job.objects.filter(Q(location__state__iexact=admin_state) | Q(address__icontains=admin_state)).values_list('user_id', flat=True)
@@ -758,7 +948,7 @@ def dashboard_view(request, path=''):
                     'name': u.get_full_name() or u.username,
                     'email': u.email or '—',
                     'mobile': mobile,
-                    'location': admin_state or 'Unknown',
+                    'location': u.assigned_state or (admin_state or 'Unknown'),
                     'quickServices': quick_services_count,
                     'jobs': jobs_count,
                     'completedJobs': completed_jobs,
@@ -768,10 +958,13 @@ def dashboard_view(request, path=''):
             context['users_json'] = json.dumps(users_data)
             context['customers'] = users_qs.select_related('user_profile').order_by('-date_joined')
             
-        if 'vendors' in path:
+        elif 'vendors' in path:
             vendors = VendorProfile.objects.select_related('user').all()
             if admin_state:
                 vendors = vendors.filter(Q(location__icontains=admin_state) | Q(user__assigned_state__iexact=admin_state))
+
+            if 'company-vendors' in path:
+                vendors = vendors.filter(vendor_type='company')
 
             vendors_data = []
             for profile in vendors:
@@ -780,17 +973,24 @@ def dashboard_view(request, path=''):
                 total_bids = Bid.objects.filter(vendor=user).count()
                 completed_jobs = Job.objects.filter(bids__vendor=user, status='completed').distinct().count()
                 
+                contact_phone = '—'
+                try:
+                    if hasattr(user, 'user_profile') and user.user_profile.phone_number:
+                        contact_phone = user.user_profile.phone_number
+                except Exception:
+                    pass
+
                 vendors_data.append({
                     'id': f'VEN-{user.id:04d}',
                     'name': profile.company_name or user.get_full_name() or user.username,
                     'email': user.email or '—',
                     'type': v_type,
-                    'contact': '—',
+                    'contact': contact_phone,
                     'category': profile.category or 'Uncategorized',
                     'location': profile.location or (admin_state or 'Unknown'),
                     'totalBids': total_bids,
                     'completedJobs': completed_jobs,
-                    'bidCredits': 100, 
+                    'bidCredits': getattr(profile, 'bid_credits', 100), 
                     'status': 'active' if user.is_active else 'suspended',
                     'registered': profile.registered_date.strftime('%Y-%m-%d') if profile.registered_date else 'Unknown'
                 })
@@ -803,6 +1003,16 @@ def dashboard_view(request, path=''):
                 # e.g., 'JOB-0001' -> 1
                 job_id = int(job_id_raw.replace('JOB-', '')) if isinstance(job_id_raw, str) and job_id_raw.startswith('JOB-') else int(job_id_raw)
                 job_obj = Job.objects.select_related('user', 'category', 'location').get(id=job_id)
+
+                # Strict territory check for Area Admin
+                admin_state, is_area_admin, available_states, co_admins = get_admin_state_context(request)
+                if is_area_admin and admin_state:
+                    job_in_state = (job_obj.location and job_obj.location.state and job_obj.location.state.lower() == admin_state.lower()) or (admin_state.lower() in (job_obj.address or '').lower()) or (bool(job_obj.user.assigned_state and job_obj.user.assigned_state.lower() == admin_state.lower()))
+                    if not job_in_state:
+                        from django.contrib import messages
+                        messages.error(request, f"Access Denied: Job is outside your assigned territory ({admin_state}).")
+                        return redirect('/jobs/index.html')
+
                 context['job'] = job_obj
                 
                 try:
@@ -835,6 +1045,16 @@ def dashboard_view(request, path=''):
                 # e.g., 'QS-0001' -> 1
                 qs_id = int(qs_id_raw.replace('QS-', '')) if isinstance(qs_id_raw, str) and qs_id_raw.startswith('QS-') else int(qs_id_raw)
                 service = QuickService.objects.select_related('user', 'category', 'location').get(id=qs_id)
+
+                # Strict territory check for Area Admin
+                admin_state, is_area_admin, available_states, co_admins = get_admin_state_context(request)
+                if is_area_admin and admin_state:
+                    qs_in_state = (service.location and service.location.state and service.location.state.lower() == admin_state.lower()) or (admin_state.lower() in (service.address or '').lower()) or (bool(service.user.assigned_state and service.user.assigned_state.lower() == admin_state.lower()))
+                    if not qs_in_state:
+                        from django.contrib import messages
+                        messages.error(request, f"Access Denied: Quick Service is outside your assigned territory ({admin_state}).")
+                        return redirect('/quick-services/index.html')
+
                 context['service'] = service
                 
                 try:
@@ -1643,6 +1863,12 @@ def create_company_vendor_view(request):
         
         user = User.objects.create_user(username=username, email=email, password=password, first_name=company_name)
         user.role = 'VENDOR'
+        
+        # Tag with Area Admin's assigned state if created by an area admin
+        if request.user.is_authenticated and request.user.role == 'ADMIN' and not request.user.is_superuser:
+            user.assigned_state = request.user.assigned_state
+            if request.user.assigned_state and request.user.assigned_state.lower() not in location.lower():
+                location = f"{location}, {request.user.assigned_state}" if location else request.user.assigned_state
         user.save()
         
         VendorProfile.objects.create(

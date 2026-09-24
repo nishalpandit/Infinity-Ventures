@@ -25,6 +25,12 @@
     </main>
   </div>
 
+  <script>
+    window.ADMIN_NAME = "{{ request.user.get_full_name|default:request.user.username }}";
+    window.ADMIN_ROLE = "{% if request.user.is_superuser %}Super Admin{% elif request.user.role == 'ADMIN' %}Area Admin{% else %}Admin{% endif %}";
+    window.ADMIN_STATE = "{{ admin_state|default:'' }}";
+    window.ADMIN_INITIALS = "{{ request.user.username|make_list|first|upper }}";
+  </script>
   <script src="/admin-dashboard/assets/js/sidebar.js"></script>
   <script src="/admin-dashboard/assets/js/components.js"></script>
   <script src="/admin-dashboard/assets/js/admin.js"></script>
@@ -33,8 +39,9 @@
     (function () {
       'use strict';
       var D = window.AdminData, U = window.AdminUI;
-      var id = U.qs('id') || 'VEN-2001';
-      var ven = D.find(D.vendors, id) || D.vendors[0];
+      var serverVen = {{ vendor_json|safe|default:"null" }};
+      var id = U.qs('id') || (serverVen ? serverVen.id : 'VEN-2001');
+      var ven = serverVen || D.find(D.vendors, id) || D.vendors[0];
 
       AdminComponents.renderBreadcrumb([
         { label: 'Users', href: '#' },
@@ -42,13 +49,15 @@
         { label: ven.name }
       ]);
 
-      var myBids = D.bids.filter(function (b) { return b.vendorId === ven.id; });
-      var myJobs = D.jobs.filter(function (j) {
+      var serverBids = {{ vendor_bids_json|safe|default:"null" }};
+      var serverPurchases = {{ vendor_purchases_json|safe|default:"null" }};
+      var myBids = serverBids || (D.bids ? D.bids.filter(function (b) { return b.vendorId === ven.id; }) : []);
+      var myJobs = D.jobs ? D.jobs.filter(function (j) {
         return myBids.some(function (b) { return b.jobId === j.id && b.status === 'selected'; });
-      });
-      var myQS = D.quickServices.filter(function (s) { return s.selectedVendor === ven.name; });
-      var myPurchases = D.purchases.filter(function (p) { return p.vendorId === ven.id; });
-      var myReviews = D.vendorReviews.filter(function (r) { return r.vendor === ven.name; });
+      }) : [];
+      var myQS = D.quickServices ? D.quickServices.filter(function (s) { return s.selectedVendor === ven.name; }) : [];
+      var myPurchases = serverPurchases || (D.purchases ? D.purchases.filter(function (p) { return p.vendorId === ven.id; }) : []);
+      var myReviews = D.vendorReviews ? D.vendorReviews.filter(function (r) { return r.vendor === ven.name; }) : [];
 
       function render() {
         var html = '';

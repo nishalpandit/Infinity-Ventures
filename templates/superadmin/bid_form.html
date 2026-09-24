@@ -1,6 +1,6 @@
 {% extends 'superadmin/base.html' %}
-{% block title %}Edit Bid{% endblock %}
-{% block header_title %}Edit Bid{% endblock %}
+{% block title %}{% if mode == 'create' %}Add Bid{% else %}Edit Bid{% endif %}{% endblock %}
+{% block header_title %}{% if mode == 'create' %}Add Bid{% else %}Edit Bid{% endif %}{% endblock %}
 
 {% block content %}
 <div style="margin-bottom: 24px;">
@@ -10,29 +10,98 @@
 </div>
 
 <div class="card form-card">
-  <h3 style="font-size: 20px; font-weight: 700; margin-bottom: 24px;">Edit Bid by {{ bid.vendor.username }}</h3>
+  <h3 style="font-size: 20px; font-weight: 700; margin-bottom: 24px;">
+    {% if mode == 'create' %}Submit Quotation Bid on Behalf of Vendor{% else %}Edit Bid: #{{ bid.id }}{% endif %}
+  </h3>
   
   <form method="POST">
     {% csrf_token %}
     
+    {% if mode == 'create' %}
     <div class="form-row">
       <div class="form-group">
-        <label>Amount (₹)</label>
-        <input type="number" step="0.01" name="amount" class="form-control" value="{{ bid.amount }}">
+        <label>Vendor Account</label>
+        <select name="vendor" class="form-control" required>
+          <option value="">-- Select Vendor --</option>
+          {% for v in vendors %}
+          <option value="{{ v.id }}">{{ v.username }} ({{ v.vendor_profile.company_name|default:v.get_full_name }})</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Target Type</label>
+        <select name="target_type" id="targetTypeSelect" class="form-control" onchange="toggleTargetList()">
+          <option value="job">Customer Job Project</option>
+          <option value="quick_service">Instant Quick Service</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="form-group" id="jobTargetGroup">
+      <label>Select Job</label>
+      <select name="target_id" id="jobSelect" class="form-control">
+        <option value="">-- Select Job --</option>
+        {% for j in jobs %}
+        <option value="{{ j.id }}">JOB-{{ j.id }}: {{ j.title }} (Budget: ₹{{ j.budget }})</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div class="form-group" id="qsTargetGroup" style="display: none;">
+      <label>Select Quick Service</label>
+      <select id="qsSelect" class="form-control">
+        <option value="">-- Select Quick Service --</option>
+        {% for q in qservices %}
+        <option value="{{ q.id }}">QS-{{ q.id }}: {{ q.title }} (Budget: ₹{{ q.budget }})</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <script>
+      function toggleTargetList() {
+        var type = document.getElementById('targetTypeSelect').value;
+        var jobGrp = document.getElementById('jobTargetGroup');
+        var qsGrp = document.getElementById('qsTargetGroup');
+        var jobSel = document.getElementById('jobSelect');
+        var qsSel = document.getElementById('qsSelect');
+        if (type === 'job') {
+          jobGrp.style.display = 'block';
+          qsGrp.style.display = 'none';
+          jobSel.name = 'target_id';
+          qsSel.removeAttribute('name');
+        } else {
+          jobGrp.style.display = 'none';
+          qsGrp.style.display = 'block';
+          qsSel.name = 'target_id';
+          jobSel.removeAttribute('name');
+        }
+      }
+    </script>
+    {% endif %}
+
+    <div class="form-row">
+      <div class="form-group">
+        <label>Bid Amount (₹)</label>
+        <input type="number" step="0.01" name="amount" class="form-control" value="{{ bid.amount|default:0 }}" required>
       </div>
       <div class="form-group">
         <label>Status</label>
         <select name="status" class="form-control">
-          <option value="submitted" {% if bid.status == 'submitted' %}selected{% endif %}>Submitted</option>
-          <option value="selected" {% if bid.status == 'selected' %}selected{% endif %}>Selected</option>
+          <option value="pending" {% if bid.status == 'pending' %}selected{% endif %}>Pending Review</option>
+          <option value="selected" {% if bid.status == 'selected' %}selected{% endif %}>Selected / Accepted</option>
           <option value="rejected" {% if bid.status == 'rejected' %}selected{% endif %}>Rejected</option>
-          <option value="withdrawn" {% if bid.status == 'withdrawn' %}selected{% endif %}>Withdrawn</option>
+          <option value="completed" {% if bid.status == 'completed' %}selected{% endif %}>Completed Work</option>
         </select>
       </div>
     </div>
     
+    <div class="form-group">
+      <label>Quotation Proposal / Note</label>
+      <textarea name="proposal" class="form-control" placeholder="Quotation terms and delivery schedule...">{{ bid.proposal|default:'' }}</textarea>
+    </div>
+    
     <div class="form-actions">
-      <button type="submit" class="btn btn-primary"><i class="fa-solid fa-check"></i> Save Changes</button>
+      <button type="submit" class="btn btn-primary"><i class="fa-solid fa-check"></i> {% if mode == 'create' %}Submit Bid{% else %}Save Changes{% endif %}</button>
       <a href="{% url 'super_admin_bids' %}" class="btn btn-outline">Cancel</a>
     </div>
   </form>

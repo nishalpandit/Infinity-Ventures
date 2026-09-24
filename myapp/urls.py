@@ -33,6 +33,7 @@ urlpatterns = [
     
     # Vendors CRUD
     path('super-admin/vendors/', super_admin_views.super_admin_vendors, name='super_admin_vendors'),
+    path('super-admin/vendors/create/', super_admin_views.super_admin_vendor_create, name='super_admin_vendor_create'),
     path('super-admin/vendors/<int:vendor_id>/edit/', super_admin_views.super_admin_vendor_edit, name='super_admin_vendor_edit'),
     path('super-admin/vendors/<int:vendor_id>/delete/', super_admin_views.super_admin_vendor_delete, name='super_admin_vendor_delete'),
     
@@ -47,21 +48,25 @@ urlpatterns = [
     
     # Jobs CRUD
     path('super-admin/jobs/', super_admin_views.super_admin_jobs, name='super_admin_jobs'),
+    path('super-admin/jobs/create/', super_admin_views.super_admin_job_create, name='super_admin_job_create'),
     path('super-admin/jobs/<int:job_id>/edit/', super_admin_views.super_admin_job_edit, name='super_admin_job_edit'),
     path('super-admin/jobs/<int:job_id>/delete/', super_admin_views.super_admin_job_delete, name='super_admin_job_delete'),
     
     # Quick Services CRUD
     path('super-admin/quick-services/', super_admin_views.super_admin_quick_services, name='super_admin_quick_services'),
+    path('super-admin/quick-services/create/', super_admin_views.super_admin_qs_create, name='super_admin_qs_create'),
     path('super-admin/quick-services/<int:qs_id>/edit/', super_admin_views.super_admin_qs_edit, name='super_admin_qs_edit'),
     path('super-admin/quick-services/<int:qs_id>/delete/', super_admin_views.super_admin_qs_delete, name='super_admin_qs_delete'),
     
     # Bids CRUD
     path('super-admin/bids/', super_admin_views.super_admin_bids, name='super_admin_bids'),
+    path('super-admin/bids/create/', super_admin_views.super_admin_bid_create, name='super_admin_bid_create'),
     path('super-admin/bids/<int:bid_id>/edit/', super_admin_views.super_admin_bid_edit, name='super_admin_bid_edit'),
     path('super-admin/bids/<int:bid_id>/delete/', super_admin_views.super_admin_bid_delete, name='super_admin_bid_delete'),
     
     # Subscriptions
     path('super-admin/subscriptions/', super_admin_views.super_admin_subscriptions, name='super_admin_subscriptions'),
+    path('super-admin/subscriptions/create/', super_admin_views.super_admin_subscription_create, name='super_admin_subscription_create'),
     path('super-admin/subscriptions/<int:sub_id>/delete/', super_admin_views.super_admin_subscription_delete, name='super_admin_subscription_delete'),
     
     # Messages

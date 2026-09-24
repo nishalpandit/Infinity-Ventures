@@ -1,0 +1,67 @@
+{% extends 'superadmin/base.html' %}
+{% block title %}Add Subscription{% endblock %}
+{% block header_title %}Add Subscription{% endblock %}
+
+{% block content %}
+<div style="margin-bottom: 24px;">
+  <a href="{% url 'super_admin_subscriptions' %}" style="color: var(--accent); text-decoration: none; font-weight: 600; font-size: 14px;">
+    <i class="fa-solid fa-arrow-left"></i> Back to Subscriptions
+  </a>
+</div>
+
+<div class="card form-card">
+  <h3 style="font-size: 20px; font-weight: 700; margin-bottom: 24px;">
+    Add Subscription / Credit Top-up for Vendor
+  </h3>
+  
+  <form method="POST">
+    {% csrf_token %}
+    
+    <div class="form-row">
+      <div class="form-group">
+        <label>Vendor Account</label>
+        <select name="vendor" class="form-control" required>
+          <option value="">-- Select Vendor --</option>
+          {% for v in vendors %}
+          <option value="{{ v.id }}">{{ v.username }} ({{ v.vendor_profile.company_name|default:v.get_full_name }})</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Subscription Package</label>
+        <select name="package_name" class="form-control" required>
+          <option value="Starter Pack (10 Bids)">Starter Pack (10 Bids)</option>
+          <option value="Growth Tier (25 Bids)">Growth Tier (25 Bids)</option>
+          <option value="Pro Unlimited (50 Bids)" selected>Pro Unlimited (50 Bids)</option>
+          <option value="Enterprise Prime (100 Bids)">Enterprise Prime (100 Bids)</option>
+        </select>
+      </div>
+    </div>
+    
+    <div class="form-row">
+      <div class="form-group">
+        <label>Amount Paid (₹)</label>
+        <input type="number" step="0.01" name="amount" class="form-control" value="999.00" required>
+      </div>
+      <div class="form-group">
+        <label>Bid Credits to Add</label>
+        <input type="number" name="credits" class="form-control" value="50" required>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label>Transaction Status</label>
+      <select name="status" class="form-control">
+        <option value="success" selected>Success (Credits Instantly Applied)</option>
+        <option value="pending">Pending Verification</option>
+        <option value="failed">Failed</option>
+      </select>
+    </div>
+    
+    <div class="form-actions">
+      <button type="submit" class="btn btn-primary"><i class="fa-solid fa-check"></i> Add Subscription</button>
+      <a href="{% url 'super_admin_subscriptions' %}" class="btn btn-outline">Cancel</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

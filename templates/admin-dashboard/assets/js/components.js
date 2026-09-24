@@ -188,11 +188,23 @@
     var uRole = window.ADMIN_ROLE || 'Area Admin';
     var uState = window.ADMIN_STATE ? ' (' + window.ADMIN_STATE + ')' : '';
     var uInitials = window.ADMIN_INITIALS || 'AA';
+    var isSuper = uRole.indexOf('Super') !== -1;
 
     var html = '';
     html += '<header class="app-header">';
-    html += '  <button class="header-toggle d-lg-none" id="mobileMenuBtn" aria-label="Open menu"><i class="fa-solid fa-bars"></i></button>';
-    html += '  <button class="header-toggle d-none d-lg-inline-flex" id="sidebarToggle" aria-label="Toggle sidebar"><i class="fa-solid fa-bars-staggered"></i></button>';
+    html += '  <div style="display:flex;align-items:center;gap:12px;">';
+    html += '    <button class="header-toggle d-lg-none" id="mobileMenuBtn" aria-label="Open menu"><i class="fa-solid fa-bars"></i></button>';
+    html += '    <button class="header-toggle d-none d-lg-inline-flex" id="sidebarToggle" aria-label="Toggle sidebar"><i class="fa-solid fa-bars-staggered"></i></button>';
+    if (window.ADMIN_STATE && !isSuper) {
+      html += '    <div class="d-none d-md-flex align-items-center gap-2 px-3 py-1" style="background:rgba(79,70,229,0.08);border:1px solid rgba(79,70,229,0.2);border-radius:20px;font-size:12px;color:var(--primary);font-weight:600;">';
+      html += '      <i class="fa-solid fa-location-dot" style="font-size:11px;"></i> Territory: ' + window.ADMIN_STATE;
+      html += '    </div>';
+    } else if (isSuper) {
+      html += '    <a href="/super-admin/" class="d-none d-md-inline-flex align-items-center gap-2 px-3 py-1 btn btn-sm btn-outline-primary" style="border-radius:20px;font-size:12px;font-weight:600;text-decoration:none;">';
+      html += '      <i class="fa-solid fa-shield-halved"></i> Super Admin Hub';
+      html += '    </a>';
+    }
+    html += '  </div>';
     html += '  <div class="header-actions">';
     html += '    <div style="position:relative;">';
     html += '      <button class="header-icon-btn" id="notifBtn" aria-label="Notifications"><i class="fa-regular fa-bell"></i><span class="dot"></span></button>';
@@ -209,6 +221,9 @@
     html += '        <i class="fa-solid fa-chevron-down" style="font-size:10px;color:var(--text-light);"></i>';
     html += '      </div>';
     html += '      <div class="header-dropdown profile-menu" id="profileDropdown">';
+    if (isSuper) {
+      html += '        <a class="pm-item" href="/super-admin/"><i class="fa-solid fa-shield-halved"></i> Super Admin Hub</a>';
+    }
     html += '        <a class="pm-item" href="' + P + 'profile.html"><i class="fa-regular fa-user"></i> My Profile</a>';
     html += '        <a class="pm-item" href="' + P + 'notifications.html"><i class="fa-regular fa-bell"></i> Notifications</a>';
     html += '        <div class="pm-divider"></div>';

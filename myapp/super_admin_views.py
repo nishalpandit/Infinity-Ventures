@@ -167,7 +167,7 @@ def super_admin_user_toggle(request, user_id):
     return redirect('super_admin_users')
 
 # ─────────────────────────────────────────────
-# VENDORS (List + Edit + Delete)
+# VENDORS (List + Create + Edit + Delete + Toggle)
 # ─────────────────────────────────────────────
 @sa_required
 def super_admin_vendors(request):
@@ -175,8 +175,66 @@ def super_admin_vendors(request):
     return render(request, 'superadmin/vendors.html', {'vendors': vendors})
 
 @sa_required
+def super_admin_vendor_create(request):
+    active_states = list(Location.objects.values_list('state', flat=True).distinct().order_by('state'))
+    default_states = ['Jharkhand', 'Maharashtra', 'Delhi', 'Karnataka', 'Tamil Nadu', 'Uttar Pradesh', 'West Bengal', 'Gujarat', 'Bihar', 'Rajasthan', 'Madhya Pradesh', 'Telangana', 'Andhra Pradesh', 'Kerala', 'Punjab', 'Haryana', 'Odisha']
+    states = sorted(list(set([s for s in (active_states + default_states) if s])))
+    categories = Category.objects.all().order_by('name')
+
+    if request.method == 'POST':
+        username = request.POST.get('username', '').strip()
+        email = request.POST.get('email', '').strip()
+        password = request.POST.get('password', '').strip()
+        company_name = request.POST.get('company_name', '').strip()
+        vendor_type = request.POST.get('vendor_type', 'vendor')
+        category = request.POST.get('category', '').strip()
+        state = request.POST.get('state', '').strip()
+        city = request.POST.get('city', '').strip()
+        location = f"{city}, {state}".strip(', ') if (city or state) else request.POST.get('location', '').strip()
+        experience = request.POST.get('experience', 0) or 0
+        rating = request.POST.get('rating', 5.0) or 5.0
+        about = request.POST.get('about', '').strip()
+
+        if not username:
+            username = email if email else company_name.replace(" ", "").lower() + str(CustomUser.objects.count())
+
+        if CustomUser.objects.filter(username=username).exists():
+            django_messages.error(request, f'Username "{username}" is already taken.')
+            return redirect('super_admin_vendor_create')
+
+        user = CustomUser.objects.create_user(
+            username=username,
+            email=email,
+            password=password,
+            role='VENDOR',
+            first_name=company_name
+        )
+        user.assigned_state = state
+        user.save()
+
+        VendorProfile.objects.create(
+            user=user,
+            vendor_type=vendor_type,
+            company_name=company_name,
+            category=category,
+            location=location,
+            experience=experience,
+            rating=rating,
+            about=about
+        )
+        django_messages.success(request, f'Vendor "{company_name or username}" created successfully.')
+        return redirect('super_admin_vendors')
+
+    return render(request, 'superadmin/vendor_form.html', {
+        'mode': 'create',
+        'states': states,
+        'categories': categories
+    })
+
+@sa_required
 def super_admin_vendor_edit(request, vendor_id):
     vendor = get_object_or_404(VendorProfile, pk=vendor_id)
+    categories = Category.objects.all().order_by('name')
     if request.method == 'POST':
         vendor.company_name = request.POST.get('company_name', '')
         vendor.category = request.POST.get('category', '')
@@ -188,7 +246,7 @@ def super_admin_vendor_edit(request, vendor_id):
         vendor.save()
         django_messages.success(request, f'Vendor "{vendor}" updated.')
         return redirect('super_admin_vendors')
-    return render(request, 'superadmin/vendor_form.html', {'vendor': vendor})
+    return render(request, 'superadmin/vendor_form.html', {'mode': 'edit', 'vendor': vendor, 'categories': categories})
 
 @sa_required
 def super_admin_vendor_delete(request, vendor_id):
@@ -299,7 +357,7 @@ def super_admin_location_delete(request, loc_id):
     return redirect('super_admin_cms')
 
 # ─────────────────────────────────────────────
-# JOBS (List + Edit Status + Delete)
+# JOBS (List + Create + Edit + Delete)
 # ─────────────────────────────────────────────
 @sa_required
 def super_admin_jobs(request):
@@ -307,9 +365,52 @@ def super_admin_jobs(request):
     return render(request, 'superadmin/jobs.html', {'jobs': jobs})
 
 @sa_required
+def super_admin_job_create(request):
+    users = CustomUser.objects.filter(role='USER').order_by('username')
+    categories = Category.objects.all().order_by('name')
+    locations = Location.objects.all().order_by('state', 'city')
+
+    if request.method == 'POST':
+        user_id = request.POST.get('user')
+        title = request.POST.get('title', '').strip()
+        cat_id = request.POST.get('category')
+        loc_id = request.POST.get('location')
+        budget = request.POST.get('budget', 0) or 0
+        status = request.POST.get('status', 'open')
+        description = request.POST.get('description', '').strip()
+        address = request.POST.get('address', '').strip()
+
+        customer = get_object_or_404(CustomUser, pk=user_id)
+        cat_obj = Category.objects.filter(id=cat_id).first() if cat_id else None
+        loc_obj = Location.objects.filter(id=loc_id).first() if loc_id else None
+
+        job = Job.objects.create(
+            user=customer,
+            title=title,
+            category=cat_obj,
+            location=loc_obj,
+            budget=budget,
+            status=status,
+            description=description,
+            address=address,
+            contact_name=customer.get_full_name() or customer.username
+        )
+        django_messages.success(request, f'Job "{job.title}" created successfully.')
+        return redirect('super_admin_jobs')
+
+    return render(request, 'superadmin/job_form.html', {
+        'mode': 'create',
+        'users': users,
+        'categories': categories,
+        'locations': locations
+    })
+
+@sa_required
 def super_admin_job_edit(request, job_id):
     job = get_object_or_404(Job, pk=job_id)
     categories = Category.objects.all()
+    locations = Location.objects.all().order_by('state', 'city')
+    users = CustomUser.objects.filter(role='USER').order_by('username')
     if request.method == 'POST':
         job.title = request.POST.get('title', job.title)
         job.status = request.POST.get('status', job.status)
@@ -317,11 +418,14 @@ def super_admin_job_edit(request, job_id):
         cat_id = request.POST.get('category')
         if cat_id:
             job.category = get_object_or_404(Category, pk=cat_id)
+        loc_id = request.POST.get('location')
+        if loc_id:
+            job.location = Location.objects.filter(id=loc_id).first()
         job.description = request.POST.get('description', job.description)
         job.save()
         django_messages.success(request, f'Job "{job.title}" updated.')
         return redirect('super_admin_jobs')
-    return render(request, 'superadmin/job_form.html', {'job': job, 'categories': categories})
+    return render(request, 'superadmin/job_form.html', {'mode': 'edit', 'job': job, 'categories': categories, 'locations': locations, 'users': users})
 
 @sa_required
 def super_admin_job_delete(request, job_id):
@@ -331,7 +435,7 @@ def super_admin_job_delete(request, job_id):
     return redirect('super_admin_jobs')
 
 # ─────────────────────────────────────────────
-# QUICK SERVICES (List + Edit + Delete)
+# QUICK SERVICES (List + Create + Edit + Delete)
 # ─────────────────────────────────────────────
 @sa_required
 def super_admin_quick_services(request):
@@ -339,9 +443,52 @@ def super_admin_quick_services(request):
     return render(request, 'superadmin/quick_services.html', {'qservices': qservices})
 
 @sa_required
+def super_admin_qs_create(request):
+    users = CustomUser.objects.filter(role='USER').order_by('username')
+    categories = Category.objects.all().order_by('name')
+    locations = Location.objects.all().order_by('state', 'city')
+
+    if request.method == 'POST':
+        user_id = request.POST.get('user')
+        title = request.POST.get('title', '').strip()
+        cat_id = request.POST.get('category')
+        loc_id = request.POST.get('location')
+        budget = request.POST.get('budget', 0) or 0
+        status = request.POST.get('status', 'open')
+        description = request.POST.get('description', '').strip()
+        address = request.POST.get('address', '').strip()
+
+        customer = get_object_or_404(CustomUser, pk=user_id)
+        cat_obj = Category.objects.filter(id=cat_id).first() if cat_id else None
+        loc_obj = Location.objects.filter(id=loc_id).first() if loc_id else None
+
+        qs = QuickService.objects.create(
+            user=customer,
+            title=title,
+            category=cat_obj,
+            location=loc_obj,
+            budget=budget,
+            status=status,
+            description=description,
+            address=address,
+            contact_name=customer.get_full_name() or customer.username
+        )
+        django_messages.success(request, f'Quick Service "{qs.title}" created successfully.')
+        return redirect('super_admin_quick_services')
+
+    return render(request, 'superadmin/qs_form.html', {
+        'mode': 'create',
+        'users': users,
+        'categories': categories,
+        'locations': locations
+    })
+
+@sa_required
 def super_admin_qs_edit(request, qs_id):
     qs = get_object_or_404(QuickService, pk=qs_id)
     categories = Category.objects.all()
+    locations = Location.objects.all().order_by('state', 'city')
+    users = CustomUser.objects.filter(role='USER').order_by('username')
     if request.method == 'POST':
         qs.title = request.POST.get('title', qs.title)
         qs.status = request.POST.get('status', qs.status)
@@ -349,11 +496,14 @@ def super_admin_qs_edit(request, qs_id):
         cat_id = request.POST.get('category')
         if cat_id:
             qs.category = get_object_or_404(Category, pk=cat_id)
+        loc_id = request.POST.get('location')
+        if loc_id:
+            qs.location = Location.objects.filter(id=loc_id).first()
         qs.description = request.POST.get('description', qs.description)
         qs.save()
         django_messages.success(request, f'Quick Service "{qs.title}" updated.')
         return redirect('super_admin_quick_services')
-    return render(request, 'superadmin/qs_form.html', {'qs': qs, 'categories': categories})
+    return render(request, 'superadmin/qs_form.html', {'mode': 'edit', 'qs': qs, 'categories': categories, 'locations': locations, 'users': users})
 
 @sa_required
 def super_admin_qs_delete(request, qs_id):
@@ -363,12 +513,53 @@ def super_admin_qs_delete(request, qs_id):
     return redirect('super_admin_quick_services')
 
 # ─────────────────────────────────────────────
-# BIDS (List + Edit Status + Delete)
+# BIDS (List + Create + Edit + Delete)
 # ─────────────────────────────────────────────
 @sa_required
 def super_admin_bids(request):
     bids = Bid.objects.all().select_related('vendor', 'job', 'quick_service').order_by('-created_at')
     return render(request, 'superadmin/bids.html', {'bids': bids})
+
+@sa_required
+def super_admin_bid_create(request):
+    vendors = CustomUser.objects.filter(role='VENDOR').order_by('username')
+    jobs = Job.objects.filter(status__in=['open', 'progress']).order_by('-created_at')
+    qservices = QuickService.objects.filter(status__in=['open', 'progress']).order_by('-created_at')
+
+    if request.method == 'POST':
+        vendor_id = request.POST.get('vendor')
+        target_type = request.POST.get('target_type', 'job')
+        target_id = request.POST.get('target_id')
+        amount = request.POST.get('amount', 0) or 0
+        status = request.POST.get('status', 'pending')
+        proposal = request.POST.get('proposal', '').strip()
+
+        vendor = get_object_or_404(CustomUser, pk=vendor_id)
+        job_obj = None
+        qs_obj = None
+
+        if target_type == 'job' and target_id:
+            job_obj = get_object_or_404(Job, pk=target_id)
+        elif target_type == 'quick_service' and target_id:
+            qs_obj = get_object_or_404(QuickService, pk=target_id)
+
+        bid = Bid.objects.create(
+            vendor=vendor,
+            job=job_obj,
+            quick_service=qs_obj,
+            amount=amount,
+            status=status,
+            proposal=proposal
+        )
+        django_messages.success(request, f'Bid of ₹{bid.amount} created successfully for {vendor.username}.')
+        return redirect('super_admin_bids')
+
+    return render(request, 'superadmin/bid_form.html', {
+        'mode': 'create',
+        'vendors': vendors,
+        'jobs': jobs,
+        'qservices': qservices
+    })
 
 @sa_required
 def super_admin_bid_edit(request, bid_id):
@@ -379,7 +570,7 @@ def super_admin_bid_edit(request, bid_id):
         bid.save()
         django_messages.success(request, 'Bid updated.')
         return redirect('super_admin_bids')
-    return render(request, 'superadmin/bid_form.html', {'bid': bid})
+    return render(request, 'superadmin/bid_form.html', {'mode': 'edit', 'bid': bid})
 
 @sa_required
 def super_admin_bid_delete(request, bid_id):
@@ -389,12 +580,44 @@ def super_admin_bid_delete(request, bid_id):
     return redirect('super_admin_bids')
 
 # ─────────────────────────────────────────────
-# SUBSCRIPTIONS (List + Delete)
+# SUBSCRIPTIONS (List + Create + Delete)
 # ─────────────────────────────────────────────
 @sa_required
 def super_admin_subscriptions(request):
     subscriptions = Subscription.objects.all().select_related('vendor').order_by('-created_at')
     return render(request, 'superadmin/subscriptions.html', {'subscriptions': subscriptions})
+
+@sa_required
+def super_admin_subscription_create(request):
+    vendors = CustomUser.objects.filter(role='VENDOR').order_by('username')
+    if request.method == 'POST':
+        vendor_id = request.POST.get('vendor')
+        package_name = request.POST.get('package_name', 'Pro Growth Tier')
+        amount = request.POST.get('amount', 0) or 0
+        status = request.POST.get('status', 'success')
+        credits = int(request.POST.get('credits', 50) or 50)
+
+        vendor = get_object_or_404(CustomUser, pk=vendor_id)
+        sub = Subscription.objects.create(
+            vendor=vendor,
+            package_name=package_name,
+            amount=amount,
+            status=status
+        )
+
+        # Update vendor profile credits if success
+        if status == 'success' and hasattr(vendor, 'vendor_profile'):
+            vp = vendor.vendor_profile
+            vp.bid_credits = getattr(vp, 'bid_credits', 0) + credits
+            vp.save()
+
+        django_messages.success(request, f'Subscription of ₹{sub.amount} added for {vendor.username}.')
+        return redirect('super_admin_subscriptions')
+
+    return render(request, 'superadmin/subscription_form.html', {
+        'mode': 'create',
+        'vendors': vendors
+    })
 
 @sa_required
 def super_admin_subscription_delete(request, sub_id):

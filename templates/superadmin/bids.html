@@ -3,9 +3,12 @@
 {% block header_title %}Vendor Bids{% endblock %}
 
 {% block content %}
-<div style="margin-bottom: 24px;">
-  <h2 style="font-size: 24px; font-weight: 700; margin-bottom: 8px;">Vendor Quotations</h2>
-  <p style="color: var(--text-muted);">Monitor and manage all bids placed by vendors.</p>
+<div style="margin-bottom: 24px; display: flex; justify-content: space-between; align-items: center;">
+  <div>
+    <h2 style="font-size: 24px; font-weight: 700; margin-bottom: 8px;">Vendor Quotations</h2>
+    <p style="color: var(--text-muted);">Monitor and manage all bids placed by vendors.</p>
+  </div>
+  <a href="{% url 'super_admin_bid_create' %}" class="btn btn-primary"><i class="fa-solid fa-plus"></i> Add Bid</a>
 </div>
 
 <div class="card" style="padding: 0;">

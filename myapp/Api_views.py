@@ -605,6 +605,10 @@ def add_user_api(request):
             first_name=name
         )
         user.set_password(password)
+        
+        # Tag with Area Admin's assigned state if created by an area admin
+        if request.user.is_authenticated and request.user.role == 'ADMIN' and not request.user.is_superuser:
+            user.assigned_state = request.user.assigned_state
         user.save()
 
         UserProfile.objects.create(user=user, phone_number=mobile)
@@ -614,7 +618,7 @@ def add_user_api(request):
             'name': name,
             'email': email or '—',
             'mobile': mobile or '—',
-            'location': 'Unknown',
+            'location': user.assigned_state or 'Unknown',
             'quickServices': 0,
             'jobs': 0,
             'completedJobs': 0,
