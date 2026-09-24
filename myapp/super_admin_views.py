@@ -782,7 +782,6 @@ def super_admin_landing_overview(request):
         'featured_count': FeaturedProjectCard.objects.count(),
         'packages_count': PackageCard.objects.count(),
         'testimonials_count': Testimonial.objects.count(),
-        'trust_metrics_count': TrustMetric.objects.count(),
     }
     return render(request, 'superadmin/cms_landing_overview.html', context)
 
@@ -1039,60 +1038,4 @@ def super_admin_landing_testimonial_toggle(request, card_id):
     item.save()
     django_messages.success(request, f'Testimonial for "{item.client_name}" status updated.')
     return redirect('super_admin_landing_testimonials')
-
-
-# ── TRUST METRICS ─────────────────────────────────────────────────────────────
-@sa_required
-def super_admin_landing_trust_metrics(request):
-    metrics = TrustMetric.objects.all().order_by('order')
-    return render(request, 'superadmin/cms_trust_metrics.html', {'metrics': metrics})
-
-@sa_required
-def super_admin_landing_trust_metric_create(request):
-    if request.method == 'POST':
-        form = TrustMetricForm(request.POST)
-        if form.is_valid():
-            form.save()
-            django_messages.success(request, 'Trust Metric created!')
-            return redirect('super_admin_landing_trust_metrics')
-    else:
-        form = TrustMetricForm()
-    return render(request, 'superadmin/cms_card_form.html', {
-        'form': form,
-        'title': 'Add Trust Metric',
-        'back_url': 'super_admin_landing_trust_metrics'
-    })
-
-@sa_required
-def super_admin_landing_trust_metric_edit(request, metric_id):
-    item = get_object_or_404(TrustMetric, pk=metric_id)
-    if request.method == 'POST':
-        form = TrustMetricForm(request.POST, instance=item)
-        if form.is_valid():
-            form.save()
-            django_messages.success(request, 'Trust Metric updated!')
-            return redirect('super_admin_landing_trust_metrics')
-    else:
-        form = TrustMetricForm(instance=item)
-    return render(request, 'superadmin/cms_card_form.html', {
-        'form': form,
-        'card': item,
-        'title': f'Edit Trust Metric: {item.label}',
-        'back_url': 'super_admin_landing_trust_metrics'
-    })
-
-@sa_required
-def super_admin_landing_trust_metric_delete(request, metric_id):
-    item = get_object_or_404(TrustMetric, pk=metric_id)
-    item.delete()
-    django_messages.success(request, 'Trust Metric deleted.')
-    return redirect('super_admin_landing_trust_metrics')
-
-@sa_required
-def super_admin_landing_trust_metric_toggle(request, metric_id):
-    item = get_object_or_404(TrustMetric, pk=metric_id)
-    item.is_active = not item.is_active
-    item.save()
-    django_messages.success(request, f'Trust Metric "{item.label}" status updated.')
-    return redirect('super_admin_landing_trust_metrics')
 

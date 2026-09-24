@@ -109,13 +109,6 @@ urlpatterns = [
     path('super-admin/landing/testimonials/<int:card_id>/delete/', super_admin_views.super_admin_landing_testimonial_delete, name='super_admin_landing_testimonial_delete'),
     path('super-admin/landing/testimonials/<int:card_id>/toggle/', super_admin_views.super_admin_landing_testimonial_toggle, name='super_admin_landing_testimonial_toggle'),
 
-    # Trust Metrics
-    path('super-admin/landing/trust-metrics/', super_admin_views.super_admin_landing_trust_metrics, name='super_admin_landing_trust_metrics'),
-    path('super-admin/landing/trust-metrics/create/', super_admin_views.super_admin_landing_trust_metric_create, name='super_admin_landing_trust_metric_create'),
-    path('super-admin/landing/trust-metrics/<int:metric_id>/edit/', super_admin_views.super_admin_landing_trust_metric_edit, name='super_admin_landing_trust_metric_edit'),
-    path('super-admin/landing/trust-metrics/<int:metric_id>/delete/', super_admin_views.super_admin_landing_trust_metric_delete, name='super_admin_landing_trust_metric_delete'),
-    path('super-admin/landing/trust-metrics/<int:metric_id>/toggle/', super_admin_views.super_admin_landing_trust_metric_toggle, name='super_admin_landing_trust_metric_toggle'),
-
     # General APIs (from Api_views.py)
     path('api/add-user/', Api_views.add_user_api, name='add_user_api'),
     path('api/user-nav-data/', Api_views.user_nav_data_api, name='user_nav_data_api'),
