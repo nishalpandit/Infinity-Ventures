@@ -4,11 +4,17 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages as django_messages
 from django.http import JsonResponse
 from django.views.decorators.http import require_POST
+from django.core.paginator import Paginator, PageNotAnInteger, EmptyPage
+from django.db.models import Q, Sum, Count
 from .models import (
     CustomUser, VendorProfile, UserProfile, Job, QuickService, 
     Category, GlobalSettings, Location, Bid, Subscription, Message,
     SiteBranding, HeroSection, QuickServiceCard, FeaturedProjectCard,
-    PackageCard, Testimonial, TrustMetric, VendorKYC
+    PackageCard, Testimonial, TrustMetric, VendorKYC,
+    VendorWallet, WalletTransaction, PayoutRequest
+)
+from .wallet_services import (
+    settle_job_completion, approve_payout, reject_payout, get_or_create_wallet
 )
 from .cms_forms import (
     SiteBrandingForm, HeroSectionForm, QuickServiceCardForm,
@@ -548,6 +554,7 @@ def super_admin_job_edit(request, job_id):
     vendors = CustomUser.objects.filter(role='VENDOR').select_related('vendor_profile').order_by('username')
     
     if request.method == 'POST':
+        old_status = job.status
         job.title = request.POST.get('title', job.title)
         job.status = request.POST.get('status', job.status)
         job.budget = request.POST.get('budget', job.budget)
@@ -577,6 +584,10 @@ def super_admin_job_edit(request, job_id):
             job.location = Location.objects.filter(id=loc_id).first()
         job.description = request.POST.get('description', job.description)
         job.save()
+        if job.status == 'completed' and old_status != 'completed':
+            settled, msg = settle_job_completion(job=job)
+            if settled:
+                django_messages.info(request, msg)
         django_messages.success(request, f'Job "{job.title}" updated.')
         return redirect('super_admin_jobs')
     return render(request, 'superadmin/job_form.html', {
@@ -651,9 +662,13 @@ def super_admin_job_bids(request, job_id):
                     pass
 
             if status_val:
+                old_status = job.status
                 job.status = status_val
-
-            job.save()
+                job.save()
+                if status_val == 'completed' and old_status != 'completed':
+                    settled, msg = settle_job_completion(job=job)
+                    if settled:
+                        django_messages.info(request, msg)
             django_messages.success(request, 'Bidding parameters & limits updated successfully.')
             return redirect('super_admin_job_bids', job_id=job.id)
 
@@ -812,6 +827,7 @@ def super_admin_qs_edit(request, qs_id):
     locations = Location.objects.all().order_by('state', 'city')
     users = CustomUser.objects.filter(role='USER').order_by('username')
     if request.method == 'POST':
+        old_status = qs.status
         qs.title = request.POST.get('title', qs.title)
         qs.status = request.POST.get('status', qs.status)
         qs.budget = request.POST.get('budget', qs.budget)
@@ -823,6 +839,10 @@ def super_admin_qs_edit(request, qs_id):
             qs.location = Location.objects.filter(id=loc_id).first()
         qs.description = request.POST.get('description', qs.description)
         qs.save()
+        if qs.status == 'completed' and old_status != 'completed':
+            settled, msg = settle_job_completion(quick_service=qs)
+            if settled:
+                django_messages.info(request, msg)
         django_messages.success(request, f'Quick Service "{qs.title}" updated.')
         return redirect('super_admin_quick_services')
     return render(request, 'superadmin/qs_form.html', {'mode': 'edit', 'qs': qs, 'categories': categories, 'locations': locations, 'users': users})
@@ -1361,3 +1381,95 @@ def super_admin_kyc_reject(request, kyc_id):
     kyc.save()
     django_messages.success(request, f'KYC rejected for {kyc.vendor.username}.')
     return redirect('super_admin_kyc')
+
+
+# ─────────────────────────────────────────────
+# PAYOUTS & WALLET SETTLEMENTS
+# ─────────────────────────────────────────────
+@sa_required
+def super_admin_payouts(request):
+    q = request.GET.get('q', '').strip()
+    status_filter = request.GET.get('status', '').strip()
+    method_filter = request.GET.get('method', '').strip()
+    page = request.GET.get('page', 1)
+
+    queryset = PayoutRequest.objects.select_related(
+        'vendor', 'vendor__vendor_profile', 'processed_by'
+    ).all().order_by('-requested_at')
+
+    if q:
+        queryset = queryset.filter(
+            Q(vendor__username__icontains=q) |
+            Q(vendor__first_name__icontains=q) |
+            Q(vendor__vendor_profile__company_name__icontains=q) |
+            Q(bank_reference_number__icontains=q) |
+            Q(account_number__icontains=q) |
+            Q(upi_id__icontains=q)
+        )
+    if status_filter:
+        queryset = queryset.filter(status=status_filter)
+    if method_filter:
+        queryset = queryset.filter(payout_method=method_filter)
+
+    # Summary metrics
+    all_payouts = PayoutRequest.objects.all()
+    completed_payouts = all_payouts.filter(status='completed')
+    total_paid_out = completed_payouts.aggregate(total=Sum('amount'))['total'] or 0
+    pending_payouts = all_payouts.filter(status='pending')
+    pending_count = pending_payouts.count()
+    pending_amount = pending_payouts.aggregate(total=Sum('amount'))['total'] or 0
+    rejected_count = all_payouts.filter(status='rejected').count()
+    total_commission_collected = WalletTransaction.objects.filter(
+        transaction_type='commission'
+    ).aggregate(total=Sum('amount'))['total'] or 0
+
+    paginator = Paginator(queryset, 15)
+    try:
+        items = paginator.page(page)
+    except PageNotAnInteger:
+        items = paginator.page(1)
+    except EmptyPage:
+        items = paginator.page(paginator.num_pages)
+
+    context = {
+        'payouts': items,
+        'q': q,
+        'status_filter': status_filter,
+        'method_filter': method_filter,
+        'total_paid_out': total_paid_out,
+        'pending_count': pending_count,
+        'pending_amount': pending_amount,
+        'rejected_count': rejected_count,
+        'total_commission_collected': total_commission_collected,
+    }
+    return render(request, 'superadmin/payouts.html', context)
+
+
+@sa_required
+@require_POST
+def super_admin_payout_approve(request, payout_id):
+    payout = get_object_or_404(PayoutRequest, pk=payout_id)
+    bank_reference_number = request.POST.get('bank_reference_number', '').strip()
+    admin_remarks = request.POST.get('admin_remarks', '').strip()
+    
+    success, msg = approve_payout(payout, request.user, bank_reference_number=bank_reference_number, remarks=admin_remarks)
+    if success:
+        django_messages.success(request, msg)
+    else:
+        django_messages.error(request, msg)
+    return redirect('super_admin_payouts')
+
+
+@sa_required
+@require_POST
+def super_admin_payout_reject(request, payout_id):
+    payout = get_object_or_404(PayoutRequest, pk=payout_id)
+    admin_remarks = request.POST.get('admin_remarks', '').strip() or "Payout request rejected by administration."
+    
+    success, msg = reject_payout(payout, request.user, remarks=admin_remarks)
+    if success:
+        django_messages.success(request, msg)
+    else:
+        django_messages.error(request, msg)
+    return redirect('super_admin_payouts')
+

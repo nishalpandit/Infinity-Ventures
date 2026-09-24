@@ -4,7 +4,7 @@ from .models import (
     CustomUser, UserProfile, VendorProfile, QuickService, Job,
     Bid, Subscription, Category, Location, Message, GlobalSettings,
     SiteBranding, HeroSection, QuickServiceCard, FeaturedProjectCard,
-    PackageCard, Testimonial, TrustMetric
+    PackageCard, Testimonial, TrustMetric, VendorWallet, WalletTransaction, PayoutRequest
 )
 
 @admin.action(description='Suspend selected users')
@@ -111,3 +111,22 @@ admin.site.register(UserProfile)
 admin.site.register(Subscription)
 admin.site.register(Message)
 admin.site.register(GlobalSettings)
+
+class VendorWalletAdmin(admin.ModelAdmin):
+    list_display = ('vendor', 'available_balance', 'total_earned', 'total_withdrawn', 'updated_at')
+    search_fields = ('vendor__username', 'vendor__email')
+
+class WalletTransactionAdmin(admin.ModelAdmin):
+    list_display = ('wallet', 'amount', 'transaction_type', 'created_at')
+    list_filter = ('transaction_type',)
+    search_fields = ('wallet__vendor__username', 'description')
+
+class PayoutRequestAdmin(admin.ModelAdmin):
+    list_display = ('vendor', 'amount', 'payout_method', 'status', 'bank_reference_number', 'requested_at')
+    list_filter = ('status', 'payout_method')
+    search_fields = ('vendor__username', 'bank_reference_number', 'account_number', 'upi_id')
+
+admin.site.register(VendorWallet, VendorWalletAdmin)
+admin.site.register(WalletTransaction, WalletTransactionAdmin)
+admin.site.register(PayoutRequest, PayoutRequestAdmin)
+

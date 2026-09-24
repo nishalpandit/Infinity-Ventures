@@ -179,6 +179,73 @@ class Subscription(models.Model):
     def __str__(self):
         return f"{self.vendor.username} - {self.package_name}"
 
+
+class VendorWallet(models.Model):
+    vendor = models.OneToOneField(CustomUser, on_delete=models.CASCADE, related_name='wallet')
+    available_balance = models.DecimalField(max_digits=12, decimal_places=2, default=0.00)
+    total_earned = models.DecimalField(max_digits=12, decimal_places=2, default=0.00)
+    total_withdrawn = models.DecimalField(max_digits=12, decimal_places=2, default=0.00)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Vendor Wallet"
+        verbose_name_plural = "Vendor Wallets"
+
+    def __str__(self):
+        return f"{self.vendor.username} Wallet (₹{self.available_balance})"
+
+
+class WalletTransaction(models.Model):
+    TXN_TYPE = (
+        ('credit', 'Job Earnings'),
+        ('debit', 'Payout Withdrawal'),
+        ('commission', 'Commission Deduction'),
+        ('refund', 'Refund / Adjustment'),
+    )
+    wallet = models.ForeignKey(VendorWallet, on_delete=models.CASCADE, related_name='transactions')
+    amount = models.DecimalField(max_digits=10, decimal_places=2)
+    transaction_type = models.CharField(max_length=20, choices=TXN_TYPE)
+    related_job = models.ForeignKey(Job, on_delete=models.SET_NULL, null=True, blank=True)
+    related_quick_service = models.ForeignKey(QuickService, on_delete=models.SET_NULL, null=True, blank=True)
+    description = models.CharField(max_length=255)
+    created_at = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.wallet.vendor.username} - {self.transaction_type}: ₹{self.amount}"
+
+
+class PayoutRequest(models.Model):
+    STATUS_CHOICES = (
+        ('pending', 'Pending Approval'),
+        ('processing', 'Processing'),
+        ('completed', 'Transferred / Paid'),
+        ('rejected', 'Rejected'),
+    )
+    vendor = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='payout_requests')
+    amount = models.DecimalField(max_digits=10, decimal_places=2)
+    payout_method = models.CharField(max_length=20, choices=[('bank', 'Bank Transfer'), ('upi', 'UPI ID')])
+    account_holder_name = models.CharField(max_length=150, blank=True, null=True)
+    account_number = models.CharField(max_length=50, blank=True, null=True)
+    ifsc_code = models.CharField(max_length=20, blank=True, null=True)
+    bank_name = models.CharField(max_length=100, blank=True, null=True)
+    upi_id = models.CharField(max_length=100, blank=True, null=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+    bank_reference_number = models.CharField(max_length=100, blank=True, null=True, help_text="UTR / Transaction Ref")
+    admin_remarks = models.TextField(blank=True, null=True)
+    requested_at = models.DateTimeField(default=timezone.now)
+    processed_at = models.DateTimeField(null=True, blank=True)
+    processed_by = models.ForeignKey(CustomUser, on_delete=models.SET_NULL, null=True, blank=True, related_name='processed_payouts')
+
+    class Meta:
+        ordering = ['-requested_at']
+
+    def __str__(self):
+        return f"{self.vendor.username} - ₹{self.amount} ({self.get_status_display()})"
+
+
 class Category(models.Model):
     SERVICE_TYPE_CHOICES = (
         ('job', 'Job'),

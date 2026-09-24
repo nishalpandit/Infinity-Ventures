@@ -1,0 +1,396 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="Infinity Ventures Vendor Portal — Wallet & Payouts">
+  <title>Wallet & Payouts · Infinity Ventures Vendor</title>
+  <link rel="stylesheet" href="/infinity-vendor-dashboard/assets/styles.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+  <script>
+    window.VENDOR_INITIALS = "{{ vendor_initials|escapejs }}";
+    window.VENDOR_NAME = "{{ vendor_name|escapejs }}";
+    window.VENDOR_TYPE = "{{ vendor_type|escapejs }}";
+    window.VENDOR_LOCATION = "{{ vendor_location|escapejs }}";
+    window.PROFILE_IMAGE_URL = "{{ profile_image_url|escapejs }}" || null;
+    window.VENDOR_CREDITS = {{ remaining_credits|default:5 }};
+    window.VENDOR_WALLET_BALANCE = "{{ wallet_balance|default:'0.00' }}";
+  </script>
+  <script defer src="/infinity-vendor-dashboard/assets/app.js"></script>
+</head>
+<body data-page="wallet" data-title="Wallet & Payouts" data-root="../">
+<div class="app-shell">
+  <div id="sidebar-root"></div>
+  <div class="workspace">
+    <div id="topbar-root"></div>
+    <main class="page">
+
+      <div class="page-head">
+        <div>
+          <h1>Vendor Wallet &amp; Payouts</h1>
+          <p class="muted">Monitor job settlement earnings, platform commission deductions, and withdraw funds directly to your Bank Account or UPI.</p>
+        </div>
+        <div class="actions">
+          <button type="button" class="btn btn-primary" onclick="openPayoutModal();" {% if wallet.available_balance < 100 %}disabled title="Minimum balance of ₹100 required to withdraw"{% endif %}>
+            <span data-icon="rupee"></span> Request Payout
+          </button>
+        </div>
+      </div>
+
+      {% if success_message %}
+      <div class="callout success" style="margin-bottom: 20px;">
+        <span data-icon="check"></span>
+        <div><strong>Success:</strong> {{ success_message }}</div>
+      </div>
+      {% endif %}
+
+      {% if error_message %}
+      <div class="callout warning" style="margin-bottom: 20px; background: #fff0ee; border-color: #f7c2bd; color: #b42318;">
+        <span data-icon="alert"></span>
+        <div><strong>Action Failed:</strong> {{ error_message }}</div>
+      </div>
+      {% endif %}
+
+      <!-- WALLET BALANCES & METRICS -->
+      <section class="grid grid-4" style="margin-bottom: 24px;">
+        <!-- Available Withdrawable Balance Card -->
+        <article class="card stat-card credit-balance" style="background: linear-gradient(135deg, #0f766e, #1e3a8a); color: white; padding: 22px;">
+          <div class="stat-top">
+            <span class="stat-icon" style="background: rgba(255,255,255,0.2); color: white;"><span data-icon="rupee"></span></span>
+            <span class="badge" style="background: rgba(255,255,255,0.25); color: #fff; font-size: 10px; border: none;">WITHDRAWABLE</span>
+          </div>
+          <div class="stat-value" style="font-size: 32px; font-weight: 800; color: white; margin: 12px 0 4px;">
+            ₹{{ wallet.available_balance|floatformat:2 }}
+          </div>
+          <div class="stat-label" style="color: #cbd5e1; font-size: 12px;">Available for Immediate Withdrawal</div>
+        </article>
+
+        <!-- Total Earned Card -->
+        <article class="card stat-card">
+          <div class="stat-top">
+            <span class="stat-icon teal"><span data-icon="chart"></span></span>
+            <span class="trend" style="background: #ecfdf5; color: #059669;">Lifetime</span>
+          </div>
+          <div class="stat-value" style="color: #0f172a;">₹{{ wallet.total_earned|floatformat:2 }}</div>
+          <div class="stat-label">Total Net Earnings</div>
+        </article>
+
+        <!-- Total Withdrawn Card -->
+        <article class="card stat-card">
+          <div class="stat-top">
+            <span class="stat-icon blue"><span data-icon="award"></span></span>
+            <span class="trend" style="background: #eff8ff; color: #0284c7;">Settled</span>
+          </div>
+          <div class="stat-value" style="color: #0f172a;">₹{{ wallet.total_withdrawn|floatformat:2 }}</div>
+          <div class="stat-label">Total Payouts Completed</div>
+        </article>
+
+        <!-- Pending Payouts Card -->
+        <article class="card stat-card">
+          <div class="stat-top">
+            <span class="stat-icon orange"><span data-icon="clock"></span></span>
+            <span class="trend" style="background: #fffbeb; color: #d97706;">In Review</span>
+          </div>
+          <div class="stat-value" style="color: #d97706;">₹{{ pending_payouts_sum|floatformat:2 }}</div>
+          <div class="stat-label">Pending Payout Requests</div>
+        </article>
+      </section>
+
+      <!-- COMMISSION TRANSPARENCY NOTICE -->
+      <div class="callout neutral" style="margin-bottom: 24px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 14px;">
+        <div style="display: flex; gap: 12px; align-items: center;">
+          <span class="stat-icon purple" style="width: 36px; height: 36px; border-radius: 8px;"><span data-icon="shield"></span></span>
+          <div>
+            <strong>Transparent Platform Settlement Engine</strong>
+            <span class="muted small">A standard platform commission of <strong>{{ commission_percent }}%</strong> is automatically deducted upon job completion. Net revenue is credited instantly to your wallet.</span>
+          </div>
+        </div>
+        <div class="badge badge-purple" style="font-size: 12px; padding: 6px 12px;">
+          Commission: {{ commission_percent }}%
+        </div>
+      </div>
+
+      <!-- TABS CONTAINER -->
+      <section class="card" style="margin-top: 18px;">
+        <div class="tabs">
+          <button type="button" class="tab active" id="tab-txns-btn" onclick="switchWalletTab('txns')">
+            <i class="fa-solid fa-receipt"></i> Transaction Ledger <span class="count">{{ transactions|length }}</span>
+          </button>
+          <button type="button" class="tab" id="tab-payouts-btn" onclick="switchWalletTab('payouts')">
+            <i class="fa-solid fa-money-bill-transfer"></i> Payout Requests <span class="count">{{ payout_requests|length }}</span>
+          </button>
+        </div>
+
+        <!-- TRANSACTIONS LEDGER TAB -->
+        <div id="tab-txns" class="table-wrap">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Date &amp; Time</th>
+                <th>Description</th>
+                <th>Type</th>
+                <th>Reference Booking</th>
+                <th style="text-align: right;">Amount</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for t in transactions %}
+              <tr>
+                <td>
+                  <span style="font-weight: 600; color: #334155;">{{ t.created_at|date:"M d, Y" }}</span><br>
+                  <span class="tiny muted">{{ t.created_at|time:"h:i A" }}</span>
+                </td>
+                <td>
+                  <strong style="color: #1e293b;">{{ t.description }}</strong>
+                </td>
+                <td>
+                  {% if t.transaction_type == 'credit' %}
+                    <span class="badge badge-success"><i class="fa-solid fa-plus"></i> Job Earnings</span>
+                  {% elif t.transaction_type == 'commission' %}
+                    <span class="badge badge-progress"><i class="fa-solid fa-percent"></i> Platform Fee</span>
+                  {% elif t.transaction_type == 'debit' %}
+                    <span class="badge badge-info"><i class="fa-solid fa-arrow-up-right-from-square"></i> Payout Transfer</span>
+                  {% else %}
+                    <span class="badge badge-purple"><i class="fa-solid fa-rotate-left"></i> Refund</span>
+                  {% endif %}
+                </td>
+                <td>
+                  {% if t.related_job %}
+                    <span style="font-size: 12px; font-weight: 600; color: var(--primary);">Job #{{ t.related_job.id }}: {{ t.related_job.title|truncatechars:35 }}</span>
+                  {% elif t.related_quick_service %}
+                    <span style="font-size: 12px; font-weight: 600; color: var(--teal);">Quick Service #{{ t.related_quick_service.id }}: {{ t.related_quick_service.title|truncatechars:35 }}</span>
+                  {% else %}
+                    <span class="muted small">—</span>
+                  {% endif %}
+                </td>
+                <td style="text-align: right;">
+                  {% if t.transaction_type == 'credit' or t.transaction_type == 'refund' %}
+                    <span style="font-weight: 800; font-size: 15px; color: #059669;">+₹{{ t.amount|floatformat:2 }}</span>
+                  {% else %}
+                    <span style="font-weight: 800; font-size: 15px; color: #dc2626;">-₹{{ t.amount|floatformat:2 }}</span>
+                  {% endif %}
+                </td>
+              </tr>
+              {% empty %}
+              <tr>
+                <td colspan="5" class="table-empty">
+                  <span data-icon="file" style="width: 36px; height: 36px; margin: 0 auto 10px; color: #94a3b8; display: block;"></span>
+                  <strong>No wallet transactions recorded yet.</strong>
+                  <p class="small muted" style="margin: 4px 0 0;">Earnings will be credited automatically as soon as your active jobs or quick services are marked as completed.</p>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+
+        <!-- PAYOUT REQUESTS TAB -->
+        <div id="tab-payouts" class="table-wrap" style="display: none;">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Request ID</th>
+                <th>Requested Date</th>
+                <th>Amount</th>
+                <th>Destination Details</th>
+                <th>Status</th>
+                <th>Transfer Reference / UTR</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for p in payout_requests %}
+              <tr>
+                <td><strong style="color: var(--primary);">#PAY-{{ p.id }}</strong></td>
+                <td>
+                  <span style="font-weight: 600; color: #334155;">{{ p.requested_at|date:"M d, Y" }}</span><br>
+                  <span class="tiny muted">{{ p.requested_at|time:"h:i A" }}</span>
+                </td>
+                <td>
+                  <span style="font-size: 16px; font-weight: 800; color: #0f172a;">₹{{ p.amount|floatformat:2 }}</span>
+                </td>
+                <td>
+                  {% if p.payout_method == 'bank' %}
+                    <div style="font-size: 12.5px; font-weight: 600; color: #1e293b;"><i class="fa-solid fa-building-columns" style="color: var(--primary);"></i> {{ p.bank_name|default:"Bank Account" }}</div>
+                    <div class="tiny muted" style="font-family: monospace;">A/C: {{ p.account_number }} &bull; IFSC: {{ p.ifsc_code }}</div>
+                  {% else %}
+                    <div style="font-size: 12.5px; font-weight: 600; color: #0284c7;"><i class="fa-solid fa-mobile-screen-button"></i> UPI Transfer</div>
+                    <div class="tiny muted" style="font-family: monospace;">{{ p.upi_id }}</div>
+                  {% endif %}
+                </td>
+                <td>
+                  {% if p.status == 'pending' %}
+                    <span class="badge badge-pending"><i class="fa-solid fa-clock"></i> In Review</span>
+                  {% elif p.status == 'completed' %}
+                    <span class="badge badge-success"><i class="fa-solid fa-circle-check"></i> Transferred &amp; Paid</span>
+                  {% else %}
+                    <span class="badge badge-danger"><i class="fa-solid fa-circle-xmark"></i> Rejected &amp; Refunded</span>
+                  {% endif %}
+                </td>
+                <td>
+                  {% if p.status == 'completed' %}
+                    <div style="font-size: 12px; font-family: monospace; font-weight: 700; color: #0f172a;">{{ p.bank_reference_number|default:"DIRECT-TRANSFER" }}</div>
+                    {% if p.processed_at %}<div class="tiny muted">On {{ p.processed_at|date:"M d, Y" }}</div>{% endif %}
+                  {% elif p.status == 'rejected' %}
+                    <div class="tiny" style="color: #dc2626;"><em>{{ p.admin_remarks|default:"Rejected by Admin" }}</em></div>
+                  {% else %}
+                    <span class="tiny muted">Processing by Admin</span>
+                  {% endif %}
+                </td>
+              </tr>
+              {% empty %}
+              <tr>
+                <td colspan="6" class="table-empty">
+                  <span data-icon="rupee" style="width: 36px; height: 36px; margin: 0 auto 10px; color: #94a3b8; display: block;"></span>
+                  <strong>No payout requests submitted yet.</strong>
+                  <p class="small muted" style="margin: 4px 0 0;">When you have at least ₹100 in available balance, click "Request Payout" above.</p>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- REQUEST PAYOUT MODAL -->
+      <div id="payout-modal" class="modal-backdrop">
+        <div class="modal modal-lg">
+          <div class="modal-head">
+            <h3><span data-icon="rupee"></span> Request Payout Withdrawal</h3>
+            <button type="button" class="modal-close" onclick="closePayoutModal();">&times;</button>
+          </div>
+          <form method="post" action="/vendor/wallet/index">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="request_payout">
+            
+            <div class="modal-body">
+              <div class="callout success" style="margin-bottom: 18px; padding: 10px 14px;">
+                <span data-icon="award"></span>
+                <div>
+                  <strong>Available Withdrawable Balance: ₹{{ wallet.available_balance|floatformat:2 }}</strong>
+                  <span class="small">Withdrawals are processed directly to your registered bank account or verified UPI ID.</span>
+                </div>
+              </div>
+
+              <!-- WITHDRAWAL AMOUNT -->
+              <div class="form-group" style="margin-bottom: 18px;">
+                <label style="display: block; font-weight: 700; margin-bottom: 6px;">Withdrawal Amount (₹) *</label>
+                <div class="input-prefix">
+                  <span>₹</span>
+                  <input type="number" name="amount" class="input" min="100" max="{{ wallet.available_balance }}" step="1" placeholder="Enter amount (min ₹100)" required style="font-size: 16px; font-weight: 700;">
+                </div>
+                <div class="field-hint">Minimum withdrawal: ₹100.00 &bull; Maximum: ₹{{ wallet.available_balance|floatformat:2 }}</div>
+              </div>
+
+              <!-- PAYOUT METHOD TOGGLE -->
+              <div class="form-group" style="margin-bottom: 18px;">
+                <label style="display: block; font-weight: 700; margin-bottom: 8px;">Select Transfer Method *</label>
+                <div style="display: flex; gap: 14px;">
+                  <label style="flex: 1; border: 2px solid var(--primary); padding: 12px; border-radius: 10px; cursor: pointer; display: flex; align-items: center; gap: 10px; background: var(--primary-soft);">
+                    <input type="radio" name="payout_method" value="bank" checked onchange="togglePayoutMethod('bank')">
+                    <div>
+                      <strong style="display: block; font-size: 13px; color: var(--primary-dark);"><i class="fa-solid fa-building-columns"></i> Bank Account</strong>
+                      <span class="tiny muted">NEFT / IMPS / RTGS Transfer</span>
+                    </div>
+                  </label>
+                  <label style="flex: 1; border: 2px solid var(--line); padding: 12px; border-radius: 10px; cursor: pointer; display: flex; align-items: center; gap: 10px;">
+                    <input type="radio" name="payout_method" value="upi" onchange="togglePayoutMethod('upi')">
+                    <div>
+                      <strong style="display: block; font-size: 13px; color: #1e293b;"><i class="fa-solid fa-mobile-screen-button"></i> UPI Instant Transfer</strong>
+                      <span class="tiny muted">Google Pay, PhonePe, Paytm UPI</span>
+                    </div>
+                  </label>
+                </div>
+              </div>
+
+              <!-- BANK ACCOUNT FIELDS -->
+              <div id="bank-fields">
+                <div class="form-grid" style="margin-bottom: 14px;">
+                  <div class="field">
+                    <label>Account Holder Name *</label>
+                    <input type="text" name="account_holder_name" class="input" placeholder="Name as in bank passbook" value="{{ vendor_name }}">
+                  </div>
+                  <div class="field">
+                    <label>Bank Name</label>
+                    <input type="text" name="bank_name" class="input" placeholder="e.g. State Bank of India, HDFC Bank">
+                  </div>
+                </div>
+
+                <div class="form-grid" style="margin-bottom: 14px;">
+                  <div class="field">
+                    <label>Account Number *</label>
+                    <input type="password" name="account_number" id="acc_num" class="input" placeholder="Enter bank account number">
+                  </div>
+                  <div class="field">
+                    <label>Confirm Account Number *</label>
+                    <input type="text" name="confirm_account_number" id="confirm_acc_num" class="input" placeholder="Re-enter bank account number">
+                  </div>
+                </div>
+
+                <div class="field" style="margin-bottom: 14px;">
+                  <label>IFSC Code *</label>
+                  <input type="text" name="ifsc_code" class="input" placeholder="e.g. SBIN0001234" style="text-transform: uppercase;">
+                </div>
+              </div>
+
+              <!-- UPI FIELDS -->
+              <div id="upi-fields" style="display: none;">
+                <div class="field" style="margin-bottom: 14px;">
+                  <label>Virtual Payment Address (UPI ID) *</label>
+                  <input type="text" name="upi_id" class="input" placeholder="e.g. yourname@okhdfcbank or 9876543210@paytm">
+                  <div class="field-hint">Ensure the UPI ID belongs to you. Payouts transferred to incorrect UPI IDs cannot be recovered.</div>
+                </div>
+              </div>
+
+            </div>
+
+            <div class="modal-actions">
+              <button type="button" class="btn btn-secondary" onclick="closePayoutModal();">Cancel</button>
+              <button type="submit" class="btn btn-primary"><span data-icon="check"></span> Submit Withdrawal Request</button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <script>
+        function openPayoutModal() {
+          document.getElementById('payout-modal').classList.add('open');
+        }
+        function closePayoutModal() {
+          document.getElementById('payout-modal').classList.remove('open');
+        }
+        function togglePayoutMethod(method) {
+          const bankFields = document.getElementById('bank-fields');
+          const upiFields = document.getElementById('upi-fields');
+          if (method === 'bank') {
+            bankFields.style.display = 'block';
+            upiFields.style.display = 'none';
+          } else {
+            bankFields.style.display = 'none';
+            upiFields.style.display = 'block';
+          }
+        }
+        function switchWalletTab(tab) {
+          const txnsTab = document.getElementById('tab-txns');
+          const payoutsTab = document.getElementById('tab-payouts');
+          const txnsBtn = document.getElementById('tab-txns-btn');
+          const payoutsBtn = document.getElementById('tab-payouts-btn');
+
+          if (tab === 'txns') {
+            txnsTab.style.display = 'block';
+            payoutsTab.style.display = 'none';
+            txnsBtn.classList.add('active');
+            payoutsBtn.classList.remove('active');
+          } else {
+            txnsTab.style.display = 'none';
+            payoutsTab.style.display = 'block';
+            txnsBtn.classList.remove('active');
+            payoutsBtn.classList.add('active');
+          }
+        }
+      </script>
+
+    </main>
+  </div>
+</div>
+</body>
+</html>

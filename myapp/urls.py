@@ -42,6 +42,11 @@ urlpatterns = [
     path('super-admin/kyc/<int:kyc_id>/approve/', super_admin_views.super_admin_kyc_approve, name='super_admin_kyc_approve'),
     path('super-admin/kyc/<int:kyc_id>/reject/', super_admin_views.super_admin_kyc_reject, name='super_admin_kyc_reject'),
     
+    # Payouts & Settlements
+    path('super-admin/payouts/', super_admin_views.super_admin_payouts, name='super_admin_payouts'),
+    path('super-admin/payouts/<int:payout_id>/approve/', super_admin_views.super_admin_payout_approve, name='super_admin_payout_approve'),
+    path('super-admin/payouts/<int:payout_id>/reject/', super_admin_views.super_admin_payout_reject, name='super_admin_payout_reject'),
+    
     # CMS: Categories + Locations
     path('super-admin/cms/', super_admin_views.super_admin_cms, name='super_admin_cms'),
     path('super-admin/cms/category/create/', super_admin_views.super_admin_category_create, name='super_admin_category_create'),

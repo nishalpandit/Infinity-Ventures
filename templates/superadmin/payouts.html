@@ -1,0 +1,272 @@
+{% extends 'superadmin/base.html' %}
+{% block title %}Payouts & Settlements{% endblock %}
+{% block header_title %}Vendor Payout & Settlement Hub{% endblock %}
+
+{% block content %}
+<!-- SUMMARY STATS -->
+<div class="stats-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-bottom: 24px;">
+  <div class="stat-card" style="background: white; border: 1px solid var(--border); border-radius: var(--r-md); padding: 18px; display: flex; align-items: center; gap: 16px; box-shadow: var(--shadow-xs);">
+    <div class="stat-icon green" style="width: 48px; height: 48px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 20px;">
+      <i class="fa-solid fa-money-bill-transfer"></i>
+    </div>
+    <div class="stat-info">
+      <div class="label" style="font-size: 11.5px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Total Disbursed</div>
+      <div class="value" style="font-size: 22px; font-weight: 800; color: var(--text-main);">₹{{ total_paid_out|floatformat:2 }}</div>
+    </div>
+  </div>
+
+  <div class="stat-card" style="background: white; border: 1px solid var(--border); border-radius: var(--r-md); padding: 18px; display: flex; align-items: center; gap: 16px; box-shadow: var(--shadow-xs);">
+    <div class="stat-icon orange" style="width: 48px; height: 48px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 20px;">
+      <i class="fa-solid fa-clock-rotate-left"></i>
+    </div>
+    <div class="stat-info">
+      <div class="label" style="font-size: 11.5px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Pending Approval</div>
+      <div class="value" style="font-size: 22px; font-weight: 800; color: #d97706;">{{ pending_count }} <span style="font-size: 14px; font-weight: 600; color: var(--text-muted);">(₹{{ pending_amount|floatformat:0 }})</span></div>
+    </div>
+  </div>
+
+  <div class="stat-card" style="background: white; border: 1px solid var(--border); border-radius: var(--r-md); padding: 18px; display: flex; align-items: center; gap: 16px; box-shadow: var(--shadow-xs);">
+    <div class="stat-icon purple" style="width: 48px; height: 48px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 20px;">
+      <i class="fa-solid fa-percent"></i>
+    </div>
+    <div class="stat-info">
+      <div class="label" style="font-size: 11.5px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Commission Earned</div>
+      <div class="value" style="font-size: 22px; font-weight: 800; color: var(--accent);">₹{{ total_commission_collected|floatformat:2 }}</div>
+    </div>
+  </div>
+
+  <div class="stat-card" style="background: white; border: 1px solid var(--border); border-radius: var(--r-md); padding: 18px; display: flex; align-items: center; gap: 16px; box-shadow: var(--shadow-xs);">
+    <div class="stat-icon blue" style="width: 48px; height: 48px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 20px;">
+      <i class="fa-solid fa-circle-xmark"></i>
+    </div>
+    <div class="stat-info">
+      <div class="label" style="font-size: 11.5px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Rejected Payouts</div>
+      <div class="value" style="font-size: 22px; font-weight: 800; color: var(--danger);">{{ rejected_count }}</div>
+    </div>
+  </div>
+</div>
+
+<!-- FILTER BAR -->
+<div class="card" style="padding: 16px; margin-bottom: 20px; background: white; border: 1px solid var(--border); border-radius: var(--r-md); box-shadow: var(--shadow-xs);">
+  <form method="get" style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
+    <div style="flex: 1; min-width: 260px;">
+      <input type="text" name="q" class="form-control" placeholder="Search by vendor, UTR reference, account, or UPI..." value="{{ q }}" style="width: 100%; padding: 9px 14px; border: 1px solid var(--border); border-radius: var(--r-xs); font-size: 13.5px;">
+    </div>
+    <div style="width: 170px;">
+      <select name="status" class="form-control" onchange="this.form.submit()" style="width: 100%; padding: 9px 12px; border: 1px solid var(--border); border-radius: var(--r-xs); font-size: 13.5px;">
+        <option value="">All Statuses</option>
+        <option value="pending" {% if status_filter == 'pending' %}selected{% endif %}>Pending Review</option>
+        <option value="completed" {% if status_filter == 'completed' %}selected{% endif %}>Completed / Paid</option>
+        <option value="rejected" {% if status_filter == 'rejected' %}selected{% endif %}>Rejected</option>
+      </select>
+    </div>
+    <div style="width: 170px;">
+      <select name="method" class="form-control" onchange="this.form.submit()" style="width: 100%; padding: 9px 12px; border: 1px solid var(--border); border-radius: var(--r-xs); font-size: 13.5px;">
+        <option value="">All Methods</option>
+        <option value="bank" {% if method_filter == 'bank' %}selected{% endif %}>Bank Transfer</option>
+        <option value="upi" {% if method_filter == 'upi' %}selected{% endif %}>UPI ID</option>
+      </select>
+    </div>
+    <button type="submit" class="btn btn-primary" style="padding: 9px 16px;"><i class="fa-solid fa-search"></i> Filter</button>
+    {% if q or status_filter or method_filter %}
+    <a href="{% url 'super_admin_payouts' %}" class="btn btn-outline" style="padding: 9px 14px; color: var(--text-muted); border: 1px solid var(--border);"><i class="fa-solid fa-rotate-left"></i> Reset</a>
+    {% endif %}
+  </form>
+</div>
+
+<!-- PAYOUTS TABLE -->
+<div class="card" style="padding: 0; background: white; border: 1px solid var(--border); border-radius: var(--r-md); box-shadow: var(--shadow-xs); overflow: hidden;">
+  <div class="table-container">
+    <table>
+      <thead>
+        <tr>
+          <th>Req ID</th>
+          <th>Vendor Details</th>
+          <th>Amount</th>
+          <th>Payout Method & Destination</th>
+          <th>Status</th>
+          <th>Requested Date</th>
+          <th style="min-width: 220px;">Settlement Details / Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for p in payouts %}
+        <tr>
+          <td><strong style="color: var(--accent);">#PAY-{{ p.id }}</strong></td>
+          <td>
+            <div style="display: flex; flex-direction: column;">
+              <span style="font-weight: 700; color: var(--text-main);">{{ p.vendor.vendor_profile.company_name|default:p.vendor.get_full_name|default:p.vendor.username }}</span>
+              <span style="font-size: 12px; color: var(--text-muted);">@{{ p.vendor.username }} &bull; {{ p.vendor.email }}</span>
+            </div>
+          </td>
+          <td>
+            <div style="font-size: 16px; font-weight: 800; color: #0f172a;">
+              ₹{{ p.amount|floatformat:2 }}
+            </div>
+          </td>
+          <td>
+            {% if p.payout_method == 'bank' %}
+              <div style="display: inline-flex; align-items: center; gap: 6px; font-weight: 600; color: #1e293b; margin-bottom: 3px;">
+                <i class="fa-solid fa-building-columns" style="color: var(--accent);"></i> {{ p.bank_name|default:"Bank Transfer" }}
+              </div>
+              <div style="font-size: 12px; color: var(--text-muted); font-family: monospace;">
+                A/C: {{ p.account_number }}<br>
+                IFSC: {{ p.ifsc_code }}<br>
+                <span style="font-family: var(--font-sans); color: #475569;">Holder: {{ p.account_holder_name|default:p.vendor.username }}</span>
+              </div>
+            {% else %}
+              <div style="display: inline-flex; align-items: center; gap: 6px; font-weight: 600; color: #1e293b; margin-bottom: 3px;">
+                <i class="fa-solid fa-mobile-screen-button" style="color: #0284c7;"></i> UPI Transfer
+              </div>
+              <div style="font-size: 12.5px; font-family: monospace; color: #0284c7; background: rgba(14,165,233,0.08); padding: 2px 8px; border-radius: 4px; display: inline-block;">
+                {{ p.upi_id }}
+              </div>
+            {% endif %}
+          </td>
+          <td>
+            {% if p.status == 'pending' %}
+              <span class="badge" style="background: rgba(245,158,11,0.12); color: #d97706; border: 1px solid rgba(245,158,11,0.25);"><i class="fa-solid fa-clock"></i> Pending Review</span>
+            {% elif p.status == 'completed' %}
+              <span class="badge" style="background: rgba(16,185,129,0.12); color: #059669; border: 1px solid rgba(16,185,129,0.25);"><i class="fa-solid fa-circle-check"></i> Paid & Settled</span>
+            {% else %}
+              <span class="badge" style="background: rgba(239,68,68,0.12); color: #dc2626; border: 1px solid rgba(239,68,68,0.25);"><i class="fa-solid fa-circle-xmark"></i> Rejected</span>
+            {% endif %}
+          </td>
+          <td style="color: var(--text-muted); font-size: 12.5px;">
+            {{ p.requested_at|date:"M d, Y" }}<br>
+            <span style="font-size: 11px;">{{ p.requested_at|time:"h:i A" }}</span>
+          </td>
+          <td>
+            {% if p.status == 'pending' %}
+            <div style="display: flex; gap: 8px;">
+              <button type="button" class="btn btn-primary btn-sm" style="padding: 6px 12px; font-size: 12px; background: #059669; border-color: #059669;" onclick="document.getElementById('approve-modal-{{ p.id }}').style.display='block';">
+                <i class="fa-solid fa-check"></i> Approve
+              </button>
+              <button type="button" class="btn btn-outline btn-sm" style="padding: 6px 12px; font-size: 12px; border: 1px solid rgba(239,68,68,0.3); color: var(--danger); background: white;" onclick="document.getElementById('reject-modal-{{ p.id }}').style.display='block';">
+                <i class="fa-solid fa-xmark"></i> Reject
+              </button>
+            </div>
+
+            <!-- APPROVAL MODAL -->
+            <div id="approve-modal-{{ p.id }}" style="display:none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 9999; backdrop-filter: blur(2px);">
+              <div style="background: white; border-radius: var(--r-md); max-width: 480px; margin: 100px auto; padding: 24px; box-shadow: var(--shadow-lg);">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                  <h4 style="margin: 0; font-size: 18px; font-weight: 700; color: var(--text-main);"><i class="fa-solid fa-check-circle" style="color: #059669;"></i> Approve Payout #PAY-{{ p.id }}</h4>
+                  <button type="button" onclick="document.getElementById('approve-modal-{{ p.id }}').style.display='none';" style="background:none; border:none; font-size:18px; cursor:pointer;">&times;</button>
+                </div>
+                <div style="background: #f8fafc; padding: 12px; border-radius: var(--r-xs); margin-bottom: 16px; font-size: 13px;">
+                  <strong>Recipient:</strong> {{ p.vendor.username }}<br>
+                  <strong>Amount:</strong> <span style="font-size: 16px; font-weight: 800; color: #059669;">₹{{ p.amount|floatformat:2 }}</span><br>
+                  <strong>Destination:</strong> {% if p.payout_method == 'bank' %}{{ p.bank_name }} - {{ p.account_number }} (IFSC: {{ p.ifsc_code }}){% else %}UPI: {{ p.upi_id }}{% endif %}
+                </div>
+                <form method="post" action="{% url 'super_admin_payout_approve' p.id %}">
+                  {% csrf_token %}
+                  <div style="margin-bottom: 14px;">
+                    <label style="display: block; font-size: 12.5px; font-weight: 600; margin-bottom: 5px; color: var(--text-main);">Bank UTR / Transaction Reference *</label>
+                    <input type="text" name="bank_reference_number" class="form-control" placeholder="e.g. UTR298471928374 or IMPS-82910" required style="width: 100%; padding: 8px 12px; border: 1px solid var(--border); border-radius: var(--r-xs); font-size: 13.5px;">
+                  </div>
+                  <div style="margin-bottom: 18px;">
+                    <label style="display: block; font-size: 12.5px; font-weight: 600; margin-bottom: 5px; color: var(--text-main);">Admin Remarks (Optional)</label>
+                    <textarea name="admin_remarks" class="form-control" rows="2" placeholder="e.g. Settled via ICICI Netbanking" style="width: 100%; padding: 8px 12px; border: 1px solid var(--border); border-radius: var(--r-xs); font-size: 13px;"></textarea>
+                  </div>
+                  <div style="display: flex; gap: 8px; justify-content: flex-end;">
+                    <button type="button" class="btn btn-outline" onclick="document.getElementById('approve-modal-{{ p.id }}').style.display='none';">Cancel</button>
+                    <button type="submit" class="btn btn-primary" style="background: #059669; border-color: #059669;"><i class="fa-solid fa-check"></i> Confirm Transfer &amp; Settle</button>
+                  </div>
+                </form>
+              </div>
+            </div>
+
+            <!-- REJECTION MODAL -->
+            <div id="reject-modal-{{ p.id }}" style="display:none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 9999; backdrop-filter: blur(2px);">
+              <div style="background: white; border-radius: var(--r-md); max-width: 480px; margin: 100px auto; padding: 24px; box-shadow: var(--shadow-lg);">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                  <h4 style="margin: 0; font-size: 18px; font-weight: 700; color: var(--danger);"><i class="fa-solid fa-triangle-exclamation"></i> Reject Payout #PAY-{{ p.id }}</h4>
+                  <button type="button" onclick="document.getElementById('reject-modal-{{ p.id }}').style.display='none';" style="background:none; border:none; font-size:18px; cursor:pointer;">&times;</button>
+                </div>
+                <div style="background: #fef2f2; border: 1px solid #fee2e2; padding: 12px; border-radius: var(--r-xs); margin-bottom: 16px; font-size: 13px; color: #991b1b;">
+                  <strong>Attention:</strong> Rejecting will immediately refund the held <strong>₹{{ p.amount|floatformat:2 }}</strong> back into <strong>{{ p.vendor.username }}</strong>'s available wallet balance.
+                </div>
+                <form method="post" action="{% url 'super_admin_payout_reject' p.id %}">
+                  {% csrf_token %}
+                  <div style="margin-bottom: 18px;">
+                    <label style="display: block; font-size: 12.5px; font-weight: 600; margin-bottom: 5px; color: var(--text-main);">Reason for Rejection *</label>
+                    <textarea name="admin_remarks" class="form-control" rows="3" placeholder="Provide reason (e.g. Incorrect bank account number / Invalid IFSC / Name mismatch)..." required style="width: 100%; padding: 8px 12px; border: 1px solid var(--border); border-radius: var(--r-xs); font-size: 13px;"></textarea>
+                  </div>
+                  <div style="display: flex; gap: 8px; justify-content: flex-end;">
+                    <button type="button" class="btn btn-outline" onclick="document.getElementById('reject-modal-{{ p.id }}').style.display='none';">Cancel</button>
+                    <button type="submit" class="btn btn-primary" style="background: var(--danger); border-color: var(--danger);"><i class="fa-solid fa-ban"></i> Reject &amp; Refund Wallet</button>
+                  </div>
+                </form>
+              </div>
+            </div>
+
+            {% elif p.status == 'completed' %}
+              <div style="font-size: 12.5px; color: #334155;">
+                <div style="display: flex; align-items: center; gap: 4px;">
+                  <strong style="color: var(--text-muted); font-size: 11px;">UTR / REF:</strong>
+                  <span style="font-family: monospace; font-weight: 700; color: #0f172a;">{{ p.bank_reference_number|default:"DIRECT-TRANSFER" }}</span>
+                </div>
+                {% if p.processed_at %}
+                <div style="font-size: 11px; color: var(--text-muted); margin-top: 2px;">
+                  Paid on {{ p.processed_at|date:"M d, Y" }} {% if p.processed_by %}by {{ p.processed_by.username }}{% endif %}
+                </div>
+                {% endif %}
+                {% if p.admin_remarks %}
+                <div style="font-size: 11.5px; color: #475569; font-style: italic; margin-top: 2px;">
+                  "{{ p.admin_remarks }}"
+                </div>
+                {% endif %}
+              </div>
+            {% else %}
+              <div style="font-size: 12px; color: var(--danger);">
+                <strong>Rejection Note:</strong><br>
+                <em>{{ p.admin_remarks|default:"No reason specified." }}</em>
+                {% if p.processed_at %}
+                <div style="font-size: 11px; color: var(--text-muted); margin-top: 2px;">
+                  Rejected on {{ p.processed_at|date:"M d, Y" }}
+                </div>
+                {% endif %}
+              </div>
+            {% endif %}
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="7" style="text-align: center; padding: 48px 20px; color: var(--text-muted);">
+            <i class="fa-solid fa-receipt" style="font-size: 36px; color: #cbd5e1; margin-bottom: 12px; display: block;"></i>
+            <p style="margin: 0; font-size: 14px; font-weight: 600;">No payout requests found matching your filter criteria.</p>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- PAGINATION -->
+  {% if payouts.has_other_pages %}
+  <div class="pagination-wrap">
+    <div>
+      Showing <strong>{{ payouts.start_index }}</strong> to <strong>{{ payouts.end_index }}</strong> of <strong>{{ payouts.paginator.count }}</strong> requests
+    </div>
+    <div class="pagination-nav">
+      {% if payouts.has_previous %}
+      <a href="?page={{ payouts.previous_page_number }}{% if q %}&q={{ q }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if method_filter %}&method={{ method_filter }}{% endif %}" class="page-link"><i class="fa-solid fa-chevron-left"></i></a>
+      {% endif %}
+
+      {% for num in payouts.paginator.page_range %}
+        {% if payouts.number == num %}
+          <span class="page-link active">{{ num }}</span>
+        {% elif num > payouts.number|add:'-3' and num < payouts.number|add:'3' %}
+          <a href="?page={{ num }}{% if q %}&q={{ q }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if method_filter %}&method={{ method_filter }}{% endif %}" class="page-link">{{ num }}</a>
+        {% endif %}
+      {% endfor %}
+
+      {% if payouts.has_next %}
+      <a href="?page={{ payouts.next_page_number }}{% if q %}&q={{ q }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if method_filter %}&method={{ method_filter }}{% endif %}" class="page-link"><i class="fa-solid fa-chevron-right"></i></a>
+      {% endif %}
+    </div>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

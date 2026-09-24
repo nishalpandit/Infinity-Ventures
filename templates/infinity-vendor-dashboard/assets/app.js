@@ -22,6 +22,7 @@
     home:'<path d="m3 11 9-8 9 8v10h-6v-6H9v6H3Z"/>', shield:'<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/><path d="m9 12 2 2 4-4"/>', lock:'<rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/>', mail:'<rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/>', building:'<rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 7h2M14 7h2M8 11h2M14 11h2M9 21v-5h6v5"/>',
     alert:'<path d="M10.3 3.5 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.5a2 2 0 0 0-3.4 0Z"/><path d="M12 9v4M12 17h.01"/>', info:'<circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/>', award:'<circle cx="12" cy="8" r="6"/><path d="M8.2 13 7 22l5-3 5 3-1.2-9"/>', tool:'<path d="M14.7 6.3a4 4 0 0 0-5-5L12 4 9 7 6.3 4.3a4 4 0 0 0 5 5L3 17.6A2 2 0 0 0 5.4 20l8.3-8.3a4 4 0 0 0 5-5L16 9l-3-3 2.7-2.7Z"/>',
     rupee:'<path d="M6 3h12M6 8h12M7 3c6 0 7 7 0 7h-1l9 11"/>', chart:'<path d="M3 3v18h18M7 16l4-5 4 3 5-7"/>', refresh:'<path d="M20 11a8 8 0 1 0-2.3 5.7L20 14M20 6v5h-5"/>', copy:'<rect x="9" y="9" width="12" height="12" rx="2"/><rect x="3" y="3" width="12" height="12" rx="2"/>',
+    wallet:'<path d="M19 7V4a1 1 0 0 0-1-1H5a2 2 0 0 0 0 4h15a1 1 0 0 1 1 1v4h-3a2 2 0 0 0 0 4h3a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1"/><path d="M3 5v14a2 2 0 0 0 2 2h15a1 1 0 0 0 1-1v-4"/>',
     camera:'<path d="M14.5 4 16 6h3a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h3l1.5-2z"/><circle cx="12" cy="13" r="4"/>', globe:'<circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15 15 0 0 1 0 20M12 2a15 15 0 0 0 0 20"/>', download:'<path d="M12 3v12M7 10l5 5 5-5M5 21h14"/>', external:'<path d="M14 3h7v7M10 14 21 3M21 14v5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5"/>'
   };
   function icon(name, cls='') { return `<svg class="icon ${cls}" viewBox="0 0 24 24" aria-hidden="true">${icons[name] || icons.info}</svg>`; }
@@ -31,6 +32,7 @@
     {key:'quick-group', icon:'bolt', label:'Quick Services', path:'quick-services/nearby.html'},
 
     {key:'messages', icon:'chat', label:'Messages', path:'messages/index.html'},
+    {key:'wallet', icon:'wallet', label:'Wallet & Payouts', path:'wallet/index.html'},
 
     {key:'credit-group', icon:'rupee', label:'Bid Credits', path:'bid-credits/packages.html', children:[
       ['credit-packages','Packages','bid-credits/packages.html'],
@@ -53,6 +55,7 @@
     if(k==='credit-group' && pageKey.startsWith('credit-')) return true;
     if(k==='credit-packages' && pageKey==='credit-checkout') return true;
     if(k==='messages' && pageKey.startsWith('message')) return true;
+    if(k==='wallet' && pageKey.startsWith('wallet')) return true;
     if(k==='reviews' && pageKey.startsWith('review')) return true;
     if(k==='profile' && pageKey.startsWith('profile')) return true;
     if(k==='kyc' && pageKey==='kyc') return true;
@@ -90,7 +93,8 @@
     const imgUrl = window.PROFILE_IMAGE_URL;
     const avatarTopHtml = imgUrl ? `<img src="${imgUrl}" alt="Profile" class="avatar" style="object-fit:cover;width:32px;height:32px;border-radius:50%;">` : `<span class="avatar">${initials}</span>`;
 
-    topbarRoot.outerHTML = `<header class="topbar"><div class="topbar-left"><button class="icon-btn hamburger" id="mobile-menu" aria-label="Open menu">${icon('menu')}</button><button class="icon-btn desktop-collapse" id="collapse-menu" aria-label="Collapse sidebar">${icon('panel')}</button><div><div class="topbar-title">${pageTitle}</div><div class="breadcrumbs"><a href="${route('dashboard.html')}">Vendor</a> &nbsp;/&nbsp; ${pageTitle}</div></div></div><div class="topbar-actions"><a class="vendor-credit-pill" href="${route('bid-credits/packages.html')}">${icon('bolt')} ${window.VENDOR_CREDITS || 5} credits</a><a class="icon-btn" href="${route('messages/index.html')}" aria-label="Messages">${icon('chat')}</a><div class="profile-menu"><button class="top-user profile-trigger" id="profile-trigger">${avatarTopHtml}<span class="top-user-copy"><strong>${name}</strong><span>${type}</span></span>${icon('down')}</button><div class="profile-dropdown" id="profile-dropdown"><a href="${route('profile/index.html')}">${icon('user')} View Profile</a><a href="${route('settings/index.html')}">${icon('settings')} Settings</a><a href="${route('bid-credits/packages.html')}">${icon('bolt')} Buy Bid Credits</a><button data-confirm="logout">${icon('logout')} Logout</button></div></div></div></header>`
+    const walletBal = window.VENDOR_WALLET_BALANCE || '0.00';
+    topbarRoot.outerHTML = `<header class="topbar"><div class="topbar-left"><button class="icon-btn hamburger" id="mobile-menu" aria-label="Open menu">${icon('menu')}</button><button class="icon-btn desktop-collapse" id="collapse-menu" aria-label="Collapse sidebar">${icon('panel')}</button><div><div class="topbar-title">${pageTitle}</div><div class="breadcrumbs"><a href="${route('dashboard.html')}">Vendor</a> &nbsp;/&nbsp; ${pageTitle}</div></div></div><div class="topbar-actions"><a class="vendor-credit-pill" href="${route('wallet/index.html')}" style="background:#eef2ff; color:#4338ca; border-color:#c7d2fe;">${icon('rupee')} ₹${walletBal}</a><a class="vendor-credit-pill" href="${route('bid-credits/packages.html')}">${icon('bolt')} ${window.VENDOR_CREDITS || 5} credits</a><a class="icon-btn" href="${route('messages/index.html')}" aria-label="Messages">${icon('chat')}</a><div class="profile-menu"><button class="top-user profile-trigger" id="profile-trigger">${avatarTopHtml}<span class="top-user-copy"><strong>${name}</strong><span>${type}</span></span>${icon('down')}</button><div class="profile-dropdown" id="profile-dropdown"><a href="${route('profile/index.html')}">${icon('user')} View Profile</a><a href="${route('wallet/index.html')}">${icon('wallet')} Wallet &amp; Payouts</a><a href="${route('settings/index.html')}">${icon('settings')} Settings</a><a href="${route('bid-credits/packages.html')}">${icon('bolt')} Buy Bid Credits</a><button data-confirm="logout">${icon('logout')} Logout</button></div></div></div></header>`
   }
   if(!$('.mobile-overlay')) body.insertAdjacentHTML('beforeend','<div class="mobile-overlay" id="mobile-overlay"></div><div class="toast-container" id="toast-container" aria-live="polite"></div>');
   if(!$('#global-modal')) body.insertAdjacentHTML('beforeend',`<div class="modal-backdrop" id="global-modal" role="dialog" aria-modal="true"><div class="modal"><div class="modal-head"><h3 id="global-modal-title">Please confirm</h3><button class="modal-close" data-modal-close>${icon('x')}</button></div><div class="modal-body" id="global-modal-body"></div><div class="modal-actions"><button class="btn btn-secondary" data-modal-close>Cancel</button><button class="btn btn-primary" id="global-modal-confirm">Confirm</button></div></div></div>`);

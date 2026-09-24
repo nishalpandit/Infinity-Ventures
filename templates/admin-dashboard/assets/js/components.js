@@ -101,7 +101,8 @@
     },
     { label: 'Payments', icon: 'fa-credit-card', children: [
         { label: 'Subscription Payments', href: 'payments/index.html' },
-        { label: 'Transactions', href: 'payments/index.html?view=transactions' }
+        { label: 'Transactions', href: 'payments/index.html?view=transactions' },
+        { label: 'Vendor Payouts', href: '/super-admin/payouts/' }
       ]
     },
     {

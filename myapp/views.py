@@ -237,6 +237,10 @@ def dashboard_view(request, path=''):
     
     if path.startswith('vendor/') and request.user.is_authenticated:
         try:
+            from .wallet_services import get_or_create_wallet
+            wallet = get_or_create_wallet(request.user)
+            context['wallet_balance'] = f"{wallet.available_balance:.2f}"
+            context['vendor_wallet'] = wallet
             vendor_profile = getattr(request.user, 'vendor_profile', None)
             if vendor_profile:
                 name = vendor_profile.company_name or request.user.get_full_name() or request.user.username
@@ -562,6 +566,60 @@ def dashboard_view(request, path=''):
                 return redirect('/vendor/kyc/index.html')
             
             context['kyc'] = kyc
+
+    if path in ['vendor/wallet/index', 'vendor/wallet', 'vendor/wallet.html']:
+        from .models import VendorWallet, WalletTransaction, PayoutRequest, Job, QuickService
+        from .wallet_services import get_or_create_wallet, request_payout, get_platform_commission_percent, settle_job_completion
+        
+        if not request.user.is_authenticated:
+            return redirect('/login/?next=/vendor/wallet/index.html')
+            
+        wallet = get_or_create_wallet(request.user)
+        context['wallet'] = wallet
+        context['commission_percent'] = get_platform_commission_percent()
+
+        if request.method == 'POST':
+            action = request.POST.get('action')
+            if action == 'request_payout':
+                amt_str = request.POST.get('amount', '').strip()
+                payout_method = request.POST.get('payout_method', 'bank')
+                account_holder_name = request.POST.get('account_holder_name', '').strip()
+                account_number = request.POST.get('account_number', '').strip()
+                confirm_account_number = request.POST.get('confirm_account_number', '').strip()
+                ifsc_code = request.POST.get('ifsc_code', '').strip().upper()
+                bank_name = request.POST.get('bank_name', '').strip()
+                upi_id = request.POST.get('upi_id', '').strip()
+
+                if payout_method == 'bank' and account_number and confirm_account_number and account_number != confirm_account_number:
+                    context['error_message'] = "Account numbers do not match. Please verify and try again."
+                else:
+                    try:
+                        amt = float(amt_str)
+                        ok, res = request_payout(
+                            vendor=request.user,
+                            amount=amt,
+                            payout_method=payout_method,
+                            account_holder_name=account_holder_name,
+                            account_number=account_number,
+                            ifsc_code=ifsc_code,
+                            bank_name=bank_name,
+                            upi_id=upi_id
+                        )
+                        if ok:
+                            context['success_message'] = f"Payout request for ₹{amt:.2f} submitted successfully! We will process the transfer shortly."
+                            wallet.refresh_from_db()
+                            context['wallet'] = wallet
+                            context['wallet_balance'] = f"{wallet.available_balance:.2f}"
+                        else:
+                            context['error_message'] = str(res)
+                    except (ValueError, TypeError):
+                        context['error_message'] = "Please enter a valid numeric withdrawal amount."
+
+        # Fetch itemized transactions & payout requests
+        context['transactions'] = wallet.transactions.all().order_by('-created_at')[:50]
+        context['payout_requests'] = PayoutRequest.objects.filter(vendor=request.user).order_by('-requested_at')[:50]
+        context['pending_payouts_sum'] = PayoutRequest.objects.filter(vendor=request.user, status='pending').aggregate(total=Sum('amount'))['total'] or 0
+        context['wallet_balance'] = f"{wallet.available_balance:.2f}"
 
     if path == 'user/messages/index' or path == 'user/messages':
         if request.user.is_authenticated:
