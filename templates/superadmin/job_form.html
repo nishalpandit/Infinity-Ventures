@@ -79,6 +79,44 @@
         <input type="text" name="address" class="form-control" value="{{ job.address|default:'' }}" placeholder="e.g. Main Road, Ranchi">
       </div>
     </div>
+
+    <!-- BIDDING PARAMETERS & VENDOR ASSIGNMENT -->
+    <div style="background: #f8fafc; border: 1px solid var(--border); border-radius: 8px; padding: 18px; margin-bottom: 20px;">
+      <h4 style="font-size: 14.5px; font-weight: 700; color: var(--text-main); margin-bottom: 14px; display: flex; align-items: center; gap: 8px;">
+        <i class="fa-solid fa-sliders" style="color: var(--accent);"></i> Bidding Rules &amp; Vendor Assignment
+      </h4>
+      
+      <div class="form-row">
+        <div class="form-group">
+          <label>Max Bids Limit (Vendor Capacity)</label>
+          <input type="number" min="1" max="100" name="max_bids" class="form-control" value="{{ job.max_bids|default:10 }}" placeholder="e.g. 5 or 10">
+          <small style="color: var(--text-muted); font-size: 11.5px;">Bidding automatically stops when this number of bids is reached.</small>
+        </div>
+        <div class="form-group">
+          <label>Assign Vendor (Direct Selection)</label>
+          <select name="assigned_vendor" class="form-control">
+            <option value="">-- No Vendor Assigned (Open to Bids) --</option>
+            {% for v in vendors %}
+            <option value="{{ v.id }}" {% if job.assigned_vendor_id == v.id %}selected{% endif %}>
+              {{ v.vendor_profile.company_name|default:v.username }} ({{ v.username }})
+            </option>
+            {% endfor %}
+          </select>
+          <small style="color: var(--text-muted); font-size: 11.5px;">Superadmin can directly assign or change the chosen vendor.</small>
+        </div>
+      </div>
+
+      <div class="form-row" style="margin-top: 10px;">
+        <div class="form-group">
+          <label>Min Allowed Bid Price (₹) <span style="font-weight: 400; color: var(--text-muted);">(Optional)</span></label>
+          <input type="number" step="0.01" name="min_bid_amount" class="form-control" value="{{ job.min_bid_amount|default:'' }}" placeholder="Minimum price vendor can quote">
+        </div>
+        <div class="form-group">
+          <label>Max Allowed Bid Price (₹) <span style="font-weight: 400; color: var(--text-muted);">(Optional)</span></label>
+          <input type="number" step="0.01" name="max_bid_amount" class="form-control" value="{{ job.max_bid_amount|default:'' }}" placeholder="Maximum price vendor can quote">
+        </div>
+      </div>
+    </div>
     
     <div class="form-group">
       <label>Description & Scope of Work</label>

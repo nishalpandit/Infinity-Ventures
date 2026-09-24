@@ -473,11 +473,11 @@ def super_admin_location_delete(request, loc_id):
     return redirect('super_admin_cms')
 
 # ─────────────────────────────────────────────
-# JOBS (List + Create + Edit + Delete)
+# JOBS (List + Create + Edit + Delete + Bids Management & Vendor Assignment)
 # ─────────────────────────────────────────────
 @sa_required
 def super_admin_jobs(request):
-    jobs_qs = Job.objects.all().select_related('user', 'category', 'location').order_by('-created_at')
+    jobs_qs = Job.objects.all().select_related('user', 'category', 'location', 'assigned_vendor').prefetch_related('bids').order_by('-created_at')
     paginator = Paginator(jobs_qs, 10)
     page_num = request.GET.get('page', 1)
     try:
@@ -490,6 +490,7 @@ def super_admin_jobs(request):
 @sa_required
 def super_admin_job_create(request):
     users = CustomUser.objects.filter(role='USER').order_by('username')
+    vendors = CustomUser.objects.filter(role='VENDOR').select_related('vendor_profile').order_by('username')
     categories = Category.objects.all().order_by('name')
     locations = Location.objects.all().order_by('state', 'city')
 
@@ -499,6 +500,10 @@ def super_admin_job_create(request):
         cat_id = request.POST.get('category')
         loc_id = request.POST.get('location')
         budget = request.POST.get('budget', 0) or 0
+        max_bids = request.POST.get('max_bids')
+        min_bid_amount = request.POST.get('min_bid_amount')
+        max_bid_amount = request.POST.get('max_bid_amount')
+        assigned_vendor_id = request.POST.get('assigned_vendor')
         status = request.POST.get('status', 'open')
         description = request.POST.get('description', '').strip()
         address = request.POST.get('address', '').strip()
@@ -506,6 +511,7 @@ def super_admin_job_create(request):
         customer = get_object_or_404(CustomUser, pk=user_id)
         cat_obj = Category.objects.filter(id=cat_id).first() if cat_id else None
         loc_obj = Location.objects.filter(id=loc_id).first() if loc_id else None
+        assigned_v = CustomUser.objects.filter(id=assigned_vendor_id, role='VENDOR').first() if assigned_vendor_id else None
 
         job = Job.objects.create(
             user=customer,
@@ -513,7 +519,11 @@ def super_admin_job_create(request):
             category=cat_obj,
             location=loc_obj,
             budget=budget,
-            status=status,
+            max_bids=int(max_bids) if max_bids else 10,
+            min_bid_amount=float(min_bid_amount) if min_bid_amount else None,
+            max_bid_amount=float(max_bid_amount) if max_bid_amount else None,
+            assigned_vendor=assigned_v,
+            status=status if not assigned_v else ('selected' if status == 'open' else status),
             description=description,
             address=address,
             contact_name=customer.get_full_name() or customer.username
@@ -524,20 +534,41 @@ def super_admin_job_create(request):
     return render(request, 'superadmin/job_form.html', {
         'mode': 'create',
         'users': users,
+        'vendors': vendors,
         'categories': categories,
         'locations': locations
     })
 
 @sa_required
 def super_admin_job_edit(request, job_id):
-    job = get_object_or_404(Job, pk=job_id)
-    categories = Category.objects.all()
+    job = get_object_or_404(Job.objects.select_related('assigned_vendor'), pk=job_id)
+    categories = Category.objects.all().order_by('name')
     locations = Location.objects.all().order_by('state', 'city')
     users = CustomUser.objects.filter(role='USER').order_by('username')
+    vendors = CustomUser.objects.filter(role='VENDOR').select_related('vendor_profile').order_by('username')
+    
     if request.method == 'POST':
         job.title = request.POST.get('title', job.title)
         job.status = request.POST.get('status', job.status)
         job.budget = request.POST.get('budget', job.budget)
+        
+        max_bids = request.POST.get('max_bids')
+        job.max_bids = int(max_bids) if max_bids else None
+        
+        min_bid_amount = request.POST.get('min_bid_amount')
+        job.min_bid_amount = float(min_bid_amount) if min_bid_amount else None
+        
+        max_bid_amount = request.POST.get('max_bid_amount')
+        job.max_bid_amount = float(max_bid_amount) if max_bid_amount else None
+        
+        assigned_vendor_id = request.POST.get('assigned_vendor')
+        if assigned_vendor_id:
+            job.assigned_vendor = CustomUser.objects.filter(id=assigned_vendor_id, role='VENDOR').first()
+            if job.status == 'open':
+                job.status = 'selected'
+        else:
+            job.assigned_vendor = None
+
         cat_id = request.POST.get('category')
         if cat_id:
             job.category = get_object_or_404(Category, pk=cat_id)
@@ -548,7 +579,14 @@ def super_admin_job_edit(request, job_id):
         job.save()
         django_messages.success(request, f'Job "{job.title}" updated.')
         return redirect('super_admin_jobs')
-    return render(request, 'superadmin/job_form.html', {'mode': 'edit', 'job': job, 'categories': categories, 'locations': locations, 'users': users})
+    return render(request, 'superadmin/job_form.html', {
+        'mode': 'edit',
+        'job': job,
+        'categories': categories,
+        'locations': locations,
+        'users': users,
+        'vendors': vendors
+    })
 
 @sa_required
 def super_admin_job_delete(request, job_id):
@@ -556,6 +594,160 @@ def super_admin_job_delete(request, job_id):
     job.delete()
     django_messages.success(request, 'Job deleted.')
     return redirect('super_admin_jobs')
+
+@sa_required
+def super_admin_job_bids(request, job_id):
+    """
+    Dedicated view for Super Admin to:
+    1. See all vendor bids submitted for this job.
+    2. Manage bidding limit (max_bids) and pricing boundaries (min_bid_amount, max_bid_amount, budget).
+    3. Assign/Select a vendor directly or select from submitted bids.
+    4. Create a manual bid on behalf of a vendor.
+    """
+    job = get_object_or_404(
+        Job.objects.select_related('user', 'category', 'location', 'assigned_vendor'),
+        pk=job_id
+    )
+    vendors = CustomUser.objects.filter(role='VENDOR').select_related('vendor_profile').order_by('username')
+
+    if request.method == 'POST':
+        action = request.POST.get('action')
+
+        if action == 'update_limits':
+            max_bids_val = request.POST.get('max_bids', '').strip()
+            min_bid_val = request.POST.get('min_bid_amount', '').strip()
+            max_bid_val = request.POST.get('max_bid_amount', '').strip()
+            budget_val = request.POST.get('budget', '').strip()
+            status_val = request.POST.get('status', '').strip()
+
+            if max_bids_val:
+                try:
+                    job.max_bids = max(1, int(max_bids_val))
+                except (ValueError, TypeError):
+                    pass
+            else:
+                job.max_bids = None
+
+            if min_bid_val:
+                try:
+                    job.min_bid_amount = float(min_bid_val)
+                except (ValueError, TypeError):
+                    pass
+            else:
+                job.min_bid_amount = None
+
+            if max_bid_val:
+                try:
+                    job.max_bid_amount = float(max_bid_val)
+                except (ValueError, TypeError):
+                    pass
+            else:
+                job.max_bid_amount = None
+
+            if budget_val:
+                try:
+                    job.budget = float(budget_val)
+                except (ValueError, TypeError):
+                    pass
+
+            if status_val:
+                job.status = status_val
+
+            job.save()
+            django_messages.success(request, 'Bidding parameters & limits updated successfully.')
+            return redirect('super_admin_job_bids', job_id=job.id)
+
+        elif action == 'assign_vendor':
+            vendor_id = request.POST.get('vendor_id')
+            if vendor_id:
+                vendor = get_object_or_404(CustomUser, pk=vendor_id, role='VENDOR')
+                job.assigned_vendor = vendor
+                if job.status in ['open', 'cancelled']:
+                    job.status = 'selected'
+                job.save()
+                # Mark existing bid if any as selected
+                Bid.objects.filter(job=job, vendor=vendor).update(status='selected')
+                django_messages.success(request, f'Vendor "{vendor.get_full_name() or vendor.username}" assigned to Job #{job.id}.')
+            else:
+                job.assigned_vendor = None
+                job.save()
+                django_messages.success(request, 'Vendor assignment removed.')
+            return redirect('super_admin_job_bids', job_id=job.id)
+
+        elif action == 'select_bid':
+            bid_id = request.POST.get('bid_id')
+            bid = get_object_or_404(Bid, pk=bid_id, job=job)
+            Bid.objects.filter(job=job).exclude(id=bid.id).filter(status='selected').update(status='submitted')
+            bid.status = 'selected'
+            bid.save()
+            job.assigned_vendor = bid.vendor
+            job.status = 'selected'
+            job.save()
+            django_messages.success(request, f'Bid from "{bid.vendor.username}" for ₹{bid.amount} accepted & vendor assigned!')
+            return redirect('super_admin_job_bids', job_id=job.id)
+
+        elif action == 'reject_bid':
+            bid_id = request.POST.get('bid_id')
+            bid = get_object_or_404(Bid, pk=bid_id, job=job)
+            bid.status = 'rejected'
+            bid.save()
+            if job.assigned_vendor == bid.vendor:
+                job.assigned_vendor = None
+                job.status = 'open'
+                job.save()
+            django_messages.success(request, f'Bid from "{bid.vendor.username}" rejected.')
+            return redirect('super_admin_job_bids', job_id=job.id)
+
+        elif action == 'delete_bid':
+            bid_id = request.POST.get('bid_id')
+            bid = get_object_or_404(Bid, pk=bid_id, job=job)
+            if job.assigned_vendor == bid.vendor:
+                job.assigned_vendor = None
+                job.save()
+            bid.delete()
+            django_messages.success(request, 'Bid deleted successfully.')
+            return redirect('super_admin_job_bids', job_id=job.id)
+
+        elif action == 'create_bid':
+            vendor_id = request.POST.get('vendor_id')
+            amount = request.POST.get('amount')
+            estimated_time = request.POST.get('estimated_time', '').strip()
+            proposal = request.POST.get('proposal', '').strip()
+            status_bid = request.POST.get('bid_status', 'submitted')
+
+            if vendor_id and amount:
+                vendor = get_object_or_404(CustomUser, pk=vendor_id, role='VENDOR')
+                if job.max_bids and job.bids.count() >= job.max_bids:
+                    django_messages.error(request, f'Job has reached the maximum limit of {job.max_bids} bids.')
+                    return redirect('super_admin_job_bids', job_id=job.id)
+
+                bid = Bid.objects.create(
+                    vendor=vendor,
+                    job=job,
+                    amount=amount,
+                    estimated_time=estimated_time,
+                    proposal=proposal,
+                    status=status_bid
+                )
+                if status_bid == 'selected':
+                    job.assigned_vendor = vendor
+                    job.status = 'selected'
+                    job.save()
+                django_messages.success(request, f'Bid of ₹{bid.amount} recorded for {vendor.username}.')
+            return redirect('super_admin_job_bids', job_id=job.id)
+
+    bids = job.bids.all().select_related('vendor', 'vendor__vendor_profile').order_by('-created_at')
+    bids_count = bids.count()
+    is_limit_reached = bool(job.max_bids and bids_count >= job.max_bids)
+
+    context = {
+        'job': job,
+        'bids': bids,
+        'bids_count': bids_count,
+        'is_limit_reached': is_limit_reached,
+        'vendors': vendors,
+    }
+    return render(request, 'superadmin/job_bids.html', context)
 
 # ─────────────────────────────────────────────
 # QUICK SERVICES (List + Create + Edit + Delete)

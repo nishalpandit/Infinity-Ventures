@@ -1,0 +1,363 @@
+{% extends 'superadmin/base.html' %}
+{% block title %}Bids &amp; Vendor Assignment - {{ job.title }}{% endblock %}
+{% block header_title %}Job Bids &amp; Vendor Assignment{% endblock %}
+
+{% block header_actions %}
+<a href="{% url 'super_admin_jobs' %}" class="btn btn-outline btn-sm">
+  <i class="fa-solid fa-arrow-left"></i>
+  <span>Back to Jobs</span>
+</a>
+<a href="{% url 'super_admin_job_edit' job.id %}" class="btn btn-outline btn-sm">
+  <i class="fa-solid fa-pen-to-square"></i>
+  <span>Edit Job</span>
+</a>
+{% endblock %}
+
+{% block content %}
+<!-- 1. JOB SUMMARY BANNER -->
+<div class="card" style="margin-bottom: 20px; padding: 24px;">
+  <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 16px;">
+    <div>
+      <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 6px;">
+        <span class="badge" style="background: rgba(79, 70, 229, 0.12); color: var(--accent); font-size: 13px; font-weight: 800;">JOB #{{ job.id }}</span>
+        <span class="badge {% if job.status == 'open' %}active{% elif job.status == 'selected' or job.status == 'progress' %}info{% elif job.status == 'completed' %}active{% else %}inactive{% endif %}">
+          {{ job.get_status_display }}
+        </span>
+      </div>
+      <h2 style="font-size: 22px; font-weight: 800; color: var(--text-main); margin: 0 0 8px 0;">{{ job.title }}</h2>
+      <div style="font-size: 13px; color: var(--text-muted); display: flex; flex-wrap: wrap; gap: 16px;">
+        <span><i class="fa-solid fa-user" style="color: var(--accent); margin-right: 5px;"></i>Customer: <strong>{{ job.user.get_full_name|default:job.user.username }}</strong></span>
+        <span><i class="fa-solid fa-shapes" style="color: var(--accent); margin-right: 5px;"></i>Category: <strong>{{ job.category.name|default:"Uncategorized" }}</strong></span>
+        <span><i class="fa-solid fa-location-dot" style="color: var(--accent); margin-right: 5px;"></i>Location: <strong>{% if job.location %}{{ job.location.city }}, {{ job.location.state }}{% else %}{{ job.address|default:"General" }}{% endif %}</strong></span>
+        <span><i class="fa-solid fa-calendar" style="color: var(--text-muted); margin-right: 5px;"></i>Posted: {{ job.created_at|date:"M d, Y" }}</span>
+      </div>
+    </div>
+
+    <!-- ASSIGNED VENDOR PILL -->
+    <div style="background: var(--bg-surface-hover); border: 1px solid var(--border); border-radius: 10px; padding: 14px 18px; min-width: 260px;">
+      <div style="font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px;">Assigned Vendor</div>
+      {% if job.assigned_vendor %}
+        <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px;">
+          <div>
+            <strong style="color: var(--success); font-size: 15px; display: block;">
+              <i class="fa-solid fa-circle-check"></i> {{ job.assigned_vendor.vendor_profile.company_name|default:job.assigned_vendor.username }}
+            </strong>
+            <span style="font-size: 12px; color: var(--text-muted);">{{ job.assigned_vendor.email }}</span>
+          </div>
+          <form method="POST" style="margin: 0;">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="assign_vendor">
+            <input type="hidden" name="vendor_id" value="">
+            <button type="submit" class="btn btn-outline btn-sm" style="border-color: rgba(239,68,68,0.3); color: var(--danger); padding: 4px 8px;" title="Unassign Vendor" onclick="return confirm('Remove vendor assignment from this job?');">
+              <i class="fa-solid fa-user-xmark"></i>
+            </button>
+          </form>
+        </div>
+      {% else %}
+        <div style="color: var(--text-muted); font-size: 13.5px; font-style: italic;">
+          <i class="fa-solid fa-circle-info" style="color: var(--warning);"></i> No vendor assigned yet.
+        </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<!-- 2. METRICS & BID CONTROLS GRID -->
+<div class="grid-3" style="margin-bottom: 24px;">
+  <!-- Metric: Target Budget -->
+  <div class="stat-card">
+    <div class="stat-icon green"><i class="fa-solid fa-indian-rupee-sign"></i></div>
+    <div class="stat-info">
+      <div class="label">Target Budget</div>
+      <div class="value" style="color: var(--success);">₹{{ job.budget }}</div>
+    </div>
+  </div>
+
+  <!-- Metric: Bids Capacity -->
+  <div class="stat-card">
+    <div class="stat-icon {% if is_limit_reached %}orange{% else %}indigo{% endif %}">
+      <i class="fa-solid fa-gavel"></i>
+    </div>
+    <div class="stat-info">
+      <div class="label">Bids Received / Limit</div>
+      <div class="value">
+        {{ bids_count }}{% if job.max_bids %} / <span style="font-size: 18px; color: var(--text-muted);">{{ job.max_bids }} max</span>{% endif %}
+      </div>
+      {% if is_limit_reached %}
+        <div style="color: var(--danger); font-size: 11.5px; font-weight: 700; margin-top: 2px;">
+          <i class="fa-solid fa-lock"></i> Capacity Reached (Bidding Closed)
+        </div>
+      {% else %}
+        <div style="color: var(--success); font-size: 11.5px; font-weight: 600; margin-top: 2px;">
+          <i class="fa-solid fa-lock-open"></i> Accepting Quotations
+        </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Metric: Bid Price Limits -->
+  <div class="stat-card">
+    <div class="stat-icon purple"><i class="fa-solid fa-scale-balanced"></i></div>
+    <div class="stat-info">
+      <div class="label">Allowed Bid Price Limits</div>
+      <div style="font-size: 16px; font-weight: 700; color: var(--text-main); margin-top: 4px;">
+        {% if job.min_bid_amount or job.max_bid_amount %}
+          ₹{{ job.min_bid_amount|default:"0" }} <span style="color: var(--text-muted); font-weight: 400;">to</span> ₹{{ job.max_bid_amount|default:"∞" }}
+        {% else %}
+          <span style="color: var(--text-muted); font-size: 14px; font-weight: 500;">No restrictions set</span>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 3. BIDDING RULES & VENDOR ASSIGNMENT FORMS -->
+<div class="grid-2" style="margin-bottom: 24px;">
+  <!-- Box A: Manage Bidding Rules & Limits -->
+  <div class="card" style="margin-bottom: 0;">
+    <div class="card-header">
+      <h4 class="card-title"><i class="fa-solid fa-sliders"></i> Bidding Limits &amp; Price Controls</h4>
+    </div>
+    <form method="POST">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="update_limits">
+      
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Max Bids Limit (Capacity)</label>
+          <input type="number" min="1" max="100" name="max_bids" class="form-control" value="{{ job.max_bids|default:'' }}" placeholder="e.g. 5 or 10">
+          <small style="color: var(--text-muted); font-size: 11.5px;">Leave empty for unlimited bids.</small>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Target Budget (₹)</label>
+          <input type="number" step="0.01" name="budget" class="form-control" value="{{ job.budget }}" required>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Min Allowed Bid Price (₹)</label>
+          <input type="number" step="0.01" name="min_bid_amount" class="form-control" value="{{ job.min_bid_amount|default:'' }}" placeholder="e.g. 20000">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Max Allowed Bid Price (₹)</label>
+          <input type="number" step="0.01" name="max_bid_amount" class="form-control" value="{{ job.max_bid_amount|default:'' }}" placeholder="e.g. 50000">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Job Status</label>
+        <select name="status" class="form-control">
+          <option value="open" {% if job.status == 'open' %}selected{% endif %}>Open for Bidding</option>
+          <option value="selected" {% if job.status == 'selected' %}selected{% endif %}>Vendor Selected</option>
+          <option value="progress" {% if job.status == 'progress' %}selected{% endif %}>In Progress</option>
+          <option value="completed" {% if job.status == 'completed' %}selected{% endif %}>Completed</option>
+          <option value="cancelled" {% if job.status == 'cancelled' %}selected{% endif %}>Cancelled</option>
+          <option value="closed" {% if job.status == 'closed' %}selected{% endif %}>Closed</option>
+        </select>
+      </div>
+
+      <button type="submit" class="btn btn-primary btn-sm" style="width: 100%;">
+        <i class="fa-solid fa-save"></i> Save Bidding Rules &amp; Limits
+      </button>
+    </form>
+  </div>
+
+  <!-- Box B: Direct Vendor Assignment & Manual Bid Creation -->
+  <div class="card" style="margin-bottom: 0;">
+    <div class="card-header">
+      <h4 class="card-title"><i class="fa-solid fa-user-check"></i> Direct Vendor Assignment</h4>
+    </div>
+    
+    <form method="POST" style="margin-bottom: 24px;">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="assign_vendor">
+      
+      <div class="form-group">
+        <label class="form-label">Select Vendor to Assign</label>
+        <select name="vendor_id" class="form-control" required>
+          <option value="">-- Choose Registered Vendor --</option>
+          {% for v in vendors %}
+          <option value="{{ v.id }}" {% if job.assigned_vendor_id == v.id %}selected{% endif %}>
+            {{ v.vendor_profile.company_name|default:v.username }} ({{ v.username }} · {{ v.vendor_profile.location|default:"General" }})
+          </option>
+          {% endfor %}
+        </select>
+        <small style="color: var(--text-muted); font-size: 11.5px;">Directly awards the job to this vendor and updates status to Vendor Selected.</small>
+      </div>
+
+      <button type="submit" class="btn btn-success btn-sm" style="width: 100%;">
+        <i class="fa-solid fa-handshake"></i> Assign Selected Vendor to Job
+      </button>
+    </form>
+
+    <hr style="border: 0; border-top: 1px solid var(--border); margin: 20px 0;">
+
+    <details style="font-size: 13px;">
+      <summary style="font-weight: 700; color: var(--accent); cursor: pointer; padding: 4px 0;">
+        <i class="fa-solid fa-plus-circle"></i> Place Bid on Behalf of a Vendor
+      </summary>
+      <form method="POST" style="margin-top: 16px;">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="create_bid">
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Vendor</label>
+            <select name="vendor_id" class="form-control" required>
+              <option value="">-- Select Vendor --</option>
+              {% for v in vendors %}
+              <option value="{{ v.id }}">{{ v.vendor_profile.company_name|default:v.username }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Quoted Amount (₹)</label>
+            <input type="number" step="0.01" name="amount" class="form-control" placeholder="e.g. 25000" required>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Est. Time</label>
+            <input type="text" name="estimated_time" class="form-control" placeholder="e.g. 5 days">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Status</label>
+            <select name="bid_status" class="form-control">
+              <option value="submitted">Submitted</option>
+              <option value="selected">Selected (Award Job)</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Proposal Note</label>
+          <textarea name="proposal" class="form-control" rows="2" placeholder="Quotation remarks..."></textarea>
+        </div>
+        <button type="submit" class="btn btn-primary btn-sm">
+          <i class="fa-solid fa-paper-plane"></i> Record Vendor Bid
+        </button>
+      </form>
+    </details>
+  </div>
+</div>
+
+<!-- 4. ALL BIDS TABLE -->
+<div class="card" style="padding: 0; overflow: hidden;">
+  <div class="card-header" style="padding: 18px 24px; margin-bottom: 0;">
+    <h4 class="card-title" style="margin: 0;">
+      <i class="fa-solid fa-list-check"></i> All Submitted Quotations &amp; Bids ({{ bids_count }})
+    </h4>
+  </div>
+
+  <div class="table-container" style="border: none; border-radius: 0; box-shadow: none;">
+    <table>
+      <thead>
+        <tr>
+          <th>Vendor Details</th>
+          <th>Quoted Price</th>
+          <th>Estimated Timeline</th>
+          <th>Proposal / Pitch</th>
+          <th>Submitted Date</th>
+          <th>Status</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for bid in bids %}
+        <tr {% if bid.status == 'selected' %}style="background: rgba(16, 185, 129, 0.05);"{% endif %}>
+          <td>
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <div class="avatar" style="width: 32px; height: 32px; font-size: 11px;">
+                {{ bid.vendor.username|slice:":2"|upper }}
+              </div>
+              <div>
+                <strong>{{ bid.vendor.vendor_profile.company_name|default:bid.vendor.username }}</strong>
+                <div style="font-size: 11.5px; color: var(--text-muted);">
+                  @{{ bid.vendor.username }}
+                  {% if bid.vendor.vendor_profile.rating %} · <i class="fa-solid fa-star" style="color: var(--warning); font-size: 10px;"></i> {{ bid.vendor.vendor_profile.rating }}{% endif %}
+                </div>
+              </div>
+            </div>
+          </td>
+          <td>
+            <strong style="color: var(--success); font-size: 15px;">₹{{ bid.amount }}</strong>
+            {% if job.budget %}
+              {% if bid.amount <= job.budget %}
+                <span class="badge active" style="font-size: 10.5px; padding: 2px 6px; margin-left: 4px;">Within Budget</span>
+              {% else %}
+                <span class="badge warn" style="font-size: 10.5px; padding: 2px 6px; margin-left: 4px;">Above Budget</span>
+              {% endif %}
+            {% endif %}
+          </td>
+          <td>
+            <span style="color: var(--text-main); font-size: 13px;">{{ bid.estimated_time|default:"—" }}</span>
+          </td>
+          <td style="max-width: 250px;">
+            <div style="font-size: 12.5px; color: var(--text-main); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="{{ bid.proposal|default:bid.message }}">
+              {{ bid.proposal|default:bid.message|default:"No description provided." }}
+            </div>
+            {% if bid.attachment %}
+              <a href="{{ bid.attachment.url }}" target="_blank" style="font-size: 11.5px; color: var(--accent); text-decoration: none; margin-top: 3px; display: inline-block;">
+                <i class="fa-solid fa-paperclip"></i> View Attachment
+              </a>
+            {% endif %}
+          </td>
+          <td style="color: var(--text-muted); font-size: 12.5px;">
+            {{ bid.created_at|date:"M d, Y" }}
+            <div style="font-size: 11px;">{{ bid.created_at|date:"H:i" }}</div>
+          </td>
+          <td>
+            <span class="badge {% if bid.status == 'selected' %}active{% elif bid.status == 'rejected' or bid.status == 'withdrawn' %}inactive{% else %}warn{% endif %}">
+              {% if bid.status == 'selected' %}<i class="fa-solid fa-check-circle"></i>{% endif %}
+              {{ bid.get_status_display }}
+            </span>
+          </td>
+          <td>
+            <div style="display: flex; gap: 6px; align-items: center;">
+              {% if bid.status != 'selected' %}
+              <form method="POST" style="margin: 0;">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="select_bid">
+                <input type="hidden" name="bid_id" value="{{ bid.id }}">
+                <button type="submit" class="btn btn-success btn-sm" title="Accept Bid & Assign Vendor" style="padding: 4px 10px; font-size: 11.5px;">
+                  <i class="fa-solid fa-check"></i> Select
+                </button>
+              </form>
+              {% else %}
+              <span class="badge active" style="font-size: 11px;"><i class="fa-solid fa-user-check"></i> Assigned</span>
+              {% endif %}
+
+              {% if bid.status != 'rejected' and bid.status != 'selected' %}
+              <form method="POST" style="margin: 0;">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="reject_bid">
+                <input type="hidden" name="bid_id" value="{{ bid.id }}">
+                <button type="submit" class="btn btn-outline btn-sm" title="Reject Bid" style="padding: 4px 8px; font-size: 11px; border-color: rgba(239,68,68,0.3); color: var(--danger);">
+                  <i class="fa-solid fa-xmark"></i>
+                </button>
+              </form>
+              {% endif %}
+
+              <form method="POST" style="margin: 0;" onsubmit="return confirm('Delete this bid?');">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="delete_bid">
+                <input type="hidden" name="bid_id" value="{{ bid.id }}">
+                <button type="submit" class="btn btn-outline btn-sm" title="Delete Bid" style="padding: 4px 8px; font-size: 11px; border-color: rgba(239,68,68,0.3); color: var(--danger);">
+                  <i class="fa-solid fa-trash"></i>
+                </button>
+              </form>
+            </div>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="7" style="text-align: center; padding: 48px; color: var(--text-muted);">
+            <i class="fa-solid fa-gavel" style="font-size: 32px; margin-bottom: 12px; display: block; opacity: 0.5;"></i>
+            No bids submitted yet for this job. You can assign a vendor directly above or record a bid manually.
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

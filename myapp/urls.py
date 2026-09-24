@@ -50,6 +50,7 @@ urlpatterns = [
     path('super-admin/jobs/', super_admin_views.super_admin_jobs, name='super_admin_jobs'),
     path('super-admin/jobs/create/', super_admin_views.super_admin_job_create, name='super_admin_job_create'),
     path('super-admin/jobs/<int:job_id>/edit/', super_admin_views.super_admin_job_edit, name='super_admin_job_edit'),
+    path('super-admin/jobs/<int:job_id>/bids/', super_admin_views.super_admin_job_bids, name='super_admin_job_bids'),
     path('super-admin/jobs/<int:job_id>/delete/', super_admin_views.super_admin_job_delete, name='super_admin_job_delete'),
     
     # Quick Services CRUD

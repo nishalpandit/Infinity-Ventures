@@ -110,6 +110,10 @@ class Job(models.Model):
     contact_mobile = models.CharField(max_length=20, blank=True, null=True)
     user = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='jobs')
     bids_count = models.IntegerField(default=0)
+    max_bids = models.IntegerField(default=10, blank=True, null=True, help_text="Maximum allowed bids")
+    min_bid_amount = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True, help_text="Minimum allowed bid price")
+    max_bid_amount = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True, help_text="Maximum allowed bid price")
+    assigned_vendor = models.ForeignKey(CustomUser, on_delete=models.SET_NULL, null=True, blank=True, related_name='assigned_jobs', help_text="Vendor assigned to this job")
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='open')
     created_at = models.DateTimeField(default=timezone.now)
 

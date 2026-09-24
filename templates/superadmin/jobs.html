@@ -15,10 +15,11 @@
     <table>
       <thead>
         <tr>
-          <th>Title</th>
+          <th>Job Title</th>
           <th>Customer</th>
-          <th>Category</th>
-          <th>Budget</th>
+          <th>Budget &amp; Price Limits</th>
+          <th>Bids / Limit</th>
+          <th>Assigned Vendor</th>
           <th>Status</th>
           <th>Actions</th>
         </tr>
@@ -26,22 +27,65 @@
       <tbody>
         {% for job in jobs %}
         <tr>
-          <td><strong>{{ job.title }}</strong></td>
-          <td>{{ job.user.username }}</td>
-          <td>{{ job.category.name|default:"—" }}</td>
-          <td style="color: var(--success); font-weight: 600;">₹{{ job.budget }}</td>
-          <td><span class="badge {% if job.status == 'open' %}active{% elif job.status == 'cancelled' or job.status == 'closed' %}inactive{% else %}warn{% endif %}">{{ job.get_status_display }}</span></td>
           <td>
-            <div style="display: flex; gap: 8px;">
-              <a href="{% url 'super_admin_job_edit' job.id %}" class="btn btn-outline btn-sm"><i class="fa-solid fa-pen-to-square"></i> Edit</a>
-              <a href="{% url 'super_admin_job_delete' job.id %}" class="btn btn-outline btn-sm" style="border-color: rgba(239,68,68,0.3);" onclick="return confirm('Delete this job?')">
-                <i class="fa-solid fa-trash" style="color: var(--danger);"></i>
+            <strong>{{ job.title }}</strong>
+            <div style="font-size: 11.5px; color: var(--text-muted);">
+              {% if job.category %}<span style="color: var(--accent); font-weight: 600;">{{ job.category.name }}</span> · {% endif %}
+              {% if job.location %}{{ job.location.city }}, {{ job.location.state }}{% else %}Online / Anywhere{% endif %}
+            </div>
+          </td>
+          <td>
+            <strong>{{ job.user.username }}</strong>
+            {% if job.user.email %}<div style="font-size: 11.5px; color: var(--text-muted);">{{ job.user.email }}</div>{% endif %}
+          </td>
+          <td>
+            <strong style="color: var(--success); font-size: 14px;">₹{{ job.budget }}</strong>
+            {% if job.min_bid_amount or job.max_bid_amount %}
+            <div style="font-size: 11.5px; color: var(--text-muted);">
+              Range: {% if job.min_bid_amount %}₹{{ job.min_bid_amount }}{% else %}0{% endif %} - {% if job.max_bid_amount %}₹{{ job.max_bid_amount }}{% else %}∞{% endif %}
+            </div>
+            {% else %}
+            <div style="font-size: 11px; color: var(--text-muted);">No price limits</div>
+            {% endif %}
+          </td>
+          <td>
+            {% with bcount=job.bids.count %}
+            <a href="{% url 'super_admin_job_bids' job.id %}" style="text-decoration: none;">
+              <span class="badge" style="background: rgba(79, 70, 229, 0.1); color: var(--accent); font-size: 12px; font-weight: 700;">
+                <i class="fa-solid fa-gavel"></i> {{ bcount }}{% if job.max_bids %} / {{ job.max_bids }}{% endif %} bids
+              </span>
+            </a>
+            {% if job.max_bids and bcount >= job.max_bids %}
+            <div style="font-size: 10.5px; color: var(--danger); font-weight: 700; margin-top: 2px;">Limit Full</div>
+            {% endif %}
+            {% endwith %}
+          </td>
+          <td>
+            {% if job.assigned_vendor %}
+              <div style="display: flex; align-items: center; gap: 6px;">
+                <span class="badge active" style="font-size: 11.5px;">
+                  <i class="fa-solid fa-user-check"></i> {{ job.assigned_vendor.vendor_profile.company_name|default:job.assigned_vendor.username }}
+                </span>
+              </div>
+            {% else %}
+              <span style="color: var(--text-muted); font-size: 12px; font-style: italic;">Unassigned</span>
+            {% endif %}
+          </td>
+          <td><span class="badge {% if job.status == 'open' %}active{% elif job.status == 'selected' or job.status == 'progress' %}info{% elif job.status == 'completed' %}active{% else %}inactive{% endif %}">{{ job.get_status_display }}</span></td>
+          <td>
+            <div style="display: flex; gap: 6px; align-items: center;">
+              <a href="{% url 'super_admin_job_bids' job.id %}" class="btn btn-primary btn-sm" title="View Bids, Set Limits & Assign Vendor" style="font-size: 11.5px; padding: 5px 10px;">
+                <i class="fa-solid fa-gavel"></i> Bids &amp; Assign
+              </a>
+              <a href="{% url 'super_admin_job_edit' job.id %}" class="btn btn-outline btn-sm" title="Edit Job"><i class="fa-solid fa-pen-to-square"></i></a>
+              <a href="{% url 'super_admin_job_delete' job.id %}" class="btn btn-outline btn-sm" style="border-color: rgba(239,68,68,0.3); color: var(--danger);" onclick="return confirm('Delete this job?')" title="Delete Job">
+                <i class="fa-solid fa-trash"></i>
               </a>
             </div>
           </td>
         </tr>
         {% empty %}
-        <tr><td colspan="6" style="text-align: center; padding: 40px; color: var(--text-muted);">No jobs found.</td></tr>
+        <tr><td colspan="7" style="text-align: center; padding: 40px; color: var(--text-muted);">No jobs found.</td></tr>
         {% endfor %}
       </tbody>
     </table>

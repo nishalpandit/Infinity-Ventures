@@ -649,16 +649,25 @@ def dashboard_view(request, path=''):
             if job_id and amount:
                 try:
                     job = Job.objects.get(id=job_id)
-                    if not Bid.objects.filter(job=job, vendor=request.user).exists():
-                        Bid.objects.create(
-                            vendor=request.user,
-                            job=job,
-                            amount=amount,
-                            estimated_time=estimated_time,
-                            proposal=proposal,
-                            attachment=attachment
-                        )
-                except Job.DoesNotExist:
+                    amount_float = float(amount)
+                    
+                    # Validate bidding limits set by Superadmin
+                    is_limit_reached = bool(job.max_bids and job.bids.count() >= job.max_bids)
+                    below_min = bool(job.min_bid_amount and amount_float < float(job.min_bid_amount))
+                    above_max = bool(job.max_bid_amount and amount_float > float(job.max_bid_amount))
+                    is_open = job.status == 'open'
+                    
+                    if not is_limit_reached and not below_min and not above_max and is_open:
+                        if not Bid.objects.filter(job=job, vendor=request.user).exists():
+                            Bid.objects.create(
+                                vendor=request.user,
+                                job=job,
+                                amount=amount,
+                                estimated_time=estimated_time,
+                                proposal=proposal,
+                                attachment=attachment
+                            )
+                except (Job.DoesNotExist, ValueError, TypeError):
                     pass
             # Let the script handle the success state, or reload if JS doesn't prevent default
             
