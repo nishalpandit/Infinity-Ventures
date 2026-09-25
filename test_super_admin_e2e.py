@@ -61,6 +61,21 @@ class SuperAdminE2ETester:
         # Brief pause between test steps for visual clarity
         time.sleep(0.4)
 
+    def safe_goto(self, url, max_retries=4, **kwargs):
+        kwargs.setdefault("wait_until", "networkidle")
+        kwargs.setdefault("timeout", 15000)
+        for i in range(max_retries):
+            try:
+                self.page.goto(url, **kwargs)
+                return
+            except Exception as e:
+                err_msg = str(e)
+                if i < max_retries - 1 and ("ERR_CONNECTION_REFUSED" in err_msg or "refused" in err_msg or "Timeout" in err_msg):
+                    print(f"  [WAIT] Transient server connection, retrying in 1.5s ({i+1}/{max_retries})...", flush=True)
+                    time.sleep(1.5)
+                else:
+                    raise e
+
     def snap(self, name):
         filename = f"{self.step_num:02d}_{name}.png"
         filepath = os.path.join(SCREENSHOTS_DIR, filename)
@@ -71,11 +86,22 @@ class SuperAdminE2ETester:
         self.passed_tests += 1
         print(f"  [PASSED] {test_name}", flush=True)
 
+    def test_00_open_home(self):
+        self.log_step("Open Root Page: http://127.0.0.1:8000/ on Chrome")
+        home_url = f"{BASE_URL}/"
+        print(f"  Opening URL on Chrome: {home_url}", flush=True)
+        self.safe_goto(home_url)
+        expect(self.page.locator("body")).to_be_visible()
+        self.snap("00_chrome_home")
+        print("  Successfully opened http://127.0.0.1:8000/ on Chrome!", flush=True)
+        time.sleep(2.0)
+        self.assert_success("Root page http://127.0.0.1:8000/ opened and displayed on Chrome")
+
     def test_01_login(self):
         self.log_step("Super Admin Login (admin / 12345)")
         login_url = f"{BASE_URL}/super-admin/login/"
         print(f"  Navigating to: {login_url}")
-        self.page.goto(login_url, wait_until="networkidle")
+        self.safe_goto(login_url)
         
         # Verify login page components
         expect(self.page.locator("h1:has-text('Suggu Services')")).to_be_visible()
@@ -96,7 +122,7 @@ class SuperAdminE2ETester:
 
     def test_02_dashboard(self):
         self.log_step("Dashboard KPIs, Canvases & Quick Actions")
-        self.page.goto(f"{BASE_URL}/super-admin/", wait_until="networkidle")
+        self.safe_goto(f"{BASE_URL}/super-admin/", wait_until="networkidle")
 
         # Verify stat cards
         expect(self.page.locator(".stat-card .label:has-text('Customers')")).to_be_visible()
@@ -120,7 +146,7 @@ class SuperAdminE2ETester:
 
     def test_03_users_management(self):
         self.log_step("Users Management: Filters, Profile Modal, Edit & Update Form")
-        self.page.goto(f"{BASE_URL}/super-admin/users/", wait_until="networkidle")
+        self.safe_goto(f"{BASE_URL}/super-admin/users/", wait_until="networkidle")
         expect(self.page.locator("h1, .header-title:has-text('User Management')")).to_be_visible()
 
         # 1. Test Filter Functionality
@@ -161,7 +187,7 @@ class SuperAdminE2ETester:
         edit_btn = self.page.locator('a.action-btn[title="Edit"]').first
         edit_url = edit_btn.get_attribute("href")
         print(f"  Opening edit form: {edit_url}")
-        self.page.goto(f"{BASE_URL}{edit_url}", wait_until="networkidle")
+        self.safe_goto(f"{BASE_URL}{edit_url}", wait_until="networkidle")
 
         expect(self.page.locator("text=Account & Contact Details")).to_be_visible()
         
@@ -180,7 +206,7 @@ class SuperAdminE2ETester:
 
         # 4. Test Add User Page & Role Toggles
         print("  Testing Add User Page & Role Visibility Switches...")
-        self.page.goto(f"{BASE_URL}/super-admin/users/create/", wait_until="networkidle")
+        self.safe_goto(f"{BASE_URL}/super-admin/users/create/", wait_until="networkidle")
         expect(self.page.locator("text=Create New User")).to_be_visible()
         
         # Test Area Admin toggle
@@ -202,7 +228,7 @@ class SuperAdminE2ETester:
 
     def test_04_vendors_management(self):
         self.log_step("Vendors Management: Classification Filter, Quick Modal, Edit & Add Form")
-        self.page.goto(f"{BASE_URL}/super-admin/vendors/", wait_until="networkidle")
+        self.safe_goto(f"{BASE_URL}/super-admin/vendors/", wait_until="networkidle")
         expect(self.page.locator(".header-title:has-text('Vendor Management')")).to_be_visible()
 
         # 1. Test Filter
@@ -214,7 +240,7 @@ class SuperAdminE2ETester:
         print("  Company vendors filter executed successfully")
 
         # Reset
-        self.page.goto(f"{BASE_URL}/super-admin/vendors/", wait_until="networkidle")
+        self.safe_goto(f"{BASE_URL}/super-admin/vendors/", wait_until="networkidle")
 
         # 2. Test Vendor Quick View Modal
         print("  Testing Vendor Quick Profile Modal...")
@@ -239,7 +265,7 @@ class SuperAdminE2ETester:
         edit_btn = self.page.locator('a.action-btn[title="Edit Vendor"]').first
         edit_url = edit_btn.get_attribute("href")
         print(f"  Navigating to vendor edit form: {edit_url}")
-        self.page.goto(f"{BASE_URL}{edit_url}", wait_until="networkidle")
+        self.safe_goto(f"{BASE_URL}{edit_url}", wait_until="networkidle")
 
         expect(self.page.locator("h3:has-text('Edit:')")).to_be_visible()
         
@@ -256,7 +282,7 @@ class SuperAdminE2ETester:
 
         # 4. Test Add Vendor Form (Company vs Outside dynamic toggle)
         print("  Testing Add Vendor Form & Dynamic Company/Individual Fields...")
-        self.page.goto(f"{BASE_URL}/super-admin/vendors/create/", wait_until="networkidle")
+        self.safe_goto(f"{BASE_URL}/super-admin/vendors/create/", wait_until="networkidle")
         expect(self.page.locator("h3:has-text('Add New Vendor')")).to_be_visible()
 
         # Select Company Vendor -> verify companyFields visible
@@ -278,7 +304,7 @@ class SuperAdminE2ETester:
 
     def test_05_kyc_approvals(self):
         self.log_step("KYC Approvals: Filters, Document Links & Reject Form Toggle")
-        self.page.goto(f"{BASE_URL}/super-admin/kyc/", wait_until="networkidle")
+        self.safe_goto(f"{BASE_URL}/super-admin/kyc/", wait_until="networkidle")
         expect(self.page.locator("text=KYC Document Verification Center")).to_be_visible()
 
         # Filter by Pending
@@ -304,14 +330,14 @@ class SuperAdminE2ETester:
 
     def test_06_categories_and_cities(self):
         self.log_step("Categories & Cities CMS: Edit/Update Category & Edit Location")
-        self.page.goto(f"{BASE_URL}/super-admin/cms/", wait_until="networkidle")
+        self.safe_goto(f"{BASE_URL}/super-admin/cms/", wait_until="networkidle")
         expect(self.page.locator("text=Categories & City Locations")).to_be_visible()
 
         # 1. Edit Category Form
         print("  Testing Edit Category Form...")
         cat_edit_btn = self.page.locator('table a:has-text("Edit")').first
         cat_edit_url = cat_edit_btn.get_attribute("href")
-        self.page.goto(f"{BASE_URL}{cat_edit_url}", wait_until="networkidle")
+        self.safe_goto(f"{BASE_URL}{cat_edit_url}", wait_until="networkidle")
         expect(self.page.locator("h3:has-text('Edit:')")).to_be_visible()
 
         # Update category status or name
@@ -337,7 +363,7 @@ class SuperAdminE2ETester:
         loc_table = self.page.locator('table').nth(1)
         loc_edit_btn = loc_table.locator('a:has-text("Edit")').first
         loc_edit_url = loc_edit_btn.get_attribute("href")
-        self.page.goto(f"{BASE_URL}{loc_edit_url}", wait_until="networkidle")
+        self.safe_goto(f"{BASE_URL}{loc_edit_url}", wait_until="networkidle")
         expect(self.page.locator("h3:has-text('Edit:')")).to_be_visible()
         self.snap("edit_location_form")
 
@@ -350,7 +376,7 @@ class SuperAdminE2ETester:
 
     def test_07_job_posts(self):
         self.log_step("Job Posts: Bids & Assign Hub, Edit & Update Job")
-        self.page.goto(f"{BASE_URL}/super-admin/jobs/", wait_until="networkidle")
+        self.safe_goto(f"{BASE_URL}/super-admin/jobs/", wait_until="networkidle")
         expect(self.page.locator(".header-title:has-text('Jobs Engine')")).to_be_visible()
         self.snap("jobs_engine")
 
@@ -358,7 +384,7 @@ class SuperAdminE2ETester:
         print("  Testing 'Bids & Assign' detail page...")
         bids_btn = self.page.locator('a:has-text("Bids & Assign")').first
         bids_url = bids_btn.get_attribute("href")
-        self.page.goto(f"{BASE_URL}{bids_url}", wait_until="networkidle")
+        self.safe_goto(f"{BASE_URL}{bids_url}", wait_until="networkidle")
         expect(self.page.locator("a:has-text('Back to Jobs')")).to_be_visible()
         print(f"  Bids & Assign page loaded: {bids_url}")
         self.snap("job_bids_assign")
@@ -371,7 +397,7 @@ class SuperAdminE2ETester:
         print("  Testing Edit Job Form...")
         edit_btn = self.page.locator('a[title="Edit Job"]').first
         edit_url = edit_btn.get_attribute("href")
-        self.page.goto(f"{BASE_URL}{edit_url}", wait_until="networkidle")
+        self.safe_goto(f"{BASE_URL}{edit_url}", wait_until="networkidle")
         expect(self.page.locator("h3:has-text('Edit:')")).to_be_visible()
 
         # Update budget slightly
@@ -396,13 +422,13 @@ class SuperAdminE2ETester:
 
     def test_08_quick_services(self):
         self.log_step("Quick Services: Edit & Update Quick Booking")
-        self.page.goto(f"{BASE_URL}/super-admin/quick-services/", wait_until="networkidle")
+        self.safe_goto(f"{BASE_URL}/super-admin/quick-services/", wait_until="networkidle")
         expect(self.page.locator(".header-title:has-text('Quick Services')")).to_be_visible()
 
         # Edit QS Form
         edit_btn = self.page.locator('table a:has-text("Edit")').first
         edit_url = edit_btn.get_attribute("href")
-        self.page.goto(f"{BASE_URL}{edit_url}", wait_until="networkidle")
+        self.safe_goto(f"{BASE_URL}{edit_url}", wait_until="networkidle")
         expect(self.page.locator("h3:has-text('Edit:')")).to_be_visible()
         self.snap("edit_qs_form")
 
@@ -423,13 +449,13 @@ class SuperAdminE2ETester:
 
     def test_09_bids_management(self):
         self.log_step("Bids & Quotations: Edit & Update Quotation")
-        self.page.goto(f"{BASE_URL}/super-admin/bids/", wait_until="networkidle")
+        self.safe_goto(f"{BASE_URL}/super-admin/bids/", wait_until="networkidle")
         expect(self.page.locator(".header-title:has-text('Vendor Bids')")).to_be_visible()
 
         # Edit Bid Form
         edit_btn = self.page.locator('table a:has-text("Edit")').first
         edit_url = edit_btn.get_attribute("href")
-        self.page.goto(f"{BASE_URL}{edit_url}", wait_until="networkidle")
+        self.safe_goto(f"{BASE_URL}{edit_url}", wait_until="networkidle")
         expect(self.page.locator("h3:has-text('Edit Bid:')")).to_be_visible()
         self.snap("edit_bid_form")
 
@@ -450,7 +476,7 @@ class SuperAdminE2ETester:
 
     def test_10_subscriptions(self):
         self.log_step("Subscriptions: Plan Overview & Add Subscription Form")
-        self.page.goto(f"{BASE_URL}/super-admin/subscriptions/", wait_until="networkidle")
+        self.safe_goto(f"{BASE_URL}/super-admin/subscriptions/", wait_until="networkidle")
         expect(self.page.locator(".header-title:has-text('Subscription Management')")).to_be_visible()
         self.snap("subscriptions_list")
 
@@ -467,7 +493,7 @@ class SuperAdminE2ETester:
 
     def test_11_payouts(self):
         self.log_step("Payouts & Settlements: Financial KPI Cards & Search Filter")
-        self.page.goto(f"{BASE_URL}/super-admin/payouts/", wait_until="networkidle")
+        self.safe_goto(f"{BASE_URL}/super-admin/payouts/", wait_until="networkidle")
         expect(self.page.locator("text=Vendor Payout & Settlement Hub")).to_be_visible()
 
         # Verify summary stats
@@ -485,7 +511,7 @@ class SuperAdminE2ETester:
 
     def test_12_disputes(self):
         self.log_step("Disputes & Complaints: Resolution Hub & Dispute Detail View")
-        self.page.goto(f"{BASE_URL}/super-admin/disputes/", wait_until="networkidle")
+        self.safe_goto(f"{BASE_URL}/super-admin/disputes/", wait_until="networkidle")
         expect(self.page.locator("text=Dispute Resolution Hub")).to_be_visible()
 
         # Verify dispute metrics
@@ -496,7 +522,7 @@ class SuperAdminE2ETester:
         detail_link = self.page.locator('table a[href*="/super-admin/disputes/"]').first
         detail_url = detail_link.get_attribute("href")
         print(f"  Navigating to dispute details: {detail_url}")
-        self.page.goto(f"{BASE_URL}{detail_url}", wait_until="networkidle")
+        self.safe_goto(f"{BASE_URL}{detail_url}", wait_until="networkidle")
 
         expect(self.page.locator("text=Case History & Activity")).to_be_visible()
         self.snap("dispute_detail")
@@ -506,7 +532,7 @@ class SuperAdminE2ETester:
 
     def test_13_messages(self):
         self.log_step("In-App Messages: Communication Oversight Table")
-        self.page.goto(f"{BASE_URL}/super-admin/messages/", wait_until="networkidle")
+        self.safe_goto(f"{BASE_URL}/super-admin/messages/", wait_until="networkidle")
         expect(self.page.locator(".header-title:has-text('Message Oversight')")).to_be_visible()
         expect(self.page.locator("table th:has-text('Message')")).to_be_visible()
         self.snap("messages_table")
@@ -514,13 +540,13 @@ class SuperAdminE2ETester:
 
     def test_14_landing_quick_services(self):
         self.log_step("Landing CMS: Quick Service Cards (Edit & Update)")
-        self.page.goto(f"{BASE_URL}/super-admin/landing/quick-services/", wait_until="networkidle")
+        self.safe_goto(f"{BASE_URL}/super-admin/landing/quick-services/", wait_until="networkidle")
         expect(self.page.locator(".header-title:has-text('Quick Service Cards')")).to_be_visible()
 
         # Open Edit Form
         edit_btn = self.page.locator('a[title="Edit"]').first
         edit_url = edit_btn.get_attribute("href")
-        self.page.goto(f"{BASE_URL}{edit_url}", wait_until="networkidle")
+        self.safe_goto(f"{BASE_URL}{edit_url}", wait_until="networkidle")
         expect(self.page.locator("text=Card Attributes & Content")).to_be_visible()
         self.snap("edit_cms_quick_service")
 
@@ -533,13 +559,13 @@ class SuperAdminE2ETester:
 
     def test_15_landing_packages(self):
         self.log_step("Landing CMS: Service Packages (Edit & Update)")
-        self.page.goto(f"{BASE_URL}/super-admin/landing/packages/", wait_until="networkidle")
+        self.safe_goto(f"{BASE_URL}/super-admin/landing/packages/", wait_until="networkidle")
         expect(self.page.locator(".header-title:has-text('Service Packages')")).to_be_visible()
 
         # Open Edit Form
         edit_btn = self.page.locator('a[title="Edit"]').first
         edit_url = edit_btn.get_attribute("href")
-        self.page.goto(f"{BASE_URL}{edit_url}", wait_until="networkidle")
+        self.safe_goto(f"{BASE_URL}{edit_url}", wait_until="networkidle")
         expect(self.page.locator(".card-title:has-text('Card Attributes')")).to_be_visible()
         self.snap("edit_cms_package")
 
@@ -552,7 +578,7 @@ class SuperAdminE2ETester:
 
     def test_16_landing_testimonials(self):
         self.log_step("Landing CMS: Testimonials (Snippet View, Full Modal, Edit & Update)")
-        self.page.goto(f"{BASE_URL}/super-admin/landing/testimonials/", wait_until="networkidle")
+        self.safe_goto(f"{BASE_URL}/super-admin/landing/testimonials/", wait_until="networkidle")
         expect(self.page.locator(".header-title:has-text('Client Reviews & Testimonials')")).to_be_visible()
 
         # 1. Test Review Snippet Column
@@ -580,7 +606,7 @@ class SuperAdminE2ETester:
         print("  Testing Edit Testimonial Form...")
         edit_btn = self.page.locator('a[title="Edit"]').first
         edit_url = edit_btn.get_attribute("href")
-        self.page.goto(f"{BASE_URL}{edit_url}", wait_until="networkidle")
+        self.safe_goto(f"{BASE_URL}{edit_url}", wait_until="networkidle")
         expect(self.page.locator(".card-title:has-text('Card Attributes')")).to_be_visible()
         self.snap("edit_testimonial_form")
 
@@ -594,7 +620,7 @@ class SuperAdminE2ETester:
 
     def test_17_signout(self):
         self.log_step("Super Admin Sign Out")
-        self.page.goto(f"{BASE_URL}/super-admin/", wait_until="networkidle")
+        self.safe_goto(f"{BASE_URL}/super-admin/", wait_until="networkidle")
         
         # Click Sign Out in sidebar
         signout_link = self.page.locator('a.btn-logout:has-text("Sign Out")')
@@ -632,11 +658,21 @@ def run_tests():
             "--no-default-browser-check",
         ] if HEADED else []
 
-        browser = p.chromium.launch(
-            headless=not HEADED,
-            slow_mo=350 if HEADED else 0,
-            args=launch_args
-        )
+        try:
+            browser = p.chromium.launch(
+                channel="chrome",
+                headless=not HEADED,
+                slow_mo=350 if HEADED else 0,
+                args=launch_args
+            )
+            print("  [BROWSER] Launched real Google Chrome in full-screen mode.", flush=True)
+        except Exception as chrome_err:
+            print(f"  [BROWSER] Falling back to bundled Chromium: {chrome_err}", flush=True)
+            browser = p.chromium.launch(
+                headless=not HEADED,
+                slow_mo=350 if HEADED else 0,
+                args=launch_args
+            )
 
         context = browser.new_context(no_viewport=True)
         page = context.new_page()
@@ -646,6 +682,7 @@ def run_tests():
 
         start_time = time.time()
         try:
+            tester.test_00_open_home()
             tester.test_01_login()
             tester.test_02_dashboard()
             tester.test_03_users_management()
