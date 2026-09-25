@@ -706,15 +706,22 @@ def run_tests():
             print(f"  [SUCCESS] ALL {tester.passed_tests} TEST STEPS PASSED! (Time: {total_time:.2f}s)")
             print(f"  [REPORT] Screenshots stored in: {SCREENSHOTS_DIR}")
             print("=" * 75 + "\n", flush=True)
+            print("  Keeping browser open for 15 seconds so you can view the completed dashboard test...", flush=True)
+            time.sleep(15)
             return 0
 
         except Exception as e:
             tester.failed_tests += 1
             print(f"\n[ERROR] Test execution failed: {e}", flush=True)
             tester.snap("failure_error")
+            print("  Pausing browser for 20 seconds so you can inspect the current page...", flush=True)
+            time.sleep(20)
             return 1
         finally:
-            browser.close()
+            try:
+                browser.close()
+            except Exception:
+                pass
 
 if __name__ == "__main__":
     sys.exit(run_tests())
