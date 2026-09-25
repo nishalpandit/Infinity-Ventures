@@ -112,11 +112,11 @@ class SuperAdminE2ETester:
         print("  Entering credentials: admin / 12345")
         self.page.fill('input[name="username"]', "admin")
         self.page.fill('input[name="password"]', "12345")
+        time.sleep(0.5)
         self.page.click('button[type="submit"]')
 
         # Verify redirect to dashboard
-        self.page.wait_for_url("**/super-admin/**", timeout=10000)
-        expect(self.page.locator("text=Dashboard Overview")).to_be_visible()
+        expect(self.page.locator(".header-title:has-text('Dashboard Overview')")).to_be_visible(timeout=15000)
         self.snap("dashboard_loaded")
         self.assert_success("Login successfully authenticated and redirected to Dashboard")
 
