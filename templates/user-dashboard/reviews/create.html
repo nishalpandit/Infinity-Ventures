@@ -1,5 +1,285 @@
 <!doctype html>
-    <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="description" content="Suggu Services user Portal — Write a Review"><title>Write a Review · Suggu Services user</title><link rel="stylesheet" href="../assets/styles.css"><script defer src="../assets/app.js"></script></head>
-    <body data-page="review-create" data-title="Write a Review" data-root="../"><div class="app-shell"><div id="sidebar-root"></div><div class="workspace"><div id="topbar-root"></div><main class="page">
-<div class="page-head"><div class="actions"><a class="btn btn-secondary" href="index.html">Cancel</a></div></div><div class="layout-main"><section class="card"><form class="needs-validation" data-success-title="Review submitted" data-success-message="Thank you. Your review will appear after a quick moderation check."><div class="form-section"><div class="form-grid"><div class="field"><label>Vendor</label><div class="cell-user"><span class="avatar md vendor">RK</span><div><strong>Ravi Kumar</strong><div class="small muted">Independent AC Technician</div></div></div></div><div class="field"><label>Service / Job</label><div class="info-value">AC cooling issue</div><div class="small muted">Quick Service · QS-2026-0819</div></div><div class="field full"><label>Overall rating <span class="required">*</span></label><div class="rating-picker" data-rating><button type="button" data-value="1" aria-label="1 stars">★</button><button type="button" data-value="2" aria-label="2 stars">★</button><button type="button" data-value="3" aria-label="3 stars">★</button><button type="button" data-value="4" aria-label="4 stars">★</button><button type="button" data-value="5" aria-label="5 stars">★</button></div><div class="field-hint" data-rating-label>Select a rating</div></div><div class="field full"><label>Review <span class="required">*</span></label><textarea class="textarea" required minlength="20" placeholder="What went well? Was the vendor punctual, professional and clear about the work?"></textarea><div class="field-hint">Minimum 20 characters. Avoid sharing phone numbers or private information.</div></div><div class="field full"><label>Upload images</label><label class="upload-zone"><span class="upload-icon"><span data-icon="upload"></span></span><p><span>Add work photos</span></p><small>JPG or PNG up to 10 MB each</small><input type="file" multiple accept="image/*" data-preview="review-images"></label><div class="preview-list" id="review-images"></div></div></div></div><div class="form-actions"><a class="btn btn-secondary" href="index.html">Cancel</a><button class="btn btn-primary" type="submit"><span data-icon="star"></span> Submit Review</button></div></form></section><aside class="card"><div class="card-head"><h3>Review guidelines</h3></div><div class="card-body stack small"><div class="cell-user"><span class="stat-icon"><span data-icon="check"></span></span><div><strong>Be specific</strong><div class="muted">Mention quality, timing and communication.</div></div></div><div class="cell-user"><span class="stat-icon teal"><span data-icon="shield"></span></span><div><strong>Stay respectful</strong><div class="muted">Describe your experience factually.</div></div></div><div class="cell-user"><span class="stat-icon orange"><span data-icon="image"></span></span><div><strong>Use relevant photos</strong><div class="muted">Only upload images from this work.</div></div></div></div></aside></div>
-</main></div></div></body></html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="Suggu Services User Portal — Write a Review">
+  <title>Write a Review · Suggu Services User</title>
+  <link rel="stylesheet" href="../assets/styles.css">
+  <script defer src="../assets/app.js"></script>
+  <style>
+    .star-btn { font-size: 32px; background: none; border: none; cursor: pointer; color: #d1d5db; transition: color 0.15s ease, transform 0.15s ease; padding: 2px 4px; }
+    .star-btn.active, .star-btn.hover { color: #f59e0b; }
+    .star-btn:hover { transform: scale(1.15); }
+    .booking-card-preview { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 16px; margin-bottom: 20px; }
+    .preview-box { max-height: 180px; max-width: 240px; border-radius: 8px; border: 1px solid #e5e7eb; object-fit: cover; display: none; margin-top: 10px; }
+  </style>
+</head>
+<body data-page="review-create" data-title="Write a Review" data-root="../">
+  <div class="app-shell">
+    <div id="sidebar-root"></div>
+    <div class="workspace">
+      <div id="topbar-root"></div>
+      <main class="page">
+        <div class="page-head">
+          <div>
+            <h1>Write a Review</h1>
+            <p>Share your experience to help the vendor improve and guide fellow customers.</p>
+          </div>
+          <div class="actions">
+            <a class="btn btn-secondary" href="index.html">Back to Reviews</a>
+          </div>
+        </div>
+
+        <div class="layout-main">
+          <section class="card">
+            <form method="POST" action="/user/reviews/create.html" enctype="multipart/form-data">
+              {% csrf_token %}
+              <input type="hidden" name="action" value="submit_review">
+              <input type="hidden" name="rating" id="rating-input" value="5">
+
+              <div class="form-section">
+                <div class="form-grid">
+
+                  {% if preselected_job %}
+                  <div class="field full">
+                    <label>Selected Service Project</label>
+                    <input type="hidden" name="job_id" value="{{ preselected_job.id }}">
+                    <input type="hidden" name="booking_id" value="job:{{ preselected_job.id }}">
+                    {% if preselected_vendor %}
+                    <input type="hidden" name="vendor_id" value="{{ preselected_vendor.id }}">
+                    {% endif %}
+
+                    <div class="booking-card-preview">
+                      <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <div>
+                          <strong style="font-size:15px; color:#111827;">{{ preselected_job.title }}</strong>
+                          <div class="small muted">Project ID: JOB-{{ preselected_job.id|stringformat:"04d" }} · {{ preselected_job.category.name|default:"General" }}</div>
+                        </div>
+                        <span class="badge badge-success">Completed</span>
+                      </div>
+                      {% if preselected_vendor %}
+                      <div class="divider" style="margin: 12px 0;"></div>
+                      <div class="cell-user">
+                        <span class="avatar sm vendor">{{ preselected_vendor.first_name|slice:":2"|upper|default:"VN" }}</span>
+                        <div>
+                          <strong>{{ preselected_vendor.vendor_profile.company_name|default:preselected_vendor.get_full_name|default:preselected_vendor.username }}</strong>
+                          <div class="small muted">{{ preselected_vendor.vendor_profile.category|default:"Contractor / Vendor" }}</div>
+                        </div>
+                      </div>
+                      {% endif %}
+                    </div>
+                  </div>
+
+                  {% elif preselected_qs %}
+                  <div class="field full">
+                    <label>Selected Quick Service</label>
+                    <input type="hidden" name="quick_service_id" value="{{ preselected_qs.id }}">
+                    <input type="hidden" name="booking_id" value="qs:{{ preselected_qs.id }}">
+                    {% if preselected_vendor %}
+                    <input type="hidden" name="vendor_id" value="{{ preselected_vendor.id }}">
+                    {% endif %}
+
+                    <div class="booking-card-preview">
+                      <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <div>
+                          <strong style="font-size:15px; color:#111827;">{{ preselected_qs.title }}</strong>
+                          <div class="small muted">Service ID: QS-{{ preselected_qs.id|stringformat:"04d" }} · {{ preselected_qs.category.name|default:"General" }}</div>
+                        </div>
+                        <span class="badge badge-success">Completed</span>
+                      </div>
+                      {% if preselected_vendor %}
+                      <div class="divider" style="margin: 12px 0;"></div>
+                      <div class="cell-user">
+                        <span class="avatar sm vendor">{{ preselected_vendor.first_name|slice:":2"|upper|default:"VN" }}</span>
+                        <div>
+                          <strong>{{ preselected_vendor.vendor_profile.company_name|default:preselected_vendor.get_full_name|default:preselected_vendor.username }}</strong>
+                          <div class="small muted">{{ preselected_vendor.vendor_profile.category|default:"Service Technician" }}</div>
+                        </div>
+                      </div>
+                      {% endif %}
+                    </div>
+                  </div>
+
+                  {% else %}
+                  <div class="field full">
+                    <label for="booking_selector">Select Completed Booking to Review <span class="required">*</span></label>
+                    <select class="select" name="booking_id" id="booking_selector" required onchange="onBookingChange(this)">
+                      <option value="">-- Choose a completed service or job --</option>
+                      {% if candidate_jobs %}
+                      <optgroup label="Contract Projects (Jobs)">
+                        {% for j in candidate_jobs %}
+                        <option value="job:{{ j.id }}" data-vendor="{{ j.review_vendor.vendor_profile.company_name|default:j.review_vendor.get_full_name|default:j.review_vendor.username }}" data-vendor-cat="{{ j.review_vendor.vendor_profile.category|default:'Contractor' }}" data-vendor-init="{{ j.review_vendor.first_name|slice:':2'|upper|default:'VN' }}" data-reviewed="{% if j.has_reviewed %}1{% else %}0{% endif %}">
+                          JOB-{{ j.id|stringformat:"04d" }}: {{ j.title }} ({{ j.review_vendor.vendor_profile.company_name|default:j.review_vendor.username }}){% if j.has_reviewed %} [Already Reviewed]{% endif %}
+                        </option>
+                        {% endfor %}
+                      </optgroup>
+                      {% endif %}
+
+                      {% if candidate_quick_services %}
+                      <optgroup label="Quick Services">
+                        {% for q in candidate_quick_services %}
+                        <option value="qs:{{ q.id }}" data-vendor="{{ q.review_vendor.vendor_profile.company_name|default:q.review_vendor.get_full_name|default:q.review_vendor.username }}" data-vendor-cat="{{ q.review_vendor.vendor_profile.category|default:'Technician' }}" data-vendor-init="{{ q.review_vendor.first_name|slice:':2'|upper|default:'VN' }}" data-reviewed="{% if q.has_reviewed %}1{% else %}0{% endif %}">
+                          QS-{{ q.id|stringformat:"04d" }}: {{ q.title }} ({{ q.review_vendor.vendor_profile.company_name|default:q.review_vendor.username }}){% if q.has_reviewed %} [Already Reviewed]{% endif %}
+                        </option>
+                        {% endfor %}
+                      </optgroup>
+                      {% endif %}
+                    </select>
+
+                    <div id="booking-preview-container" class="booking-card-preview" style="display:none; margin-top:12px;">
+                      <div class="cell-user">
+                        <span class="avatar sm vendor" id="sel-vendor-avatar">VN</span>
+                        <div>
+                          <strong id="sel-vendor-name">Vendor Name</strong>
+                          <div class="small muted" id="sel-vendor-cat">Contractor</div>
+                        </div>
+                      </div>
+                      <div id="already-reviewed-warning" style="display:none; margin-top:10px; color:#d97706; font-size:12px; font-weight:600;">
+                        ⚠️ Note: You have already submitted a review for this booking. Submitting will update your previous feedback.
+                      </div>
+                    </div>
+                  </div>
+                  {% endif %}
+
+                  <div class="field full">
+                    <label>Overall Rating <span class="required">*</span></label>
+                    <div class="rating-stars-container" style="display:flex; align-items:center; gap:6px;">
+                      <button type="button" class="star-btn active" data-val="1" onclick="setRating(1)">★</button>
+                      <button type="button" class="star-btn active" data-val="2" onclick="setRating(2)">★</button>
+                      <button type="button" class="star-btn active" data-val="3" onclick="setRating(3)">★</button>
+                      <button type="button" class="star-btn active" data-val="4" onclick="setRating(4)">★</button>
+                      <button type="button" class="star-btn active" data-val="5" onclick="setRating(5)">★</button>
+                    </div>
+                    <div id="rating-label" style="font-size:13px; font-weight:600; color:#4f46e5; margin-top:6px;">
+                      5 Stars - Excellent Service
+                    </div>
+                  </div>
+
+                  <div class="field full">
+                    <label for="review_title">Headline / Title</label>
+                    <input class="input" id="review_title" name="review_title" placeholder="e.g. Professional execution and punctual team">
+                  </div>
+
+                  <div class="field full">
+                    <label for="comment">Detailed Feedback <span class="required">*</span></label>
+                    <textarea class="textarea" id="comment" name="comment" required minlength="10" rows="5" placeholder="Share specific details about the service quality, vendor punctuality, pricing transparency, and cleanliness..."></textarea>
+                    <div class="field-hint">Minimum 10 characters. Avoid sharing personal contact info or sensitive data.</div>
+                  </div>
+
+                  <div class="field full">
+                    <label>Upload Work Photo (Optional)</label>
+                    <input type="file" name="review_image" accept="image/*" class="input" onchange="previewImage(this)">
+                    <img id="img-preview" class="preview-box" alt="Preview">
+                    <div class="field-hint">Add a photo showing the finished work or repaired item. PNG, JPG or WEBP up to 5MB.</div>
+                  </div>
+
+                </div>
+              </div>
+
+              <div class="form-actions" style="margin-top:24px; display:flex; gap:12px; justify-content:flex-end;">
+                <a class="btn btn-secondary" href="index.html">Cancel</a>
+                <button class="btn btn-primary" type="submit">
+                  <span data-icon="star"></span> Submit Review
+                </button>
+              </div>
+            </form>
+          </section>
+
+          <aside class="card">
+            <div class="card-head">
+              <h3>Review Guidelines</h3>
+            </div>
+            <div class="card-body stack small">
+              <div class="cell-user">
+                <span class="stat-icon green"><span data-icon="check"></span></span>
+                <div>
+                  <strong>Be Specific &amp; Factual</strong>
+                  <div class="muted">Mention scope accuracy, timeliness, and technician politeness.</div>
+                </div>
+              </div>
+              <div class="cell-user">
+                <span class="stat-icon purple"><span data-icon="award"></span></span>
+                <div>
+                  <strong>Helps Top Pros Grow</strong>
+                  <div class="muted">Positive reviews reward hardworking verified contractors and boost their standing.</div>
+                </div>
+              </div>
+              <div class="cell-user">
+                <span class="stat-icon teal"><span data-icon="shield"></span></span>
+                <div>
+                  <strong>Dispute Resolution</strong>
+                  <div class="muted">If work was unsatisfactory or unfinished, you can also raise a formal ticket via <a href="../support/create-complaint.html">Complaints &amp; Support</a>.</div>
+                </div>
+              </div>
+            </div>
+          </aside>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <script>
+    const ratingLabels = {
+      1: "1 Star - Poor Service",
+      2: "2 Stars - Below Average",
+      3: "3 Stars - Average Service",
+      4: "4 Stars - Very Good",
+      5: "5 Stars - Excellent Service"
+    };
+
+    function setRating(val) {
+      document.getElementById('rating-input').value = val;
+      const btns = document.querySelectorAll('.star-btn');
+      btns.forEach(btn => {
+        const bVal = parseInt(btn.getAttribute('data-val'));
+        if (bVal <= val) {
+          btn.classList.add('active');
+        } else {
+          btn.classList.remove('active');
+        }
+      });
+      document.getElementById('rating-label').innerText = ratingLabels[val] || (val + " Stars");
+    }
+
+    function onBookingChange(selectElem) {
+      const opt = selectElem.selectedOptions[0];
+      const previewCont = document.getElementById('booking-preview-container');
+      if (!opt || !opt.value) {
+        if (previewCont) previewCont.style.display = 'none';
+        return;
+      }
+
+      const vName = opt.getAttribute('data-vendor') || 'Vendor';
+      const vCat = opt.getAttribute('data-vendor-cat') || 'Service Provider';
+      const vInit = opt.getAttribute('data-vendor-init') || 'VN';
+      const isReviewed = opt.getAttribute('data-reviewed') === '1';
+
+      document.getElementById('sel-vendor-name').innerText = vName;
+      document.getElementById('sel-vendor-cat').innerText = vCat;
+      document.getElementById('sel-vendor-avatar').innerText = vInit;
+      
+      const warnElem = document.getElementById('already-reviewed-warning');
+      if (warnElem) {
+        warnElem.style.display = isReviewed ? 'block' : 'none';
+      }
+
+      previewCont.style.display = 'block';
+    }
+
+    function previewImage(input) {
+      const preview = document.getElementById('img-preview');
+      if (input.files && input.files[0]) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+          preview.src = e.target.result;
+          preview.style.display = 'block';
+        };
+        reader.readAsDataURL(input.files[0]);
+      } else {
+        preview.style.display = 'none';
+      }
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Disputes &amp; Complaints — Suggu Admin</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
+  <link rel="stylesheet" href="/admin-dashboard/assets/css/admin.css">
+  <link rel="stylesheet" href="/admin-dashboard/assets/css/sidebar.css">
+  <link rel="stylesheet" href="/admin-dashboard/assets/css/responsive.css">
+  <style>
+    body { background: #f4f5f7; font-family: 'Inter', sans-serif; }
+    .kpi-card {
+      background: #fff; border-radius: 12px; padding: 18px 20px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.06); border: 1px solid #e5e7eb;
+    }
+    .kpi-title { font-size: 12px; font-weight: 700; color: #6b7280; text-transform: uppercase; letter-spacing: 0.5px; }
+    .kpi-val { font-size: 26px; font-weight: 800; color: #111827; margin-top: 4px; }
+    .table-card {
+      background: #fff; border-radius: 12px; border: 1px solid #e5e7eb;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.06); overflow: hidden;
+    }
+    .comp-table { width: 100%; border-collapse: collapse; }
+    .comp-table th {
+      background: #f9fafb; padding: 12px 16px; font-size: 11px; font-weight: 700;
+      color: #6b7280; text-transform: uppercase; border-bottom: 1px solid #e5e7eb; white-space: nowrap;
+    }
+    .comp-table td {
+      padding: 14px 16px; font-size: 13px; color: #374151;
+      border-bottom: 1px solid #f3f4f6; vertical-align: middle;
+    }
+    .badge-open { background: #fef3c7; color: #b45309; font-weight: 600; padding: 4px 10px; border-radius: 20px; font-size: 11px; }
+    .badge-investigating { background: #e0f2fe; color: #0369a1; font-weight: 600; padding: 4px 10px; border-radius: 20px; font-size: 11px; }
+    .badge-resolved { background: #dcfce7; color: #15803d; font-weight: 600; padding: 4px 10px; border-radius: 20px; font-size: 11px; }
+    .badge-closed { background: #f3f4f6; color: #4b5563; font-weight: 600; padding: 4px 10px; border-radius: 20px; font-size: 11px; }
+    .badge-urgent { background: #fee2e2; color: #b91c1c; font-weight: 700; padding: 4px 10px; border-radius: 20px; font-size: 11px; }
+  </style>
+</head>
+<body>
+  <div id="sidebar-mount"></div>
+  <div class="main-wrapper">
+    <div id="header-mount"></div>
+    <main class="main-content">
+      <div class="breadcrumb" id="breadcrumb"></div>
+
+      <!-- Territory Header -->
+      <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+        <div>
+          <h4 class="mb-1 fw-bold text-dark">Disputes &amp; Complaints Resolution</h4>
+          <p class="text-muted mb-0 small">
+            Investigate customer-vendor dispute cases, enforce service standards, and record arbitrations.
+          </p>
+        </div>
+        {% if admin_state %}
+        <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-3 py-2 fs-7 fw-semibold">
+          <i class="fa-solid fa-map-pin me-1"></i> Area: {{ admin_state }}
+        </span>
+        {% endif %}
+      </div>
+
+      <!-- KPI Summary Cards -->
+      <div class="row g-3 mb-4">
+        <div class="col-6 col-md-3">
+          <div class="kpi-card" style="border-left: 4px solid #4f46e5;">
+            <div class="kpi-title">Total Disputes</div>
+            <div class="kpi-val">{{ total_count|default:0 }}</div>
+          </div>
+        </div>
+        <div class="col-6 col-md-3">
+          <div class="kpi-card" style="border-left: 4px solid #f59e0b;">
+            <div class="kpi-title">Open Pending</div>
+            <div class="kpi-val" style="color: #d97706;">{{ open_count|default:0 }}</div>
+          </div>
+        </div>
+        <div class="col-6 col-md-3">
+          <div class="kpi-card" style="border-left: 4px solid #0ea5e9;">
+            <div class="kpi-title">In Review</div>
+            <div class="kpi-val" style="color: #0284c7;">{{ review_count|default:0 }}</div>
+          </div>
+        </div>
+        <div class="col-6 col-md-3">
+          <div class="kpi-card" style="border-left: 4px solid #10b981;">
+            <div class="kpi-title">Resolved</div>
+            <div class="kpi-val" style="color: #059669;">{{ resolved_count|default:0 }}</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Search & Filters -->
+      <div class="card p-3 mb-4 border">
+        <form method="get" class="row g-2 align-items-center">
+          <div class="col-md-6">
+            <input type="text" name="q" class="form-control form-control-sm" placeholder="Search Ticket ID, subject, complainant or vendor..." value="{{ request.GET.q }}">
+          </div>
+          <div class="col-md-3">
+            <select name="status" class="form-select form-select-sm" onchange="this.form.submit()">
+              <option value="">All Statuses</option>
+              <option value="open" {% if request.GET.status == 'open' %}selected{% endif %}>Open</option>
+              <option value="investigating" {% if request.GET.status == 'investigating' %}selected{% endif %}>In Review</option>
+              <option value="resolved" {% if request.GET.status == 'resolved' %}selected{% endif %}>Resolved</option>
+              <option value="closed" {% if request.GET.status == 'closed' %}selected{% endif %}>Closed</option>
+            </select>
+          </div>
+          <div class="col-md-3 d-flex gap-2">
+            <button type="submit" class="btn btn-primary btn-sm w-100"><i class="fa-solid fa-search me-1"></i> Filter</button>
+            {% if request.GET.q or request.GET.status %}
+            <a href="index.html" class="btn btn-secondary btn-sm"><i class="fa-solid fa-rotate-left"></i></a>
+            {% endif %}
+          </div>
+        </form>
+      </div>
+
+      <!-- Complaints Data Table -->
+      <div class="table-card">
+        <div class="table-responsive">
+          <table class="comp-table">
+            <thead>
+              <tr>
+                <th>Ticket ID</th>
+                <th>Subject &amp; Category</th>
+                <th>Complainant</th>
+                <th>Respondent</th>
+                <th>Related Item</th>
+                <th>Priority</th>
+                <th>Status</th>
+                <th>Date</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for d in disputes %}
+              <tr>
+                <td>
+                  <a href="details.html?id={{ d.id }}" class="fw-bold text-decoration-none text-primary">
+                    {{ d.ticket_id }}
+                  </a>
+                </td>
+                <td>
+                  <div class="fw-semibold text-dark">{{ d.subject }}</div>
+                  <span class="badge bg-light text-secondary border px-2 py-1" style="font-size:10px;">
+                    {{ d.get_category_display }}
+                  </span>
+                </td>
+                <td>
+                  <div class="fw-bold">{{ d.raised_by.get_full_name|default:d.raised_by.username }}</div>
+                  <small class="text-muted">{{ d.raised_by.role }}</small>
+                </td>
+                <td>
+                  {% if d.against_user %}
+                    <div class="fw-bold">
+                      {% if d.against_user.vendor_profile and d.against_user.vendor_profile.company_name %}
+                        {{ d.against_user.vendor_profile.company_name }}
+                      {% else %}
+                        {{ d.against_user.get_full_name|default:d.against_user.username }}
+                      {% endif %}
+                    </div>
+                    <small class="text-muted">{{ d.against_user.role }}</small>
+                  {% else %}
+                    <span class="text-muted small">Platform</span>
+                  {% endif %}
+                </td>
+                <td>
+                  {% if d.job %}
+                    <span class="badge bg-light text-dark border">JOB-{{ d.job.id|stringformat:"04d" }}</span>
+                    <div class="text-muted text-truncate" style="max-width:140px; font-size:11px;">{{ d.job.title }}</div>
+                  {% elif d.quick_service %}
+                    <span class="badge bg-light text-dark border">QS-{{ d.quick_service.id|stringformat:"04d" }}</span>
+                    <div class="text-muted text-truncate" style="max-width:140px; font-size:11px;">{{ d.quick_service.title }}</div>
+                  {% else %}
+                    <span class="text-muted small">Account</span>
+                  {% endif %}
+                </td>
+                <td>
+                  {% if d.priority == 'urgent' %}
+                    <span class="badge-urgent">Urgent</span>
+                  {% elif d.priority == 'high' %}
+                    <span class="badge-urgent" style="background:#ffedd5; color:#c2410c;">High</span>
+                  {% elif d.priority == 'medium' %}
+                    <span class="badge" style="background:#e0f2fe; color:#0369a1;">Medium</span>
+                  {% else %}
+                    <span class="badge bg-light text-secondary border">Low</span>
+                  {% endif %}
+                </td>
+                <td>
+                  {% if d.status == 'open' %}
+                    <span class="badge-open">Open</span>
+                  {% elif d.status == 'investigating' %}
+                    <span class="badge-investigating">In Review</span>
+                  {% elif d.status == 'resolved' %}
+                    <span class="badge-resolved">Resolved</span>
+                  {% else %}
+                    <span class="badge-closed">Closed</span>
+                  {% endif %}
+                </td>
+                <td class="text-muted small text-nowrap">
+                  {{ d.created_at|date:"d M Y" }}
+                </td>
+                <td>
+                  <a href="details.html?id={{ d.id }}" class="btn btn-outline-primary btn-sm px-2 py-1 text-nowrap" style="font-size:12px;">
+                    <i class="fa-solid fa-magnifying-glass me-1"></i> Inspect
+                  </a>
+                </td>
+              </tr>
+              {% empty %}
+              <tr>
+                <td colspan="9" class="text-center py-5 text-muted">
+                  <i class="fa-solid fa-shield-halved fa-2x mb-2 text-secondary opacity-50 d-block"></i>
+                  No disputes or complaints registered for this territory.
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="/admin-dashboard/assets/js/sidebar.js"></script>
+  <script src="/admin-dashboard/assets/js/components.js"></script>
+  <script src="/admin-dashboard/assets/js/admin.js"></script>
+  <script>
+    (function () {
+      'use strict';
+      if (window.AdminComponents) {
+        AdminComponents.renderBreadcrumb([
+          { label: 'Admin Dashboard', href: '/admin-dashboard' },
+          { label: 'Disputes & Complaints' }
+        ]);
+      }
+    })();
+  </script>
+</body>
+</html>

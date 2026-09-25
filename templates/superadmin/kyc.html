@@ -37,7 +37,23 @@
       <tbody>
         {% for kyc in kyc_list %}
         <tr>
-          <td><strong>{{ kyc.vendor.vendor_profile.company_name|default:kyc.vendor.username }}</strong></td>
+          <td>
+            <div style="display: flex; align-items: center; gap: 10px;">
+              {% if kyc.vendor.vendor_profile.profile_image %}
+                <img src="{{ kyc.vendor.vendor_profile.profile_image.url }}" alt="{{ kyc.vendor.username }}" style="width: 38px; height: 38px; border-radius: 50%; object-fit: cover; border: 1.5px solid var(--border); flex-shrink: 0;">
+              {% elif kyc.vendor.user_profile.profile_image %}
+                <img src="{{ kyc.vendor.user_profile.profile_image.url }}" alt="{{ kyc.vendor.username }}" style="width: 38px; height: 38px; border-radius: 50%; object-fit: cover; border: 1.5px solid var(--border); flex-shrink: 0;">
+              {% else %}
+                <div class="avatar" style="width: 38px; height: 38px; font-size: 14px; font-weight: 800; background: linear-gradient(135deg, #7c3aed, #9333ea); flex-shrink: 0;">
+                  {{ kyc.vendor.username|make_list|first|upper }}
+                </div>
+              {% endif %}
+              <div>
+                <strong style="color: var(--text-main); font-size: 13.5px; display: block;">{{ kyc.vendor.vendor_profile.company_name|default:kyc.vendor.username }}</strong>
+                <span style="font-size: 11.5px; color: var(--text-muted);">@{{ kyc.vendor.username }}</span>
+              </div>
+            </div>
+          </td>
           <td><span class="badge" style="background: rgba(14,165,233,0.12); color: #0284c7;">{{ kyc.get_id_type_display }}</span></td>
           <td>{{ kyc.id_number }}</td>
           <td>

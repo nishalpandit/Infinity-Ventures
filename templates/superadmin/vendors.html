@@ -1,82 +1,438 @@
 {% extends 'superadmin/base.html' %}
-{% block title %}Vendors{% endblock %}
+{% block title %}Vendors - Super Admin{% endblock %}
 {% block header_title %}Vendor Management{% endblock %}
 
 {% block header_actions %}
-<a href="{% url 'super_admin_vendor_create' %}" class="btn btn-primary btn-sm">
-  <i class="fa-solid fa-plus"></i>
+<a href="{% url 'super_admin_vendor_create' %}" class="btn btn-primary btn-sm" style="background: #0f172a; border-color: #0f172a; font-weight: 500; font-size: 13px; border-radius: 6px; padding: 7px 14px;">
+  <i class="fa-solid fa-plus" style="font-size: 11px;"></i>
   <span>Add Vendor</span>
 </a>
 {% endblock %}
 
 {% block content %}
-<div class="card" style="padding: 0;">
-  <div class="table-container">
-    <table>
+<!-- Clean Filter Toolbar -->
+<div style="padding: 14px 18px; margin-bottom: 16px; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px;">
+  <form method="GET" action="{% url 'super_admin_vendors' %}" style="display: grid; grid-template-columns: 2fr 1.2fr 1.4fr auto; gap: 12px; align-items: flex-end;">
+    <!-- Search -->
+    <div>
+      <label style="display: block; margin-bottom: 5px; font-size: 12px; font-weight: 500; color: #475569;">
+        Search Vendors
+      </label>
+      <input type="text" name="q" value="{{ q }}" class="form-control" placeholder="Company, owner name, username, city..." style="padding: 7px 11px; font-size: 13px; height: 36px; border: 1px solid #cbd5e1; border-radius: 6px; width: 100%;">
+    </div>
+
+    <!-- Vendor Type Filter -->
+    <div>
+      <label style="display: block; margin-bottom: 5px; font-size: 12px; font-weight: 500; color: #475569;">
+        Classification
+      </label>
+      <select name="type" class="form-control" style="padding: 7px 10px; font-size: 13px; height: 36px; border: 1px solid #cbd5e1; border-radius: 6px; width: 100%;">
+        <option value="" {% if not vendor_type %}selected{% endif %}>All Classifications</option>
+        <option value="company" {% if vendor_type == 'company' %}selected{% endif %}>Company Vendors</option>
+        <option value="vendor" {% if vendor_type == 'vendor' %}selected{% endif %}>Outside / Individual Pros</option>
+      </select>
+    </div>
+
+    <!-- Category Filter -->
+    <div>
+      <label style="display: block; margin-bottom: 5px; font-size: 12px; font-weight: 500; color: #475569;">
+        Category
+      </label>
+      <select name="category" class="form-control" style="padding: 7px 10px; font-size: 13px; height: 36px; border: 1px solid #cbd5e1; border-radius: 6px; width: 100%;">
+        <option value="" {% if not category %}selected{% endif %}>All Categories</option>
+        {% for cat in categories %}
+          <option value="{{ cat.name }}" {% if category == cat.name %}selected{% endif %}>{{ cat.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <!-- Buttons -->
+    <div style="display: flex; gap: 6px;">
+      <button type="submit" class="btn btn-primary" style="padding: 7px 16px; height: 36px; font-size: 13px; font-weight: 500; background: #0f172a; border-color: #0f172a; border-radius: 6px; color: #ffffff;">
+        Filter
+      </button>
+      {% if q or vendor_type or category %}
+        <a href="{% url 'super_admin_vendors' %}" class="btn btn-outline" style="padding: 7px 12px; height: 36px; font-size: 13px; border-color: #e2e8f0; color: #64748b; border-radius: 6px; text-decoration: none; display: inline-flex; align-items: center;" title="Clear filters">
+          Reset
+        </a>
+      {% endif %}
+    </div>
+  </form>
+</div>
+
+<!-- Vendors Table -->
+<div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden;">
+  <div class="table-container" style="overflow-x: auto;">
+    <table style="width: 100%; border-collapse: collapse; text-align: left;">
       <thead>
-        <tr>
-          <th>Company / Name</th>
-          <th>Type</th>
-          <th>Category</th>
-          <th>Location</th>
-          <th>Rating</th>
-          <th>Actions</th>
+        <tr style="background: #f8fafc; border-bottom: 1px solid #e2e8f0;">
+          <th style="padding: 12px 18px; font-size: 11.5px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; color: #64748b;">Vendor &amp; Business</th>
+          <th style="padding: 12px 16px; font-size: 11.5px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; color: #64748b;">Contact &amp; Territory</th>
+          <th style="padding: 12px 16px; font-size: 11.5px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; color: #64748b;">Classification</th>
+          <th style="padding: 12px 16px; font-size: 11.5px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; color: #64748b;">Category &amp; Rating</th>
+          <th style="padding: 12px 16px; font-size: 11.5px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; color: #64748b;">Wallet &amp; KYC</th>
+          <th style="padding: 12px 20px; font-size: 11.5px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; color: #64748b; text-align: right;">Actions</th>
         </tr>
       </thead>
       <tbody>
         {% for v in vendors %}
-        <tr>
-          <td><strong>{{ v.company_name|default:v.user.username }}</strong></td>
-          <td><span class="badge" style="background: rgba(168,85,247,0.12); color: #7c3aed;">{{ v.get_vendor_type_display }}</span></td>
-          <td>{{ v.category }}</td>
-          <td style="color: var(--text-muted);">{{ v.location }}</td>
-          <td><i class="fa-solid fa-star" style="color: var(--warning);"></i> {{ v.rating }}</td>
-          <td>
-            <div style="display: flex; gap: 8px;">
-              <a href="{% url 'super_admin_vendor_edit' v.id %}" class="btn btn-outline btn-sm"><i class="fa-solid fa-pen-to-square"></i> Edit</a>
-              <a href="{% url 'super_admin_vendor_delete' v.id %}" class="btn btn-outline btn-sm" style="border-color: rgba(239,68,68,0.3);" onclick="return confirm('Delete vendor {{ v }}? This will also delete their user account.')">
-                <i class="fa-solid fa-trash" style="color: var(--danger);"></i>
+        <tr style="border-bottom: 1px solid #f1f5f9; transition: background 0.1s ease;" onmouseover="this.style.background='#fafbfc'" onmouseout="this.style.background='transparent'">
+          
+          <!-- Vendor & Business Info -->
+          <td style="padding: 12px 18px;">
+            <div style="display: flex; align-items: center; gap: 12px;">
+              {% if v.profile_image %}
+                <img src="{{ v.profile_image.url }}" alt="{{ v.company_name|default:v.user.username }}" style="width: 38px; height: 38px; border-radius: 50%; object-fit: cover; flex-shrink: 0; border: 1px solid #e2e8f0;">
+              {% elif v.user.user_profile.profile_image %}
+                <img src="{{ v.user.user_profile.profile_image.url }}" alt="{{ v.company_name|default:v.user.username }}" style="width: 38px; height: 38px; border-radius: 50%; object-fit: cover; flex-shrink: 0; border: 1px solid #e2e8f0;">
+              {% else %}
+                <div style="width: 38px; height: 38px; border-radius: 50%; background: #f1f5f9; color: #475569; font-weight: 600; font-size: 13px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; border: 1px solid #e2e8f0;">
+                  {{ v.company_name|default:v.user.username|make_list|first|upper }}
+                </div>
+              {% endif %}
+              <div>
+                <div onclick="openVendorQuickModal({{ v.id }})" style="font-weight: 600; color: #0f172a; font-size: 13.5px; cursor: pointer; line-height: 1.2;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">
+                  {{ v.company_name|default:v.user.username }}
+                </div>
+                <div style="font-size: 12px; color: #64748b; margin-top: 3px;">
+                  @{{ v.user.username }}
+                  {% if v.user.first_name %} · {{ v.user.first_name }} {{ v.user.last_name }}{% endif %}
+                </div>
+              </div>
+            </div>
+          </td>
+
+          <!-- Contact & Territory -->
+          <td style="padding: 12px 16px;">
+            <div style="color: #0f172a; font-size: 13px; font-weight: 500;">
+              {{ v.user.email|default:"—" }}
+            </div>
+            <div style="font-size: 12px; color: #64748b; margin-top: 2px;">
+              {{ v.user.user_profile.phone_number|default:"—" }}
+            </div>
+            <div style="font-size: 11.5px; color: #94a3b8; margin-top: 2px;">
+              {{ v.location|default:"Pan India" }}
+            </div>
+          </td>
+
+          <!-- Classification -->
+          <td style="padding: 12px 16px;">
+            {% if v.vendor_type == 'company' %}
+              <span style="display: inline-flex; align-items: center; padding: 3px 8px; border-radius: 5px; font-size: 12px; font-weight: 500; background: #f8fafc; color: #334155; border: 1px solid #e2e8f0;">
+                Company Vendor
+              </span>
+            {% else %}
+              <span style="display: inline-flex; align-items: center; padding: 3px 8px; border-radius: 5px; font-size: 12px; font-weight: 500; background: #f8fafc; color: #334155; border: 1px solid #e2e8f0;">
+                Outside Vendor
+              </span>
+            {% endif %}
+          </td>
+
+          <!-- Category & Rating -->
+          <td style="padding: 12px 16px;">
+            <div style="font-weight: 500; font-size: 13px; color: #0f172a;">{{ v.category }}</div>
+            <div style="font-size: 12px; color: #64748b; margin-top: 2px;">
+              <span style="color: #d97706; font-weight: 600;">{{ v.rating|default:"5.0" }} ★</span>
+              <span style="margin-left: 4px;">({{ v.experience }} yrs exp)</span>
+            </div>
+          </td>
+
+          <!-- Wallet & KYC -->
+          <td style="padding: 12px 16px;">
+            <div style="font-weight: 600; font-size: 13px; color: #15803d;">
+              ₹{{ v.user.wallet.available_balance|default:"0.00" }}
+            </div>
+            <div style="margin-top: 3px;">
+              {% if v.user.kyc_document.status == 'approved' %}
+                <span style="font-size: 11px; color: #15803d; font-weight: 500;">✓ Approved</span>
+              {% elif v.user.kyc_document.status == 'pending' %}
+                <span style="font-size: 11px; color: #d97706; font-weight: 500;">⏳ Pending</span>
+              {% else %}
+                <span style="font-size: 11px; color: #64748b;">Not Submitted</span>
+              {% endif %}
+            </div>
+          </td>
+
+          <!-- Actions -->
+          <td style="padding: 12px 20px; text-align: right;">
+            <div style="display: inline-flex; gap: 5px; align-items: center;">
+              <button type="button" onclick="openVendorQuickModal({{ v.id }})" class="action-btn" title="View Details">
+                <i class="fa-regular fa-eye"></i>
+              </button>
+              <a href="{% url 'super_admin_vendor_edit' v.id %}" class="action-btn" title="Edit Vendor">
+                <i class="fa-regular fa-pen-to-square"></i>
+              </a>
+              <a href="{% url 'super_admin_vendor_delete' v.id %}" class="action-btn delete" onclick="return confirm('Delete vendor {{ v }}? This will also delete their user account.')" title="Delete">
+                <i class="fa-regular fa-trash-can"></i>
               </a>
             </div>
+
+            <!-- JSON Payload for Vendor Profile Modal -->
+            <script id="vendorData-{{ v.id }}" type="application/json">
+            {
+              "id": {{ v.id }},
+              "company_name": "{{ v.company_name|default:v.user.username|escapejs }}",
+              "username": "{{ v.user.username|escapejs }}",
+              "full_name": "{{ v.user.first_name|escapejs }} {{ v.user.last_name|escapejs }}",
+              "email": "{{ v.user.email|default:'—'|escapejs }}",
+              "phone": "{{ v.user.user_profile.phone_number|default:'—'|escapejs }}",
+              "vendor_type": "{{ v.vendor_type|default:'vendor'|escapejs }}",
+              "vendor_type_display": "{% if v.vendor_type == 'company' %}Company Vendor{% else %}Outside Vendor{% endif %}",
+              "category": "{{ v.category|default:'—'|escapejs }}",
+              "location": "{{ v.location|default:'—'|escapejs }}",
+              "rating": "{{ v.rating|default:'5.0' }}",
+              "experience": "{{ v.experience|default:'0' }}",
+              "wallet_balance": "{{ v.user.wallet.available_balance|default:'0.00' }}",
+              "kyc_status": "{{ v.user.kyc_document.status|default:'approved'|escapejs }}",
+              "id_proof": "{{ v.id_proof|default:'—'|escapejs }}",
+              "employee_code": "{{ v.employee_code|default:'—'|escapejs }}",
+              "employee_details": "{{ v.employee_details|default:'—'|escapejs }}",
+              "about": "{{ v.about|default:'—'|escapejs }}",
+              "address": "{{ v.address|default:'—'|escapejs }}",
+              "image_url": "{% if v.profile_image %}{{ v.profile_image.url }}{% elif v.user.user_profile.profile_image %}{{ v.user.user_profile.profile_image.url }}{% endif %}",
+              "edit_url": "{% url 'super_admin_vendor_edit' v.id %}"
+            }
+            </script>
           </td>
         </tr>
         {% empty %}
-        <tr><td colspan="6" style="text-align: center; padding: 40px; color: var(--text-muted);">No vendors found.</td></tr>
+        <tr>
+          <td colspan="6" style="text-align: center; padding: 40px 20px; color: #64748b;">
+            <div style="font-size: 15px; font-weight: 600; color: #0f172a; margin-bottom: 4px;">No vendors found</div>
+            <p style="font-size: 13px; margin: 0 0 12px;">No vendors matched your query.</p>
+            {% if q or vendor_type or category %}
+              <a href="{% url 'super_admin_vendors' %}" style="font-size: 13px; color: #2563eb; text-decoration: underline;">
+                Reset filters
+              </a>
+            {% endif %}
+          </td>
+        </tr>
         {% endfor %}
       </tbody>
     </table>
-    {% if vendors.has_other_pages %}
-    <div class="pagination-wrap">
-      <div>Showing <strong>{{ vendors.start_index|default:0 }}</strong> to <strong>{{ vendors.end_index|default:0 }}</strong> of <strong>{{ vendors.paginator.count }}</strong> vendors</div>
-      <nav class="pagination-nav" aria-label="Page navigation">
-        {% if vendors.has_previous %}
-          <a href="?page=1" class="page-link" title="First Page"><i class="fa-solid fa-angles-left"></i></a>
-          <a href="?page={{ vendors.previous_page_number }}" class="page-link" title="Previous Page"><i class="fa-solid fa-chevron-left"></i></a>
-        {% else %}
-          <span class="page-link disabled"><i class="fa-solid fa-angles-left"></i></span>
-          <span class="page-link disabled"><i class="fa-solid fa-chevron-left"></i></span>
-        {% endif %}
+  </div>
 
-        {% for p in page_range %}
-          {% if p == vendors.paginator.ELLIPSIS %}
-            <span class="page-link disabled">…</span>
-          {% elif p == vendors.number %}
-            <span class="page-link active">{{ p }}</span>
-          {% else %}
-            <a href="?page={{ p }}" class="page-link">{{ p }}</a>
-          {% endif %}
-        {% endfor %}
+  {% if vendors.has_other_pages %}
+  <div style="display: flex; align-items: center; justify-content: space-between; padding: 12px 18px; border-top: 1px solid #f1f5f9; background: #ffffff; font-size: 12.5px; color: #64748b;">
+    <div>Showing <strong>{{ vendors.start_index|default:0 }}</strong> to <strong>{{ vendors.end_index|default:0 }}</strong> of <strong>{{ vendors.paginator.count }}</strong> vendors</div>
+    <nav style="display: flex; align-items: center; gap: 4px;">
+      {% if vendors.has_previous %}
+        <a href="?page=1{% if q %}&q={{ q }}{% endif %}{% if vendor_type %}&type={{ vendor_type }}{% endif %}{% if category %}&category={{ category }}{% endif %}" class="page-btn">First</a>
+        <a href="?page={{ vendors.previous_page_number }}{% if q %}&q={{ q }}{% endif %}{% if vendor_type %}&type={{ vendor_type }}{% endif %}{% if category %}&category={{ category }}{% endif %}" class="page-btn">Previous</a>
+      {% else %}
+        <span class="page-btn disabled">Previous</span>
+      {% endif %}
 
-        {% if vendors.has_next %}
-          <a href="?page={{ vendors.next_page_number }}" class="page-link" title="Next Page"><i class="fa-solid fa-chevron-right"></i></a>
-          <a href="?page={{ vendors.paginator.num_pages }}" class="page-link" title="Last Page"><i class="fa-solid fa-angles-right"></i></a>
+      {% for p in page_range %}
+        {% if p == vendors.paginator.ELLIPSIS %}
+          <span style="padding: 4px 8px; color: #94a3b8;">…</span>
+        {% elif p == vendors.number %}
+          <span class="page-btn active">{{ p }}</span>
         {% else %}
-          <span class="page-link disabled"><i class="fa-solid fa-chevron-right"></i></span>
-          <span class="page-link disabled"><i class="fa-solid fa-angles-right"></i></span>
+          <a href="?page={{ p }}{% if q %}&q={{ q }}{% endif %}{% if vendor_type %}&type={{ vendor_type }}{% endif %}{% if category %}&category={{ category }}{% endif %}" class="page-btn">{{ p }}</a>
         {% endif %}
-      </nav>
+      {% endfor %}
+
+      {% if vendors.has_next %}
+        <a href="?page={{ vendors.next_page_number }}{% if q %}&q={{ q }}{% endif %}{% if vendor_type %}&type={{ vendor_type }}{% endif %}{% if category %}&category={{ category }}{% endif %}" class="page-btn">Next</a>
+      {% else %}
+        <span class="page-btn disabled">Next</span>
+      {% endif %}
+    </nav>
+  </div>
+  {% endif %}
+</div>
+
+<!-- Simple Clean Vendor Details Modal -->
+<div id="vendorQuickModal" style="display: none; position: fixed; inset: 0; z-index: 9999; background: rgba(15, 23, 42, 0.5); backdrop-filter: blur(2px); align-items: center; justify-content: center; padding: 20px;">
+  <div style="background: white; border-radius: 12px; width: 100%; max-width: 600px; max-height: 90vh; overflow-y: auto; border: 1px solid #e2e8f0; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);">
+    
+    <!-- Modal Header -->
+    <div style="padding: 20px 24px; border-bottom: 1px solid #f1f5f9; display: flex; align-items: flex-start; justify-content: space-between;">
+      <div style="display: flex; align-items: center; gap: 14px;">
+        <div id="vmAvatarContainer" style="width: 48px; height: 48px; border-radius: 50%; overflow: hidden; background: #f1f5f9; display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 600; color: #475569; border: 1px solid #e2e8f0; flex-shrink: 0;">
+        </div>
+        <div>
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <h3 id="vmCompanyName" style="font-size: 17px; font-weight: 700; color: #0f172a; margin: 0;"></h3>
+            <span id="vmTypeBadge" style="padding: 2px 7px; border-radius: 4px; font-size: 11.5px; font-weight: 500; background: #f1f5f9; color: #334155; border: 1px solid #e2e8f0;"></span>
+          </div>
+          <div id="vmOwnerInfo" style="font-size: 12.5px; color: #64748b; margin-top: 2px;"></div>
+        </div>
+      </div>
+      <button type="button" onclick="closeVendorQuickModal()" style="background: transparent; border: none; color: #94a3b8; width: 28px; height: 28px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 15px;" onmouseover="this.style.color='#0f172a'" onmouseout="this.style.color='#94a3b8'">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
     </div>
-    {% endif %}
+
+    <!-- Modal Content -->
+    <div style="padding: 20px 24px;">
+      
+      <!-- Metrics Row -->
+      <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 18px;">
+        <div style="background: #f8fafc; border: 1px solid #f1f5f9; border-radius: 6px; padding: 10px; text-align: center;">
+          <div style="font-size: 11px; font-weight: 500; color: #64748b;">Category</div>
+          <div id="vmCategory" style="font-size: 13.5px; font-weight: 600; color: #0f172a; margin-top: 2px;"></div>
+        </div>
+        <div style="background: #f8fafc; border: 1px solid #f1f5f9; border-radius: 6px; padding: 10px; text-align: center;">
+          <div style="font-size: 11px; font-weight: 500; color: #64748b;">Wallet Balance</div>
+          <div id="vmWallet" style="font-size: 13.5px; font-weight: 600; color: #15803d; margin-top: 2px;"></div>
+        </div>
+        <div style="background: #f8fafc; border: 1px solid #f1f5f9; border-radius: 6px; padding: 10px; text-align: center;">
+          <div style="font-size: 11px; font-weight: 500; color: #64748b;">Rating &amp; Exp</div>
+          <div id="vmRatingExp" style="font-size: 13.5px; font-weight: 600; color: #0f172a; margin-top: 2px;"></div>
+        </div>
+      </div>
+
+      <!-- Detail Info Grid -->
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; font-size: 13px; margin-bottom: 18px;">
+        <div>
+          <span style="color: #64748b; font-size: 11.5px; display: block;">Official Email</span>
+          <strong id="vmEmail" style="color: #0f172a; font-weight: 500;"></strong>
+        </div>
+        <div>
+          <span style="color: #64748b; font-size: 11.5px; display: block;">Contact Phone</span>
+          <strong id="vmPhone" style="color: #0f172a; font-weight: 500;"></strong>
+        </div>
+        <div>
+          <span style="color: #64748b; font-size: 11.5px; display: block;">Territory / Location</span>
+          <strong id="vmLocation" style="color: #0f172a; font-weight: 500;"></strong>
+        </div>
+        <div>
+          <span style="color: #64748b; font-size: 11.5px; display: block;">Govt ID / Proof</span>
+          <strong id="vmIdProof" style="color: #0f172a; font-weight: 500;"></strong>
+        </div>
+        <div id="vmEmployeeWrap" style="grid-column: span 2; display: none;">
+          <span style="color: #64748b; font-size: 11.5px; display: block;">Workforce Details</span>
+          <div id="vmEmployeeDetails" style="padding: 8px 10px; background: #f8fafc; border-radius: 6px; border: 1px solid #f1f5f9; font-size: 12.5px; margin-top: 2px;"></div>
+        </div>
+        <div id="vmAboutWrap" style="grid-column: span 2;">
+          <span style="color: #64748b; font-size: 11.5px; display: block;">About / Bio</span>
+          <div id="vmAbout" style="padding: 8px 10px; background: #f8fafc; border-radius: 6px; border: 1px solid #f1f5f9; font-size: 12.5px; color: #334155; margin-top: 2px;"></div>
+        </div>
+      </div>
+
+      <!-- Footer Buttons -->
+      <div style="display: flex; gap: 8px; justify-content: flex-end; border-top: 1px solid #f1f5f9; padding-top: 14px;">
+        <button type="button" onclick="closeVendorQuickModal()" style="padding: 7px 14px; font-size: 13px; font-weight: 500; border: 1px solid #e2e8f0; background: #ffffff; color: #64748b; border-radius: 6px; cursor: pointer;">
+          Close
+        </button>
+        <a id="vmEditLink" href="#" style="padding: 7px 16px; font-size: 13px; font-weight: 500; background: #0f172a; color: #ffffff; border-radius: 6px; text-decoration: none;">
+          Edit Vendor
+        </a>
+      </div>
+    </div>
   </div>
 </div>
+
+<style>
+  .action-btn {
+    width: 30px;
+    height: 30px;
+    border-radius: 6px;
+    border: 1px solid #e2e8f0;
+    background: #ffffff;
+    color: #64748b;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12.5px;
+    text-decoration: none;
+    transition: all 0.15s ease;
+    cursor: pointer;
+  }
+  .action-btn:hover {
+    background: #f8fafc;
+    color: #0f172a;
+    border-color: #cbd5e1;
+  }
+  .action-btn.delete:hover {
+    background: #fef2f2;
+    color: #dc2626;
+    border-color: #fecaca;
+  }
+
+  .page-btn {
+    padding: 5px 10px;
+    font-size: 12.5px;
+    font-weight: 500;
+    color: #475569;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 5px;
+    text-decoration: none;
+    transition: all 0.15s;
+    display: inline-block;
+  }
+  .page-btn:hover:not(.disabled) {
+    background: #f8fafc;
+    color: #0f172a;
+    border-color: #cbd5e1;
+  }
+  .page-btn.active {
+    background: #0f172a;
+    color: #ffffff;
+    border-color: #0f172a;
+    font-weight: 600;
+  }
+  .page-btn.disabled {
+    color: #cbd5e1;
+    border-color: #f1f5f9;
+    cursor: not-allowed;
+    background: #ffffff;
+  }
+</style>
+
+<script>
+function openVendorQuickModal(vendorId) {
+  var dataEl = document.getElementById('vendorData-' + vendorId);
+  if (!dataEl) return;
+  var d = JSON.parse(dataEl.textContent);
+
+  document.getElementById('vmCompanyName').textContent = d.company_name;
+  document.getElementById('vmOwnerInfo').textContent = '@' + d.username + (d.full_name ? ' · ' + d.full_name : '');
+  document.getElementById('vmEmail').textContent = d.email;
+  document.getElementById('vmPhone').textContent = d.phone;
+  document.getElementById('vmLocation').textContent = d.location;
+  document.getElementById('vmCategory').textContent = d.category;
+  document.getElementById('vmWallet').textContent = '₹' + d.wallet_balance;
+  document.getElementById('vmRatingExp').textContent = d.rating + ' ★ (' + d.experience + 'y)';
+  document.getElementById('vmIdProof').textContent = d.id_proof;
+  document.getElementById('vmAbout').textContent = d.about;
+  document.getElementById('vmEditLink').href = d.edit_url;
+
+  // Avatar
+  var av = document.getElementById('vmAvatarContainer');
+  if (d.image_url) {
+    av.innerHTML = '<img src="' + d.image_url + '" alt="' + d.company_name + '" style="width:100%; height:100%; object-fit:cover;">';
+  } else {
+    av.textContent = d.company_name.charAt(0).toUpperCase();
+  }
+
+  // Type badge
+  var tb = document.getElementById('vmTypeBadge');
+  tb.textContent = (d.vendor_type === 'company' ? 'Company Vendor' : 'Outside Vendor');
+
+  // Employee details
+  var empWrap = document.getElementById('vmEmployeeWrap');
+  if (d.vendor_type === 'company' && (d.employee_code !== '—' || d.employee_details !== '—')) {
+    empWrap.style.display = 'block';
+    document.getElementById('vmEmployeeDetails').innerHTML = '<strong>Code:</strong> ' + d.employee_code + '<br>' + d.employee_details;
+  } else {
+    empWrap.style.display = 'none';
+  }
+
+  var modal = document.getElementById('vendorQuickModal');
+  modal.style.display = 'flex';
+}
+
+function closeVendorQuickModal() {
+  document.getElementById('vendorQuickModal').style.display = 'none';
+}
+
+// Close on escape key
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') closeVendorQuickModal();
+});
+</script>
 {% endblock %}

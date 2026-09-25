@@ -84,6 +84,10 @@ urlpatterns = [
     path('super-admin/messages/', super_admin_views.super_admin_messages, name='super_admin_messages'),
     path('super-admin/messages/<int:msg_id>/delete/', super_admin_views.super_admin_message_delete, name='super_admin_message_delete'),
     
+    # Disputes & Complaint Resolution
+    path('super-admin/disputes/', super_admin_views.super_admin_disputes, name='super_admin_disputes'),
+    path('super-admin/disputes/<int:dispute_id>/', super_admin_views.super_admin_dispute_detail, name='super_admin_dispute_detail'),
+    
     # Global Settings
     path('super-admin/settings/', super_admin_views.super_admin_settings, name='super_admin_settings'),
 

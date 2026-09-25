@@ -4,7 +4,8 @@ from .models import (
     CustomUser, UserProfile, VendorProfile, QuickService, Job,
     Bid, Subscription, Category, Location, Message, GlobalSettings,
     SiteBranding, HeroSection, QuickServiceCard, FeaturedProjectCard,
-    PackageCard, Testimonial, TrustMetric, VendorWallet, WalletTransaction, PayoutRequest
+    PackageCard, Testimonial, TrustMetric, VendorWallet, WalletTransaction, PayoutRequest,
+    DisputeTicket, DisputeMessage, JobCompletionProof, ServiceReview
 )
 
 @admin.action(description='Suspend selected users')
@@ -129,4 +130,32 @@ class PayoutRequestAdmin(admin.ModelAdmin):
 admin.site.register(VendorWallet, VendorWalletAdmin)
 admin.site.register(WalletTransaction, WalletTransactionAdmin)
 admin.site.register(PayoutRequest, PayoutRequestAdmin)
+
+class DisputeMessageInline(admin.TabularInline):
+    model = DisputeMessage
+    extra = 1
+
+@admin.register(DisputeTicket)
+class DisputeTicketAdmin(admin.ModelAdmin):
+    list_display = ('ticket_id', 'subject', 'raised_by', 'against_user', 'category', 'priority', 'status', 'created_at')
+    list_filter = ('status', 'priority', 'category')
+    search_fields = ('ticket_id', 'subject', 'description', 'raised_by__username', 'against_user__username')
+    inlines = [DisputeMessageInline]
+
+@admin.register(DisputeMessage)
+class DisputeMessageAdmin(admin.ModelAdmin):
+    list_display = ('ticket', 'sender', 'created_at')
+    search_fields = ('ticket__ticket_id', 'sender__username', 'message')
+
+@admin.register(JobCompletionProof)
+class JobCompletionProofAdmin(admin.ModelAdmin):
+    list_display = ('vendor', 'job', 'quick_service', 'completed_at')
+    search_fields = ('vendor__username', 'work_summary')
+
+@admin.register(ServiceReview)
+class ServiceReviewAdmin(admin.ModelAdmin):
+    list_display = ('vendor', 'customer', 'rating', 'review_title', 'status', 'created_at')
+    list_filter = ('rating', 'status')
+    search_fields = ('vendor__username', 'customer__username', 'review_title', 'comment')
+
 

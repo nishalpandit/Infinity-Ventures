@@ -30,3 +30,5 @@ Desktop.ini
 # Static collection
 staticfiles/
 
+# Scratchpad test scripts
+scratch/

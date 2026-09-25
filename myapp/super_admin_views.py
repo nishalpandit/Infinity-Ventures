@@ -1,3 +1,5 @@
+import json
+from decimal import Decimal
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import authenticate, login
 from django.contrib.auth.decorators import login_required
@@ -11,7 +13,8 @@ from .models import (
     Category, GlobalSettings, Location, Bid, Subscription, Message,
     SiteBranding, HeroSection, QuickServiceCard, FeaturedProjectCard,
     PackageCard, Testimonial, TrustMetric, VendorKYC,
-    VendorWallet, WalletTransaction, PayoutRequest
+    VendorWallet, WalletTransaction, PayoutRequest,
+    DisputeTicket, DisputeMessage
 )
 from .wallet_services import (
     settle_job_completion, approve_payout, reject_payout, get_or_create_wallet
@@ -32,10 +35,8 @@ def sa_required(view_func):
     from functools import wraps
     @wraps(view_func)
     def wrapper(request, *args, **kwargs):
-        if not request.user.is_authenticated:
+        if not request.user.is_authenticated or not request.user.is_superuser:
             return redirect(f'{LOGIN_URL}?next={request.path}')
-        if not request.user.is_superuser:
-            return redirect('/')
         return view_func(request, *args, **kwargs)
     return wrapper
 
@@ -64,7 +65,7 @@ def super_admin_login_view(request):
 # ─────────────────────────────────────────────
 @sa_required
 def super_admin_dashboard(request):
-    total_users = CustomUser.objects.filter(role='USER').count()
+    total_users = CustomUser.objects.filter(role__in=['USER', 'CUSTOMER']).count()
     total_vendors = VendorProfile.objects.count()
     total_admins = CustomUser.objects.filter(role='ADMIN').count()
     active_jobs = Job.objects.filter(status__in=['open', 'progress']).count()
@@ -74,6 +75,24 @@ def super_admin_dashboard(request):
     total_categories = Category.objects.count()
     total_locations = Location.objects.count()
     settings_obj = GlobalSettings.objects.first()
+
+    # Dynamic Category Distribution from live Jobs
+    job_cats = list(Job.objects.exclude(category__isnull=True).values('category__name').annotate(cnt=Count('id')).order_by('-cnt')[:5])
+    if job_cats:
+        category_chart_labels = [jc['category__name'] for jc in job_cats]
+        category_chart_data = [jc['cnt'] for jc in job_cats]
+    else:
+        vendor_cats = list(VendorProfile.objects.exclude(category='').values('category').annotate(cnt=Count('id')).order_by('-cnt')[:5])
+        category_chart_labels = [vc['category'] for vc in vendor_cats] if vendor_cats else ['Plumbing', 'Electrical', 'Cleaning']
+        category_chart_data = [vc['cnt'] for vc in vendor_cats] if vendor_cats else [4, 2, 2]
+
+    # Platform Role Breakdown for growth / distribution visualization
+    growth_labels = ['Total Users', 'Vendors', 'Area Admins', 'Active Jobs']
+    growth_data = [total_users, total_vendors, total_admins, active_jobs]
+
+    # Dynamic Recent Users (with profile images) & Recent Jobs
+    recent_users = CustomUser.objects.select_related('user_profile', 'vendor_profile').order_by('-date_joined')[:5]
+    recent_jobs = Job.objects.select_related('user', 'category').order_by('-created_at')[:5]
 
     context = {
         'total_users': total_users,
@@ -86,6 +105,12 @@ def super_admin_dashboard(request):
         'total_categories': total_categories,
         'total_locations': total_locations,
         'settings': settings_obj,
+        'category_chart_labels': json.dumps(category_chart_labels),
+        'category_chart_data': json.dumps(category_chart_data),
+        'growth_labels': json.dumps(growth_labels),
+        'growth_data': json.dumps(growth_data),
+        'recent_users': recent_users,
+        'recent_jobs': recent_jobs,
     }
     return render(request, 'superadmin/dashboard.html', context)
 
@@ -104,7 +129,7 @@ def super_admin_users(request):
     sort = request.GET.get('sort', 'newest').strip()
     page = request.GET.get('page', 1)
 
-    users_qs = CustomUser.objects.all().select_related('user_profile', 'vendor_profile')
+    users_qs = CustomUser.objects.all().select_related('user_profile', 'vendor_profile', 'wallet', 'kyc_document')
 
     # 1. Search Query (q)
     if q:
@@ -125,10 +150,14 @@ def super_admin_users(request):
             users_qs = users_qs.filter(is_superuser=True)
         elif role_filter == 'ADMIN':
             users_qs = users_qs.filter(role='ADMIN', is_superuser=False)
-        elif role_filter == 'USER':
-            users_qs = users_qs.filter(role='USER')
+        elif role_filter in ['USER', 'CUSTOMER']:
+            users_qs = users_qs.filter(role__in=['USER', 'CUSTOMER'])
         elif role_filter == 'VENDOR':
             users_qs = users_qs.filter(role='VENDOR')
+        elif role_filter == 'company':
+            users_qs = users_qs.filter(role='VENDOR', vendor_profile__vendor_type='company')
+        elif role_filter in ['outside', 'individual']:
+            users_qs = users_qs.filter(role='VENDOR', vendor_profile__vendor_type='vendor')
 
     # 3. State / Territory Filter
     if state_filter and state_filter != 'all':
@@ -178,7 +207,7 @@ def super_admin_users(request):
     # Quick overview counters
     all_count = CustomUser.objects.count()
     admin_count = CustomUser.objects.filter(role='ADMIN', is_superuser=False).count()
-    customer_count = CustomUser.objects.filter(role='USER').count()
+    customer_count = CustomUser.objects.filter(role__in=['USER', 'CUSTOMER']).count()
     vendor_count = CustomUser.objects.filter(role='VENDOR').count()
 
     # Check if any active filters are applied
@@ -211,16 +240,23 @@ def super_admin_user_create(request):
     active_states = list(Location.objects.values_list('state', flat=True).distinct().order_by('state'))
     default_states = ['Jharkhand', 'Maharashtra', 'Delhi', 'Karnataka', 'Tamil Nadu', 'Uttar Pradesh', 'West Bengal', 'Gujarat', 'Bihar', 'Rajasthan', 'Madhya Pradesh', 'Telangana', 'Andhra Pradesh', 'Kerala', 'Punjab', 'Haryana', 'Odisha']
     states = sorted(list(set([s for s in (active_states + default_states) if s])))
+    categories = Category.objects.all().order_by('name')
 
     if request.method == 'POST':
-        username = request.POST.get('username')
-        email = request.POST.get('email', '')
-        password = request.POST.get('password')
-        role = request.POST.get('role', 'USER')
-        first_name = request.POST.get('first_name', '')
-        last_name = request.POST.get('last_name', '')
+        username = request.POST.get('username', '').strip()
+        email = request.POST.get('email', '').strip()
+        password = request.POST.get('password', '').strip()
+        role = request.POST.get('role', 'USER').strip()
+        first_name = request.POST.get('first_name', '').strip()
+        last_name = request.POST.get('last_name', '').strip()
         assigned_state = request.POST.get('assigned_state', '').strip()
+        assigned_city = request.POST.get('assigned_city', '').strip()
+        phone_number = request.POST.get('phone_number', '').strip()
         
+        if not username:
+            django_messages.error(request, 'Username is required.')
+            return redirect('super_admin_user_create')
+
         if CustomUser.objects.filter(username=username).exists():
             django_messages.error(request, f'Username "{username}" already exists.')
             return redirect('super_admin_user_create')
@@ -230,36 +266,155 @@ def super_admin_user_create(request):
             role=role, first_name=first_name, last_name=last_name
         )
         user.assigned_state = assigned_state
+        user.assigned_city = assigned_city
         if role == 'ADMIN':
             user.is_staff = True
         user.save()
+
+        # UserProfile save
+        up, _ = UserProfile.objects.get_or_create(user=user)
+        if phone_number:
+            up.phone_number = phone_number
+        if 'profile_image' in request.FILES:
+            up.profile_image = request.FILES['profile_image']
+        up.save()
+
+        # VendorProfile save if role is VENDOR
+        if role == 'VENDOR':
+            company_name = request.POST.get('company_name', '').strip() or f"{first_name} {last_name}".strip() or username
+            category = request.POST.get('category', '').strip()
+            loc = request.POST.get('location', '').strip() or f"{assigned_city}, {assigned_state}".strip(', ')
+            vendor_type = request.POST.get('vendor_type', 'vendor').strip()
+            experience = int(request.POST.get('experience', 0) or 0)
+            about = request.POST.get('about', '').strip()
+            rating_val = Decimal(request.POST.get('rating', '5.0') or '5.0')
+            dob_str = request.POST.get('dob', '').strip()
+            dob_val = dob_str if dob_str else None
+            gender = request.POST.get('gender', '').strip()
+            address = request.POST.get('address', '').strip()
+            id_proof = request.POST.get('id_proof', '').strip()
+            employee_code = request.POST.get('employee_code', '').strip()
+            employee_details = request.POST.get('employee_details', '').strip()
+
+            vp, _ = VendorProfile.objects.get_or_create(user=user)
+            vp.company_name = company_name
+            vp.category = category
+            vp.location = loc
+            vp.vendor_type = vendor_type
+            vp.experience = experience
+            vp.rating = rating_val
+            vp.about = about
+            vp.dob = dob_val
+            vp.gender = gender
+            vp.address = address
+            vp.id_proof = id_proof
+            vp.employee_code = employee_code
+            vp.employee_details = employee_details
+            if 'vendor_image' in request.FILES:
+                vp.profile_image = request.FILES['vendor_image']
+            vp.save()
+
+            VendorWallet.objects.get_or_create(vendor=user, defaults={'available_balance': Decimal('10000.00'), 'total_earned': Decimal('10000.00')})
+            VendorKYC.objects.get_or_create(vendor=user, defaults={'status': 'approved', 'id_type': 'aadhaar', 'id_number': id_proof or 'KYC-PENDING'})
+
         django_messages.success(request, f'User "{username}" created successfully.')
         return redirect('super_admin_users')
-    return render(request, 'superadmin/user_form.html', {'mode': 'create', 'states': states})
+
+    return render(request, 'superadmin/user_form.html', {
+        'mode': 'create',
+        'states': states,
+        'categories': categories,
+    })
 
 @sa_required
 def super_admin_user_edit(request, user_id):
-    user_obj = get_object_or_404(CustomUser, pk=user_id)
+    user_obj = get_object_or_404(CustomUser.objects.select_related('user_profile', 'vendor_profile'), pk=user_id)
     active_states = list(Location.objects.values_list('state', flat=True).distinct().order_by('state'))
     default_states = ['Jharkhand', 'Maharashtra', 'Delhi', 'Karnataka', 'Tamil Nadu', 'Uttar Pradesh', 'West Bengal', 'Gujarat', 'Bihar', 'Rajasthan', 'Madhya Pradesh', 'Telangana', 'Andhra Pradesh', 'Kerala', 'Punjab', 'Haryana', 'Odisha']
     states = sorted(list(set([s for s in (active_states + default_states) if s])))
+    categories = Category.objects.all().order_by('name')
 
     if request.method == 'POST':
-        user_obj.first_name = request.POST.get('first_name', '')
-        user_obj.last_name = request.POST.get('last_name', '')
-        user_obj.email = request.POST.get('email', '')
-        user_obj.role = request.POST.get('role', user_obj.role)
+        user_obj.first_name = request.POST.get('first_name', '').strip()
+        user_obj.last_name = request.POST.get('last_name', '').strip()
+        user_obj.email = request.POST.get('email', '').strip()
+        # Note: Account role is immutable on edit
         user_obj.assigned_state = request.POST.get('assigned_state', '').strip()
+        user_obj.assigned_city = request.POST.get('assigned_city', '').strip()
         user_obj.is_active = request.POST.get('is_active') == 'on'
-        new_pass = request.POST.get('password', '')
+        
+        new_pass = request.POST.get('password', '').strip()
         if new_pass:
             user_obj.set_password(new_pass)
         if user_obj.role == 'ADMIN':
             user_obj.is_staff = True
         user_obj.save()
-        django_messages.success(request, f'User "{user_obj.username}" updated.')
+
+        # UserProfile save
+        phone_number = request.POST.get('phone_number', '').strip()
+        user_profile, _ = UserProfile.objects.get_or_create(user=user_obj)
+        if phone_number:
+            user_profile.phone_number = phone_number
+        if 'profile_image' in request.FILES:
+            uploaded_img = request.FILES['profile_image']
+            user_profile.profile_image = uploaded_img
+            if user_obj.role == 'VENDOR' or hasattr(user_obj, 'vendor_profile'):
+                vp_rec, _ = VendorProfile.objects.get_or_create(user=user_obj)
+                vp_rec.profile_image = uploaded_img
+                vp_rec.save()
+        user_profile.save()
+
+        # If role is VENDOR (or user already has a vendor profile), update vendor details
+        if user_obj.role == 'VENDOR' or hasattr(user_obj, 'vendor_profile'):
+            vp, _ = VendorProfile.objects.get_or_create(user=user_obj)
+            company_name = request.POST.get('company_name', '').strip()
+            if company_name:
+                vp.company_name = company_name
+            vp.category = request.POST.get('category', '').strip() or vp.category
+            loc = request.POST.get('location', '').strip()
+            if not loc and (user_obj.assigned_city or user_obj.assigned_state):
+                loc = f"{user_obj.assigned_city}, {user_obj.assigned_state}".strip(', ')
+            if loc:
+                vp.location = loc
+            vp.vendor_type = request.POST.get('vendor_type', vp.vendor_type or 'vendor').strip()
+            
+            exp_val = request.POST.get('experience', '').strip()
+            if exp_val.isdigit():
+                vp.experience = int(exp_val)
+            
+            rating_val = request.POST.get('rating', '').strip()
+            if rating_val:
+                try:
+                    vp.rating = Decimal(rating_val)
+                except Exception:
+                    pass
+            
+            vp.about = request.POST.get('about', vp.about).strip()
+            vp.gender = request.POST.get('gender', vp.gender).strip()
+            vp.address = request.POST.get('address', vp.address).strip()
+            vp.id_proof = request.POST.get('id_proof', vp.id_proof).strip()
+            vp.employee_code = request.POST.get('employee_code', vp.employee_code).strip()
+            vp.employee_details = request.POST.get('employee_details', vp.employee_details).strip()
+            
+            dob_str = request.POST.get('dob', '').strip()
+            if dob_str:
+                try:
+                    vp.dob = dob_str
+                except Exception:
+                    pass
+            if 'vendor_image' in request.FILES:
+                vp.profile_image = request.FILES['vendor_image']
+            vp.save()
+
+        django_messages.success(request, f'User "{user_obj.username}" updated successfully.')
         return redirect('super_admin_users')
-    return render(request, 'superadmin/user_form.html', {'mode': 'edit', 'user_obj': user_obj, 'states': states})
+
+    return render(request, 'superadmin/user_form.html', {
+        'mode': 'edit',
+        'user_obj': user_obj,
+        'states': states,
+        'categories': categories,
+    })
 
 @sa_required
 def super_admin_user_delete(request, user_id):
@@ -283,10 +438,31 @@ def super_admin_user_toggle(request, user_id):
 
 # ─────────────────────────────────────────────
 # VENDORS (List + Create + Edit + Delete + Toggle)
-# ─────────────────────────────────────────────
 @sa_required
 def super_admin_vendors(request):
-    vendors_qs = VendorProfile.objects.all().select_related('user').order_by('-registered_date')
+    q = request.GET.get('q', '').strip()
+    vendor_type = request.GET.get('type', '').strip()
+    category = request.GET.get('category', '').strip()
+
+    vendors_qs = VendorProfile.objects.all().select_related(
+        'user', 'user__user_profile', 'user__wallet', 'user__kyc_document'
+    ).order_by('-registered_date')
+
+    if q:
+        vendors_qs = vendors_qs.filter(
+            Q(company_name__icontains=q) |
+            Q(user__username__icontains=q) |
+            Q(user__first_name__icontains=q) |
+            Q(user__last_name__icontains=q) |
+            Q(user__email__icontains=q) |
+            Q(location__icontains=q)
+        )
+    if vendor_type:
+        vendors_qs = vendors_qs.filter(vendor_type=vendor_type)
+    if category:
+        vendors_qs = vendors_qs.filter(category=category)
+
+    categories = Category.objects.all().order_by('name')
     paginator = Paginator(vendors_qs, 10)
     page_num = request.GET.get('page', 1)
     try:
@@ -294,7 +470,14 @@ def super_admin_vendors(request):
     except (EmptyPage, PageNotAnInteger):
         vendors = paginator.page(1)
     page_range = paginator.get_elided_page_range(vendors.number, on_each_side=2, on_ends=1)
-    return render(request, 'superadmin/vendors.html', {'vendors': vendors, 'page_range': page_range})
+    return render(request, 'superadmin/vendors.html', {
+        'vendors': vendors, 
+        'page_range': page_range,
+        'q': q,
+        'vendor_type': vendor_type,
+        'category': category,
+        'categories': categories,
+    })
 
 @sa_required
 def super_admin_vendor_create(request):
@@ -307,7 +490,6 @@ def super_admin_vendor_create(request):
         username = request.POST.get('username', '').strip()
         email = request.POST.get('email', '').strip()
         password = request.POST.get('password', '').strip()
-        company_name = request.POST.get('company_name', '').strip()
         vendor_type = request.POST.get('vendor_type', 'vendor')
         category = request.POST.get('category', '').strip()
         state = request.POST.get('state', '').strip()
@@ -316,6 +498,28 @@ def super_admin_vendor_create(request):
         experience = request.POST.get('experience', 0) or 0
         rating = request.POST.get('rating', 5.0) or 5.0
         about = request.POST.get('about', '').strip()
+
+        # Differentiate between Company and Individual/Outside Vendor
+        if vendor_type == 'company':
+            company_name = request.POST.get('company_name', '').strip()
+            contact_person = request.POST.get('contact_person', '').strip()
+            phone = request.POST.get('phone', '').strip()
+            id_proof = request.POST.get('company_id_proof', '').strip() or request.POST.get('id_proof', '').strip()
+            employee_code = request.POST.get('employee_code', '').strip()
+            employee_details = request.POST.get('employee_details', '').strip()
+            address = request.POST.get('company_address', '').strip() or request.POST.get('address', '').strip()
+            dob = None
+            gender = ''
+        else:
+            company_name = request.POST.get('individual_name', '').strip() or request.POST.get('company_name', '').strip()
+            contact_person = company_name
+            phone = request.POST.get('individual_phone', '').strip() or request.POST.get('phone', '').strip()
+            id_proof = request.POST.get('individual_id_proof', '').strip() or request.POST.get('id_proof', '').strip()
+            employee_code = ''
+            employee_details = ''
+            address = request.POST.get('individual_address', '').strip() or request.POST.get('address', '').strip()
+            dob = request.POST.get('dob') or None
+            gender = request.POST.get('gender', '').strip()
 
         if not username:
             username = email if email else company_name.replace(" ", "").lower() + str(CustomUser.objects.count())
@@ -329,11 +533,13 @@ def super_admin_vendor_create(request):
             email=email,
             password=password,
             role='VENDOR',
-            first_name=company_name
+            first_name=contact_person or company_name
         )
         user.assigned_state = state
+        user.assigned_city = city
         user.save()
 
+        profile_img = request.FILES.get('profile_image')
         VendorProfile.objects.create(
             user=user,
             vendor_type=vendor_type,
@@ -342,33 +548,133 @@ def super_admin_vendor_create(request):
             location=location,
             experience=experience,
             rating=rating,
-            about=about
+            about=about,
+            employee_code=employee_code,
+            employee_details=employee_details,
+            dob=dob,
+            gender=gender,
+            address=address,
+            id_proof=id_proof,
+            profile_image=profile_img
         )
+
+        user_prof, _ = UserProfile.objects.get_or_create(user=user)
+        if phone:
+            user_prof.phone_number = phone
+        if profile_img:
+            user_prof.profile_image = profile_img
+        user_prof.save()
+
         django_messages.success(request, f'Vendor "{company_name or username}" created successfully.')
         return redirect('super_admin_vendors')
 
     return render(request, 'superadmin/vendor_form.html', {
         'mode': 'create',
         'states': states,
-        'categories': categories
+        'categories': categories,
+        'current_state': '',
+        'current_city': '',
+        'phone': '',
+        'vendor': None,
     })
 
 @sa_required
 def super_admin_vendor_edit(request, vendor_id):
-    vendor = get_object_or_404(VendorProfile, pk=vendor_id)
+    vendor = get_object_or_404(VendorProfile.objects.select_related('user'), pk=vendor_id)
     categories = Category.objects.all().order_by('name')
+    active_states = list(Location.objects.values_list('state', flat=True).distinct().order_by('state'))
+    default_states = ['Jharkhand', 'Maharashtra', 'Delhi', 'Karnataka', 'Tamil Nadu', 'Uttar Pradesh', 'West Bengal', 'Gujarat', 'Bihar', 'Rajasthan', 'Madhya Pradesh', 'Telangana', 'Andhra Pradesh', 'Kerala', 'Punjab', 'Haryana', 'Odisha']
+    states = sorted(list(set([s for s in (active_states + default_states) if s])))
+
+    current_state = vendor.user.assigned_state or ''
+    current_city = vendor.user.assigned_city or ''
+    if not current_state and vendor.location:
+        if ',' in vendor.location:
+            parts = [p.strip() for p in vendor.location.split(',', 1)]
+            if not current_city and len(parts) >= 1:
+                current_city = parts[0]
+            if not current_state and len(parts) >= 2:
+                current_state = parts[1]
+        else:
+            current_state = vendor.location.strip()
+
+    phone = ''
+    if hasattr(vendor.user, 'user_profile') and vendor.user.user_profile.phone_number:
+        phone = vendor.user.user_profile.phone_number
+
     if request.method == 'POST':
-        vendor.company_name = request.POST.get('company_name', '')
-        vendor.category = request.POST.get('category', '')
-        vendor.location = request.POST.get('location', '')
-        vendor.vendor_type = request.POST.get('vendor_type', 'vendor')
+        vendor_type = request.POST.get('vendor_type', 'vendor')
+        state = request.POST.get('state', '').strip()
+        city = request.POST.get('city', '').strip()
+        location = f"{city}, {state}".strip(', ') if (city or state) else request.POST.get('location', '').strip()
+
+        # Differentiate between Company and Individual/Outside Vendor
+        if vendor_type == 'company':
+            company_name = request.POST.get('company_name', '').strip()
+            contact_person = request.POST.get('contact_person', '').strip()
+            phone_val = request.POST.get('phone', '').strip()
+            id_proof = request.POST.get('company_id_proof', '').strip() or request.POST.get('id_proof', '').strip()
+            employee_code = request.POST.get('employee_code', '').strip()
+            employee_details = request.POST.get('employee_details', '').strip()
+            address = request.POST.get('company_address', '').strip() or request.POST.get('address', '').strip()
+            dob = None
+            gender = ''
+        else:
+            company_name = request.POST.get('individual_name', '').strip() or request.POST.get('company_name', '').strip()
+            contact_person = company_name
+            phone_val = request.POST.get('individual_phone', '').strip() or request.POST.get('phone', '').strip()
+            id_proof = request.POST.get('individual_id_proof', '').strip() or request.POST.get('id_proof', '').strip()
+            employee_code = ''
+            employee_details = ''
+            address = request.POST.get('individual_address', '').strip() or request.POST.get('address', '').strip()
+            dob = request.POST.get('dob') or None
+            gender = request.POST.get('gender', '').strip()
+
+        vendor.company_name = company_name
+        vendor.category = request.POST.get('category', '').strip()
+        vendor.location = location
+        vendor.vendor_type = vendor_type
         vendor.experience = request.POST.get('experience', 0) or 0
-        vendor.about = request.POST.get('about', '')
+        vendor.about = request.POST.get('about', '').strip()
         vendor.rating = request.POST.get('rating', 0) or 0
+        vendor.employee_code = employee_code
+        vendor.employee_details = employee_details
+        vendor.address = address
+        vendor.id_proof = id_proof
+        vendor.dob = dob
+        vendor.gender = gender
+
+        profile_img = request.FILES.get('profile_image')
+        if profile_img:
+            vendor.profile_image = profile_img
         vendor.save()
+
+        vendor.user.assigned_state = state
+        vendor.user.assigned_city = city
+        if contact_person:
+            vendor.user.first_name = contact_person
+        vendor.user.save(update_fields=['assigned_state', 'assigned_city', 'first_name'])
+
+        if phone_val or profile_img:
+            user_prof, _ = UserProfile.objects.get_or_create(user=vendor.user)
+            if phone_val:
+                user_prof.phone_number = phone_val
+            if profile_img:
+                user_prof.profile_image = profile_img
+            user_prof.save()
+
         django_messages.success(request, f'Vendor "{vendor}" updated.')
         return redirect('super_admin_vendors')
-    return render(request, 'superadmin/vendor_form.html', {'mode': 'edit', 'vendor': vendor, 'categories': categories})
+
+    return render(request, 'superadmin/vendor_form.html', {
+        'mode': 'edit',
+        'vendor': vendor,
+        'categories': categories,
+        'states': states,
+        'current_state': current_state,
+        'current_city': current_city,
+        'phone': phone,
+    })
 
 @sa_required
 def super_admin_vendor_delete(request, vendor_id):
@@ -1330,7 +1636,7 @@ def super_admin_kyc(request):
     status_filter = request.GET.get('status', '').strip()
     page = request.GET.get('page', 1)
 
-    queryset = VendorKYC.objects.select_related('vendor', 'vendor__vendor_profile').all().order_by('-submitted_at')
+    queryset = VendorKYC.objects.select_related('vendor', 'vendor__vendor_profile', 'vendor__user_profile').all().order_by('-submitted_at')
 
     if q:
         queryset = queryset.filter(
@@ -1472,4 +1778,131 @@ def super_admin_payout_reject(request, payout_id):
     else:
         django_messages.error(request, msg)
     return redirect('super_admin_payouts')
+
+
+# ─────────────────────────────────────────────
+# DISPUTES & COMPLAINT RESOLUTION SYSTEM
+# ─────────────────────────────────────────────
+@sa_required
+def super_admin_disputes(request):
+    q = request.GET.get('q', '').strip()
+    status_filter = request.GET.get('status', '').strip()
+    priority_filter = request.GET.get('priority', '').strip()
+    category_filter = request.GET.get('category', '').strip()
+    page = request.GET.get('page', 1)
+
+    queryset = DisputeTicket.objects.select_related(
+        'raised_by', 'against_user', 'job', 'quick_service', 'resolved_by'
+    ).all().order_by('-created_at')
+
+    if q:
+        queryset = queryset.filter(
+            Q(ticket_id__icontains=q) |
+            Q(subject__icontains=q) |
+            Q(description__icontains=q) |
+            Q(raised_by__username__icontains=q) |
+            Q(raised_by__first_name__icontains=q) |
+            Q(against_user__username__icontains=q) |
+            Q(against_user__first_name__icontains=q)
+        )
+    if status_filter:
+        queryset = queryset.filter(status=status_filter)
+    if priority_filter:
+        queryset = queryset.filter(priority=priority_filter)
+    if category_filter:
+        queryset = queryset.filter(category=category_filter)
+
+    # Metrics
+    all_tickets = DisputeTicket.objects.all()
+    total_disputes = all_tickets.count()
+    open_count = all_tickets.filter(status='open').count()
+    investigating_count = all_tickets.filter(status='investigating').count()
+    resolved_count = all_tickets.filter(status='resolved').count()
+    closed_count = all_tickets.filter(status='closed').count()
+    urgent_count = all_tickets.filter(priority__in=['urgent', 'high'], status__in=['open', 'investigating']).count()
+
+    paginator = Paginator(queryset, 15)
+    try:
+        items = paginator.page(page)
+    except PageNotAnInteger:
+        items = paginator.page(1)
+    except EmptyPage:
+        items = paginator.page(paginator.num_pages)
+
+    context = {
+        'disputes_list': items,
+        'q': q,
+        'status_filter': status_filter,
+        'priority_filter': priority_filter,
+        'category_filter': category_filter,
+        'total_disputes': total_disputes,
+        'open_count': open_count,
+        'investigating_count': investigating_count,
+        'resolved_count': resolved_count,
+        'closed_count': closed_count,
+        'urgent_count': urgent_count,
+    }
+    return render(request, 'superadmin/disputes.html', context)
+
+
+@sa_required
+def super_admin_dispute_detail(request, dispute_id):
+    ticket = get_object_or_404(
+        DisputeTicket.objects.select_related('raised_by', 'against_user', 'job', 'quick_service', 'resolved_by'),
+        pk=dispute_id
+    )
+
+    if request.method == 'POST':
+        action = request.POST.get('action')
+        from django.utils import timezone
+
+        if action == 'send_message':
+            msg_text = request.POST.get('message', '').strip()
+            attachment = request.FILES.get('attachment')
+            if msg_text or attachment:
+                DisputeMessage.objects.create(
+                    ticket=ticket,
+                    sender=request.user,
+                    message=msg_text,
+                    attachment=attachment
+                )
+                if ticket.status == 'open':
+                    ticket.status = 'investigating'
+                    ticket.save()
+                django_messages.success(request, 'Official admin reply posted to the ticket timeline.')
+        elif action == 'update_status':
+            new_status = request.POST.get('status')
+            new_priority = request.POST.get('priority')
+            notes = request.POST.get('resolution_notes', '').strip()
+
+            if new_status in dict(DisputeTicket.STATUS_CHOICES):
+                ticket.status = new_status
+                if new_status in ['resolved', 'closed']:
+                    ticket.resolved_by = request.user
+                    ticket.resolved_at = timezone.now()
+            if new_priority in dict(DisputeTicket.PRIORITY_CHOICES):
+                ticket.priority = new_priority
+            if notes:
+                ticket.resolution_notes = notes
+            ticket.save()
+            django_messages.success(request, f'Ticket {ticket.ticket_id} updated successfully.')
+
+        return redirect('super_admin_dispute_detail', dispute_id=dispute_id)
+
+    messages = ticket.messages.select_related('sender').order_by('created_at')
+
+    # Find if chat history exists between raised_by and against_user
+    chat_messages = []
+    if ticket.against_user:
+        chat_messages = Message.objects.filter(
+            (Q(sender=ticket.raised_by, receiver=ticket.against_user) |
+             Q(sender=ticket.against_user, receiver=ticket.raised_by))
+        ).order_by('-created_at')[:30]
+
+    context = {
+        'ticket': ticket,
+        'messages': messages,
+        'chat_messages': chat_messages,
+    }
+    return render(request, 'superadmin/dispute_detail.html', context)
 

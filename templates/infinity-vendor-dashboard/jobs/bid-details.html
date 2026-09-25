@@ -138,9 +138,12 @@
                 <div style="color: var(--text-muted); font-size: 0.9rem; margin-top: 4px;">
                   Phone: {{ bid.job.contact_mobile|default:bid.job.user.user_profile.phone_number|default:"Shared upon assignment" }}
                 </div>
-                <div style="margin-top: 16px;">
+                <div style="margin-top: 16px; display: flex; flex-direction: column; gap: 8px;">
                   <a href="/vendor/messages/chat.html?user_id={{ bid.job.user.id }}" class="btn btn-primary" style="width: 100%; text-align: center;">
                     Message Customer
+                  </a>
+                  <a href="/user/support/create-complaint.html?job_id={{ bid.job.id }}" class="btn btn-secondary btn-sm" style="width: 100%; text-align: center; color: #b91c1c; border-color: #fecaca; background: #fff5f5;">
+                    Report Issue / Dispute
                   </a>
                 </div>
               {% elif bid.quick_service %}
@@ -150,9 +153,12 @@
                 <div style="color: var(--text-muted); font-size: 0.9rem; margin-top: 4px;">
                   Phone: {{ bid.quick_service.contact_mobile|default:bid.quick_service.user.user_profile.phone_number|default:"Shared upon assignment" }}
                 </div>
-                <div style="margin-top: 16px;">
+                <div style="margin-top: 16px; display: flex; flex-direction: column; gap: 8px;">
                   <a href="/vendor/messages/chat.html?user_id={{ bid.quick_service.user.id }}" class="btn btn-primary" style="width: 100%; text-align: center;">
                     Message Customer
+                  </a>
+                  <a href="/user/support/create-complaint.html?quick_service_id={{ bid.quick_service.id }}" class="btn btn-secondary btn-sm" style="width: 100%; text-align: center; color: #b91c1c; border-color: #fecaca; background: #fff5f5;">
+                    Report Issue / Dispute
                   </a>
                 </div>
               {% endif %}

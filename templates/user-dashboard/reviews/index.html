@@ -1,5 +1,267 @@
 <!doctype html>
-    <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="description" content="Suggu Services user Portal — Reviews"><title>Reviews · Suggu Services user</title><link rel="stylesheet" href="../assets/styles.css"><script defer src="../assets/app.js"></script></head>
-    <body data-page="reviews" data-title="Reviews" data-root="../"><div class="app-shell"><div id="sidebar-root"></div><div class="workspace"><div id="topbar-root"></div><main class="page">
-<div class="page-head"><div class="actions"><a class="btn btn-primary" href="create.html"><span data-icon="star"></span> Write a Review</a></div></div><section class="card" data-filter-scope><div class="toolbar"><div class="search-box"><span data-icon="search"></span><input class="input" data-search-input placeholder="Search vendor or service"></div><select class="select" style="max-width:150px" data-filter="status"><option value="all">All statuses</option><option value="published">Published</option><option value="pending">Under Review</option></select></div><div class="table-wrap"><table class="data-table"><thead><tr><th>Vendor</th><th>Service / Job</th><th>Rating</th><th>Review</th><th>Date</th><th>Status</th><th>Actions</th></tr></thead><tbody data-rows><tr data-row data-status="published" data-search="BuildRight Contractors Office renovation"><td><div class="cell-user"><span class="avatar sm vendor">BR</span><div><strong>BuildRight Contractors</strong><div class="table-sub">General Contractor</div></div></div></td><td><strong>Office renovation</strong><div class="table-sub">JOB-2026-0314</div></td><td><span class="rating"><span class="star">★★★★★</span> 5.0</span></td><td><span class="small">Professional execution and clear updates...</span></td><td>8 Aug 2026</td><td><span class="badge badge-success">Published</span></td><td><div class="cell-actions"><button class="btn btn-secondary btn-sm" data-modal-open="review-view">View</button><a class="btn btn-soft btn-sm" href="create.html">Edit</a><button class="kebab" data-confirm="delete"><span data-icon="trash"></span></button></div></td></tr><tr data-row data-status="published" data-search="Spark India Ceiling fan"><td><div class="cell-user"><span class="avatar sm orange">SI</span><div><strong>Spark India</strong><div class="table-sub">Service Company</div></div></div></td><td><strong>Ceiling fan installation</strong><div class="table-sub">QS-2026-0809</div></td><td><span class="rating"><span class="star">★★★★☆</span> 4.0</span></td><td><span class="small">Fast and careful installation...</span></td><td>11 Aug 2026</td><td><span class="badge badge-success">Published</span></td><td><div class="cell-actions"><button class="btn btn-secondary btn-sm" data-modal-open="review-view">View</button><a class="btn btn-soft btn-sm" href="create.html">Edit</a></div></td></tr><tr data-row data-status="pending" data-search="CleanCo Sofa"><td><div class="cell-user"><span class="avatar sm teal">CC</span><div><strong>CleanCo Ranchi</strong><div class="table-sub">Service Company</div></div></div></td><td><strong>Sofa deep cleaning</strong><div class="table-sub">QS-2026-0727</div></td><td><span class="rating"><span class="star">★★★★★</span> 5.0</span></td><td><span class="small">Excellent cleaning and polite team...</span></td><td>29 Jul 2026</td><td><span class="badge badge-pending">Under Review</span></td><td><div class="cell-actions"><button class="btn btn-secondary btn-sm" data-modal-open="review-view">View</button></div></td></tr></tbody></table></div><div class="pagination"><span>Showing 1–3 of 12 reviews</span><div class="page-buttons"><button class="page-btn" data-page="previous"><span data-icon="chevron"></span></button><button class="page-btn active" data-page="1">1</button><button class="page-btn" data-page="2">2</button><button class="page-btn" data-page="3">3</button><button class="page-btn" data-page="next"><span data-icon="chevron"></span></button></div></div></section>
-</main></div></div><div class="modal-backdrop" id="review-view" role="dialog" aria-modal="true"><div class="modal"><div class="modal-head"><h3>Review Details</h3><button class="modal-close" data-modal-close><span data-icon="x"></span></button></div><div class="modal-body"><div class="cell-user"><span class="avatar md vendor">BR</span><div><strong>BuildRight Contractors</strong><div class="small muted">Office renovation · JOB-2026-0314</div></div></div><div class="divider"></div><div class="rating" style="font-size:18px"><span class="star">★★★★★</span> 5.0</div><p>Professional execution and clear updates throughout the project. The supervisor was responsive, and the team left the office clean after every working day.</p><div class="small muted">Submitted 8 Aug 2026</div></div><div class="modal-actions"><button class="btn btn-secondary" data-modal-close>Cancel</button><button class="btn btn-primary" data-modal-close>Close</button></div></div></div></body></html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="Suggu Services User Portal — My Reviews & Ratings">
+  <title>Reviews · Suggu Services User</title>
+  <link rel="stylesheet" href="../assets/styles.css">
+  <script defer src="../assets/app.js"></script>
+  <style>
+    .star-gold { color: #f59e0b; font-weight: bold; }
+    .star-muted { color: #d1d5db; }
+    .review-thumb { width: 44px; height: 44px; border-radius: 8px; object-fit: cover; border: 1px solid #e5e7eb; cursor: pointer; transition: transform 0.15s ease; }
+    .review-thumb:hover { transform: scale(1.08); }
+    .stats-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin-bottom: 20px; }
+    .stat-mini-card { background: #fff; border: 1px solid #e5e7eb; border-radius: 12px; padding: 16px; display: flex; align-items: center; justify-content: space-between; }
+    .stat-mini-val { font-size: 24px; font-weight: 700; color: #111827; }
+    .stat-mini-label { font-size: 13px; color: #6b7280; margin-top: 2px; }
+  </style>
+</head>
+<body data-page="reviews" data-title="Reviews" data-root="../">
+  <div class="app-shell">
+    <div id="sidebar-root"></div>
+    <div class="workspace">
+      <div id="topbar-root"></div>
+      <main class="page">
+        <div class="page-head">
+          <div>
+            <h1>Ratings &amp; Reviews</h1>
+            <p>Your ratings and feedback for service professionals across completed projects.</p>
+          </div>
+          <div class="actions">
+            <a class="btn btn-primary" href="create.html">
+              <span data-icon="star"></span> Write a Review
+            </a>
+          </div>
+        </div>
+
+        <div class="stats-row">
+          <div class="stat-mini-card">
+            <div>
+              <div class="stat-mini-val">{{ total_reviews|default:0 }}</div>
+              <div class="stat-mini-label">Total Reviews</div>
+            </div>
+            <span class="stat-icon"><span data-icon="star"></span></span>
+          </div>
+          <div class="stat-mini-card">
+            <div>
+              <div class="stat-mini-val" style="color: #059669;">{{ published_count|default:0 }}</div>
+              <div class="stat-mini-label">Published</div>
+            </div>
+            <span class="stat-icon green"><span data-icon="check"></span></span>
+          </div>
+          <div class="stat-mini-card">
+            <div>
+              <div class="stat-mini-val" style="color: #d97706;">{{ pending_count|default:0 }}</div>
+              <div class="stat-mini-label">Under Review</div>
+            </div>
+            <span class="stat-icon orange"><span data-icon="clock"></span></span>
+          </div>
+          <div class="stat-mini-card">
+            <div>
+              <div class="stat-mini-val" style="color: #4f46e5;">{{ average_given_rating|default:"5.0" }} ★</div>
+              <div class="stat-mini-label">Avg Given Rating</div>
+            </div>
+            <span class="stat-icon purple"><span data-icon="award"></span></span>
+          </div>
+        </div>
+
+        <section class="card" data-filter-scope>
+          <div class="toolbar">
+            <div class="search-box">
+              <span data-icon="search"></span>
+              <input class="input" data-search-input placeholder="Search vendor, service, or comment">
+            </div>
+            <select class="select" style="max-width:180px" data-filter="status">
+              <option value="all">All statuses</option>
+              <option value="published">Published</option>
+              <option value="pending">Under Review</option>
+            </select>
+          </div>
+
+          <div class="table-wrap">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Vendor</th>
+                  <th>Service / Job</th>
+                  <th>Rating</th>
+                  <th>Feedback &amp; Photo</th>
+                  <th>Date</th>
+                  <th>Status</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody data-rows>
+                {% for rev in reviews %}
+                <tr data-row data-status="{{ rev.status }}" data-search="{{ rev.vendor.get_full_name|default:rev.vendor.username }} {{ rev.vendor.vendor_profile.company_name|default:'' }} {% if rev.job %}{{ rev.job.title }}{% elif rev.quick_service %}{{ rev.quick_service.title }}{% endif %} {{ rev.comment }}">
+                  <td>
+                    <div class="cell-user">
+                      <span class="avatar sm vendor">{{ rev.vendor.first_name|slice:":2"|upper|default:"VN" }}</span>
+                      <div>
+                        <strong>{{ rev.vendor.vendor_profile.company_name|default:rev.vendor.get_full_name|default:rev.vendor.username }}</strong>
+                        <div class="table-sub">{{ rev.vendor.vendor_profile.category|default:"Service Provider" }}</div>
+                      </div>
+                    </div>
+                  </td>
+                  <td>
+                    {% if rev.job %}
+                    <a href="../jobs/details.html?id={{ rev.job.id }}" style="text-decoration:none; color:inherit;">
+                      <strong>{{ rev.job.title }}</strong>
+                      <div class="table-sub">JOB-{{ rev.job.id|stringformat:"04d" }}</div>
+                    </a>
+                    {% elif rev.quick_service %}
+                    <a href="../quick-services/details.html?id={{ rev.quick_service.id }}" style="text-decoration:none; color:inherit;">
+                      <strong>{{ rev.quick_service.title }}</strong>
+                      <div class="table-sub">QS-{{ rev.quick_service.id|stringformat:"04d" }}</div>
+                    </a>
+                    {% else %}
+                    <strong>Service Booking</strong>
+                    <div class="table-sub">Verified Contract</div>
+                    {% endif %}
+                  </td>
+                  <td>
+                    <span class="rating">
+                      <span class="star-gold">
+                        {% if rev.rating >= 5 %}★★★★★
+                        {% elif rev.rating == 4 %}★★★★<span class="star-muted">★</span>
+                        {% elif rev.rating == 3 %}★★★<span class="star-muted">★★</span>
+                        {% elif rev.rating == 2 %}★★<span class="star-muted">★★★</span>
+                        {% else %}★<span class="star-muted">★★★★</span>
+                        {% endif %}
+                      </span>
+                      <strong>{{ rev.rating }}.0</strong>
+                    </span>
+                  </td>
+                  <td>
+                    <div style="display:flex; align-items:center; gap:10px;">
+                      {% if rev.review_image %}
+                      <a href="{{ rev.review_image.url }}" target="_blank" title="View attached photo">
+                        <img src="{{ rev.review_image.url }}" alt="Review photo" class="review-thumb">
+                      </a>
+                      {% endif %}
+                      <div>
+                        {% if rev.review_title %}<strong>{{ rev.review_title }}</strong><br>{% endif %}
+                        <span class="small muted">{{ rev.comment|truncatewords:14 }}</span>
+                      </div>
+                    </div>
+                  </td>
+                  <td><span class="small">{{ rev.created_at|date:"d M Y" }}</span></td>
+                  <td>
+                    {% if rev.status == 'published' %}
+                    <span class="badge badge-success">Published</span>
+                    {% elif rev.status == 'pending' %}
+                    <span class="badge badge-pending">Under Review</span>
+                    {% else %}
+                    <span class="badge badge-neutral">{{ rev.status|title }}</span>
+                    {% endif %}
+                  </td>
+                  <td>
+                    <div class="cell-actions">
+                      <button class="btn btn-secondary btn-sm" onclick="openReviewModal('{{ rev.id }}', '{{ rev.vendor.vendor_profile.company_name|default:rev.vendor.get_full_name|default:rev.vendor.username|escapejs }}', '{% if rev.job %}{{ rev.job.title|escapejs }}{% elif rev.quick_service %}{{ rev.quick_service.title|escapejs }}{% else %}Service{% endif %}', '{{ rev.rating }}', '{{ rev.review_title|default:""|escapejs }}', '{{ rev.comment|escapejs }}', '{% if rev.review_image %}{{ rev.review_image.url }}{% endif %}', '{{ rev.created_at|date:"d M Y" }}')">
+                        View
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+                {% empty %}
+                <tr>
+                  <td colspan="7" style="text-align:center; padding: 48px 16px;">
+                    <div style="max-width: 400px; margin: 0 auto; color: var(--text-muted);">
+                      <div style="font-size: 36px; margin-bottom: 8px;">⭐</div>
+                      <h3 style="margin: 0 0 6px 0; color: #111827;">No reviews submitted yet</h3>
+                      <p style="font-size: 13px; margin: 0 0 16px 0;">Once your requested jobs or quick services are completed, you can share feedback and rate vendors to help maintain service quality.</p>
+                      <a class="btn btn-primary btn-sm" href="create.html">Write a Review</a>
+                    </div>
+                  </td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      </main>
+    </div>
+  </div>
+
+  <!-- Review View Modal -->
+  <div class="modal-backdrop" id="review-view-modal" role="dialog" aria-modal="true" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(15,23,42,0.6); z-index:9999; align-items:center; justify-content:center;">
+    <div class="modal" style="background:#fff; border-radius:16px; max-width:540px; width:90%; padding:24px; box-shadow:0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04);">
+      <div class="modal-head" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+        <h3 style="margin:0; font-size:18px;">Review Details</h3>
+        <button type="button" class="btn-sm btn-secondary" onclick="closeReviewModal()" style="border:none; background:#f3f4f6; cursor:pointer; border-radius:8px; padding:6px 10px;">✕</button>
+      </div>
+      <div class="modal-body">
+        <div style="display:flex; align-items:center; gap:12px; margin-bottom:16px; padding-bottom:14px; border-bottom:1px solid #e5e7eb;">
+          <div class="avatar md vendor" id="modal-vendor-avatar">VN</div>
+          <div>
+            <strong id="modal-vendor-name" style="font-size:15px; color:#111827;">Vendor Name</strong>
+            <div class="small muted" id="modal-service-name">Service Title</div>
+          </div>
+        </div>
+
+        <div style="display:flex; align-items:center; gap:8px; margin-bottom:12px;">
+          <div id="modal-stars" style="color:#f59e0b; font-size:18px; font-weight:bold;">★★★★★</div>
+          <span id="modal-rating-num" style="font-weight:700; color:#111827;">5.0</span>
+          <span id="modal-date" style="font-size:12px; color:#6b7280; margin-left:auto;">24 Sep 2026</span>
+        </div>
+
+        <h4 id="modal-review-title" style="margin:0 0 8px 0; font-size:15px; color:#1f2937;">Review Title</h4>
+        <p id="modal-review-comment" style="color:#4b5563; font-size:14px; line-height:1.6; margin:0 0 16px 0; background:#f9fafb; padding:12px; border-radius:8px; border:1px solid #f3f4f6; white-space:pre-wrap;"></p>
+
+        <div id="modal-image-container" style="display:none; margin-top:12px;">
+          <div class="small muted" style="margin-bottom:6px; font-weight:600;">Attached Work Photo:</div>
+          <img id="modal-review-image" src="" alt="Work photo" style="max-height:220px; width:100%; object-fit:contain; border-radius:8px; border:1px solid #e5e7eb; background:#f9fafb;">
+        </div>
+      </div>
+      <div class="modal-actions" style="margin-top:20px; text-align:right;">
+        <button class="btn btn-secondary" onclick="closeReviewModal()">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function openReviewModal(id, vendor, service, rating, title, comment, imageUrl, date) {
+      document.getElementById('modal-vendor-name').innerText = vendor;
+      document.getElementById('modal-service-name').innerText = service;
+      document.getElementById('modal-vendor-avatar').innerText = (vendor ? vendor.slice(0, 2).toUpperCase() : 'VN');
+      
+      const r = parseInt(rating) || 5;
+      let stars = '';
+      for (let i = 1; i <= 5; i++) {
+        stars += (i <= r ? '★' : '☆');
+      }
+      document.getElementById('modal-stars').innerText = stars;
+      document.getElementById('modal-rating-num').innerText = r + '.0';
+      document.getElementById('modal-date').innerText = date;
+      
+      const titleElem = document.getElementById('modal-review-title');
+      if (title && title.trim()) {
+        titleElem.innerText = title;
+        titleElem.style.display = 'block';
+      } else {
+        titleElem.style.display = 'none';
+      }
+
+      document.getElementById('modal-review-comment').innerText = comment;
+
+      const imgContainer = document.getElementById('modal-image-container');
+      const imgElem = document.getElementById('modal-review-image');
+      if (imageUrl && imageUrl.trim()) {
+        imgElem.src = imageUrl;
+        imgContainer.style.display = 'block';
+      } else {
+        imgContainer.style.display = 'none';
+      }
+
+      const modal = document.getElementById('review-view-modal');
+      modal.style.display = 'flex';
+    }
+
+    function closeReviewModal() {
+      document.getElementById('review-view-modal').style.display = 'none';
+    }
+  </script>
+</body>
+</html>

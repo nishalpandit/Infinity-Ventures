@@ -1,6 +1,6 @@
 {% extends 'superadmin/base.html' %}
 {% block title %}Testimonials - CMS{% endblock %}
-{% block header_title %}Client Reviews & Testimonials{% endblock %}
+{% block header_title %}Client Reviews &amp; Testimonials{% endblock %}
 
 {% block header_actions %}
 <a href="{% url 'super_admin_landing_overview' %}" class="btn btn-outline btn-sm">
@@ -20,10 +20,10 @@
       <thead>
         <tr>
           <th style="width: 60px;">Avatar</th>
-          <th>Client Name & Role</th>
+          <th>Client Name &amp; Role</th>
           <th>Rating</th>
           <th>Service Taken</th>
-          <th>Review Snippet</th>
+          <th style="max-width: 260px;">Review Snippet</th>
           <th>Order</th>
           <th>Status</th>
           <th>Actions</th>
@@ -51,8 +51,9 @@
           <td style="font-size: 13px; color: var(--accent); font-weight: 600;">
             {{ item.service_taken }}
           </td>
-          <td style="font-size: 12px; color: var(--text-muted); max-width: 240px;">
-            "{{ item.review_text|truncatewords:10 }}"
+          <!-- Single line with clean ellipsis -->
+          <td style="font-size: 13px; color: var(--text-muted); max-width: 250px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="{{ item.review_text }}">
+            "{{ item.review_text }}"
           </td>
           <td>{{ item.order }}</td>
           <td>
@@ -63,14 +64,33 @@
             </a>
           </td>
           <td>
-            <div style="display: flex; gap: 8px;">
-              <a href="{% url 'super_admin_landing_testimonial_edit' item.id %}" class="btn btn-outline btn-sm">
+            <div style="display: flex; gap: 6px; align-items: center;">
+              <!-- View Full Review Button -->
+              <button type="button" class="btn btn-outline btn-sm" onclick="openReviewModal({{ item.id }})" title="View Full Review">
+                <i class="fa-regular fa-eye"></i> View
+              </button>
+              <a href="{% url 'super_admin_landing_testimonial_edit' item.id %}" class="btn btn-outline btn-sm" title="Edit">
                 <i class="fa-solid fa-pen-to-square"></i> Edit
               </a>
-              <a href="{% url 'super_admin_landing_testimonial_delete' item.id %}" class="btn btn-outline btn-sm" style="border-color: rgba(239,68,68,0.3); color: var(--danger);" onclick="return confirm('Delete this review?');">
+              <a href="{% url 'super_admin_landing_testimonial_delete' item.id %}" class="btn btn-outline btn-sm" style="border-color: rgba(239,68,68,0.3); color: var(--danger);" onclick="return confirm('Delete this review?');" title="Delete">
                 <i class="fa-solid fa-trash"></i>
               </a>
             </div>
+
+            <!-- Embedded JSON Data for Modal -->
+            <script id="testimonialData-{{ item.id }}" type="application/json">
+            {
+              "id": {{ item.id }},
+              "client_name": "{{ item.client_name|escapejs }}",
+              "role": "{{ item.client_role_or_company|escapejs }}",
+              "rating": "{{ item.rating }}",
+              "service": "{{ item.service_taken|escapejs }}",
+              "review": "{{ item.review_text|escapejs }}",
+              "order": "{{ item.order }}",
+              "avatar_url": "{% if item.avatar %}{{ item.avatar.url }}{% endif %}",
+              "edit_url": "{% url 'super_admin_landing_testimonial_edit' item.id %}"
+            }
+            </script>
           </td>
         </tr>
         {% empty %}
@@ -117,4 +137,103 @@
     {% endif %}
   </div>
 </div>
+
+<!-- ========================================================
+     MODAL TO VIEW FULL CLIENT REVIEW
+     ======================================================== -->
+<div id="reviewDetailsModal" style="display: none; position: fixed; inset: 0; z-index: 9999; background: rgba(15, 23, 42, 0.5); backdrop-filter: blur(2px); align-items: center; justify-content: center; padding: 20px;">
+  <div style="background: #ffffff; border-radius: 12px; width: 100%; max-width: 520px; max-height: 90vh; overflow-y: auto; border: 1px solid #e2e8f0; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);">
+    
+    <!-- Modal Header -->
+    <div style="padding: 18px 22px; border-bottom: 1px solid #f1f5f9; display: flex; align-items: center; justify-content: space-between;">
+      <div style="display: flex; align-items: center; gap: 12px;">
+        <div id="rmAvatar" style="width: 44px; height: 44px; border-radius: 50%; overflow: hidden; background: #f1f5f9; display: flex; align-items: center; justify-content: center; font-weight: 700; color: #475569; font-size: 15px; border: 1px solid #e2e8f0; flex-shrink: 0;">
+        </div>
+        <div>
+          <h3 id="rmClientName" style="font-size: 16px; font-weight: 700; color: #0f172a; margin: 0;"></h3>
+          <div id="rmClientRole" style="font-size: 12.5px; color: #64748b; margin-top: 2px;"></div>
+        </div>
+      </div>
+      <button type="button" onclick="closeReviewModal()" style="background: transparent; border: none; color: #94a3b8; width: 28px; height: 28px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 15px;" onmouseover="this.style.color='#0f172a'" onmouseout="this.style.color='#94a3b8'">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </div>
+
+    <!-- Modal Content -->
+    <div style="padding: 20px 22px;">
+      
+      <!-- Meta Information -->
+      <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid #f1f5f9;">
+        <div>
+          <span style="font-size: 11px; text-transform: uppercase; font-weight: 600; color: #64748b; display: block; margin-bottom: 2px;">Service Taken</span>
+          <span id="rmService" style="font-size: 13.5px; font-weight: 600; color: #4f46e5;"></span>
+        </div>
+        <div style="text-align: right;">
+          <span style="font-size: 11px; text-transform: uppercase; font-weight: 600; color: #64748b; display: block; margin-bottom: 2px;">Client Rating</span>
+          <span id="rmRating" style="font-size: 14px; font-weight: 700; color: #f59e0b;"></span>
+        </div>
+      </div>
+
+      <!-- Full Review Quote Box -->
+      <div style="margin-bottom: 20px;">
+        <span style="font-size: 11px; text-transform: uppercase; font-weight: 600; color: #64748b; display: block; margin-bottom: 6px;">Full Client Review</span>
+        <div style="position: relative; padding: 16px 18px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px;">
+          <i class="fa-solid fa-quote-left" style="font-size: 18px; color: #cbd5e1; margin-bottom: 8px; display: block;"></i>
+          <p id="rmReviewText" style="font-size: 14px; color: #1e293b; line-height: 1.6; margin: 0; white-space: normal;"></p>
+        </div>
+      </div>
+
+      <!-- Footer Buttons -->
+      <div style="display: flex; align-items: center; justify-content: flex-end; gap: 8px; border-top: 1px solid #f1f5f9; padding-top: 14px;">
+        <button type="button" onclick="closeReviewModal()" style="padding: 7px 14px; font-size: 13px; font-weight: 500; border: 1px solid #e2e8f0; background: #ffffff; color: #64748b; border-radius: 6px; cursor: pointer;">
+          Close
+        </button>
+        <a id="rmEditBtn" href="#" class="btn btn-primary btn-sm" style="padding: 7px 16px; font-size: 13px; font-weight: 500; background: #0f172a; border-color: #0f172a; color: #ffffff; border-radius: 6px; text-decoration: none;">
+          <i class="fa-solid fa-pen-to-square" style="font-size: 11px; margin-right: 4px;"></i> Edit Review
+        </a>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+  function openReviewModal(testimonialId) {
+    var dataEl = document.getElementById('testimonialData-' + testimonialId);
+    if (!dataEl) return;
+    var d = JSON.parse(dataEl.textContent);
+
+    document.getElementById('rmClientName').textContent = d.client_name;
+    document.getElementById('rmClientRole').textContent = d.role;
+    document.getElementById('rmService').textContent = d.service;
+    document.getElementById('rmRating').textContent = '★ ' + d.rating;
+    document.getElementById('rmReviewText').textContent = d.review;
+    document.getElementById('rmEditBtn').href = d.edit_url;
+
+    var av = document.getElementById('rmAvatar');
+    if (d.avatar_url) {
+      av.innerHTML = '<img src="' + d.avatar_url + '" alt="' + d.client_name + '" style="width:100%; height:100%; object-fit:cover;">';
+    } else {
+      av.innerHTML = d.client_name.substring(0, 2).toUpperCase();
+    }
+
+    var modal = document.getElementById('reviewDetailsModal');
+    modal.style.display = 'flex';
+  }
+
+  function closeReviewModal() {
+    var modal = document.getElementById('reviewDetailsModal');
+    modal.style.display = 'none';
+  }
+
+  // Close on outside click
+  document.getElementById('reviewDetailsModal').addEventListener('click', function(e) {
+    if (e.target === this) closeReviewModal();
+  });
+
+  // Close on Escape key
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') closeReviewModal();
+  });
+</script>
 {% endblock %}

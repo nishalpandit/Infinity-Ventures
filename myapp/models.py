@@ -246,6 +246,147 @@ class PayoutRequest(models.Model):
         return f"{self.vendor.username} - ₹{self.amount} ({self.get_status_display()})"
 
 
+class DisputeTicket(models.Model):
+    STATUS_CHOICES = (
+        ('open', 'Open'),
+        ('investigating', 'Under Investigation'),
+        ('resolved', 'Resolved'),
+        ('closed', 'Closed'),
+    )
+    PRIORITY_CHOICES = (
+        ('low', 'Low'),
+        ('medium', 'Medium'),
+        ('high', 'High'),
+        ('urgent', 'Urgent — Safety Concern'),
+    )
+    CATEGORY_CHOICES = (
+        ('payment', 'Payment / Pricing Issue'),
+        ('quality', 'Poor Work Quality / Incomplete'),
+        ('noshow', 'No Show / Unreachable'),
+        ('behavior', 'Misbehavior / Unprofessional Conduct'),
+        ('delay', 'Delay in Execution / Missed Deadline'),
+        ('platform', 'Platform or Account Issue'),
+        ('other', 'Other Issue'),
+    )
+
+    ticket_id = models.CharField(max_length=30, unique=True, db_index=True)
+    raised_by = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='filed_disputes')
+    against_user = models.ForeignKey(CustomUser, on_delete=models.SET_NULL, null=True, blank=True, related_name='received_disputes')
+    job = models.ForeignKey(Job, on_delete=models.SET_NULL, null=True, blank=True, related_name='disputes')
+    quick_service = models.ForeignKey(QuickService, on_delete=models.SET_NULL, null=True, blank=True, related_name='disputes')
+    category = models.CharField(max_length=50, choices=CATEGORY_CHOICES, default='quality')
+    subject = models.CharField(max_length=255)
+    description = models.TextField()
+    evidence_image = models.FileField(upload_to='disputes/evidence/', null=True, blank=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='open')
+    priority = models.CharField(max_length=20, choices=PRIORITY_CHOICES, default='medium')
+    resolution_notes = models.TextField(blank=True, null=True)
+    resolved_by = models.ForeignKey(CustomUser, on_delete=models.SET_NULL, null=True, blank=True, related_name='resolved_disputes')
+    created_at = models.DateTimeField(default=timezone.now)
+    updated_at = models.DateTimeField(auto_now=True)
+    resolved_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = "Dispute Ticket"
+        verbose_name_plural = "Dispute Tickets"
+
+    def __str__(self):
+        return f"{self.ticket_id} - {self.subject} ({self.get_status_display()})"
+
+    def save(self, *args, **kwargs):
+        if not self.ticket_id:
+            import random
+            year = timezone.now().year
+            rand_suffix = random.randint(1000, 9999)
+            self.ticket_id = f"CMP-{year}-{rand_suffix}"
+            while DisputeTicket.objects.filter(ticket_id=self.ticket_id).exists():
+                rand_suffix = random.randint(1000, 9999)
+                self.ticket_id = f"CMP-{year}-{rand_suffix}"
+        super().save(*args, **kwargs)
+
+    @property
+    def related_item_label(self):
+        if self.job:
+            return f"JOB-{self.job.id:04d} · {self.job.title}"
+        elif self.quick_service:
+            return f"QS-{self.quick_service.id:04d} · {self.quick_service.title}"
+        return "General / Account"
+
+
+class DisputeMessage(models.Model):
+    ticket = models.ForeignKey(DisputeTicket, on_delete=models.CASCADE, related_name='messages')
+    sender = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='dispute_messages')
+    message = models.TextField()
+    attachment = models.FileField(upload_to='disputes/evidence/', null=True, blank=True)
+    created_at = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        ordering = ['created_at']
+
+    def __str__(self):
+        return f"{self.ticket.ticket_id} - {self.sender.username} ({self.created_at.strftime('%d %b %H:%M')})"
+
+
+class JobCompletionProof(models.Model):
+    job = models.OneToOneField(Job, on_delete=models.CASCADE, related_name='completion_proof', null=True, blank=True)
+    quick_service = models.OneToOneField(QuickService, on_delete=models.CASCADE, related_name='completion_proof', null=True, blank=True)
+    vendor = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='submitted_completion_proofs')
+    photo_1 = models.ImageField(upload_to='jobs/proof/')
+    photo_2 = models.ImageField(upload_to='jobs/proof/', null=True, blank=True)
+    work_summary = models.TextField()
+    completed_at = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        ordering = ['-completed_at']
+        verbose_name = "Job Completion Proof"
+        verbose_name_plural = "Job Completion Proofs"
+
+    def __str__(self):
+        target = f"JOB-{self.job_id:04d}" if self.job else (f"QS-{self.quick_service_id:04d}" if self.quick_service else "General")
+        return f"Completion Proof: {target} by {self.vendor.username}"
+
+
+class ServiceReview(models.Model):
+    STATUS_CHOICES = (
+        ('published', 'Published'),
+        ('pending', 'Under Review'),
+        ('hidden', 'Hidden'),
+    )
+
+    job = models.ForeignKey(Job, on_delete=models.SET_NULL, null=True, blank=True, related_name='reviews')
+    quick_service = models.ForeignKey(QuickService, on_delete=models.SET_NULL, null=True, blank=True, related_name='reviews')
+    customer = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='written_reviews')
+    vendor = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='received_reviews')
+    rating = models.PositiveSmallIntegerField(default=5)  # 1 to 5
+    review_title = models.CharField(max_length=200, blank=True, null=True)
+    comment = models.TextField()
+    review_image = models.ImageField(upload_to='reviews/photos/', null=True, blank=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='published')
+    created_at = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = "Service Review"
+        verbose_name_plural = "Service Reviews"
+
+    def __str__(self):
+        return f"{self.rating}★ Review by {self.customer.username} for {self.vendor.username}"
+
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+        try:
+            from django.db.models import Avg
+            profile = getattr(self.vendor, 'vendor_profile', None)
+            if profile:
+                avg = ServiceReview.objects.filter(vendor=self.vendor, status='published').aggregate(avg=Avg('rating'))['avg']
+                if avg is not None:
+                    profile.rating = round(avg, 1)
+                    profile.save(update_fields=['rating'])
+        except Exception:
+            pass
+
+
 class Category(models.Model):
     SERVICE_TYPE_CHOICES = (
         ('job', 'Job'),

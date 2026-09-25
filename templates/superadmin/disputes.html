@@ -1,0 +1,197 @@
+{% extends 'superadmin/base.html' %}
+{% block title %}Disputes & Complaint Resolution{% endblock %}
+{% block header_title %}Dispute Resolution Hub{% endblock %}
+
+{% block content %}
+<!-- Metric Cards -->
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 24px;">
+  <div class="card" style="padding: 18px; border-left: 4px solid #6366f1;">
+    <div style="font-size: 0.82rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase;">Total Disputes</div>
+    <div style="font-size: 1.8rem; font-weight: 800; color: var(--text-main); margin-top: 4px;">{{ total_disputes }}</div>
+  </div>
+  <div class="card" style="padding: 18px; border-left: 4px solid #f59e0b;">
+    <div style="font-size: 0.82rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase;">Open / Pending</div>
+    <div style="font-size: 1.8rem; font-weight: 800; color: #d97706; margin-top: 4px;">{{ open_count }}</div>
+  </div>
+  <div class="card" style="padding: 18px; border-left: 4px solid #0ea5e9;">
+    <div style="font-size: 0.82rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase;">In Investigation</div>
+    <div style="font-size: 1.8rem; font-weight: 800; color: #0284c7; margin-top: 4px;">{{ investigating_count }}</div>
+  </div>
+  <div class="card" style="padding: 18px; border-left: 4px solid #ef4444;">
+    <div style="font-size: 0.82rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase;">Urgent Attention</div>
+    <div style="font-size: 1.8rem; font-weight: 800; color: #dc2626; margin-top: 4px;">{{ urgent_count }}</div>
+  </div>
+  <div class="card" style="padding: 18px; border-left: 4px solid #10b981;">
+    <div style="font-size: 0.82rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase;">Resolved</div>
+    <div style="font-size: 1.8rem; font-weight: 800; color: #059669; margin-top: 4px;">{{ resolved_count }}</div>
+  </div>
+</div>
+
+<!-- Search & Filters -->
+<div class="card" style="padding: 16px; margin-bottom: 20px;">
+  <form method="get" style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
+    <div style="flex: 2; min-width: 260px;">
+      <input type="text" name="q" class="form-control" placeholder="Search ticket ID, subject, or participant name..." value="{{ q }}">
+    </div>
+    <div style="width: 170px;">
+      <select name="status" class="form-control" onchange="this.form.submit()">
+        <option value="">All Statuses</option>
+        <option value="open" {% if status_filter == 'open' %}selected{% endif %}>Open</option>
+        <option value="investigating" {% if status_filter == 'investigating' %}selected{% endif %}>In Investigation</option>
+        <option value="resolved" {% if status_filter == 'resolved' %}selected{% endif %}>Resolved</option>
+        <option value="closed" {% if status_filter == 'closed' %}selected{% endif %}>Closed</option>
+      </select>
+    </div>
+    <div style="width: 170px;">
+      <select name="priority" class="form-control" onchange="this.form.submit()">
+        <option value="">All Priorities</option>
+        <option value="urgent" {% if priority_filter == 'urgent' %}selected{% endif %}>Urgent (Safety)</option>
+        <option value="high" {% if priority_filter == 'high' %}selected{% endif %}>High</option>
+        <option value="medium" {% if priority_filter == 'medium' %}selected{% endif %}>Medium</option>
+        <option value="low" {% if priority_filter == 'low' %}selected{% endif %}>Low</option>
+      </select>
+    </div>
+    <div style="width: 190px;">
+      <select name="category" class="form-control" onchange="this.form.submit()">
+        <option value="">All Categories</option>
+        <option value="payment" {% if category_filter == 'payment' %}selected{% endif %}>Payment / Pricing</option>
+        <option value="quality" {% if category_filter == 'quality' %}selected{% endif %}>Work Quality</option>
+        <option value="noshow" {% if category_filter == 'noshow' %}selected{% endif %}>No Show / Missing</option>
+        <option value="behavior" {% if category_filter == 'behavior' %}selected{% endif %}>Misbehavior</option>
+        <option value="delay" {% if category_filter == 'delay' %}selected{% endif %}>Execution Delay</option>
+        <option value="platform" {% if category_filter == 'platform' %}selected{% endif %}>Platform Issue</option>
+        <option value="other" {% if category_filter == 'other' %}selected{% endif %}>Other</option>
+      </select>
+    </div>
+    <button type="submit" class="btn btn-primary"><i class="fa-solid fa-search"></i> Filter</button>
+    {% if q or status_filter or priority_filter or category_filter %}
+      <a href="{% url 'super_admin_disputes' %}" class="btn btn-secondary"><i class="fa-solid fa-rotate-left"></i> Reset</a>
+    {% endif %}
+  </form>
+</div>
+
+<!-- Dispute Tickets Table -->
+<div class="card" style="padding: 0; overflow: hidden;">
+  <div class="table-container">
+    <table>
+      <thead>
+        <tr>
+          <th>Ticket ID</th>
+          <th>Subject &amp; Category</th>
+          <th>Complainant</th>
+          <th>Respondent</th>
+          <th>Related Service / Job</th>
+          <th>Priority</th>
+          <th>Status</th>
+          <th>Created</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for d in disputes_list %}
+        <tr>
+          <td>
+            <a href="{% url 'super_admin_dispute_detail' d.id %}" style="font-weight: 700; color: var(--primary); text-decoration: none;">
+              {{ d.ticket_id }}
+            </a>
+          </td>
+          <td>
+            <div style="font-weight: 600; color: var(--text-main); font-size: 0.95rem;">{{ d.subject }}</div>
+            <span class="badge" style="background: rgba(99,102,241,0.08); color: #4f46e5; font-size: 0.75rem; margin-top: 2px;">
+              {{ d.get_category_display }}
+            </span>
+          </td>
+          <td>
+            <strong>{{ d.raised_by.get_full_name|default:d.raised_by.username }}</strong>
+            <div style="font-size: 0.75rem; color: var(--text-muted);">{{ d.raised_by.role|title }}</div>
+          </td>
+          <td>
+            {% if d.against_user %}
+              <strong>{{ d.against_user.get_full_name|default:d.against_user.username }}</strong>
+              <div style="font-size: 0.75rem; color: var(--text-muted);">{{ d.against_user.role|title }}</div>
+            {% else %}
+              <span style="color: var(--text-muted);">Platform / System</span>
+            {% endif %}
+          </td>
+          <td>
+            {% if d.job %}
+              <span class="badge" style="background: #f1f5f9; color: #334155;">
+                <i class="fa-solid fa-briefcase"></i> JOB-{{ d.job.id|stringformat:"04d" }}
+              </span>
+              <div style="font-size: 0.75rem; color: var(--text-muted); max-width: 140px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                {{ d.job.title }}
+              </div>
+            {% elif d.quick_service %}
+              <span class="badge" style="background: #f1f5f9; color: #334155;">
+                <i class="fa-solid fa-bolt"></i> QS-{{ d.quick_service.id|stringformat:"04d" }}
+              </span>
+              <div style="font-size: 0.75rem; color: var(--text-muted); max-width: 140px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                {{ d.quick_service.title }}
+              </div>
+            {% else %}
+              <span style="color: var(--text-muted); font-size: 0.85rem;">General Account</span>
+            {% endif %}
+          </td>
+          <td>
+            {% if d.priority == 'urgent' %}
+              <span class="badge" style="background: #fee2e2; color: #b91c1c; font-weight: 700;">
+                <i class="fa-solid fa-triangle-exclamation"></i> Urgent
+              </span>
+            {% elif d.priority == 'high' %}
+              <span class="badge" style="background: #ffedd5; color: #c2410c; font-weight: 600;">High</span>
+            {% elif d.priority == 'medium' %}
+              <span class="badge" style="background: #e0f2fe; color: #0369a1;">Medium</span>
+            {% else %}
+              <span class="badge" style="background: #f1f5f9; color: #64748b;">Low</span>
+            {% endif %}
+          </td>
+          <td>
+            {% if d.status == 'open' %}
+              <span class="badge" style="background: rgba(245,158,11,0.12); color: #d97706; font-weight: 600;">Open</span>
+            {% elif d.status == 'investigating' %}
+              <span class="badge" style="background: rgba(14,165,233,0.12); color: #0284c7; font-weight: 600;">In Investigation</span>
+            {% elif d.status == 'resolved' %}
+              <span class="badge" style="background: rgba(16,185,129,0.12); color: #059669; font-weight: 600;">Resolved</span>
+            {% else %}
+              <span class="badge" style="background: #f1f5f9; color: #64748b;">Closed</span>
+            {% endif %}
+          </td>
+          <td style="color: var(--text-muted); font-size: 0.85rem; white-space: nowrap;">
+            {{ d.created_at|date:"M d, Y" }}
+          </td>
+          <td>
+            <a href="{% url 'super_admin_dispute_detail' d.id %}" class="btn btn-secondary btn-sm" style="white-space: nowrap;">
+              <i class="fa-solid fa-magnifying-glass"></i> Manage Case
+            </a>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="9" style="text-align: center; padding: 36px; color: var(--text-muted);">
+            <i class="fa-solid fa-shield-halved" style="font-size: 2rem; margin-bottom: 8px; color: #cbd5e1; display: block;"></i>
+            No complaints or disputes match the current criteria.
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Pagination -->
+{% if disputes_list.has_other_pages %}
+<div style="display: flex; justify-content: space-between; align-items: center; margin-top: 18px; padding: 0 4px;">
+  <span style="font-size: 0.9rem; color: var(--text-muted);">
+    Page {{ disputes_list.number }} of {{ disputes_list.paginator.num_pages }} ({{ disputes_list.paginator.count }} total cases)
+  </span>
+  <div style="display: flex; gap: 6px;">
+    {% if disputes_list.has_previous %}
+      <a href="?page={{ disputes_list.previous_page_number }}&q={{ q }}&status={{ status_filter }}&priority={{ priority_filter }}&category={{ category_filter }}" class="btn btn-secondary btn-sm">Previous</a>
+    {% endif %}
+    {% if disputes_list.has_next %}
+      <a href="?page={{ disputes_list.next_page_number }}&q={{ q }}&status={{ status_filter }}&priority={{ priority_filter }}&category={{ category_filter }}" class="btn btn-secondary btn-sm">Next</a>
+    {% endif %}
+  </div>
+</div>
+{% endif %}
+{% endblock %}

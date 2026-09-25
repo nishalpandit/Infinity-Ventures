@@ -111,6 +111,7 @@
         { label: 'Locations', href: 'master/locations.html' }
       ]
     },
+    { label: 'Disputes & Complaints', icon: 'fa-shield-halved', href: 'complaints/index.html' },
     { label: 'Admin Profile', icon: 'fa-user-shield', href: 'profile.html' }
   ];
 

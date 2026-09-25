@@ -7,6 +7,11 @@
   <title>Selected Jobs · Suggu Services Vendor</title>
   <link rel="stylesheet" href="/infinity-vendor-dashboard/assets/styles.css">
   <script defer src="/infinity-vendor-dashboard/assets/app.js"></script>
+  <style>
+    .proof-thumb { width: 50px; height: 50px; border-radius: 8px; object-fit: cover; border: 1px solid #e2e8f0; cursor: pointer; }
+    .modal-backdrop-custom { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15,23,42,0.65); z-index: 9999; align-items: center; justify-content: center; backdrop-filter: blur(2px); }
+    .modal-box-custom { background: #fff; border-radius: 16px; max-width: 560px; width: 92%; padding: 24px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25); max-height: 90vh; overflow-y: auto; }
+  </style>
 </head>
 <body data-page="selected-jobs" data-title="Selected Jobs" data-root="../../">
   <div class="app-shell">
@@ -16,11 +21,11 @@
       <main class="page">
         <div class="page-head">
           <div>
-            <h1>Assigned & Selected Projects</h1>
+            <h1>Assigned &amp; Selected Projects</h1>
             <p>Projects and service requests where the customer has selected your quotation.</p>
           </div>
           <div class="actions">
-            <span class="badge badge-success">{{ selected_bids|length }} Active Assignment{{ selected_bids|length|pluralize }}</span>
+            <span class="badge badge-success">{{ selected_bids|length }} Assignment{{ selected_bids|length|pluralize }}</span>
           </div>
         </div>
 
@@ -61,19 +66,50 @@
                   </td>
                   <td><strong>₹{{ b.amount|floatformat:0 }}</strong></td>
                   <td>{{ b.estimated_time|default:"As agreed" }}</td>
-                  <td><span class="badge badge-success">Selected</span></td>
                   <td>
-                    {% if b.job %}
-                    <a class="btn btn-primary btn-sm" href="/vendor/messages/chat.html?user_id={{ b.job.user.id }}">Chat Customer</a>
+                    {% if b.status == 'completed' %}
+                    <span class="badge" style="background:#ecfdf5; color:#065f46; border:1px solid #a7f3d0; font-weight:600;">
+                      <span data-icon="check"></span> Completed
+                    </span>
                     {% else %}
-                    <a class="btn btn-primary btn-sm" href="/vendor/messages/chat.html?user_id={{ b.quick_service.user.id }}">Chat Customer</a>
+                    <span class="badge badge-success">Active / Selected</span>
                     {% endif %}
+                  </td>
+                  <td>
+                    <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
+                      {% if b.status == 'selected' %}
+                      <button class="btn btn-primary btn-sm" type="button" onclick="openSubmitProofModal('{{ b.job.id|default:"" }}', '{{ b.quick_service.id|default:"" }}', '{{ b.job.title|default:b.quick_service.title|escapejs }}', '{{ b.job.user.get_full_name|default:b.quick_service.user.get_full_name|default:b.job.user.username|default:b.quick_service.user.username|escapejs }}')" style="background:#059669; border-color:#059669;">
+                        <span data-icon="check"></span> Complete &amp; Proof
+                      </button>
+                      {% elif b.status == 'completed' %}
+                        {% if b.job.completion_proof %}
+                        <button class="btn btn-secondary btn-sm" type="button" onclick="viewProofModal('{{ b.job.title|escapejs }}', '{{ b.job.completion_proof.work_summary|escapejs }}', '{{ b.job.completion_proof.photo_1.url }}', '{% if b.job.completion_proof.photo_2 %}{{ b.job.completion_proof.photo_2.url }}{% endif %}', '{{ b.job.completion_proof.completed_at|date:"d M Y, h:i A" }}')">
+                          View Proof
+                        </button>
+                        {% elif b.quick_service.completion_proof %}
+                        <button class="btn btn-secondary btn-sm" type="button" onclick="viewProofModal('{{ b.quick_service.title|escapejs }}', '{{ b.quick_service.completion_proof.work_summary|escapejs }}', '{{ b.quick_service.completion_proof.photo_1.url }}', '{% if b.quick_service.completion_proof.photo_2 %}{{ b.quick_service.completion_proof.photo_2.url }}{% endif %}', '{{ b.quick_service.completion_proof.completed_at|date:"d M Y, h:i A" }}')">
+                          View Proof
+                        </button>
+                        {% endif %}
+                      {% endif %}
+
+                      {% if b.job %}
+                      <a class="btn btn-soft btn-sm" href="/vendor/messages/chat.html?user_id={{ b.job.user.id }}">Chat</a>
+                      {% else %}
+                      <a class="btn btn-soft btn-sm" href="/vendor/messages/chat.html?user_id={{ b.quick_service.user.id }}">Chat</a>
+                      {% endif %}
+                    </div>
                   </td>
                 </tr>
                 {% empty %}
                 <tr>
-                  <td colspan="6" style="text-align:center; padding:32px; color: var(--text-muted);">
-                    No jobs currently selected. Browse <a href="available.html">Available Jobs</a> and submit quotations to win contracts!
+                  <td colspan="6" style="text-align:center; padding:40px 16px; color: var(--text-muted);">
+                    <div style="max-width:380px; margin:0 auto;">
+                      <div style="font-size:32px; margin-bottom:8px;">📋</div>
+                      <h3 style="margin:0 0 6px 0; color:#111827;">No active assignments</h3>
+                      <p style="font-size:13px; margin:0 0 16px 0;">Browse available customer requirements and submit competitive quotations to win service contracts.</p>
+                      <a class="btn btn-primary btn-sm" href="available.html">Browse Available Jobs</a>
+                    </div>
                   </td>
                 </tr>
                 {% endfor %}
@@ -84,5 +120,146 @@
       </main>
     </div>
   </div>
+
+  <!-- Submit Work Completion Proof Modal -->
+  <div class="modal-backdrop-custom" id="submit-proof-modal">
+    <div class="modal-box-custom">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+        <h3 style="margin:0; font-size:18px;">Submit Work Completion Proof</h3>
+        <button type="button" onclick="closeSubmitProofModal()" style="border:none; background:#f3f4f6; cursor:pointer; border-radius:8px; padding:6px 10px; font-weight:bold;">✕</button>
+      </div>
+
+      <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:12px 14px; margin-bottom:18px;">
+        <div style="font-size:14px; font-weight:600; color:#111827;" id="modal-project-title">Project Title</div>
+        <div class="small muted" id="modal-customer-name">Customer Name</div>
+      </div>
+
+      <form method="POST" action="/vendor/jobs/selected-jobs.html" enctype="multipart/form-data">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="submit_completion_proof">
+        <input type="hidden" name="job_id" id="form-job-id" value="">
+        <input type="hidden" name="quick_service_id" id="form-qs-id" value="">
+
+        <div style="margin-bottom:16px;">
+          <label style="display:block; font-size:13px; font-weight:600; margin-bottom:6px; color:#374151;">
+            Primary Work Completion Photo <span style="color:#ef4444;">*</span>
+          </label>
+          <input type="file" name="photo_1" accept="image/*" required class="input" style="width:100%;">
+          <div class="small muted" style="margin-top:4px;">Upload a clear photo of the finished installation, repair, or deliverables.</div>
+        </div>
+
+        <div style="margin-bottom:16px;">
+          <label style="display:block; font-size:13px; font-weight:600; margin-bottom:6px; color:#374151;">
+            Additional Photo (Optional - Before/After)
+          </label>
+          <input type="file" name="photo_2" accept="image/*" class="input" style="width:100%;">
+          <div class="small muted" style="margin-top:4px;">Optional secondary angle or before-work photo.</div>
+        </div>
+
+        <div style="margin-bottom:16px;">
+          <label style="display:block; font-size:13px; font-weight:600; margin-bottom:6px; color:#374151;">
+            Work Summary &amp; Notes <span style="color:#ef4444;">*</span>
+          </label>
+          <textarea name="work_summary" class="textarea" rows="3" required placeholder="Specify work conducted, parts installed, tests passed, or customer signoff..." style="width:100%;"></textarea>
+        </div>
+
+        <div style="background:#eff6ff; border:1px solid #bfdbfe; border-radius:8px; padding:12px; margin-bottom:20px; display:flex; gap:10px; align-items:flex-start;">
+          <span style="font-size:18px;">💡</span>
+          <div style="font-size:12px; color:#1e40af; line-height:1.5;">
+            <strong>Instant Settlement:</strong> Marking completion releases the agreed payment from escrow into your vendor wallet balance, minus standard platform commission.
+          </div>
+        </div>
+
+        <div style="display:flex; justify-content:flex-end; gap:10px;">
+          <button type="button" class="btn btn-secondary" onclick="closeSubmitProofModal()">Cancel</button>
+          <button type="submit" class="btn btn-primary" style="background:#059669; border-color:#059669;">
+            <span data-icon="check"></span> Complete &amp; Settle
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- View Completion Proof Modal -->
+  <div class="modal-backdrop-custom" id="view-proof-modal">
+    <div class="modal-box-custom">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+        <h3 style="margin:0; font-size:18px;">Work Completion Proof</h3>
+        <button type="button" onclick="closeViewProofModal()" style="border:none; background:#f3f4f6; cursor:pointer; border-radius:8px; padding:6px 10px; font-weight:bold;">✕</button>
+      </div>
+
+      <div style="margin-bottom:14px;">
+        <strong id="view-modal-title" style="font-size:15px; color:#111827;">Project Title</strong>
+        <div class="small muted" id="view-modal-time">Completed on: ...</div>
+      </div>
+
+      <div style="margin-bottom:16px;">
+        <div style="font-size:13px; font-weight:600; color:#374151; margin-bottom:6px;">Summary of Work Performed:</div>
+        <div id="view-modal-summary" style="background:#f9fafb; border:1px solid #f3f4f6; border-radius:8px; padding:12px; font-size:13px; color:#4b5563; line-height:1.5; white-space:pre-wrap;"></div>
+      </div>
+
+      <div style="margin-bottom:16px;">
+        <div style="font-size:13px; font-weight:600; color:#374151; margin-bottom:8px;">Uploaded Photos:</div>
+        <div style="display:flex; gap:12px; flex-wrap:wrap;">
+          <a id="view-modal-img1-link" href="#" target="_blank">
+            <img id="view-modal-img1" src="" alt="Proof 1" style="max-height:160px; max-width:240px; border-radius:8px; border:1px solid #e5e7eb; object-fit:cover;">
+          </a>
+          <a id="view-modal-img2-link" href="#" target="_blank" style="display:none;">
+            <img id="view-modal-img2" src="" alt="Proof 2" style="max-height:160px; max-width:240px; border-radius:8px; border:1px solid #e5e7eb; object-fit:cover;">
+          </a>
+        </div>
+      </div>
+
+      <div style="text-align:right;">
+        <button type="button" class="btn btn-secondary" onclick="closeViewProofModal()">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function openSubmitProofModal(jobId, qsId, title, customer) {
+      document.getElementById('form-job-id').value = jobId || '';
+      document.getElementById('form-qs-id').value = qsId || '';
+      document.getElementById('modal-project-title').innerText = title;
+      document.getElementById('modal-customer-name').innerText = "Customer: " + customer;
+      document.getElementById('submit-proof-modal').style.display = 'flex';
+    }
+
+    function closeSubmitProofModal() {
+      document.getElementById('submit-proof-modal').style.display = 'none';
+    }
+
+    function viewProofModal(title, summary, img1, img2, time) {
+      document.getElementById('view-modal-title').innerText = title;
+      document.getElementById('view-modal-time').innerText = "Completed at: " + time;
+      document.getElementById('view-modal-summary').innerText = summary;
+      
+      const img1Elem = document.getElementById('view-modal-img1');
+      const img1Link = document.getElementById('view-modal-img1-link');
+      if (img1) {
+        img1Elem.src = img1;
+        img1Link.href = img1;
+        img1Link.style.display = 'inline-block';
+      } else {
+        img1Link.style.display = 'none';
+      }
+
+      const img2Elem = document.getElementById('view-modal-img2');
+      const img2Link = document.getElementById('view-modal-img2-link');
+      if (img2 && img2.trim()) {
+        img2Elem.src = img2;
+        img2Link.href = img2;
+        img2Link.style.display = 'inline-block';
+      } else {
+        img2Link.style.display = 'none';
+      }
+
+      document.getElementById('view-proof-modal').style.display = 'flex';
+    }
+
+    function closeViewProofModal() {
+      document.getElementById('view-proof-modal').style.display = 'none';
+    }
+  </script>
 </body>
 </html>

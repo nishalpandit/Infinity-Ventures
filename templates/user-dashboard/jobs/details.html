@@ -16,6 +16,9 @@
       <main class="page">
         <div class="page-head">
           <div class="actions">
+            <a class="btn btn-secondary" href="../support/create-complaint.html?job_id={{ job.id }}" style="color: #b91c1c; border-color: #fecaca; background: #fff5f5;">
+              <span data-icon="alert"></span> Report Issue / Dispute
+            </a>
             <a class="btn btn-primary" href="quotations.html?job_id={{ job.id }}"><span data-icon="quote"></span> View Quotations</a>
             <a class="btn btn-secondary" href="compare.html?job_id={{ job.id }}"><span data-icon="chart"></span> Compare</a>
             <a class="btn btn-secondary" href="selected-vendors.html?job_id={{ job.id }}"><span data-icon="users"></span> Selected Vendors</a>
@@ -199,6 +202,103 @@
                 </table>
               </div>
             </section>
+
+            {% if completion_proof %}
+            <section class="card" style="border-left: 4px solid #059669;">
+              <div class="card-head">
+                <div>
+                  <h2 style="display:flex; align-items:center; gap:8px;">
+                    <span data-icon="check" style="color:#059669;"></span> Work Completion Proof &amp; Deliverables
+                  </h2>
+                  <p>Verified documentation and photos submitted by the contractor upon work completion</p>
+                </div>
+                <span class="badge" style="background:#ecfdf5; color:#065f46; border:1px solid #a7f3d0; font-weight:600;">
+                  Verified Completion
+                </span>
+              </div>
+              <div class="card-body">
+                <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:14px 16px; margin-bottom:16px;">
+                  <div class="small muted" style="margin-bottom:4px;">Submitted by Contractor:</div>
+                  <strong style="color:#111827; font-size:15px;">{{ completion_proof.vendor.vendor_profile.company_name|default:completion_proof.vendor.get_full_name|default:completion_proof.vendor.username }}</strong>
+                  <div class="small muted" style="margin-top:2px;">Completed on {{ completion_proof.completed_at|date:"d M Y, h:i A" }}</div>
+                </div>
+
+                <h3 class="section-title">Work Summary &amp; Notes</h3>
+                <p class="muted" style="background:#fff; border:1px solid #f3f4f6; padding:12px; border-radius:8px; line-height:1.6; white-space:pre-wrap;">{{ completion_proof.work_summary }}</p>
+
+                <h3 class="section-title" style="margin-top:16px;">Completion Evidence Photos</h3>
+                <div style="display:flex; gap:16px; flex-wrap:wrap; margin-top:8px;">
+                  {% if completion_proof.photo_1 %}
+                  <div style="text-align:center;">
+                    <a href="{{ completion_proof.photo_1.url }}" target="_blank" title="View full photo">
+                      <img src="{{ completion_proof.photo_1.url }}" alt="Completion Proof 1" style="max-height:180px; max-width:260px; border-radius:10px; border:1px solid #e5e7eb; object-fit:cover; box-shadow:0 1px 3px rgba(0,0,0,0.1);">
+                    </a>
+                    <div class="small muted" style="margin-top:4px;">Primary Proof Photo</div>
+                  </div>
+                  {% endif %}
+                  {% if completion_proof.photo_2 %}
+                  <div style="text-align:center;">
+                    <a href="{{ completion_proof.photo_2.url }}" target="_blank" title="View full photo">
+                      <img src="{{ completion_proof.photo_2.url }}" alt="Completion Proof 2" style="max-height:180px; max-width:260px; border-radius:10px; border:1px solid #e5e7eb; object-fit:cover; box-shadow:0 1px 3px rgba(0,0,0,0.1);">
+                    </a>
+                    <div class="small muted" style="margin-top:4px;">Additional Angle / Before-After</div>
+                  </div>
+                  {% endif %}
+                </div>
+              </div>
+            </section>
+            {% endif %}
+
+            {% if job.status == 'completed' %}
+            <section class="card">
+              <div class="card-head">
+                <div>
+                  <h2>Customer Feedback &amp; Review</h2>
+                  <p>Your rating and service experience review for this completed project</p>
+                </div>
+              </div>
+              <div class="card-body">
+                {% if user_review %}
+                <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px; padding:16px;">
+                  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                    <div style="display:flex; align-items:center; gap:8px;">
+                      <span style="color:#f59e0b; font-size:20px;">
+                        {% if user_review.rating >= 5 %}★★★★★
+                        {% elif user_review.rating == 4 %}★★★★☆
+                        {% elif user_review.rating == 3 %}★★★☆☆
+                        {% elif user_review.rating == 2 %}★★☆☆☆
+                        {% else %}★☆☆☆☆
+                        {% endif %}
+                      </span>
+                      <strong style="font-size:16px;">{{ user_review.rating }}.0</strong>
+                    </div>
+                    <span class="badge badge-success">Published Review</span>
+                  </div>
+                  {% if user_review.review_title %}
+                  <h4 style="margin:6px 0; color:#111827;">{{ user_review.review_title }}</h4>
+                  {% endif %}
+                  <p class="muted" style="margin:4px 0 10px 0; line-height:1.5;">{{ user_review.comment }}</p>
+                  {% if user_review.review_image %}
+                  <a href="{{ user_review.review_image.url }}" target="_blank">
+                    <img src="{{ user_review.review_image.url }}" alt="Review photo" style="max-height:120px; border-radius:8px; border:1px solid #e5e7eb;">
+                  </a>
+                  {% endif %}
+                  <div class="small muted" style="margin-top:8px;">Submitted on {{ user_review.created_at|date:"d M Y" }}</div>
+                </div>
+                {% else %}
+                <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:14px; background:#fffbeb; border:1px solid #fde68a; border-radius:12px; padding:16px;">
+                  <div>
+                    <strong style="color:#92400e; font-size:15px;">How was your experience with the service provider?</strong>
+                    <div class="small" style="color:#b45309; margin-top:2px;">Rate the quality of work, punctuality, and professionalism to help top contractors grow.</div>
+                  </div>
+                  <a class="btn btn-primary" href="../reviews/create.html?job_id={{ job.id }}" style="background:#d97706; border-color:#d97706;">
+                    <span data-icon="star"></span> Rate &amp; Review Vendor
+                  </a>
+                </div>
+                {% endif %}
+              </div>
+            </section>
+            {% endif %}
           </div>
 
           <aside class="stack">
@@ -227,6 +327,14 @@
                   <h4>Vendor selected</h4>
                   <p>Project assigned</p>
                   <time>Active</time>
+                </div>
+                {% endif %}
+                {% if job.status == 'completed' %}
+                <div class="timeline-item">
+                  <span class="timeline-dot" style="background:#059669;"></span>
+                  <h4 style="color:#059669;">Project Completed</h4>
+                  <p>Work approved &amp; settled</p>
+                  <time>{{ completion_proof.completed_at|date:"d M Y"|default:"Recent" }}</time>
                 </div>
                 {% endif %}
               </div>

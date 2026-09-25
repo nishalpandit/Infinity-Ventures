@@ -1,0 +1,322 @@
+{% extends 'superadmin/base.html' %}
+{% block title %}Dispute {{ ticket.ticket_id }} Details{% endblock %}
+{% block header_title %}Dispute Case: {{ ticket.ticket_id }}{% endblock %}
+
+{% block content %}
+<div style="margin-bottom: 20px;">
+  <a href="{% url 'super_admin_disputes' %}" class="btn btn-secondary btn-sm">
+    <i class="fa-solid fa-arrow-left"></i> Back to Disputes List
+  </a>
+</div>
+
+<div style="display: grid; grid-template-columns: 2fr 1fr; gap: 24px; align-items: start;">
+  <!-- Left Main Column: Case Details & Timeline -->
+  <div style="display: flex; flex-direction: column; gap: 24px;">
+
+    <!-- Case Header & Summary -->
+    <div class="card" style="padding: 24px;">
+      <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; flex-wrap: wrap;">
+        <div>
+          <span class="badge" style="background: rgba(99,102,241,0.1); color: #4f46e5; font-size: 0.82rem; margin-bottom: 8px;">
+            {{ ticket.get_category_display }}
+          </span>
+          <h2 style="font-size: 1.35rem; font-weight: 700; color: var(--text-main); margin: 6px 0;">
+            {{ ticket.subject }}
+          </h2>
+          <div style="font-size: 0.85rem; color: var(--text-muted);">
+            Filed on {{ ticket.created_at|date:"d M Y, h:i A" }} · Last Updated {{ ticket.updated_at|date:"d M Y, h:i A" }}
+          </div>
+        </div>
+        <div style="display: flex; gap: 8px; align-items: center;">
+          {% if ticket.priority == 'urgent' %}
+            <span class="badge" style="background: #fee2e2; color: #b91c1c; font-weight: 700; padding: 6px 12px;">
+              <i class="fa-solid fa-triangle-exclamation"></i> Urgent
+            </span>
+          {% elif ticket.priority == 'high' %}
+            <span class="badge" style="background: #ffedd5; color: #c2410c; font-weight: 600; padding: 6px 12px;">High Priority</span>
+          {% elif ticket.priority == 'medium' %}
+            <span class="badge" style="background: #e0f2fe; color: #0369a1; padding: 6px 12px;">Medium Priority</span>
+          {% else %}
+            <span class="badge" style="background: #f1f5f9; color: #64748b; padding: 6px 12px;">Low Priority</span>
+          {% endif %}
+
+          {% if ticket.status == 'open' %}
+            <span class="badge" style="background: rgba(245,158,11,0.12); color: #d97706; font-weight: 700; padding: 6px 12px;">Open</span>
+          {% elif ticket.status == 'investigating' %}
+            <span class="badge" style="background: rgba(14,165,233,0.12); color: #0284c7; font-weight: 700; padding: 6px 12px;">Under Investigation</span>
+          {% elif ticket.status == 'resolved' %}
+            <span class="badge" style="background: rgba(16,185,129,0.12); color: #059669; font-weight: 700; padding: 6px 12px;">Resolved</span>
+          {% else %}
+            <span class="badge" style="background: #f1f5f9; color: #64748b; font-weight: 700; padding: 6px 12px;">Closed</span>
+          {% endif %}
+        </div>
+      </div>
+
+      <hr style="margin: 20px 0; border: 0; border-top: 1px solid var(--border-color, #e2e8f0);">
+
+      <h3 style="font-size: 1rem; font-weight: 700; color: var(--text-main); margin-bottom: 10px;">
+        Complainant's Statement
+      </h3>
+      <div style="background: var(--bg-surface, #f8fafc); border-radius: 8px; padding: 18px; line-height: 1.6; color: var(--text-main); font-size: 0.95rem; white-space: pre-line;">
+        {{ ticket.description }}
+      </div>
+
+      {% if ticket.evidence_image %}
+      <div style="margin-top: 16px; padding: 14px; background: #fff; border: 1px solid #e2e8f0; border-radius: 8px; display: flex; align-items: center; justify-content: space-between;">
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <i class="fa-solid fa-paperclip" style="color: var(--primary); font-size: 1.2rem;"></i>
+          <div>
+            <div style="font-weight: 600; font-size: 0.9rem;">Supporting Evidence Attachment</div>
+            <div style="font-size: 0.75rem; color: var(--text-muted);">Uploaded by {{ ticket.raised_by.get_full_name|default:ticket.raised_by.username }}</div>
+          </div>
+        </div>
+        <a href="{{ ticket.evidence_image.url }}" target="_blank" class="btn btn-secondary btn-sm">
+          <i class="fa-solid fa-arrow-up-right-from-square"></i> View / Download
+        </a>
+      </div>
+      {% endif %}
+
+      {% if ticket.resolution_notes %}
+      <div style="margin-top: 20px; padding: 16px; background: #ecfdf5; border-left: 4px solid #10b981; border-radius: 6px;">
+        <div style="font-weight: 700; color: #065f46; font-size: 0.95rem; margin-bottom: 4px;">
+          <i class="fa-solid fa-circle-check"></i> Official Resolution Record
+        </div>
+        <div style="color: #047857; font-size: 0.9rem; line-height: 1.5; white-space: pre-line;">
+          {{ ticket.resolution_notes }}
+        </div>
+        <div style="font-size: 0.75rem; color: #059669; margin-top: 8px;">
+          Resolved by {{ ticket.resolved_by.get_full_name|default:ticket.resolved_by.username }} on {{ ticket.resolved_at|date:"d M Y, h:i A" }}
+        </div>
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- Case Discussion / Message Timeline -->
+    <div class="card" style="padding: 24px;">
+      <h3 style="font-size: 1.15rem; font-weight: 700; color: var(--text-main); margin-bottom: 16px;">
+        Case Conversation &amp; Investigation Log ({{ messages.count }})
+      </h3>
+
+      <div style="display: flex; flex-direction: column; gap: 16px; margin-bottom: 24px;">
+        {% for m in messages %}
+        <div style="padding: 16px; border-radius: 8px; border: 1px solid #e2e8f0; {% if m.sender.is_superuser %}background: #eff6ff; border-color: #bfdbfe;{% else %}background: #ffffff;{% endif %}">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <strong>{{ m.sender.get_full_name|default:m.sender.username }}</strong>
+              {% if m.sender.is_superuser %}
+                <span class="badge" style="background: #3b82f6; color: #ffffff; font-size: 0.7rem; font-weight: 600;">Support Admin</span>
+              {% elif m.sender == ticket.raised_by %}
+                <span class="badge" style="background: #e2e8f0; color: #475569; font-size: 0.7rem;">Complainant</span>
+              {% else %}
+                <span class="badge" style="background: #fef3c7; color: #92400e; font-size: 0.7rem;">Respondent</span>
+              {% endif %}
+            </div>
+            <span style="font-size: 0.75rem; color: var(--text-muted);">{{ m.created_at|date:"d M, h:i A" }}</span>
+          </div>
+          <div style="font-size: 0.92rem; color: var(--text-main); line-height: 1.5; white-space: pre-line;">
+            {{ m.message }}
+          </div>
+          {% if m.attachment %}
+          <div style="margin-top: 10px;">
+            <a href="{{ m.attachment.url }}" target="_blank" class="badge" style="background: #f8fafc; color: var(--primary); text-decoration: none; border: 1px solid #cbd5e1; padding: 4px 8px;">
+              <i class="fa-solid fa-file"></i> Attachment View
+            </a>
+          </div>
+          {% endif %}
+        </div>
+        {% empty %}
+        <div style="text-align: center; padding: 24px; color: var(--text-muted); background: #f8fafc; border-radius: 8px;">
+          No messages have been posted to this case log yet.
+        </div>
+        {% endfor %}
+      </div>
+
+      <!-- Admin Reply Box -->
+      <form method="post" enctype="multipart/form-data" style="background: #f8fafc; padding: 18px; border-radius: 8px; border: 1px solid #e2e8f0;">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="send_message">
+        <div style="font-weight: 600; font-size: 0.95rem; margin-bottom: 8px; color: var(--text-main);">
+          <i class="fa-solid fa-reply"></i> Post Official Admin Response
+        </div>
+        <div style="margin-bottom: 12px;">
+          <textarea name="message" class="form-control" rows="3" required placeholder="Write a response or investigation update visible to participants..."></textarea>
+        </div>
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+          <div>
+            <label style="font-size: 0.8rem; color: var(--text-muted); display: block; margin-bottom: 2px;">Attach Document (Optional):</label>
+            <input type="file" name="attachment" style="font-size: 0.85rem;">
+          </div>
+          <button type="submit" class="btn btn-primary">
+            <i class="fa-solid fa-paper-plane"></i> Send Reply
+          </button>
+        </div>
+      </form>
+    </div>
+
+  </div>
+
+  <!-- Right Sidebar Column: Resolution Controls & Participant Cards -->
+  <div style="display: flex; flex-direction: column; gap: 24px;">
+
+    <!-- Resolution & Status Update Panel -->
+    <div class="card" style="padding: 20px;">
+      <h3 style="font-size: 1.05rem; font-weight: 700; color: var(--text-main); margin-bottom: 16px;">
+        <i class="fa-solid fa-gavel"></i> Case Adjudication
+      </h3>
+
+      <form method="post">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="update_status">
+
+        <div style="margin-bottom: 14px;">
+          <label style="font-size: 0.82rem; font-weight: 600; color: var(--text-muted); display: block; margin-bottom: 4px;">
+            Case Status:
+          </label>
+          <select name="status" class="form-control">
+            <option value="open" {% if ticket.status == 'open' %}selected{% endif %}>Open</option>
+            <option value="investigating" {% if ticket.status == 'investigating' %}selected{% endif %}>Under Investigation</option>
+            <option value="resolved" {% if ticket.status == 'resolved' %}selected{% endif %}>Resolved</option>
+            <option value="closed" {% if ticket.status == 'closed' %}selected{% endif %}>Closed</option>
+          </select>
+        </div>
+
+        <div style="margin-bottom: 14px;">
+          <label style="font-size: 0.82rem; font-weight: 600; color: var(--text-muted); display: block; margin-bottom: 4px;">
+            Case Priority:
+          </label>
+          <select name="priority" class="form-control">
+            <option value="urgent" {% if ticket.priority == 'urgent' %}selected{% endif %}>Urgent (Safety Concern)</option>
+            <option value="high" {% if ticket.priority == 'high' %}selected{% endif %}>High</option>
+            <option value="medium" {% if ticket.priority == 'medium' %}selected{% endif %}>Medium</option>
+            <option value="low" {% if ticket.priority == 'low' %}selected{% endif %}>Low</option>
+          </select>
+        </div>
+
+        <div style="margin-bottom: 16px;">
+          <label style="font-size: 0.82rem; font-weight: 600; color: var(--text-muted); display: block; margin-bottom: 4px;">
+            Official Resolution Remarks:
+          </label>
+          <textarea name="resolution_notes" class="form-control" rows="4" placeholder="Enter findings, settlement agreement, or reason for closure...">{{ ticket.resolution_notes|default:'' }}</textarea>
+        </div>
+
+        <button type="submit" class="btn btn-primary" style="width: 100%;">
+          <i class="fa-solid fa-floppy-disk"></i> Save &amp; Update Status
+        </button>
+      </form>
+    </div>
+
+    <!-- Related Job / Service Card -->
+    {% if ticket.job %}
+    <div class="card" style="padding: 20px;">
+      <h3 style="font-size: 0.95rem; font-weight: 700; color: var(--text-main); margin-bottom: 12px;">
+        <i class="fa-solid fa-briefcase"></i> Related Job Project
+      </h3>
+      <div style="font-weight: 700; font-size: 1rem; color: var(--primary);">
+        JOB-{{ ticket.job.id|stringformat:"04d" }}
+      </div>
+      <div style="font-weight: 600; color: var(--text-main); margin: 4px 0;">
+        {{ ticket.job.title }}
+      </div>
+      <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 8px;">
+        Budget: ₹{{ ticket.job.budget|floatformat:0 }} · Status: {{ ticket.job.get_status_display }}
+      </div>
+      <div style="font-size: 0.82rem; color: var(--text-muted);">
+        Location: {{ ticket.job.location.city }}, {{ ticket.job.location.state }}
+      </div>
+      <div style="margin-top: 14px;">
+        <a href="{% url 'super_admin_job_bids' ticket.job.id %}" class="btn btn-secondary btn-sm" style="width: 100%;">
+          <i class="fa-solid fa-list-check"></i> Inspect Job Quotations
+        </a>
+      </div>
+    </div>
+    {% elif ticket.quick_service %}
+    <div class="card" style="padding: 20px;">
+      <h3 style="font-size: 0.95rem; font-weight: 700; color: var(--text-main); margin-bottom: 12px;">
+        <i class="fa-solid fa-bolt"></i> Related Quick Service
+      </h3>
+      <div style="font-weight: 700; font-size: 1rem; color: var(--primary);">
+        QS-{{ ticket.quick_service.id|stringformat:"04d" }}
+      </div>
+      <div style="font-weight: 600; color: var(--text-main); margin: 4px 0;">
+        {{ ticket.quick_service.title }}
+      </div>
+      <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 8px;">
+        Budget: ₹{{ ticket.quick_service.budget|floatformat:0 }} · Status: {{ ticket.quick_service.get_status_display }}
+      </div>
+      <div style="font-size: 0.82rem; color: var(--text-muted);">
+        Location: {{ ticket.quick_service.location.city }}, {{ ticket.quick_service.location.state }}
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Complainant Card -->
+    <div class="card" style="padding: 20px;">
+      <h3 style="font-size: 0.95rem; font-weight: 700; color: var(--text-main); margin-bottom: 12px;">
+        <i class="fa-solid fa-user"></i> Complainant (Raised By)
+      </h3>
+      <div style="font-weight: 700; color: var(--text-main);">
+        {{ ticket.raised_by.get_full_name|default:ticket.raised_by.username }}
+      </div>
+      <div style="font-size: 0.82rem; color: var(--text-muted);">
+        Username: {{ ticket.raised_by.username }}
+      </div>
+      <div style="font-size: 0.82rem; color: var(--text-muted);">
+        Role: <span class="badge" style="background:#e0f2fe; color:#0369a1;">{{ ticket.raised_by.role }}</span>
+      </div>
+      <div style="font-size: 0.82rem; color: var(--text-muted); margin-top: 4px;">
+        Email: {{ ticket.raised_by.email|default:"N/A" }}
+      </div>
+      {% if ticket.raised_by.user_profile and ticket.raised_by.user_profile.phone_number %}
+      <div style="font-size: 0.82rem; color: var(--text-muted);">
+        Phone: {{ ticket.raised_by.user_profile.phone_number }}
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- Respondent Card -->
+    {% if ticket.against_user %}
+    <div class="card" style="padding: 20px;">
+      <h3 style="font-size: 0.95rem; font-weight: 700; color: var(--text-main); margin-bottom: 12px;">
+        <i class="fa-solid fa-user-shield"></i> Respondent (Reported Party)
+      </h3>
+      <div style="font-weight: 700; color: var(--text-main);">
+        {% if ticket.against_user.vendor_profile and ticket.against_user.vendor_profile.company_name %}
+          {{ ticket.against_user.vendor_profile.company_name }}
+        {% else %}
+          {{ ticket.against_user.get_full_name|default:ticket.against_user.username }}
+        {% endif %}
+      </div>
+      <div style="font-size: 0.82rem; color: var(--text-muted);">
+        Username: {{ ticket.against_user.username }}
+      </div>
+      <div style="font-size: 0.82rem; color: var(--text-muted);">
+        Role: <span class="badge" style="background:#fef3c7; color:#92400e;">{{ ticket.against_user.role }}</span>
+      </div>
+      <div style="font-size: 0.82rem; color: var(--text-muted); margin-top: 4px;">
+        Email: {{ ticket.against_user.email|default:"N/A" }}
+      </div>
+
+      <!-- In-App Chat Inspector -->
+      {% if chat_messages %}
+      <div style="margin-top: 14px; padding-top: 12px; border-top: 1px solid #e2e8f0;">
+        <div style="font-size: 0.82rem; font-weight: 600; color: var(--text-muted); margin-bottom: 8px;">
+          <i class="fa-solid fa-comments"></i> In-App Chat History ({{ chat_messages|length }} latest)
+        </div>
+        <div style="max-height: 180px; overflow-y: auto; background: #f8fafc; border-radius: 6px; padding: 10px; font-size: 0.8rem; display: flex; flex-direction: column; gap: 6px;">
+          {% for cm in chat_messages %}
+          <div style="line-height: 1.3;">
+            <strong style="color: {% if cm.sender == ticket.raised_by %}#4f46e5{% else %}#059669{% endif %};">
+              {{ cm.sender.username }}:
+            </strong>
+            <span>{{ cm.content|truncatechars:60 }}</span>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
+    </div>
+    {% endif %}
+
+  </div>
+</div>
+{% endblock %}

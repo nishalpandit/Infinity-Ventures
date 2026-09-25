@@ -1,5 +1,260 @@
 <!doctype html>
-    <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="description" content="Suggu Services user Portal — Complaint Details"><title>Complaint Details · Suggu Services user</title><link rel="stylesheet" href="../assets/styles.css"><script defer src="../assets/app.js"></script></head>
-    <body data-page="support-complaint-details" data-title="Complaint Details" data-root="../"><div class="app-shell"><div id="sidebar-root"></div><div class="workspace"><div id="topbar-root"></div><main class="page">
-<div class="page-head"><div class="actions"><a class="btn btn-secondary" href="complaints.html"><span data-icon="chevron"></span> Back</a><span class="badge badge-pending">In Review</span></div></div><div class="layout-main"><div class="stack"><section class="card"><div class="card-head"><div><h2>Delay in scheduled update</h2><p>CMP-2026-0187 · Created 18 Aug 2026</p></div></div><div class="card-body"><div class="info-list"><div class="info-item"><div class="info-label">Complaint ID</div><div class="info-value">CMP-2026-0187</div></div><div class="info-item"><div class="info-label">Related job</div><div class="info-value"><a class="link" href="../jobs/details.html">JOB-2026-0397 · Office electrical rewiring</a></div></div><div class="info-item"><div class="info-label">Vendor</div><div class="info-value">Spark India Services</div></div><div class="info-item"><div class="info-label">Category / Priority</div><div class="info-value">Vendor conduct · High</div></div><div class="info-item" style="grid-column:1/-1"><div class="info-label">Subject</div><div class="info-value">Delay in scheduled update</div></div></div><h3 class="section-title" style="margin-top:18px">Description</h3><p class="muted">The vendor was due to share the inspection report on 17 August but I did not receive an update. I contacted them twice in chat. Please help confirm the work schedule and next milestone.</p><h3 class="section-title">Attachments</h3><div class="attachments"><a class="attachment" href="#" data-toast="Opening chat-screenshot.png"><span data-icon="image"></span><span><strong>chat-screenshot.png</strong><span>640 KB</span></span><span data-icon="eye"></span></a><a class="attachment" href="#" data-toast="Opening work-schedule.pdf"><span data-icon="file"></span><span><strong>work-schedule.pdf</strong><span>820 KB</span></span><span data-icon="eye"></span></a></div></div></section><section class="card"><div class="card-head"><div><h2>Conversation</h2><p>Updates between you and Suggu Services Support</p></div></div><div class="card-body"><div class="review-item"><span class="avatar sm teal">AS</span><div class="review-body"><div class="review-head"><strong>You</strong><span class="tiny subtle">18 Aug, 3:28 PM</span></div><p>I have attached the schedule and the messages sent to the vendor.</p></div></div><div class="review-item"><span class="avatar sm vendor">FS</span><div class="review-body"><div class="review-head"><strong>Meera · Suggu Services Support</strong><span class="tiny subtle">19 Aug, 10:02 AM</span></div><p>Thank you, Ananya. We contacted Spark India and asked for a written milestone update within one business day.</p></div></div><div class="review-item"><span class="avatar sm vendor">FS</span><div class="review-body"><div class="review-head"><strong>Meera · Suggu Services Support</strong><span class="tiny subtle">Today, 9:15 AM</span></div><p>The vendor has shared the inspection report. Please confirm whether you can now access the document.</p></div></div><form class="needs-validation" data-success-title="Response added" data-success-message="Support has been notified of your response."><div class="field" style="margin-top:18px"><label>Add response <span class="required">*</span></label><textarea class="textarea" required placeholder="Write your response to the support team..."></textarea></div><div class="field" style="margin-top:12px"><label>Upload additional evidence</label><label class="upload-zone"><span class="upload-icon"><span data-icon="upload"></span></span><p><span>Click to upload or drag and drop</span></p><small>PNG, JPG, PDF or DOC up to 10 MB</small><input type="file" multiple accept="image/*,.pdf,.doc,.docx" data-preview="extra-evidence"></label><div class="preview-list" id="extra-evidence"></div></div><div class="actions" style="justify-content:flex-end;margin-top:14px"><button class="btn btn-primary" type="submit"><span data-icon="send"></span> Add Response</button></div></form></div></section></div><aside class="stack"><section class="card"><div class="card-head"><h3>Status</h3></div><div class="card-body timeline"><div class="timeline-item"><span class="timeline-dot"></span><h4>Complaint opened</h4><p>18 Aug, 3:28 PM</p></div><div class="timeline-item"><span class="timeline-dot"></span><h4>In Review</h4><p>Assigned to Meera</p></div><div class="timeline-item"><span class="timeline-dot"></span><h4>Vendor contacted</h4><p>19 Aug, 11:10 AM</p></div><div class="timeline-item"><span class="timeline-dot"></span><h4>Waiting for your confirmation</h4><p>Today, 9:15 AM</p></div></div></section><section class="card"><div class="card-head"><h3>Resolution</h3></div><div class="card-body"><p class="small muted">The inspection report was provided by the vendor. Support is waiting for user confirmation before marking the complaint resolved.</p><button class="btn btn-primary" style="width:100%" data-toast="Resolution confirmed" data-toast-message="The complaint will be marked resolved."><span data-icon="check"></span> Confirm Resolution</button></div></section></aside></div>
-</main></div></div></body></html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="Suggu Services User Portal — Complaint Details">
+  <title>Complaint {{ ticket.ticket_id }} · Suggu Services User</title>
+  <link rel="stylesheet" href="../assets/styles.css">
+  <script defer src="../assets/app.js"></script>
+</head>
+<body data-page="support-complaint-details" data-title="Complaint Details" data-root="../">
+  <div class="app-shell">
+    <div id="sidebar-root"></div>
+    <div class="workspace">
+      <div id="topbar-root"></div>
+      <main class="page">
+        <div class="page-head">
+          <div>
+            <div class="eyebrow">{{ ticket.ticket_id }}</div>
+            <h1>{{ ticket.subject }}</h1>
+            <p>Created {{ ticket.created_at|date:"d M Y, h:i A" }} · Last updated {{ ticket.updated_at|date:"d M Y" }}</p>
+          </div>
+          <div class="actions">
+            <a class="btn btn-secondary" href="complaints.html">
+              <span data-icon="chevron"></span> Back to Complaints
+            </a>
+            {% if ticket.status == 'open' %}
+              <span class="badge badge-open">Open</span>
+            {% elif ticket.status == 'investigating' %}
+              <span class="badge badge-pending">In Review</span>
+            {% elif ticket.status == 'resolved' %}
+              <span class="badge badge-resolved">Resolved</span>
+            {% else %}
+              <span class="badge badge-closed">Closed</span>
+            {% endif %}
+          </div>
+        </div>
+
+        <div class="layout-main">
+          <div class="stack">
+            <!-- Complaint Summary Card -->
+            <section class="card">
+              <div class="card-head">
+                <h2>Complaint Information</h2>
+              </div>
+              <div class="card-body">
+                <div class="info-list">
+                  <div class="info-item">
+                    <div class="info-label">Complaint ID</div>
+                    <div class="info-value"><strong>{{ ticket.ticket_id }}</strong></div>
+                  </div>
+
+                  <div class="info-item">
+                    <div class="info-label">Related Booking</div>
+                    <div class="info-value">
+                      {% if ticket.job %}
+                        <a class="link" href="../jobs/details.html?id={{ ticket.job.id }}">
+                          JOB-{{ ticket.job.id|stringformat:"04d" }} · {{ ticket.job.title }}
+                        </a>
+                      {% elif ticket.quick_service %}
+                        <a class="link" href="../quick-services/details.html?id={{ ticket.quick_service.id }}">
+                          QS-{{ ticket.quick_service.id|stringformat:"04d" }} · {{ ticket.quick_service.title }}
+                        </a>
+                      {% else %}
+                        General Platform Issue
+                      {% endif %}
+                    </div>
+                  </div>
+
+                  <div class="info-item">
+                    <div class="info-label">Reported Party (Vendor)</div>
+                    <div class="info-value">
+                      {% if ticket.against_user %}
+                        {% if ticket.against_user.vendor_profile and ticket.against_user.vendor_profile.company_name %}
+                          {{ ticket.against_user.vendor_profile.company_name }}
+                        {% else %}
+                          {{ ticket.against_user.get_full_name|default:ticket.against_user.username }}
+                        {% endif %}
+                      {% else %}
+                        Support &amp; Platform System
+                      {% endif %}
+                    </div>
+                  </div>
+
+                  <div class="info-item">
+                    <div class="info-label">Category / Priority</div>
+                    <div class="info-value">
+                      {{ ticket.get_category_display }} ·
+                      {% if ticket.priority == 'urgent' or ticket.priority == 'high' %}
+                        <span class="badge badge-danger">{{ ticket.get_priority_display }}</span>
+                      {% elif ticket.priority == 'medium' %}
+                        <span class="badge badge-progress">Medium</span>
+                      {% else %}
+                        <span class="badge badge-gray">Low</span>
+                      {% endif %}
+                    </div>
+                  </div>
+
+                  <div class="info-item" style="grid-column:1/-1">
+                    <div class="info-label">Subject</div>
+                    <div class="info-value"><strong>{{ ticket.subject }}</strong></div>
+                  </div>
+                </div>
+
+                <h3 class="section-title" style="margin-top:18px">Description of Incident</h3>
+                <p class="muted" style="line-height:1.6; white-space:pre-line;">{{ ticket.description }}</p>
+
+                {% if ticket.evidence_image %}
+                <h3 class="section-title" style="margin-top:18px">Uploaded Evidence</h3>
+                <div class="attachments">
+                  <a class="attachment" href="{{ ticket.evidence_image.url }}" target="_blank">
+                    <span data-icon="file"></span>
+                    <span>
+                      <strong>View Attached Evidence</strong>
+                      <span>Click to open in new tab</span>
+                    </span>
+                    <span data-icon="eye"></span>
+                  </a>
+                </div>
+                {% endif %}
+
+                {% if ticket.resolution_notes %}
+                <div style="margin-top:20px; padding:16px; background:#ecfdf5; border:1px solid #a7f3d0; border-radius:8px;">
+                  <strong style="color:#065f46; display:block; margin-bottom:6px;">Official Support Resolution:</strong>
+                  <p style="color:#047857; margin:0; line-height:1.5; white-space:pre-line;">{{ ticket.resolution_notes }}</p>
+                  {% if ticket.resolved_at %}
+                  <small style="color:#059669; display:block; margin-top:8px;">
+                    Resolved on {{ ticket.resolved_at|date:"d M Y, h:i A" }}
+                  </small>
+                  {% endif %}
+                </div>
+                {% endif %}
+              </div>
+            </section>
+
+            <!-- Conversation Timeline -->
+            <section class="card">
+              <div class="card-head">
+                <div>
+                  <h2>Conversation History</h2>
+                  <p>Direct communication between you, the assigned vendor, and Suggu Services Support.</p>
+                </div>
+              </div>
+              <div class="card-body">
+                {% for m in messages %}
+                <div class="review-item" style="margin-bottom:18px; padding-bottom:14px; border-bottom:1px solid #f1f5f9;">
+                  <span class="avatar sm {% if m.sender == request.user %}teal{% elif m.sender.is_superuser %}vendor{% else %}purple{% endif %}">
+                    {{ m.sender.username|slice:":2"|upper }}
+                  </span>
+                  <div class="review-body" style="flex:1;">
+                    <div class="review-head" style="display:flex; justify-content:space-between; margin-bottom:4px;">
+                      <strong>
+                        {% if m.sender == request.user %}
+                          You
+                        {% elif m.sender.is_superuser %}
+                          Support Team ({{ m.sender.get_full_name|default:"Suggu Services" }})
+                        {% else %}
+                          {{ m.sender.vendor_profile.company_name|default:m.sender.username }} (Vendor)
+                        {% endif %}
+                      </strong>
+                      <span class="tiny subtle">{{ m.created_at|date:"d M, h:i A" }}</span>
+                    </div>
+                    <p style="margin:0; line-height:1.5; white-space:pre-line;">{{ m.message }}</p>
+                    {% if m.attachment %}
+                    <div style="margin-top:8px;">
+                      <a href="{{ m.attachment.url }}" target="_blank" class="link small">
+                        View Attached File
+                      </a>
+                    </div>
+                    {% endif %}
+                  </div>
+                </div>
+                {% empty %}
+                <p class="muted" style="text-align:center; padding: 20px 0;">No updates yet. Support is reviewing your complaint details.</p>
+                {% endfor %}
+
+                <!-- Add Response Form -->
+                {% if ticket.status != 'closed' %}
+                <form method="post" enctype="multipart/form-data" style="margin-top:24px; padding-top:18px; border-top:2px solid #f1f5f9;">
+                  {% csrf_token %}
+                  <input type="hidden" name="action" value="add_response">
+                  <div class="field">
+                    <label>Add Response / Additional Info <span class="required">*</span></label>
+                    <textarea class="textarea" name="response" required placeholder="Write your response to the support team or vendor..."></textarea>
+                  </div>
+                  <div class="field" style="margin-top:12px">
+                    <label>Upload additional evidence (Optional)</label>
+                    <input type="file" name="extra_evidence" class="input" style="padding:6px;">
+                  </div>
+                  <div class="actions" style="justify-content:flex-end; margin-top:14px">
+                    <button class="btn btn-primary" type="submit">
+                      <span data-icon="send"></span> Add Response
+                    </button>
+                  </div>
+                </form>
+                {% endif %}
+              </div>
+            </section>
+          </div>
+
+          <aside class="stack">
+            <!-- Timeline Status -->
+            <section class="card">
+              <div class="card-head">
+                <h3>Case Milestones</h3>
+              </div>
+              <div class="card-body timeline">
+                <div class="timeline-item">
+                  <span class="timeline-dot"></span>
+                  <h4>Complaint Registered</h4>
+                  <p>{{ ticket.created_at|date:"d M, h:i A" }}</p>
+                </div>
+                {% if ticket.status == 'investigating' or ticket.status == 'resolved' or ticket.status == 'closed' %}
+                <div class="timeline-item">
+                  <span class="timeline-dot"></span>
+                  <h4>Investigation In Progress</h4>
+                  <p>Assigned to dispute officer</p>
+                </div>
+                {% endif %}
+                {% if ticket.status == 'resolved' or ticket.status == 'closed' %}
+                <div class="timeline-item">
+                  <span class="timeline-dot"></span>
+                  <h4>Resolution Recorded</h4>
+                  <p>{{ ticket.resolved_at|date:"d M, h:i A"|default:"Completed" }}</p>
+                </div>
+                {% endif %}
+              </div>
+            </section>
+
+            <!-- Resolution Action Box -->
+            <section class="card">
+              <div class="card-head">
+                <h3>Resolution Status</h3>
+              </div>
+              <div class="card-body">
+                {% if ticket.status == 'resolved' or ticket.status == 'closed' %}
+                <div style="background:#ecfdf5; color:#065f46; padding:14px; border-radius:8px; text-align:center; font-weight:600;">
+                  <span data-icon="check"></span> This dispute has been marked as resolved.
+                </div>
+                {% else %}
+                <p class="small muted">
+                  If the vendor or support has satisfied your request and resolved the issue, confirm resolution below to close the case.
+                </p>
+                <form method="post" onsubmit="return confirm('Are you sure you want to mark this complaint as resolved?');">
+                  {% csrf_token %}
+                  <input type="hidden" name="action" value="confirm_resolution">
+                  <button class="btn btn-primary" style="width:100%" type="submit">
+                    <span data-icon="check"></span> Confirm Resolution
+                  </button>
+                </form>
+                {% endif %}
+              </div>
+            </section>
+          </aside>
+        </div>
+      </main>
+    </div>
+  </div>
+</body>
+</html>

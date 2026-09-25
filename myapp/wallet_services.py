@@ -89,8 +89,8 @@ def settle_job_completion(job=None, quick_service=None, vendor=None, custom_amou
 
     with transaction.atomic():
         # Update wallet balance
-        wallet.available_balance += net_earning
-        wallet.total_earned += net_earning
+        wallet.available_balance = Decimal(str(wallet.available_balance or 0)) + net_earning
+        wallet.total_earned = Decimal(str(wallet.total_earned or 0)) + net_earning
         wallet.save()
 
         # Log Gross Credit Transaction
@@ -122,12 +122,13 @@ def request_payout(vendor, amount, payout_method, account_holder_name=None,
     """
     wallet = get_or_create_wallet(vendor)
     req_amount = Decimal(str(amount)).quantize(Decimal('0.01'))
+    current_balance = Decimal(str(wallet.available_balance or 0))
 
     if req_amount < Decimal('100.00'):
         return False, "Minimum payout request amount is ₹100.00."
 
-    if req_amount > wallet.available_balance:
-        return False, f"Insufficient balance. Your available balance is ₹{wallet.available_balance:.2f}."
+    if req_amount > current_balance:
+        return False, f"Insufficient balance. Your available balance is ₹{current_balance:.2f}."
 
     if payout_method == 'bank':
         if not account_number or not ifsc_code:
@@ -140,7 +141,7 @@ def request_payout(vendor, amount, payout_method, account_holder_name=None,
 
     with transaction.atomic():
         # Deduct from available balance immediately to prevent double spending
-        wallet.available_balance -= req_amount
+        wallet.available_balance = current_balance - req_amount
         wallet.save()
 
         payout = PayoutRequest.objects.create(
@@ -167,7 +168,7 @@ def approve_payout(payout_request, admin_user, bank_reference_number=None, remar
     wallet = get_or_create_wallet(payout_request.vendor)
 
     with transaction.atomic():
-        wallet.total_withdrawn += payout_request.amount
+        wallet.total_withdrawn = Decimal(str(wallet.total_withdrawn or 0)) + Decimal(str(payout_request.amount))
         wallet.save()
 
         payout_request.status = 'completed'

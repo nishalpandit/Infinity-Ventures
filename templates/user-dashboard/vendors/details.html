@@ -75,6 +75,39 @@
                 </div>
               </div>
             </section>
+
+            <section class="card">
+              <div class="card-head">
+                <h2>Customer Reviews &amp; Testimonials ({{ vendor_reviews|length }})</h2>
+              </div>
+              <div class="card-body">
+                {% for r in vendor_reviews %}
+                <div style="padding:14px 16px; background:#f8fafc; border-radius:10px; border:1px solid #e2e8f0; margin-bottom:12px;">
+                  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                    <div style="display:flex; align-items:center; gap:8px;">
+                      <span class="avatar sm teal">{{ r.customer.first_name|slice:":2"|upper|default:"CU" }}</span>
+                      <div>
+                        <strong>{{ r.customer.get_full_name|default:r.customer.username }}</strong>
+                        <div class="small muted">{{ r.created_at|date:"d M Y" }}</div>
+                      </div>
+                    </div>
+                    <span style="color:#f59e0b; font-weight:700; font-size:15px;">★ {{ r.rating }}.0</span>
+                  </div>
+                  {% if r.review_title %}
+                  <h4 style="margin:4px 0 6px 0; font-size:14px; color:#111827;">{{ r.review_title }}</h4>
+                  {% endif %}
+                  <p class="muted" style="margin:0 0 8px 0; font-size:13px; line-height:1.5;">{{ r.comment }}</p>
+                  {% if r.review_image %}
+                  <a href="{{ r.review_image.url }}" target="_blank">
+                    <img src="{{ r.review_image.url }}" alt="Review photo" style="max-height:100px; border-radius:6px; border:1px solid #e5e7eb; object-fit:cover;">
+                  </a>
+                  {% endif %}
+                </div>
+                {% empty %}
+                <p class="muted" style="text-align:center; padding:20px;">No published customer reviews yet for this vendor.</p>
+                {% endfor %}
+              </div>
+            </section>
           </div>
 
           <aside class="stack">

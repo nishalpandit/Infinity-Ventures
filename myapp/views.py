@@ -10,7 +10,8 @@ from .models import (
     VendorProfile, QuickService, Job, Bid, Subscription, Category, Location, 
     UserProfile, Message, GlobalSettings, SiteBranding, HeroSection, 
     QuickServiceCard, FeaturedProjectCard, PackageCard, Testimonial, TrustMetric,
-    VendorWallet, WalletTransaction, PayoutRequest, VendorKYC
+    VendorWallet, WalletTransaction, PayoutRequest, VendorKYC,
+    DisputeTicket, DisputeMessage, JobCompletionProof, ServiceReview
 )
 
 User = get_user_model()
@@ -139,32 +140,123 @@ def dashboard_view(request, path=''):
     if path.endswith('.html'):
         path = path[:-5]
 
-    if request.method == 'POST' and request.POST.get('action') == 'complete_and_settle':
+    if request.method == 'POST' and request.POST.get('action') in ['complete_and_settle', 'submit_completion_proof']:
         from .wallet_services import settle_job_completion
         job_id = request.POST.get('job_id')
         qs_id = request.POST.get('quick_service_id')
+        work_summary = request.POST.get('work_summary', '').strip() or "Work completed in accordance with agreed service terms."
+        photo_1 = request.FILES.get('photo_1')
+        photo_2 = request.FILES.get('photo_2')
+
         if job_id:
             try:
                 j_obj = Job.objects.get(id=job_id)
-                if request.user.is_authenticated and (request.user == j_obj.user or request.user.role == 'ADMIN' or request.user == j_obj.assigned_vendor):
+                has_selected_bid = Bid.objects.filter(job=j_obj, vendor=request.user, status__in=['selected', 'completed']).exists()
+                if request.user.is_authenticated and (request.user == j_obj.user or request.user.role == 'ADMIN' or request.user == j_obj.assigned_vendor or has_selected_bid):
                     settle_job_completion(job=j_obj)
                     j_obj.status = 'completed'
+                    if not j_obj.assigned_vendor and has_selected_bid:
+                        j_obj.assigned_vendor = request.user
                     j_obj.save()
                     Bid.objects.filter(job=j_obj, status='selected').update(status='completed')
+                    # Save work completion proof
+                    proof_vendor = j_obj.assigned_vendor or (request.user if request.user.role == 'VENDOR' else None)
+                    if not proof_vendor:
+                        sel_bid = Bid.objects.filter(job=j_obj, status='completed').first()
+                        if sel_bid:
+                            proof_vendor = sel_bid.vendor
+                    if photo_1 or work_summary:
+                        JobCompletionProof.objects.update_or_create(
+                            job=j_obj,
+                            defaults={
+                                'vendor': proof_vendor or request.user,
+                                'work_summary': work_summary,
+                                **({'photo_1': photo_1} if photo_1 else {}),
+                                **({'photo_2': photo_2} if photo_2 else {}),
+                            }
+                        )
             except Job.DoesNotExist:
                 pass
         elif qs_id:
             try:
                 qs_obj = QuickService.objects.get(id=qs_id)
-                if request.user.is_authenticated and (request.user == qs_obj.user or request.user.role == 'ADMIN'):
+                has_selected_bid = Bid.objects.filter(quick_service=qs_obj, vendor=request.user, status__in=['selected', 'completed']).exists()
+                if request.user.is_authenticated and (request.user == qs_obj.user or request.user.role == 'ADMIN' or has_selected_bid):
                     settle_job_completion(quick_service=qs_obj)
                     qs_obj.status = 'completed'
                     qs_obj.save()
                     Bid.objects.filter(quick_service=qs_obj, status='selected').update(status='completed')
+                    sel_bid = Bid.objects.filter(quick_service=qs_obj, status__in=['selected', 'completed']).first()
+                    proof_vendor = (request.user if request.user.role == 'VENDOR' else (sel_bid.vendor if sel_bid else None))
+                    if (photo_1 or work_summary) and proof_vendor:
+                        JobCompletionProof.objects.update_or_create(
+                            quick_service=qs_obj,
+                            defaults={
+                                'vendor': proof_vendor,
+                                'work_summary': work_summary,
+                                **({'photo_1': photo_1} if photo_1 else {}),
+                                **({'photo_2': photo_2} if photo_2 else {}),
+                            }
+                        )
             except QuickService.DoesNotExist:
                 pass
         referer = request.META.get('HTTP_REFERER')
-        return redirect(referer if referer else '/user/dashboard')
+        return redirect(referer if referer else '/vendor/jobs/selected-jobs.html')
+
+    if request.method == 'POST' and (request.POST.get('action') == 'submit_review' or path == 'user/reviews/create'):
+        if request.user.is_authenticated:
+            try:
+                rating_val = int(request.POST.get('rating', 5))
+            except (ValueError, TypeError):
+                rating_val = 5
+            review_title = request.POST.get('review_title', '').strip()
+            comment = request.POST.get('comment', '').strip() or request.POST.get('review', '').strip()
+            review_image = request.FILES.get('review_image') or request.FILES.get('review_images')
+            job_id = request.POST.get('job_id')
+            qs_id = request.POST.get('quick_service_id')
+            vendor_id = request.POST.get('vendor_id')
+            booking_key = request.POST.get('booking_id') or request.POST.get('related_booking') or request.POST.get('related_item')
+
+            if booking_key:
+                if str(booking_key).startswith('job:'):
+                    job_id = str(booking_key).split(':')[1]
+                elif str(booking_key).startswith('qs:'):
+                    qs_id = str(booking_key).split(':')[1]
+
+            target_job = Job.objects.filter(id=job_id).first() if job_id else None
+            target_qs = QuickService.objects.filter(id=qs_id).first() if qs_id else None
+            target_vendor = None
+
+            if vendor_id:
+                target_vendor = User.objects.filter(id=vendor_id).first()
+            if not target_vendor and target_job:
+                if target_job.assigned_vendor:
+                    target_vendor = target_job.assigned_vendor
+                else:
+                    sel_bid = Bid.objects.filter(job=target_job, status__in=['selected', 'completed']).first()
+                    if sel_bid:
+                        target_vendor = sel_bid.vendor
+            if not target_vendor and target_qs:
+                sel_bid = Bid.objects.filter(quick_service=target_qs, status__in=['selected', 'completed']).first()
+                if sel_bid:
+                    target_vendor = sel_bid.vendor
+
+            if target_vendor and comment:
+                ServiceReview.objects.update_or_create(
+                    customer=request.user,
+                    job=target_job,
+                    quick_service=target_qs,
+                    vendor=target_vendor,
+                    defaults={
+                        'rating': min(max(rating_val, 1), 5),
+                        'review_title': review_title,
+                        'comment': comment,
+                        **({'review_image': review_image} if review_image else {}),
+                        'status': 'published'
+                    }
+                )
+            referer = request.META.get('HTTP_REFERER')
+            return redirect('/user/reviews/index.html')
 
     if request.method == 'POST' and request.POST.get('action') == 'accept_vendor':
         bid_id = request.POST.get('bid_id')
@@ -405,6 +497,10 @@ def dashboard_view(request, path=''):
                 else:
                     context['preferred_datetime'] = "Not specified"
                     
+                context['completion_proof'] = getattr(qs, 'completion_proof', None)
+                if request.user.is_authenticated:
+                    context['user_review'] = ServiceReview.objects.filter(quick_service=qs, customer=request.user).first()
+                    
             except QuickService.DoesNotExist:
                 return redirect('/user/quick-services/index.html')
         else:
@@ -481,6 +577,10 @@ def dashboard_view(request, path=''):
                 context['start_date_fmt'] = job.preferred_start_date.strftime('%d %B %Y') if job.preferred_start_date else "Not specified"
                 context['end_date_fmt'] = job.expected_completion.strftime('%d %B %Y') if job.expected_completion else "Not specified"
                 
+                context['completion_proof'] = getattr(job, 'completion_proof', None)
+                if request.user.is_authenticated:
+                    context['user_review'] = ServiceReview.objects.filter(job=job, customer=request.user).first()
+                    
             except Job.DoesNotExist:
                 return redirect('/user/jobs/index.html')
         else:
@@ -509,7 +609,316 @@ def dashboard_view(request, path=''):
             context['jobs'] = []
             context['status_counts'] = {'all':0,'open':0,'selected':0,'progress':0,'completed':0,'cancelled':0,'closed':0}
             context['active_cats'] = []
-            
+
+    # ── USER SUPPORT & DISPUTE TICKETS ──
+    if 'support/complaints' in path or 'support/create-complaint' in path or 'support/complaint-details' in path or path == 'user/support/index' or path == 'user/support':
+        if not request.user.is_authenticated:
+            return redirect('/login/?next=/' + path + '.html')
+
+        if 'support/complaints' in path:
+            status_filter = request.GET.get('status')
+            q_filter = request.GET.get('q', '').strip()
+
+            user_disputes = DisputeTicket.objects.filter(
+                Q(raised_by=request.user) | Q(against_user=request.user)
+            ).select_related('raised_by', 'against_user', 'job', 'quick_service').order_by('-created_at')
+
+            all_user_disputes = DisputeTicket.objects.filter(
+                Q(raised_by=request.user) | Q(against_user=request.user)
+            )
+            context['count_all'] = all_user_disputes.count()
+            context['count_open'] = all_user_disputes.filter(status='open').count()
+            context['count_review'] = all_user_disputes.filter(status='investigating').count()
+            context['count_resolved'] = all_user_disputes.filter(status='resolved').count()
+            context['count_closed'] = all_user_disputes.filter(status='closed').count()
+
+            if status_filter and status_filter != 'all':
+                if status_filter == 'review':
+                    user_disputes = user_disputes.filter(status='investigating')
+                else:
+                    user_disputes = user_disputes.filter(status=status_filter)
+            if q_filter:
+                user_disputes = user_disputes.filter(
+                    Q(ticket_id__icontains=q_filter) | Q(subject__icontains=q_filter)
+                )
+
+            context['complaints'] = user_disputes
+
+        elif 'support/create-complaint' in path:
+            if request.method == 'POST':
+                related_item = request.POST.get('related_item', '')
+                category = request.POST.get('category', 'quality')
+                subject = request.POST.get('subject', '').strip()
+                description = request.POST.get('description', '').strip()
+                priority = request.POST.get('priority', 'medium').lower()
+                evidence = request.FILES.get('evidence_image')
+
+                job_obj = None
+                qs_obj = None
+                against_u = None
+
+                if related_item:
+                    if related_item.startswith('job:'):
+                        j_id = related_item.split(':')[1]
+                        job_obj = Job.objects.filter(id=j_id).first()
+                        if job_obj:
+                            if job_obj.assigned_vendor and job_obj.assigned_vendor != request.user:
+                                against_u = job_obj.assigned_vendor
+                            elif job_obj.user != request.user:
+                                against_u = job_obj.user
+                    elif related_item.startswith('qs:'):
+                        q_id = related_item.split(':')[1]
+                        qs_obj = QuickService.objects.filter(id=q_id).first()
+                        if qs_obj:
+                            selected_bid = Bid.objects.filter(quick_service=qs_obj, status='selected').first()
+                            if selected_bid and selected_bid.vendor != request.user:
+                                against_u = selected_bid.vendor
+                            elif qs_obj.user != request.user:
+                                against_u = qs_obj.user
+
+                ticket = DisputeTicket.objects.create(
+                    raised_by=request.user,
+                    against_user=against_u,
+                    job=job_obj,
+                    quick_service=qs_obj,
+                    category=category,
+                    subject=subject,
+                    description=description,
+                    priority=priority,
+                    evidence_image=evidence,
+                    status='open'
+                )
+                return redirect(f'/user/support/complaint-details.html?id={ticket.id}')
+
+            # GET: Load candidate jobs and quick services for the dropdown
+            user_jobs = Job.objects.filter(user=request.user).order_by('-created_at')
+            user_qs = QuickService.objects.filter(user=request.user).order_by('-created_at')
+            context['user_jobs'] = user_jobs
+            context['user_quick_services'] = user_qs
+
+            preselected_job_id = request.GET.get('job_id')
+            preselected_qs_id = request.GET.get('quick_service_id')
+            if preselected_job_id:
+                context['preselected_job'] = Job.objects.filter(id=preselected_job_id).first()
+            if preselected_qs_id:
+                context['preselected_qs'] = QuickService.objects.filter(id=preselected_qs_id).first()
+
+        elif 'support/complaint-details' in path:
+            ticket_id = request.GET.get('id') or request.GET.get('ticket_id')
+            ticket = None
+            if ticket_id:
+                ticket_qs = DisputeTicket.objects.select_related(
+                    'raised_by', 'against_user', 'job', 'quick_service', 'resolved_by'
+                )
+                if str(ticket_id).isdigit():
+                    ticket = ticket_qs.filter(id=ticket_id).first()
+                if not ticket:
+                    ticket = ticket_qs.filter(ticket_id=ticket_id).first()
+
+            if not ticket:
+                return redirect('/user/support/complaints.html')
+
+            if request.method == 'POST':
+                action = request.POST.get('action')
+                if action == 'add_response':
+                    msg_text = request.POST.get('response', '').strip() or request.POST.get('message', '').strip()
+                    extra_evidence = request.FILES.get('extra_evidence') or request.FILES.get('attachment')
+                    if msg_text or extra_evidence:
+                        DisputeMessage.objects.create(
+                            ticket=ticket,
+                            sender=request.user,
+                            message=msg_text,
+                            attachment=extra_evidence
+                        )
+                        if ticket.status == 'open':
+                            ticket.status = 'investigating'
+                            ticket.save()
+                elif action == 'confirm_resolution':
+                    ticket.status = 'resolved'
+                    ticket.resolved_at = timezone.now()
+                    ticket.resolved_by = request.user
+                    ticket.save()
+
+                return redirect(f'/user/support/complaint-details.html?id={ticket.id}')
+
+            context['ticket'] = ticket
+            context['messages'] = ticket.messages.select_related('sender').order_by('created_at')
+
+    # ── AREA ADMIN COMPLAINTS & DISPUTES ──
+    if ('complaints' in path or 'admin-dashboard/complaints' in path) and not path.startswith('user/'):
+        admin_state, is_area_admin, available_states, co_admins = get_admin_state_context(request)
+        context['admin_state'] = admin_state
+        context['is_area_admin'] = is_area_admin
+
+        disputes_qs = DisputeTicket.objects.select_related(
+            'raised_by', 'against_user', 'job', 'quick_service', 'resolved_by'
+        ).all().order_by('-created_at')
+
+        if admin_state:
+            disputes_qs = disputes_qs.filter(
+                Q(job__location__state__iexact=admin_state) |
+                Q(quick_service__location__state__iexact=admin_state) |
+                Q(raised_by__assigned_state__iexact=admin_state) |
+                Q(against_user__assigned_state__iexact=admin_state)
+            )
+
+        if 'details' in path:
+            ticket_id = request.GET.get('id') or request.GET.get('ticket_id')
+            ticket = None
+            if ticket_id:
+                if str(ticket_id).isdigit():
+                    ticket = disputes_qs.filter(id=ticket_id).first()
+                if not ticket:
+                    ticket = disputes_qs.filter(ticket_id=ticket_id).first()
+
+            if request.method == 'POST' and ticket:
+                action = request.POST.get('action')
+                if action == 'add_response':
+                    msg_text = request.POST.get('message', '').strip()
+                    attachment = request.FILES.get('attachment')
+                    if msg_text or attachment:
+                        DisputeMessage.objects.create(
+                            ticket=ticket,
+                            sender=request.user,
+                            message=msg_text,
+                            attachment=attachment
+                        )
+                        if ticket.status == 'open':
+                            ticket.status = 'investigating'
+                            ticket.save()
+                elif action == 'update_status':
+                    new_status = request.POST.get('status')
+                    notes = request.POST.get('resolution_notes', '').strip()
+                    if new_status in dict(DisputeTicket.STATUS_CHOICES):
+                        ticket.status = new_status
+                        if new_status in ['resolved', 'closed']:
+                            ticket.resolved_by = request.user
+                            ticket.resolved_at = timezone.now()
+                    if notes:
+                        ticket.resolution_notes = notes
+                    ticket.save()
+                return redirect(f'/complaints/details.html?id={ticket.id}')
+
+            context['ticket'] = ticket
+            if ticket:
+                context['messages'] = ticket.messages.select_related('sender').order_by('created_at')
+        else:
+            q = request.GET.get('q', '').strip()
+            status_filter = request.GET.get('status', '').strip()
+            if q:
+                disputes_qs = disputes_qs.filter(
+                    Q(ticket_id__icontains=q) | Q(subject__icontains=q) |
+                    Q(raised_by__username__icontains=q) | Q(against_user__username__icontains=q)
+                )
+            if status_filter:
+                disputes_qs = disputes_qs.filter(status=status_filter)
+
+            context['disputes'] = disputes_qs
+            context['total_count'] = disputes_qs.count()
+            context['open_count'] = disputes_qs.filter(status='open').count()
+            context['review_count'] = disputes_qs.filter(status='investigating').count()
+            context['resolved_count'] = disputes_qs.filter(status='resolved').count()
+            context['closed_count'] = disputes_qs.filter(status='closed').count()
+
+    # ── USER REVIEWS & RATINGS ──
+    if 'reviews' in path and path.startswith('user/'):
+        if not request.user.is_authenticated:
+            return redirect('/login/?next=/' + path + '.html')
+
+        if 'reviews/index' in path or path in ['user/reviews', 'user/reviews/index']:
+            status_filter = request.GET.get('status')
+            q_filter = request.GET.get('q', '').strip()
+
+            all_reviews = ServiceReview.objects.filter(customer=request.user).select_related(
+                'vendor', 'vendor__vendor_profile', 'job', 'quick_service'
+            ).order_by('-created_at')
+
+            reviews_list = all_reviews
+            if status_filter and status_filter != 'all':
+                reviews_list = reviews_list.filter(status=status_filter)
+            if q_filter:
+                reviews_list = reviews_list.filter(
+                    Q(vendor__username__icontains=q_filter) |
+                    Q(vendor__first_name__icontains=q_filter) |
+                    Q(vendor__vendor_profile__company_name__icontains=q_filter) |
+                    Q(job__title__icontains=q_filter) |
+                    Q(quick_service__title__icontains=q_filter) |
+                    Q(comment__icontains=q_filter) |
+                    Q(review_title__icontains=q_filter)
+                )
+
+            total_count = all_reviews.count()
+            published_count = all_reviews.filter(status='published').count()
+            pending_count = all_reviews.filter(status='pending').count()
+            avg_rating = 0.0
+            if total_count > 0:
+                from django.db.models import Avg
+                agg_avg = all_reviews.aggregate(avg=Avg('rating'))['avg']
+                avg_rating = round(agg_avg, 1) if agg_avg is not None else 5.0
+
+            context['reviews'] = reviews_list
+            context['total_reviews'] = total_count
+            context['published_count'] = published_count
+            context['pending_count'] = pending_count
+            context['average_given_rating'] = avg_rating
+
+        elif 'reviews/create' in path or path in ['user/reviews/create']:
+            cand_jobs = Job.objects.filter(user=request.user, status__in=['selected', 'completed']).select_related('category', 'assigned_vendor', 'assigned_vendor__vendor_profile').order_by('-created_at')
+            cand_qs = QuickService.objects.filter(user=request.user, status__in=['selected', 'completed']).select_related('category').order_by('-created_at')
+
+            valid_cand_jobs = []
+            for j in cand_jobs:
+                vendor = j.assigned_vendor
+                if not vendor:
+                    sel = Bid.objects.filter(job=j, status__in=['selected', 'completed']).first()
+                    if sel:
+                        vendor = sel.vendor
+                if vendor:
+                    j.review_vendor = vendor
+                    j.has_reviewed = ServiceReview.objects.filter(customer=request.user, job=j).exists()
+                    valid_cand_jobs.append(j)
+
+            valid_cand_qs = []
+            for q in cand_qs:
+                sel = Bid.objects.filter(quick_service=q, status__in=['selected', 'completed']).first()
+                if sel:
+                    q.review_vendor = sel.vendor
+                    q.has_reviewed = ServiceReview.objects.filter(customer=request.user, quick_service=q).exists()
+                    valid_cand_qs.append(q)
+
+            context['candidate_jobs'] = valid_cand_jobs
+            context['candidate_quick_services'] = valid_cand_qs
+
+            preselected_job_id = request.GET.get('job_id')
+            preselected_qs_id = request.GET.get('quick_service_id')
+            preselected_vendor_id = request.GET.get('vendor_id')
+
+            target_job = None
+            target_qs = None
+            target_vendor = None
+
+            if preselected_job_id:
+                target_job = Job.objects.filter(id=preselected_job_id, user=request.user).first()
+                if target_job:
+                    target_vendor = target_job.assigned_vendor
+                    if not target_vendor:
+                        sel = Bid.objects.filter(job=target_job, status__in=['selected', 'completed']).first()
+                        if sel:
+                            target_vendor = sel.vendor
+            elif preselected_qs_id:
+                target_qs = QuickService.objects.filter(id=preselected_qs_id, user=request.user).first()
+                if target_qs:
+                    sel = Bid.objects.filter(quick_service=target_qs, status__in=['selected', 'completed']).first()
+                    if sel:
+                        target_vendor = sel.vendor
+
+            if not target_vendor and preselected_vendor_id:
+                target_vendor = User.objects.filter(id=preselected_vendor_id).first()
+
+            context['preselected_job'] = target_job
+            context['preselected_qs'] = target_qs
+            context['preselected_vendor'] = target_vendor
+
     if path == 'user/profile/index' or path == 'user/profile':
         if request.user.is_authenticated:
             qs_count = QuickService.objects.filter(user=request.user).count()
@@ -766,7 +1175,7 @@ def dashboard_view(request, path=''):
                 pass
 
     if path == 'vendor/jobs/selected-jobs':
-        selected_bids = Bid.objects.filter(vendor=request.user, status='selected').select_related('job', 'quick_service').order_by('-created_at')
+        selected_bids = Bid.objects.filter(vendor=request.user, status__in=['selected', 'completed']).select_related('job', 'quick_service', 'job__user', 'quick_service__user').order_by('-created_at')
         context['selected_bids'] = selected_bids
 
     if path == 'vendor/jobs/details' or path == 'vendor/jobs/send-quotation':
@@ -1640,15 +2049,17 @@ def dashboard_view(request, path=''):
         v_id = request.GET.get('id')
         if v_id:
             try:
-                context['vendor_profile'] = VendorProfile.objects.select_related('user').get(id=v_id)
-                context['vendor_jobs_count'] = Job.objects.filter(bids__vendor=context['vendor_profile'].user, status='completed').distinct().count()
+                v_prof = VendorProfile.objects.select_related('user').get(id=v_id)
+                context['vendor_profile'] = v_prof
+                context['vendor_jobs_count'] = Job.objects.filter(bids__vendor=v_prof.user, status='completed').distinct().count()
+                context['vendor_reviews'] = ServiceReview.objects.filter(vendor=v_prof.user, status='published').select_related('customer', 'job', 'quick_service').order_by('-created_at')
             except VendorProfile.DoesNotExist:
                 pass
         context['vendors'] = VendorProfile.objects.select_related('user').all()
 
     if 'vendor/jobs/selected-jobs' in path:
         if request.user.is_authenticated:
-            context['selected_bids'] = Bid.objects.filter(vendor=request.user, status='selected').select_related('job', 'quick_service', 'job__user', 'quick_service__user').order_by('-created_at')
+            context['selected_bids'] = Bid.objects.filter(vendor=request.user, status__in=['selected', 'completed']).select_related('job', 'quick_service', 'job__user', 'quick_service__user').order_by('-created_at')
 
     if 'vendor/jobs/bid-details' in path:
         bid_id = request.GET.get('bid_id') or request.GET.get('id')

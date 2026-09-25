@@ -1,5 +1,5 @@
 {% extends 'superadmin/base.html' %}
-{% block title %}{{ mode|title }} User{% endblock %}
+{% block title %}{{ mode|title }} User - Super Admin{% endblock %}
 {% block header_title %}{{ mode|title }} User{% endblock %}
 
 {% block header_actions %}
@@ -10,82 +10,343 @@
 {% endblock %}
 
 {% block content %}
-<div class="card form-card">
-  <h3 style="font-size: 20px; font-weight: 700; margin-bottom: 24px;">
-    {% if mode == 'create' %}Create New User{% else %}Edit: {{ user_obj.username }}{% endif %}
-  </h3>
+<div class="card form-card" style="max-width: 920px; margin: 0 auto; padding: 32px 36px; box-shadow: var(--shadow-sm);">
   
-  <form method="POST">
-    {% csrf_token %}
-    
-    <div class="form-row">
-      <div class="form-group">
-        <label>Username</label>
-        <input type="text" name="username" class="form-control" value="{{ user_obj.username|default:'' }}" {% if mode == 'edit' %}readonly style="opacity: 0.6; cursor: not-allowed;"{% endif %} required>
-      </div>
-      <div class="form-group">
-        <label>Email</label>
-        <input type="email" name="email" class="form-control" value="{{ user_obj.email|default:'' }}">
-      </div>
-    </div>
-    
-    <div class="form-row">
-      <div class="form-group">
-        <label>First Name</label>
-        <input type="text" name="first_name" class="form-control" value="{{ user_obj.first_name|default:'' }}">
-      </div>
-      <div class="form-group">
-        <label>Last Name</label>
-        <input type="text" name="last_name" class="form-control" value="{{ user_obj.last_name|default:'' }}">
-      </div>
-    </div>
-    
-    <div class="form-row">
-      <div class="form-group">
-        <label>Role</label>
-        <select name="role" id="roleSelect" class="form-control">
-          <option value="USER" {% if user_obj.role == 'USER' %}selected{% endif %}>Customer</option>
-          <option value="VENDOR" {% if user_obj.role == 'VENDOR' %}selected{% endif %}>Vendor</option>
-          <option value="ADMIN" {% if user_obj.role == 'ADMIN' %}selected{% endif %}>Area Admin (State Admin)</option>
-        </select>
-      </div>
-      <div class="form-group">
-        <label>Password {% if mode == 'edit' %}<span style="font-weight: 400; text-transform: none;">(leave blank to keep)</span>{% endif %}</label>
-        <input type="password" name="password" class="form-control" {% if mode == 'create' %}required{% endif %}>
-      </div>
-    </div>
-
-    <div class="form-row" id="assignedStateRow">
-      <div class="form-group">
-        <label>Assigned State / Territory <span style="font-weight: 400; color: var(--text-muted);">(Required for Area Admin — Multiple Admins allowed per state)</span></label>
-        <select name="assigned_state" class="form-control">
-          <option value="">-- Select Assigned State / Area --</option>
-          {% for s in states %}
-            <option value="{{ s }}" {% if user_obj.assigned_state == s %}selected{% endif %}>{{ s }}</option>
-          {% endfor %}
-        </select>
-        <small style="color: var(--text-muted); font-size: 12px; margin-top: 4px; display: block;">
-          <i class="fa-solid fa-circle-info"></i> When role is Area Admin, they will only manage operations, jobs, vendors, and revenue for this designated State.
-        </small>
+  <!-- Header Title & Badges -->
+  <div style="display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border); padding-bottom: 20px; margin-bottom: 28px;">
+    <div style="display: flex; align-items: center; gap: 14px;">
+      {% if user_obj.user_profile.profile_image %}
+        <img src="{{ user_obj.user_profile.profile_image.url }}" alt="{{ user_obj.username }}" style="width: 44px; height: 44px; border-radius: 50%; object-fit: cover; border: 2px solid var(--accent); flex-shrink: 0; box-shadow: 0 2px 6px rgba(0,0,0,0.1);">
+      {% elif user_obj.vendor_profile.profile_image %}
+        <img src="{{ user_obj.vendor_profile.profile_image.url }}" alt="{{ user_obj.username }}" style="width: 44px; height: 44px; border-radius: 50%; object-fit: cover; border: 2px solid var(--accent); flex-shrink: 0; box-shadow: 0 2px 6px rgba(0,0,0,0.1);">
+      {% else %}
+        <div class="avatar" style="width: 44px; height: 44px; font-size: 18px; font-weight: 800; background: {% if user_obj.is_superuser %}linear-gradient(135deg, #ef4444, #b91c1c){% elif user_obj.role == 'ADMIN' %}linear-gradient(135deg, #4f46e5, #7c3aed){% elif user_obj.role == 'VENDOR' %}linear-gradient(135deg, #9333ea, #c026d3){% else %}linear-gradient(135deg, #2563eb, #38bdf8){% endif %};">
+          {{ user_obj.username|default:'U'|make_list|first|upper }}
+        </div>
+      {% endif %}
+      <div>
+        <h3 style="font-size: 20px; font-weight: 800; color: var(--text-main); margin-bottom: 3px;">
+          {% if mode == 'create' %}Create New User{% else %}Edit: {{ user_obj.username }}{% endif %}
+        </h3>
+        <p style="font-size: 13px; color: var(--text-muted); margin: 0;">
+          {% if mode == 'create' %}Fill in account credentials, contact information, and role attributes.{% else %}User ID: #{{ user_obj.id }} · Registered {{ user_obj.date_joined|date:"M d, Y" }}{% endif %}
+        </p>
       </div>
     </div>
     
     {% if mode == 'edit' %}
-    <div class="form-group">
-      <label>Account Active</label>
-      <label class="toggle-switch">
-        <input type="checkbox" name="is_active" {% if user_obj.is_active %}checked{% endif %}>
-        <span class="toggle-slider"></span>
-      </label>
+    <div>
+      {% if user_obj.is_superuser %}
+        <span class="badge" style="background: rgba(239,68,68,0.12); color: #b91c1c; border: 1px solid rgba(239,68,68,0.25);">
+          <i class="fa-solid fa-shield-halved" style="font-size: 11px;"></i> Super Admin
+        </span>
+      {% elif user_obj.role == 'ADMIN' %}
+        <span class="badge" style="background: rgba(79,70,229,0.12); color: #4338ca; border: 1px solid rgba(79,70,229,0.25);">
+          <i class="fa-solid fa-map-pin" style="font-size: 11px;"></i> Area Admin
+        </span>
+      {% elif user_obj.role == 'VENDOR' %}
+        {% if user_obj.vendor_profile.vendor_type == 'company' %}
+          <span class="badge" style="background: rgba(124,58,237,0.12); color: #6d28d9; border: 1px solid rgba(124,58,237,0.25);">
+            <i class="fa-solid fa-building" style="font-size: 11px;"></i> Company Vendor
+          </span>
+        {% else %}
+          <span class="badge" style="background: rgba(14,165,233,0.12); color: #0284c7; border: 1px solid rgba(14,165,233,0.25);">
+            <i class="fa-solid fa-user-gear" style="font-size: 11px;"></i> Outside Vendor
+          </span>
+        {% endif %}
+      {% else %}
+        <span class="badge" style="background: rgba(59,130,246,0.12); color: #1d4ed8; border: 1px solid rgba(59,130,246,0.25);">
+          <i class="fa-solid fa-user" style="font-size: 11px;"></i> Customer
+        </span>
+      {% endif %}
     </div>
     {% endif %}
+  </div>
+  
+  <form method="POST" enctype="multipart/form-data">
+    {% csrf_token %}
     
-    <div class="form-actions">
-      <button type="submit" class="btn btn-primary">
-        <i class="fa-solid fa-check"></i> {% if mode == 'create' %}Create User{% else %}Save Changes{% endif %}
-      </button>
-      <a href="{% url 'super_admin_users' %}" class="btn btn-outline">Cancel</a>
+    <!-- SECTION 1: ACCOUNT & CONTACT -->
+    <div style="margin-bottom: 28px;">
+      <h4 style="font-size: 14px; font-weight: 800; color: var(--text-main); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 16px; display: flex; align-items: center; gap: 8px;">
+        <i class="fa-solid fa-id-card" style="color: var(--accent);"></i> Account & Contact Details
+      </h4>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Username</label>
+          <input type="text" name="username" class="form-control" value="{{ user_obj.username|default:'' }}" {% if mode == 'edit' %}readonly style="opacity: 0.7; cursor: not-allowed; background:#f8fafc;"{% endif %} required placeholder="Enter unique username">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Email Address</label>
+          <input type="email" name="email" class="form-control" value="{{ user_obj.email|default:'' }}" placeholder="name@domain.com">
+        </div>
+      </div>
+      
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">First Name</label>
+          <input type="text" name="first_name" class="form-control" value="{{ user_obj.first_name|default:'' }}" placeholder="First name">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Last Name</label>
+          <input type="text" name="last_name" class="form-control" value="{{ user_obj.last_name|default:'' }}" placeholder="Last name">
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label"><i class="fa-solid fa-phone" style="font-size: 11px; margin-right: 3px;"></i> Contact Phone Number</label>
+          <input type="text" name="phone_number" class="form-control" value="{{ user_obj.user_profile.phone_number|default:'' }}" placeholder="+91 98765 00000">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Account Role</label>
+          {% if mode == 'edit' %}
+            <input type="hidden" name="role" id="roleSelect" value="{{ user_obj.role }}">
+            <input type="text" class="form-control" value="{% if user_obj.is_superuser %}Super Administrator{% elif user_obj.role == 'ADMIN' %}Area Admin{% elif user_obj.role == 'VENDOR' %}Vendor{% else %}Customer{% endif %}" readonly style="opacity: 0.7; cursor: not-allowed; background:#f8fafc; font-weight: 600;">
+          {% else %}
+            <select name="role" id="roleSelect" class="form-control" style="font-weight: 600;">
+              <option value="USER" {% if user_obj.role == 'USER' %}selected{% endif %}>Customer</option>
+              <option value="VENDOR" {% if user_obj.role == 'VENDOR' %}selected{% endif %}>Vendor</option>
+              <option value="ADMIN" {% if user_obj.role == 'ADMIN' %}selected{% endif %}>Area Admin</option>
+            </select>
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">
+            Password 
+            {% if mode == 'edit' %}
+              <span style="font-weight: 400; text-transform: none; color: var(--text-muted);">(Leave blank to keep unchanged)</span>
+            {% endif %}
+          </label>
+          <input type="password" name="password" class="form-control" {% if mode == 'create' %}required{% endif %} placeholder="••••••••">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Avatar / Profile Photo</label>
+          <div style="display: flex; align-items: center; gap: 12px;">
+            {% if user_obj.user_profile.profile_image %}
+              <img src="{{ user_obj.user_profile.profile_image.url }}" alt="Profile" style="width: 42px; height: 42px; border-radius: 50%; object-fit: cover; border: 1.5px solid var(--border);">
+            {% elif user_obj.vendor_profile.profile_image %}
+              <img src="{{ user_obj.vendor_profile.profile_image.url }}" alt="Profile" style="width: 42px; height: 42px; border-radius: 50%; object-fit: cover; border: 1.5px solid var(--border);">
+            {% endif %}
+            <input type="file" name="profile_image" accept="image/*" class="form-control" style="padding: 7px 12px; font-size: 13px;">
+          </div>
+        </div>
+      </div>
+
+      {% if mode == 'edit' %}
+      <div class="form-group" style="margin-top: 6px;">
+        <label class="form-label" style="margin-bottom: 8px;">Account Status</label>
+        <div style="display: flex; align-items: center; gap: 12px;">
+          <label class="toggle-switch">
+            <input type="checkbox" name="is_active" {% if user_obj.is_active %}checked{% endif %}>
+            <span class="toggle-slider"></span>
+          </label>
+          <span style="font-size: 13.5px; font-weight: 600; color: {% if user_obj.is_active %}var(--success){% else %}var(--danger){% endif %};">
+            {% if user_obj.is_active %}Active & Allowed to Login{% else %}Disabled / Suspended{% endif %}
+          </span>
+        </div>
+      </div>
+      {% endif %}
     </div>
+
+    <!-- SECTION 2: TERRITORY & LOCATION -->
+    <div style="border-top: 1px solid var(--border); padding-top: 24px; margin-bottom: 28px;">
+      <h4 style="font-size: 14px; font-weight: 800; color: var(--text-main); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 16px; display: flex; align-items: center; gap: 8px;">
+        <i class="fa-solid fa-map-location-dot" style="color: var(--accent);"></i> Territory & Location
+      </h4>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label" id="stateLabel">
+            {% if user_obj.role == 'ADMIN' or selected_role == 'ADMIN' %}Assigned Operational State <span style="color: var(--danger);">*</span>{% else %}State{% endif %}
+          </label>
+          <select name="assigned_state" class="form-control">
+            <option value="">-- Select State --</option>
+            {% for s in states %}
+              <option value="{{ s }}" {% if user_obj.assigned_state == s %}selected{% endif %}>{{ s }}</option>
+            {% endfor %}
+          </select>
+          <small id="areaAdminNotice" style="color: var(--accent); font-size: 12px; margin-top: 5px; display: block;">
+            <i class="fa-solid fa-circle-info"></i> For Area Admins, this designates the state operations they manage.
+          </small>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" id="cityLabel">
+            {% if user_obj.role == 'ADMIN' or selected_role == 'ADMIN' %}Assigned District / City (Optional){% else %}City{% endif %}
+          </label>
+          <input type="text" name="assigned_city" class="form-control" value="{{ user_obj.assigned_city|default:'' }}" placeholder="e.g. Ranchi, Mumbai, Bengaluru, New Delhi">
+        </div>
+      </div>
+    </div>
+
+    <!-- SECTION 3: VENDOR PROFILE DETAILS (Differentiates Company vs Outside Vendor) -->
+    <div id="vendorSection" style="border-top: 1px solid var(--border); padding-top: 24px; margin-bottom: 28px; background: #faf5ff; border: 1.5px solid rgba(168,85,247,0.2); border-radius: var(--r-md); padding: 24px;">
+      <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px;">
+        <h4 style="font-size: 14px; font-weight: 800; color: #7c3aed; text-transform: uppercase; letter-spacing: 0.5px; margin: 0; display: flex; align-items: center; gap: 8px;">
+          <i class="fa-solid fa-briefcase"></i> Vendor & Professional Business Profile
+        </h4>
+        <span class="badge" style="background: rgba(168,85,247,0.15); color: #7c3aed; font-weight: 700;">
+          Vendor Specific Information
+        </span>
+      </div>
+
+      <!-- VENDOR CLASSIFICATION (COMPANY VS OUTSIDE VENDOR) -->
+      <div class="form-row" style="margin-bottom: 18px;">
+        <div class="form-group" style="grid-column: span 2;">
+          <label class="form-label" style="color: #6d28d9; font-weight: 800;">
+            <i class="fa-solid fa-layer-group" style="margin-right: 4px;"></i> Vendor Classification (Company vs Outside Pro)
+          </label>
+          <select name="vendor_type" class="form-control" style="font-size: 14px; font-weight: 700; border-color: #c084fc;">
+            <option value="vendor" {% if user_obj.vendor_profile.vendor_type == 'vendor' or not user_obj.vendor_profile.vendor_type %}selected{% endif %}>
+              👤 Individual / Outside Vendor (Independent Technician / Contractor / Sole Proprietor)
+            </option>
+            <option value="company" {% if user_obj.vendor_profile.vendor_type == 'company' %}selected{% endif %}>
+              🏢 Company Vendor (Registered Firm / Agency / Enterprise Service Provider)
+            </option>
+          </select>
+          <small style="color: var(--text-muted); font-size: 12px; margin-top: 5px; display: block;">
+            • <strong>Individual / Outside Vendor</strong>: Independent professional operating directly.<br>
+            • <strong>Company Vendor</strong>: Registered company with staff/workforce, corporate GST, and employee tracking.
+          </small>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Company / Registered Trade Name</label>
+          <input type="text" name="company_name" class="form-control" value="{{ user_obj.vendor_profile.company_name|default:'' }}" placeholder="e.g. Apex Electricals & Automation">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Primary Service Category</label>
+          <select name="category" class="form-control">
+            <option value="">-- Select Category --</option>
+            {% for cat in categories %}
+              <option value="{{ cat.name }}" {% if user_obj.vendor_profile.category == cat.name %}selected{% endif %}>{{ cat.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Operating Location (City, State)</label>
+          <input type="text" name="location" class="form-control" value="{{ user_obj.vendor_profile.location|default:'' }}" placeholder="e.g. Ranchi, Jharkhand">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Years of Experience</label>
+          <input type="number" name="experience" min="0" max="60" class="form-control" value="{{ user_obj.vendor_profile.experience|default:0 }}" placeholder="e.g. 8">
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Vendor Rating (0.0 to 5.0)</label>
+          <input type="number" step="0.1" min="0" max="5" name="rating" class="form-control" value="{{ user_obj.vendor_profile.rating|default:'5.0' }}" placeholder="4.8">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Government ID Proof / License No.</label>
+          <input type="text" name="id_proof" class="form-control" value="{{ user_obj.vendor_profile.id_proof|default:'' }}" placeholder="Aadhaar / PAN / GST / License No.">
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Date of Birth</label>
+          <input type="date" name="dob" class="form-control" value="{{ user_obj.vendor_profile.dob|date:'Y-m-d' }}">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Gender</label>
+          <select name="gender" class="form-control">
+            <option value="">-- Select Gender --</option>
+            <option value="Male" {% if user_obj.vendor_profile.gender == 'Male' %}selected{% endif %}>Male</option>
+            <option value="Female" {% if user_obj.vendor_profile.gender == 'Female' %}selected{% endif %}>Female</option>
+            <option value="Other" {% if user_obj.vendor_profile.gender == 'Other' %}selected{% endif %}>Other</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Employee / Staff Code (For Companies)</label>
+          <input type="text" name="employee_code" class="form-control" value="{{ user_obj.vendor_profile.employee_code|default:'' }}" placeholder="e.g. EMP-V008">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Workforce & Team Details</label>
+          <input type="text" name="employee_details" class="form-control" value="{{ user_obj.vendor_profile.employee_details|default:'' }}" placeholder="e.g. Lead technician with 6 field crew members">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Full Business / Workshop Street Address</label>
+        <textarea name="address" rows="2" class="form-control" placeholder="Shop / Office address, Street, Locality, Pincode">{{ user_obj.vendor_profile.address|default:'' }}</textarea>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">About / Professional Bio / Specialization</label>
+        <textarea name="about" rows="3" class="form-control" placeholder="Describe specialties, tools, services, and certifications">{{ user_obj.vendor_profile.about|default:'' }}</textarea>
+      </div>
+
+      <div class="form-group" style="margin-bottom: 0;">
+        <label class="form-label">Vendor Profile Picture / Brand Logo</label>
+        <div style="display: flex; align-items: center; gap: 14px;">
+          {% if user_obj.vendor_profile.profile_image %}
+            <img src="{{ user_obj.vendor_profile.profile_image.url }}" alt="Vendor Logo" style="width: 46px; height: 46px; border-radius: 8px; object-fit: cover; border: 1.5px solid var(--border);">
+          {% endif %}
+          <input type="file" name="vendor_image" accept="image/*" class="form-control" style="padding: 7px 12px; font-size: 13px;">
+        </div>
+      </div>
+
+    </div>
+
+    <!-- FORM ACTIONS -->
+    <div class="form-actions" style="display: flex; gap: 12px; margin-top: 32px; border-top: 1px solid var(--border); padding-top: 24px;">
+      <button type="submit" class="btn btn-primary" style="padding: 12px 28px; font-size: 14px; font-weight: 700;">
+        <i class="fa-solid fa-check"></i> {% if mode == 'create' %}Create User{% else %}Save All Changes{% endif %}
+      </button>
+      <a href="{% url 'super_admin_users' %}" class="btn btn-outline" style="padding: 12px 24px; font-size: 14px;">Cancel</a>
+    </div>
+
   </form>
 </div>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    var roleSelect = document.getElementById('roleSelect');
+    var vendorSection = document.getElementById('vendorSection');
+    var areaNotice = document.getElementById('areaAdminNotice');
+
+    var stateLabel = document.getElementById('stateLabel');
+    var cityLabel = document.getElementById('cityLabel');
+
+    function updateRoleVisibility() {
+      var val = roleSelect ? roleSelect.value : '';
+      if (val === 'VENDOR') {
+        if (vendorSection) vendorSection.style.display = 'block';
+      } else {
+        if (vendorSection) vendorSection.style.display = 'none';
+      }
+
+      if (val === 'ADMIN') {
+        if (areaNotice) areaNotice.style.display = 'block';
+        if (stateLabel) stateLabel.innerHTML = 'Assigned Operational State <span style="color: var(--danger);">*</span>';
+        if (cityLabel) cityLabel.textContent = 'Assigned District / City (Optional)';
+      } else {
+        if (areaNotice) areaNotice.style.display = 'none';
+        if (stateLabel) stateLabel.textContent = 'State';
+        if (cityLabel) cityLabel.textContent = 'City';
+      }
+    }
+
+    if (roleSelect) {
+      roleSelect.addEventListener('change', updateRoleVisibility);
+      updateRoleVisibility();
+    }
+  });
+</script>
 {% endblock %}
