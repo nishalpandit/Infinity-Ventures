@@ -32,3 +32,4 @@ staticfiles/
 
 # Scratchpad test scripts
 scratch/
+test_reports/
