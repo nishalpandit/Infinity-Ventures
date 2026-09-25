@@ -650,32 +650,39 @@ def run_tests():
     print(f"  Browser Mode:  {'Headed Full-Screen (' + str(screen_w) + 'x' + str(screen_h) + ')' if HEADED else 'Headless'}")
     print("=" * 75, flush=True)
 
+    user_data_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "test_reports", "chrome_user_data")
+    os.makedirs(user_data_dir, exist_ok=True)
+
     with sync_playwright() as p:
         launch_args = [
             "--start-maximized",
             f"--window-size={screen_w},{screen_h}",
             "--window-position=0,0",
             "--no-default-browser-check",
+            "--no-first-run",
         ] if HEADED else []
 
         try:
-            browser = p.chromium.launch(
+            context = p.chromium.launch_persistent_context(
+                user_data_dir=user_data_dir,
                 channel="chrome",
                 headless=not HEADED,
-                slow_mo=350 if HEADED else 0,
-                args=launch_args
+                slow_mo=400 if HEADED else 0,
+                args=launch_args,
+                no_viewport=True,
             )
-            print("  [BROWSER] Launched real Google Chrome in full-screen mode.", flush=True)
+            print("  [BROWSER] Launched dedicated Google Chrome window in full-screen mode.", flush=True)
         except Exception as chrome_err:
-            print(f"  [BROWSER] Falling back to bundled Chromium: {chrome_err}", flush=True)
-            browser = p.chromium.launch(
+            print(f"  [BROWSER] Launching Chromium persistent context: {chrome_err}", flush=True)
+            context = p.chromium.launch_persistent_context(
+                user_data_dir=user_data_dir,
                 headless=not HEADED,
-                slow_mo=350 if HEADED else 0,
-                args=launch_args
+                slow_mo=400 if HEADED else 0,
+                args=launch_args,
+                no_viewport=True,
             )
 
-        context = browser.new_context(no_viewport=True)
-        page = context.new_page()
+        page = context.pages[0] if context.pages else context.new_page()
         page.bring_to_front()
 
         tester = SuperAdminE2ETester(page)
@@ -719,9 +726,10 @@ def run_tests():
             return 1
         finally:
             try:
-                browser.close()
+                context.close()
             except Exception:
                 pass
 
 if __name__ == "__main__":
     sys.exit(run_tests())
+
