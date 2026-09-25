@@ -524,7 +524,7 @@ class SuperAdminE2ETester:
         print(f"  Navigating to dispute details: {detail_url}")
         self.safe_goto(f"{BASE_URL}{detail_url}", wait_until="networkidle")
 
-        expect(self.page.locator("text=Case History & Activity")).to_be_visible()
+        expect(self.page.locator("text=Complainant's Statement")).to_be_visible()
         self.snap("dispute_detail")
         print("  Dispute detail view, message timeline, and resolution tools loaded properly")
 
