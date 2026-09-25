@@ -19,9 +19,9 @@ class Command(BaseCommand):
         branding, created = SiteBranding.objects.get_or_create(
             pk=1,
             defaults={
-                'site_title': 'Infinity Ventures',
+                'site_title': 'Suggu Services',
                 'tagline': 'Instant Home Services & Custom Project Bidding Marketplace',
-                'contact_email': 'support@infinityventures.com',
+                'contact_email': 'support@sugguservices.com',
                 'support_phone': '+91 98765 43210',
                 'address': 'Main Road, Ranchi, Jharkhand 834001, India',
                 'facebook_url': 'https://facebook.com',
@@ -29,7 +29,7 @@ class Command(BaseCommand):
                 'linkedin_url': 'https://linkedin.com',
                 'twitter_url': 'https://twitter.com',
                 'youtube_url': 'https://youtube.com',
-                'copyright_text': '© 2026 Infinity Ventures Marketplace. All rights reserved.',
+                'copyright_text': '© 2026 Suggu Services Marketplace. All rights reserved.',
             }
         )
         if created:
@@ -232,7 +232,7 @@ class Command(BaseCommand):
                 'client_name': 'Dr. Rajesh Sharma',
                 'client_role_or_company': 'Clinic Owner, Ranchi',
                 'rating': 5.0,
-                'review_text': 'Posted our clinic renovation on Infinity Ventures and received 5 detailed vendor bids within 4 hours. Saved nearly ₹60,000 compared to off-market contractors!',
+                'review_text': 'Posted our clinic renovation on Suggu Services and received 5 detailed vendor bids within 4 hours. Saved nearly ₹60,000 compared to off-market contractors!',
                 'service_taken': 'Clinic Interior Renovation',
                 'order': 1,
             },

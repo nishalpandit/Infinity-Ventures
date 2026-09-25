@@ -61,7 +61,7 @@ def seed():
         categories[name] = cat
 
     # 3. Superuser / Admin
-    admin_user, _ = User.objects.get_or_create(username='admin', defaults={'email': 'admin@infinityventures.com', 'first_name': 'Super', 'last_name': 'Admin', 'role': 'ADMIN', 'is_staff': True, 'is_superuser': True})
+    admin_user, _ = User.objects.get_or_create(username='admin', defaults={'email': 'admin@sugguservices.com', 'first_name': 'Super', 'last_name': 'Admin', 'role': 'ADMIN', 'is_staff': True, 'is_superuser': True})
     admin_user.set_password('admin123')
     admin_user.role = 'ADMIN'
     admin_user.is_staff = True

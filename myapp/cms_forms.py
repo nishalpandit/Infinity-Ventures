@@ -33,9 +33,9 @@ class SiteBrandingForm(StyledModelForm):
             'copyright_text'
         ]
         widgets = {
-            'site_title': forms.TextInput(attrs={'placeholder': 'e.g. Infinity Ventures'}),
+            'site_title': forms.TextInput(attrs={'placeholder': 'e.g. Suggu Services'}),
             'tagline': forms.TextInput(attrs={'placeholder': 'e.g. Instant Home Services & Custom Project Bidding Marketplace'}),
-            'contact_email': forms.EmailInput(attrs={'placeholder': 'e.g. support@infinityventures.in'}),
+            'contact_email': forms.EmailInput(attrs={'placeholder': 'e.g. support@sugguservices.in'}),
             'support_phone': forms.TextInput(attrs={'placeholder': 'e.g. +91 1800-000-0000'}),
             'address': forms.TextInput(attrs={'placeholder': 'e.g. Main Road, Ranchi, Jharkhand, India'}),
             'facebook_url': forms.URLInput(attrs={'placeholder': 'https://facebook.com/yourpage'}),
@@ -43,7 +43,7 @@ class SiteBrandingForm(StyledModelForm):
             'linkedin_url': forms.URLInput(attrs={'placeholder': 'https://linkedin.com/company/yourprofile'}),
             'twitter_url': forms.URLInput(attrs={'placeholder': 'https://twitter.com/yourhandle'}),
             'youtube_url': forms.URLInput(attrs={'placeholder': 'https://youtube.com/@yourchannel'}),
-            'copyright_text': forms.TextInput(attrs={'placeholder': 'e.g. © 2026 Infinity Ventures Private Limited. All rights reserved.'}),
+            'copyright_text': forms.TextInput(attrs={'placeholder': 'e.g. © 2026 Suggu Services Private Limited. All rights reserved.'}),
             'logo': forms.FileInput(attrs={'class': 'dropzone-input', 'accept': 'image/*', 'id': 'id_logo'}),
             'favicon': forms.FileInput(attrs={'class': 'dropzone-input', 'accept': 'image/*', 'id': 'id_favicon'}),
         }

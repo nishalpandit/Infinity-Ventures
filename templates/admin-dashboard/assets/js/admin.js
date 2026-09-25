@@ -1,5 +1,5 @@
 /* ==========================================================================
-   INFINITY ADMIN DASHBOARD — admin.js
+   Suggu Admin DASHBOARD — admin.js
    Reusable UI toolkit: DataTable engine (search/filter/sort/pagination/
    export), toasts, confirm dialogs, modal helper, badges, misc helpers.
    ========================================================================== */

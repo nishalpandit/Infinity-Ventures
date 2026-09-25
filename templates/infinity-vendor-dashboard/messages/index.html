@@ -1,4 +1,4 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="description" content="Infinity Ventures Vendor Portal — Messages"><title>Messages · Infinity Ventures Vendor</title><link rel="stylesheet" href="/infinity-vendor-dashboard/assets/styles.css"><script defer src="/infinity-vendor-dashboard/assets/app.js"></script></head><body data-page="messages" data-title="Messages" data-root="../"><div class="app-shell"><div id="sidebar-root"></div><div class="workspace"><div id="topbar-root"></div><main class="page">
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="description" content="Suggu Services Vendor Portal — Messages"><title>Messages · Suggu Services Vendor</title><link rel="stylesheet" href="/infinity-vendor-dashboard/assets/styles.css"><script defer src="/infinity-vendor-dashboard/assets/app.js"></script></head><body data-page="messages" data-title="Messages" data-root="../"><div class="app-shell"><div id="sidebar-root"></div><div class="workspace"><div id="topbar-root"></div><main class="page">
 <section class="card inbox"><div class="conversation-list"><div class="conversation-search"><div class="search-box" style="max-width:none"><span data-icon="search"></span><input class="input" placeholder="Search customers or messages"></div></div>
 {% for conv in conversations %}
 <a class="conversation {% if forloop.first %}active{% endif %}" href="chat.html?user_id={{ conv.user_id }}"> 
@@ -17,7 +17,7 @@
 <div class="date-separator"><span>Latest Message</span></div>
 <div class="message-row {% if conversations.0.latest_message.sender == request.user %}sent{% endif %}"><div class="message">{{ conversations.0.latest_message.content }}<div class="message-time">{{ conversations.0.latest_message.created_at|date:"h:i A" }} {% if conversations.0.latest_message.is_read %}· Read ✓✓{% endif %}</div></div></div>
 </div>
-<div class="payment-note">Negotiation is allowed. Customer service payment happens directly and is not processed by Infinity Ventures.</div>
+<div class="payment-note">Negotiation is allowed. Customer service payment happens directly and is not processed by Suggu Services.</div>
 <div class="chat-compose">
 <form method="POST" action="chat.html?user_id={{ conversations.0.user_id }}" style="display:flex;width:100%;gap:10px" enctype="multipart/form-data">
 {% csrf_token %}

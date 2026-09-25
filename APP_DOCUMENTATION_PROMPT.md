@@ -1,7 +1,7 @@
-# INFINITY VENTURES — MASTER APP DEVELOPMENT PROMPT & SYSTEM SPECIFICATION
+# Suggu Services — MASTER APP DEVELOPMENT PROMPT & SYSTEM SPECIFICATION
 
 > **Target Platform:** Cross-Platform Mobile Application (Flutter / React Native / Native iOS & Android) & Web Client  
-> **System Name:** Infinity Ventures Service & Project Marketplace  
+> **System Name:** Suggu Services Service & Project Marketplace  
 > **Target Audience:** Customers (Users) & Service Providers (Normal/Individual Vendors and Company Vendors)  
 > **Backend Reference:** Django REST Framework, Django Channels (WebSockets), SQLite/PostgreSQL Database  
 
@@ -9,7 +9,7 @@
 
 ## 1. SYSTEM ROLE & APP MISSION
 
-You are an expert full-stack mobile system architect and senior mobile app developer. Build a production-ready, enterprise-grade marketplace mobile application called **"Infinity Ventures"**.
+You are an expert full-stack mobile system architect and senior mobile app developer. Build a production-ready, enterprise-grade marketplace mobile application called **"Suggu Services"**.
 
 The application operates as a two-sided marketplace connecting:
 1. **Users (Customers):** Individuals, homeowners, and business clients who post service needs categorized as either **Quick Services** (immediate, micro-tasks like plumbing repairs, AC servicing, emergency fixing) or **Jobs** (longer-term contracting projects, renovations, waterproofing, electrical rewiring).

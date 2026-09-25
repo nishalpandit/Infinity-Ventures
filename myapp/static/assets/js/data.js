@@ -1,5 +1,5 @@
 /* ==========================================================================
-   INFINITY ADMIN DASHBOARD — data.js
+   Suggu Admin DASHBOARD — data.js
    Centralized mock data for all modules (Cleared for Backend Integration).
    ========================================================================== */
 

@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta name="description" content="Infinity Ventures User Portal — Vendors">
-  <title>Vendors · Infinity Ventures User</title>
+  <meta name="description" content="Suggu Services User Portal — Vendors">
+  <title>Vendors · Suggu Services User</title>
   <link rel="stylesheet" href="../assets/styles.css">
   <script defer src="../assets/app.js"></script>
 </head>
@@ -15,10 +15,6 @@
       <div id="topbar-root"></div>
       <main class="page">
         <div class="page-head">
-          <div>
-            <h1>Browse Verified Vendors</h1>
-            <p>Find verified professionals by name, service and location. Review profiles and chat directly.</p>
-          </div>
           <div class="actions">
             <span class="badge badge-success">{{ vendors|length }} Verified Vendors Active</span>
           </div>
@@ -67,7 +63,7 @@
                   <span class="chip">Quotation</span>
                 </div>
 
-                <p class="small muted">{{ v.about|default:"Professional contractor verified on Infinity Ventures."|truncatewords:15 }}</p>
+                <p class="small muted">{{ v.about|default:"Professional contractor verified on Suggu Services."|truncatewords:15 }}</p>
 
                 <div class="vendor-actions">
                   <a class="btn btn-secondary" href="details.html?id={{ v.id }}">View Details</a>

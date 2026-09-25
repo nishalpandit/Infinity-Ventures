@@ -1,5 +1,5 @@
 /* ==========================================================================
-   INFINITY ADMIN DASHBOARD — sidebar.js
+   Suggu Admin DASHBOARD — sidebar.js
    Collapse/expand with localStorage persistence, submenu accordion,
    mobile off-canvas drawer.
    ========================================================================== */
@@ -7,7 +7,7 @@
 (function () {
   'use strict';
 
-  var STORAGE_KEY = 'infinity_admin_sidebar';
+  var STORAGE_KEY = 'suggu_admin_sidebar';
   var MOBILE_BP = 992;
 
   function isMobile() {
@@ -83,9 +83,6 @@
       });
     });
   }
-
-
-
 
   function init() {
     applyState();

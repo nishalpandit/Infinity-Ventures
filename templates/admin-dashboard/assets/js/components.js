@@ -1,5 +1,5 @@
 /* ==========================================================================
-   INFINITY ADMIN DASHBOARD — components.js
+   Suggu Admin DASHBOARD — components.js
    Shared layout: injects the SAME sidebar + header into every page,
    detects active menu, renders breadcrumbs, header dropdowns.
    ========================================================================== */
@@ -121,8 +121,8 @@
     html += '<aside class="app-sidebar" id="appSidebar">';
     html += '  <div class="sidebar-logo">';
     html += '    <a href="/admin-dashboard" style="display:flex;align-items:center;gap:12px;text-decoration:none;">';
-    html += '      <span class="logo-mark"><i class="fa-solid fa-infinity"></i></span>';
-    html += '      <div><span class="logo-text">Infinity <span>Admin</span></span>' + stateLabel + '</div>';
+    html += '      <span class="logo-mark" style="background:transparent;padding:0;display:flex;align-items:center;justify-content:center;"><img src="/static/assets/images/logo.png" alt="Suggu Services" style="width:32px;height:32px;border-radius:8px;object-fit:contain;" /></span>';
+    html += '      <div><span class="logo-text">Suggu <span>Services</span></span>' + stateLabel + '</div>';
     html += '    </a>';
     html += '  </div>';
     html += '  <nav class="sidebar-nav" id="sidebarNav">';

@@ -3,7 +3,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Register as User - Infinity Dashboard</title>
+  <title>Register as User - Suggu Services Dashboard</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
@@ -238,9 +238,11 @@
 
   <div class="login-wrapper">
     <div class="logo-area">
-      <div class="icon"><i class="fa-solid fa-user"></i></div>
+      <div class="icon" style="margin-bottom:12px;display:flex;align-items:center;justify-content:center;">
+        <img src="{% static 'assets/images/logo.png' %}" alt="Suggu Services" style="width:68px;height:68px;border-radius:18px;object-fit:contain;box-shadow:0 8px 24px -4px rgba(99,102,241,0.4);" />
+      </div>
       <h1>Create User Account</h1>
-      <p>Join Infinity to access our services</p>
+      <p>Join Suggu Services to access our services</p>
     </div>
 
     {% if error %}

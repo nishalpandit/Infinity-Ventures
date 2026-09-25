@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta name="description" content="Infinity Ventures User Portal — Quick Service Details">
-  <title>Quick Service Details · Infinity Ventures User</title>
+  <meta name="description" content="Suggu Services User Portal — Quick Service Details">
+  <title>Quick Service Details · Suggu Services User</title>
   <link rel="stylesheet" href="../assets/styles.css">
   <script defer src="../assets/app.js"></script>
 </head>
@@ -15,11 +15,6 @@
       <div id="topbar-root"></div>
       <main class="page">
         <div class="page-head">
-          <div>
-            <div class="eyebrow">QS-{{ qs.id|stringformat:"04d" }}</div>
-            <h1>{{ qs.title }}</h1>
-            <p>Created {{ qs.created_at|date:"d M Y" }} · {{ qs.location.city|default:"Ranchi" }}, {{ qs.location.state|default:"Jharkhand" }}</p>
-          </div>
           <div class="actions">
             <a class="btn btn-secondary" href="quotations.html?id={{ qs.id }}"><span data-icon="quote"></span> View Quotations</a>
             <a class="btn btn-secondary" href="index.html">← Back to List</a>
@@ -31,8 +26,8 @@
             <section class="card">
               <div class="card-head">
                 <div>
-                  <h2>Service Information</h2>
-                  <p>Complete requirement shared with nearby vendors</p>
+                  <h2>{{ qs.title }}</h2>
+                  <p>Created {{ qs.created_at|date:"d M Y" }} · {{ qs.location.city|default:"Ranchi" }}, {{ qs.location.state|default:"Jharkhand" }}</p>
                 </div>
                 <span class="badge badge-{{ qs.status }}">{{ qs.get_status_display }}</span>
               </div>
@@ -80,11 +75,9 @@
             </section>
 
             <section>
-              <div class="page-head" style="margin:8px 0 14px">
-                <div>
-                  <h1 style="font-size:18px">Vendor Quotations & Responses</h1>
-                  <p>{{ bids_data|length }} vendor{{ bids_data|length|pluralize }} responded with quotations.</p>
-                </div>
+              <div style="margin:8px 0 14px">
+                <h3 class="section-title" style="font-size:16px;margin-bottom:4px">Vendor Quotations & Responses</h3>
+                <p class="muted" style="margin:0;font-size:12px">{{ bids_data|length }} vendor{{ bids_data|length|pluralize }} responded with quotations.</p>
               </div>
 
               <div class="grid grid-2">
@@ -218,7 +211,7 @@
               <span data-icon="info"></span>
               <div>
                 <strong>Payment reminder</strong>
-                Service payment is arranged directly with the vendor. Infinity Ventures does not collect or hold your payment.
+                Service payment is arranged directly with the vendor. Suggu Services does not collect or hold your payment.
               </div>
             </div>
           </aside>

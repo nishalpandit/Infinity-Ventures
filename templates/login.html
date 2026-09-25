@@ -5,7 +5,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Sign In - Infinity Ventures</title>
+  <title>Sign In - Suggu Services</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -534,10 +534,10 @@
   <div class="login-container">
     <!-- Brand Header -->
     <div class="brand-header">
-      <div class="brand-icon">
-        <i class="fa-solid fa-infinity"></i>
+      <div class="brand-icon" style="background:transparent;border:none;box-shadow:none;width:auto;height:auto;margin-bottom:12px;display:flex;align-items:center;justify-content:center;">
+        <img src="{% static 'assets/images/logo.png' %}" alt="Suggu Services" style="width:72px;height:72px;border-radius:18px;object-fit:contain;box-shadow:0 10px 25px -5px rgba(99, 102, 241, 0.4);" />
       </div>
-      <h1>Welcome to Infinity</h1>
+      <h1>Welcome to Suggu Services</h1>
       <p>Sign in to your account</p>
     </div>
 
@@ -637,7 +637,7 @@
   <div id="createAccountModal" class="modal-overlay">
     <div class="modal-content">
       <button class="close-btn" onclick="closeCreateAccountModal()"><i class="fa-solid fa-xmark"></i></button>
-      <h2 style="font-size: 21px; font-weight: 800; color: #fff; margin-bottom: 6px; text-align: center;">Join Infinity Ventures</h2>
+      <h2 style="font-size: 21px; font-weight: 800; color: #fff; margin-bottom: 6px; text-align: center;">Join Suggu Services</h2>
       <p style="color: var(--text-muted); font-size: 13.5px; text-align: center; margin-bottom: 24px;">How would you like to continue?</p>
 
       <a href="{% url 'register_user' %}" class="role-option-card user-opt">

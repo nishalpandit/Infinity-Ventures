@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta name="description" content="Infinity Ventures User Portal — Job Details">
-  <title>Job Details · Infinity Ventures User</title>
+  <meta name="description" content="Suggu Services User Portal — Job Details">
+  <title>Job Details · Suggu Services User</title>
   <link rel="stylesheet" href="../assets/styles.css">
   <script defer src="../assets/app.js"></script>
 </head>
@@ -15,11 +15,6 @@
       <div id="topbar-root"></div>
       <main class="page">
         <div class="page-head">
-          <div>
-            <div class="eyebrow">JOB-{{ job.id|stringformat:"04d" }}</div>
-            <h1>{{ job.title }}</h1>
-            <p>{{ job.category.name|default:"General" }} · {{ job.location.city|default:"Ranchi" }}, {{ job.location.state|default:"Jharkhand" }} · Posted {{ job.created_at|date:"d M Y" }}</p>
-          </div>
           <div class="actions">
             <a class="btn btn-primary" href="quotations.html?job_id={{ job.id }}"><span data-icon="quote"></span> View Quotations</a>
             <a class="btn btn-secondary" href="compare.html?job_id={{ job.id }}"><span data-icon="chart"></span> Compare</a>
@@ -56,8 +51,8 @@
             <section class="card">
               <div class="card-head">
                 <div>
-                  <h2>Job Information</h2>
-                  <p>The requirement vendors bid against</p>
+                  <h2>{{ job.title }}</h2>
+                  <p>{{ job.category.name|default:"General" }} · {{ job.location.city|default:"Ranchi" }}, {{ job.location.state|default:"Jharkhand" }} · Posted {{ job.created_at|date:"d M Y" }}</p>
                 </div>
                 <span class="badge badge-{{ job.status }}">{{ job.get_status_display }}</span>
               </div>

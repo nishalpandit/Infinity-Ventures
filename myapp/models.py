@@ -326,8 +326,8 @@ class AuthToken(models.Model):
 
 
 class GlobalSettings(models.Model):
-    site_title = models.CharField(max_length=255, default='Infinity Ventures')
-    contact_email = models.EmailField(default='support@infinityventures.com')
+    site_title = models.CharField(max_length=255, default='Suggu Services')
+    contact_email = models.EmailField(default='support@sugguservices.com')
     support_phone = models.CharField(max_length=20, default='+91 0000000000')
     maintenance_mode = models.BooleanField(default=False)
     platform_commission_percent = models.DecimalField(max_digits=5, decimal_places=2, default=10.00)
@@ -344,11 +344,11 @@ class GlobalSettings(models.Model):
 # ==============================================================================
 
 class SiteBranding(models.Model):
-    site_title = models.CharField(max_length=255, default='Infinity Ventures')
+    site_title = models.CharField(max_length=255, default='Suggu Services')
     tagline = models.CharField(max_length=255, default='Instant Home Services & Custom Project Bidding Marketplace')
     logo = models.ImageField(upload_to='cms/branding/', null=True, blank=True)
     favicon = models.ImageField(upload_to='cms/branding/', null=True, blank=True)
-    contact_email = models.EmailField(default='support@infinityventures.com')
+    contact_email = models.EmailField(default='support@sugguservices.com')
     support_phone = models.CharField(max_length=50, default='+91 98765 43210')
     address = models.CharField(max_length=255, default='Main Road, Ranchi, Jharkhand, India')
     facebook_url = models.URLField(blank=True, null=True, default='https://facebook.com')
@@ -356,7 +356,7 @@ class SiteBranding(models.Model):
     linkedin_url = models.URLField(blank=True, null=True, default='https://linkedin.com')
     twitter_url = models.URLField(blank=True, null=True, default='https://twitter.com')
     youtube_url = models.URLField(blank=True, null=True, default='https://youtube.com')
-    copyright_text = models.CharField(max_length=255, default='© 2026 Infinity Ventures. All rights reserved.')
+    copyright_text = models.CharField(max_length=255, default='© 2026 Suggu Services. All rights reserved.')
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
