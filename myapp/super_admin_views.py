@@ -287,7 +287,6 @@ def super_admin_user_create(request):
             vendor_type = request.POST.get('vendor_type', 'vendor').strip()
             experience = int(request.POST.get('experience', 0) or 0)
             about = request.POST.get('about', '').strip()
-            rating_val = Decimal(request.POST.get('rating', '5.0') or '5.0')
             dob_str = request.POST.get('dob', '').strip()
             dob_val = dob_str if dob_str else None
             gender = request.POST.get('gender', '').strip()
@@ -296,13 +295,14 @@ def super_admin_user_create(request):
             employee_code = request.POST.get('employee_code', '').strip()
             employee_details = request.POST.get('employee_details', '').strip()
 
-            vp, _ = VendorProfile.objects.get_or_create(user=user)
+            vp, created = VendorProfile.objects.get_or_create(user=user)
             vp.company_name = company_name
             vp.category = category
             vp.location = loc
             vp.vendor_type = vendor_type
             vp.experience = experience
-            vp.rating = rating_val
+            if created:
+                vp.rating = Decimal('0.0')
             vp.about = about
             vp.dob = dob_val
             vp.gender = gender
@@ -381,13 +381,6 @@ def super_admin_user_edit(request, user_id):
             exp_val = request.POST.get('experience', '').strip()
             if exp_val.isdigit():
                 vp.experience = int(exp_val)
-            
-            rating_val = request.POST.get('rating', '').strip()
-            if rating_val:
-                try:
-                    vp.rating = Decimal(rating_val)
-                except Exception:
-                    pass
             
             vp.about = request.POST.get('about', vp.about).strip()
             vp.gender = request.POST.get('gender', vp.gender).strip()
@@ -496,7 +489,6 @@ def super_admin_vendor_create(request):
         city = request.POST.get('city', '').strip()
         location = f"{city}, {state}".strip(', ') if (city or state) else request.POST.get('location', '').strip()
         experience = request.POST.get('experience', 0) or 0
-        rating = request.POST.get('rating', 5.0) or 5.0
         about = request.POST.get('about', '').strip()
 
         # Differentiate between Company and Individual/Outside Vendor
@@ -547,7 +539,7 @@ def super_admin_vendor_create(request):
             category=category,
             location=location,
             experience=experience,
-            rating=rating,
+            rating=Decimal('0.0'),
             about=about,
             employee_code=employee_code,
             employee_details=employee_details,
@@ -641,7 +633,6 @@ def super_admin_vendor_edit(request, vendor_id):
         vendor.vendor_type = vendor_type
         vendor.experience = request.POST.get('experience', 0) or 0
         vendor.about = request.POST.get('about', '').strip()
-        vendor.rating = request.POST.get('rating', 0) or 0
         vendor.employee_code = employee_code
         vendor.employee_details = employee_details
         vendor.address = address

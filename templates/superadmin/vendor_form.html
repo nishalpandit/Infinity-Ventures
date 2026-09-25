@@ -162,14 +162,9 @@
         <input type="number" name="experience" class="form-control" value="{% if vendor %}{{ vendor.experience|default:0 }}{% else %}0{% endif %}" min="0">
       </div>
       <div class="form-group">
-        <label>Rating (0.0 to 5.0)</label>
-        <input type="number" step="0.1" min="0" max="5" name="rating" class="form-control" value="{% if vendor %}{{ vendor.rating|default:5.0 }}{% else %}5.0{% endif %}">
+        <label>Profile Photo / Logo</label>
+        <input type="file" name="profile_image" class="form-control">
       </div>
-    </div>
-
-    <div class="form-group">
-      <label>Profile Photo / Logo</label>
-      <input type="file" name="profile_image" class="form-control">
     </div>
 
     <div class="form-group">
