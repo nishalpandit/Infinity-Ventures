@@ -575,6 +575,8 @@ def super_admin_vendor_create(request):
         'current_state': '',
         'current_city': '',
         'phone': '',
+        'contact_person': '',
+        'individual_name': '',
         'vendor': None,
     })
 
@@ -601,6 +603,9 @@ def super_admin_vendor_edit(request, vendor_id):
     phone = ''
     if hasattr(vendor.user, 'user_profile') and vendor.user.user_profile.phone_number:
         phone = vendor.user.user_profile.phone_number
+
+    contact_person = vendor.user.first_name or ''
+    individual_name = vendor.company_name or vendor.user.first_name or vendor.user.username
 
     if request.method == 'POST':
         vendor_type = request.POST.get('vendor_type', 'vendor')
@@ -674,6 +679,8 @@ def super_admin_vendor_edit(request, vendor_id):
         'current_state': current_state,
         'current_city': current_city,
         'phone': phone,
+        'contact_person': contact_person,
+        'individual_name': individual_name,
     })
 
 @sa_required

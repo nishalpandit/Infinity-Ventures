@@ -14,14 +14,14 @@
   <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; padding-bottom: 16px; border-bottom: 1px solid var(--border);">
     <div>
       <h3 style="font-size: 20px; font-weight: 700; margin: 0; color: var(--text-main);">
-        {% if mode == 'create' %}Add New Vendor / Service Provider{% else %}Edit Vendor: {{ vendor.company_name|default:vendor.user.username }}{% endif %}
+        {% if mode == 'create' %}Add New Vendor / Service Provider{% else %}Edit Vendor: {{ vendor.company_name|default:individual_name|default:'Vendor' }}{% endif %}
       </h3>
       <p style="font-size: 13px; color: var(--text-muted); margin: 4px 0 0 0;">
         Configure profile, categorization, and operational verification details.
       </p>
     </div>
     <span class="badge" id="typeIndicatorBadge" style="background: #f1f5f9; color: #475569; font-size: 12px; font-weight: 600; padding: 6px 12px; border-radius: 999px;">
-      {% if vendor.vendor_type == 'company' %}🏢 Company Vendor{% else %}👤 Individual Pro{% endif %}
+      {% if vendor and vendor.vendor_type == 'company' %}🏢 Company Vendor{% else %}👤 Individual Pro{% endif %}
     </span>
   </div>
   
@@ -61,10 +61,10 @@
           <i class="fa-solid fa-layer-group" style="color: #4f46e5;"></i> Select Vendor Classification
         </label>
         <select name="vendor_type" id="vendorTypeSelect" class="form-control" onchange="toggleVendorTypeFields()" style="font-size: 14px; font-weight: 600; border-color: #cbd5e1;">
-          <option value="company" {% if vendor.vendor_type == 'company' %}selected{% endif %}>
+          <option value="company" {% if vendor and vendor.vendor_type == 'company' %}selected{% endif %}>
             🏢 Company Vendor — (Registered Enterprise / Agency with Staff &amp; Crew)
           </option>
-          <option value="vendor" {% if vendor.vendor_type == 'vendor' or not vendor.vendor_type %}selected{% endif %}>
+          <option value="vendor" {% if not vendor or vendor.vendor_type == 'vendor' %}selected{% endif %}>
             👤 Individual / Outside Vendor — (Independent Contractor / Certified Pro / Sole Technician)
           </option>
         </select>
@@ -88,14 +88,14 @@
       <div class="form-row">
         <div class="form-group">
           <label>Registered Company / Trade Name <span style="color: var(--danger);">*</span></label>
-          <input type="text" name="company_name" class="form-control" value="{% if vendor.vendor_type == 'company' %}{{ vendor.company_name|default:'' }}{% endif %}" placeholder="e.g. Apex Electrical Solutions Pvt Ltd">
+          <input type="text" name="company_name" class="form-control" value="{% if vendor and vendor.vendor_type == 'company' %}{{ vendor.company_name|default:'' }}{% endif %}" placeholder="e.g. Apex Electrical Solutions Pvt Ltd">
         </div>
         <div class="form-group">
           <label>Primary Service Category</label>
           <select name="company_category" class="form-control category-select">
             <option value="">-- Select Category --</option>
             {% for c in categories %}
-            <option value="{{ c.name }}" {% if vendor.category == c.name %}selected{% endif %}>{{ c.name }}</option>
+            <option value="{{ c.name }}" {% if vendor and vendor.category == c.name %}selected{% endif %}>{{ c.name }}</option>
             {% endfor %}
           </select>
         </div>
@@ -104,7 +104,7 @@
       <div class="form-row">
         <div class="form-group">
           <label>Authorized Representative / Contact Person</label>
-          <input type="text" name="contact_person" class="form-control" value="{{ vendor.user.first_name|default:'' }}" placeholder="e.g. Rajeev Malhotra (Director)">
+          <input type="text" name="contact_person" class="form-control" value="{{ contact_person|default:'' }}" placeholder="e.g. Rajeev Malhotra (Director)">
         </div>
         <div class="form-group">
           <label>Official Business Mobile / Helpline</label>
@@ -115,17 +115,17 @@
       <div class="form-row">
         <div class="form-group">
           <label>Corporate GST / Business Registration No.</label>
-          <input type="text" name="company_id_proof" class="form-control" value="{% if vendor.vendor_type == 'company' %}{{ vendor.id_proof|default:'' }}{% endif %}" placeholder="e.g. 20AAACA1234A1Z5 / CIN U74999...">
+          <input type="text" name="company_id_proof" class="form-control" value="{% if vendor and vendor.vendor_type == 'company' %}{{ vendor.id_proof|default:'' }}{% endif %}" placeholder="e.g. 20AAACA1234A1Z5 / CIN U74999...">
         </div>
         <div class="form-group">
           <label>Staff / Vendor Employee Code</label>
-          <input type="text" name="employee_code" class="form-control" value="{{ vendor.employee_code|default:'' }}" placeholder="e.g. CORP-V042 or EMP-771">
+          <input type="text" name="employee_code" class="form-control" value="{% if vendor %}{{ vendor.employee_code|default:'' }}{% endif %}" placeholder="e.g. CORP-V042 or EMP-771">
         </div>
       </div>
 
       <div class="form-group">
         <label>Workforce &amp; Crew Structure Details</label>
-        <input type="text" name="employee_details" class="form-control" value="{{ vendor.employee_details|default:'' }}" placeholder="e.g. 14 field technicians, 2 certified supervisors, 3 mobile utility vans">
+        <input type="text" name="employee_details" class="form-control" value="{% if vendor %}{{ vendor.employee_details|default:'' }}{% endif %}" placeholder="e.g. 14 field technicians, 2 certified supervisors, 3 mobile utility vans">
         <small style="color: var(--text-muted); font-size: 11.5px; margin-top: 4px; display: block;">
           Provide details of available technicians, on-field team strength, or supervisor allocation.
         </small>
@@ -133,7 +133,7 @@
 
       <div class="form-group" style="margin-bottom: 0;">
         <label>Corporate Headquarters / Registered Office Street Address</label>
-        <textarea name="company_address" class="form-control" rows="2" placeholder="Suite / Office No., Floor, Commercial Complex, Street, Locality">{% if vendor.vendor_type == 'company' %}{{ vendor.address|default:'' }}{% endif %}</textarea>
+        <textarea name="company_address" class="form-control" rows="2" placeholder="Suite / Office No., Floor, Commercial Complex, Street, Locality">{% if vendor and vendor.vendor_type == 'company' %}{{ vendor.address|default:'' }}{% endif %}</textarea>
       </div>
     </div>
 
@@ -151,14 +151,14 @@
       <div class="form-row">
         <div class="form-group">
           <label>Full Professional / Technician Name <span style="color: var(--danger);">*</span></label>
-          <input type="text" name="individual_name" class="form-control" value="{% if vendor.vendor_type != 'company' %}{{ vendor.company_name|default:vendor.user.first_name|default:'' }}{% endif %}" placeholder="e.g. Rajesh Kumar Sharma">
+          <input type="text" name="individual_name" class="form-control" value="{{ individual_name|default:'' }}" placeholder="e.g. Rajesh Kumar Sharma">
         </div>
         <div class="form-group">
           <label>Primary Service Category</label>
           <select name="individual_category" class="form-control category-select">
             <option value="">-- Select Category --</option>
             {% for c in categories %}
-            <option value="{{ c.name }}" {% if vendor.category == c.name %}selected{% endif %}>{{ c.name }}</option>
+            <option value="{{ c.name }}" {% if vendor and vendor.category == c.name %}selected{% endif %}>{{ c.name }}</option>
             {% endfor %}
           </select>
         </div>
@@ -171,34 +171,34 @@
         </div>
         <div class="form-group">
           <label>Government ID Proof (Aadhaar / PAN Card No.)</label>
-          <input type="text" name="individual_id_proof" class="form-control" value="{% if vendor.vendor_type != 'company' %}{{ vendor.id_proof|default:'' }}{% endif %}" placeholder="e.g. 4582 9102 3847 (Aadhaar) / ABCDE1234F">
+          <input type="text" name="individual_id_proof" class="form-control" value="{% if vendor and vendor.vendor_type != 'company' %}{{ vendor.id_proof|default:'' }}{% endif %}" placeholder="e.g. 4582 9102 3847 (Aadhaar) / ABCDE1234F">
         </div>
       </div>
 
       <div class="form-row">
         <div class="form-group">
           <label>Date of Birth</label>
-          <input type="date" name="dob" class="form-control" value="{{ vendor.dob|date:'Y-m-d' }}">
+          <input type="date" name="dob" class="form-control" value="{% if vendor %}{{ vendor.dob|date:'Y-m-d' }}{% endif %}">
         </div>
         <div class="form-group">
           <label>Gender</label>
           <select name="gender" class="form-control">
             <option value="">-- Select Gender --</option>
-            <option value="Male" {% if vendor.gender == 'Male' %}selected{% endif %}>Male</option>
-            <option value="Female" {% if vendor.gender == 'Female' %}selected{% endif %}>Female</option>
-            <option value="Other" {% if vendor.gender == 'Other' %}selected{% endif %}>Other</option>
+            <option value="Male" {% if vendor and vendor.gender == 'Male' %}selected{% endif %}>Male</option>
+            <option value="Female" {% if vendor and vendor.gender == 'Female' %}selected{% endif %}>Female</option>
+            <option value="Other" {% if vendor and vendor.gender == 'Other' %}selected{% endif %}>Other</option>
           </select>
         </div>
       </div>
 
       <div class="form-group" style="margin-bottom: 0;">
         <label>Workshop / Residential Base Street Address</label>
-        <textarea name="individual_address" class="form-control" rows="2" placeholder="House/Workshop No., Street, Landmark, Village or City">{% if vendor.vendor_type != 'company' %}{{ vendor.address|default:'' }}{% endif %}</textarea>
+        <textarea name="individual_address" class="form-control" rows="2" placeholder="House/Workshop No., Street, Landmark, Village or City">{% if vendor and vendor.vendor_type != 'company' %}{{ vendor.address|default:'' }}{% endif %}</textarea>
       </div>
     </div>
 
     <!-- Hidden synced Category to ensure POST always gets chosen category -->
-    <input type="hidden" name="category" id="hiddenCategory" value="{{ vendor.category|default:'' }}">
+    <input type="hidden" name="category" id="hiddenCategory" value="{% if vendor %}{{ vendor.category|default:'' }}{% endif %}">
 
     <!-- SECTION 4: LOCATION & OPERATIONAL METRICS (SHARED) -->
     <div style="border-top: 1px solid var(--border); padding-top: 20px; margin-bottom: 24px;">
@@ -225,18 +225,18 @@
       <div class="form-row">
         <div class="form-group">
           <label>Years of Industry Experience</label>
-          <input type="number" name="experience" class="form-control" value="{{ vendor.experience|default:0 }}" min="0" max="60">
+          <input type="number" name="experience" class="form-control" value="{% if vendor %}{{ vendor.experience|default:0 }}{% else %}0{% endif %}" min="0" max="60">
         </div>
         <div class="form-group">
           <label>Performance Rating (0.0 to 5.0)</label>
-          <input type="number" step="0.1" min="0" max="5" name="rating" class="form-control" value="{{ vendor.rating|default:5.0 }}">
+          <input type="number" step="0.1" min="0" max="5" name="rating" class="form-control" value="{% if vendor %}{{ vendor.rating|default:5.0 }}{% else %}5.0{% endif %}">
         </div>
       </div>
 
       <div class="form-group">
         <label>Profile Photo / Company Brand Logo</label>
         <div style="display: flex; align-items: center; gap: 14px;">
-          {% if vendor.profile_image %}
+          {% if vendor and vendor.profile_image %}
             <img src="{{ vendor.profile_image.url }}" alt="Vendor Photo" style="width: 44px; height: 44px; border-radius: 8px; object-fit: cover; border: 1.5px solid var(--border);">
           {% endif %}
           <input type="file" name="profile_image" accept="image/*" class="form-control" style="padding: 7px 12px; font-size: 13px;">
@@ -245,7 +245,7 @@
 
       <div class="form-group" style="margin-bottom: 0;">
         <label>About / Bio / Service Portfolio</label>
-        <textarea name="about" class="form-control" rows="3" placeholder="Provide background summary, certifications, equipment capabilities, or warranty overview...">{{ vendor.about|default:'' }}</textarea>
+        <textarea name="about" class="form-control" rows="3" placeholder="Provide background summary, certifications, equipment capabilities, or warranty overview...">{% if vendor %}{{ vendor.about|default:'' }}{% endif %}</textarea>
       </div>
     </div>
     
