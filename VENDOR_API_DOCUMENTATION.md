@@ -97,6 +97,12 @@ response :-
 "address": "GIDC Naroda, Ahmedabad",
 "vendor_type": "company",
 "experience": 8,
+"dob": "1990-01-01",
+"gender": "Male",
+"id_proof": "Aadhar/PAN",
+"about": "Description",
+"profile_image": "http://192.168.1.54:8000/media/vendor_profiles/image.jpg",
+
 "role": "VENDOR"
 }
 }
@@ -145,6 +151,12 @@ response :-
 "address": "GIDC Naroda, Ahmedabad",
 "vendor_type": "company",
 "experience": 8,
+"dob": "1990-01-01",
+"gender": "Male",
+"id_proof": "Aadhar/PAN",
+"about": "Description",
+"profile_image": "http://192.168.1.54:8000/media/vendor_profiles/image.jpg",
+
 "role": "VENDOR"
 }
 }
@@ -177,6 +189,12 @@ response :-
 "address": "GIDC Naroda, Ahmedabad",
 "vendor_type": "company",
 "experience": 8,
+"dob": "1990-01-01",
+"gender": "Male",
+"id_proof": "Aadhar/PAN",
+"about": "Description",
+"profile_image": "http://192.168.1.54:8000/media/vendor_profiles/image.jpg",
+
 "role": "VENDOR"
 }
 }
@@ -209,6 +227,12 @@ response :-
 "address": "GIDC Naroda, Ahmedabad",
 "vendor_type": "company",
 "experience": 8,
+"dob": "1990-01-01",
+"gender": "Male",
+"id_proof": "Aadhar/PAN",
+"about": "Description",
+"profile_image": "http://192.168.1.54:8000/media/vendor_profiles/image.jpg",
+
 "role": "VENDOR"
 }
 }

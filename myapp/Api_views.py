@@ -503,6 +503,11 @@ def vendor_signup_api(request):
                 'address': address or '—',
                 'vendor_type': vendor_type,
                 'experience': experience,
+                'dob': str(vendor_profile.dob) if vendor_profile.dob else '',
+                'gender': vendor_profile.gender or '',
+                'id_proof': vendor_profile.id_proof or '',
+                'about': vendor_profile.about or '',
+                'profile_image': vendor_profile.profile_image.url if vendor_profile.profile_image else '',
                 'role': 'VENDOR'
             }
         }
@@ -578,6 +583,11 @@ def vendor_login_api(request):
                 'address': address,
                 'vendor_type': vendor_type,
                 'experience': experience,
+                'dob': str(vendor_profile.dob) if vendor_profile.dob else '',
+                'gender': vendor_profile.gender or '',
+                'id_proof': vendor_profile.id_proof or '',
+                'about': vendor_profile.about or '',
+                'profile_image': vendor_profile.profile_image.url if vendor_profile.profile_image else '',
                 'role': 'VENDOR'
             }
         }
@@ -1403,6 +1413,11 @@ def vendor_otp_signup_api(request):
                 'address': address or '—',
                 'vendor_type': vendor_type,
                 'experience': experience,
+                'dob': str(vendor_profile.dob) if vendor_profile.dob else '',
+                'gender': vendor_profile.gender or '',
+                'id_proof': vendor_profile.id_proof or '',
+                'about': vendor_profile.about or '',
+                'profile_image': vendor_profile.profile_image.url if vendor_profile.profile_image else '',
                 'role': 'VENDOR'
             }
         }
@@ -1493,6 +1508,11 @@ def vendor_otp_login_api(request):
                 'address': address,
                 'vendor_type': vendor_type,
                 'experience': experience,
+                'dob': str(vendor_profile.dob) if vendor_profile.dob else '',
+                'gender': vendor_profile.gender or '',
+                'id_proof': vendor_profile.id_proof or '',
+                'about': vendor_profile.about or '',
+                'profile_image': vendor_profile.profile_image.url if vendor_profile.profile_image else '',
                 'role': 'VENDOR'
             }
         }
