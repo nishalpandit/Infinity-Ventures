@@ -21,6 +21,9 @@ urlpatterns = [
     path('api/manage-location/', views.manage_location_view, name='manage_location_view'),
     path('api/categories/', Api_views.get_categories_api, name='get_categories_api'),
     path('api/locations/', Api_views.get_locations_api, name='get_locations_api'),
+    path('api/states/', Api_views.get_states_api, name='get_states_api'),
+    path('api/cities/', Api_views.get_cities_api, name='get_cities_api'),
+    path('api/vendor-types/', Api_views.get_vendor_types_api, name='get_vendor_types_api'),
 
     # Super Admin Dashboard
     path('super-admin/login/', super_admin_views.super_admin_login_view, name='super_admin_login'),

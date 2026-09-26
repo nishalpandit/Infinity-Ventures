@@ -306,3 +306,45 @@ response :-
 ]
 }
 
+
+
+API for Get States
+url : (http://192.168.1.54:8000/api/states/)
+method : GET
+response :-
+{
+"status": "success",
+"states": ["Gujarat", "Maharashtra"]
+}
+
+
+API for Get Cities
+url : (http://192.168.1.54:8000/api/cities/?state=Gujarat)
+method : GET
+params :-
+state:Gujarat (Optional query parameter)
+response :-
+{
+"status": "success",
+"cities": ["Ahmedabad", "Surat"]
+}
+
+
+API for Get Vendor Types
+url : (http://192.168.1.54:8000/api/vendor-types/)
+method : GET
+response :-
+{
+"status": "success",
+"vendor_types": [
+{
+"id": "vendor",
+"name": "Vendor"
+},
+{
+"id": "company",
+"name": "Company Vendor"
+}
+]
+}
+

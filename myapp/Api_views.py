@@ -1859,3 +1859,48 @@ def get_locations_api(request):
         return JsonResponse({'status': 'success', 'locations': list(locations)}, status=200)
     return JsonResponse({'status': 'error', 'message': 'Method not allowed'}, status=405)
 
+
+
+@csrf_exempt
+def get_states_api(request):
+    '''
+    API to fetch all distinct active states.
+    URL: /api/states/
+    Method: GET
+    '''
+    if request.method == 'GET':
+        states = Location.objects.filter(status='active').values_list('state', flat=True).distinct()
+        return JsonResponse({'status': 'success', 'states': list(states)}, status=200)
+    return JsonResponse({'status': 'error', 'message': 'Method not allowed'}, status=405)
+
+@csrf_exempt
+def get_cities_api(request):
+    '''
+    API to fetch cities, optionally filtered by state.
+    URL: /api/cities/?state=Gujarat
+    Method: GET
+    '''
+    if request.method == 'GET':
+        state = request.GET.get('state')
+        qs = Location.objects.filter(status='active')
+        if state:
+            qs = qs.filter(state__iexact=state)
+        cities = qs.values_list('city', flat=True).distinct()
+        return JsonResponse({'status': 'success', 'cities': list(cities)}, status=200)
+    return JsonResponse({'status': 'error', 'message': 'Method not allowed'}, status=405)
+
+@csrf_exempt
+def get_vendor_types_api(request):
+    '''
+    API to fetch all vendor types for dropdown.
+    URL: /api/vendor-types/
+    Method: GET
+    '''
+    if request.method == 'GET':
+        types = [
+            {'id': 'vendor', 'name': 'Vendor'},
+            {'id': 'company', 'name': 'Company Vendor'}
+        ]
+        return JsonResponse({'status': 'success', 'vendor_types': types}, status=200)
+    return JsonResponse({'status': 'error', 'message': 'Method not allowed'}, status=405)
+
