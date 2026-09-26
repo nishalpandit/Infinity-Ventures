@@ -1,5 +1,5 @@
 API for Check Phone Number (User)
-url : (http://192.168.1.54:8000/api/auth/check-phone/)
+url : (http://192.168.1.55:800/api/auth/check-phone/)
 method : POST
 params :-
 mobile:9876543210
@@ -21,7 +21,7 @@ response :-
 
 
 API for Send OTP (User)
-url : (http://192.168.1.54:8000/api/auth/send-otp/)
+url : (http://192.168.1.55:800/api/auth/send-otp/)
 method : POST
 params :-
 mobile:9876543210
@@ -39,7 +39,7 @@ response :-
 
 
 API for Verify OTP (User)
-url : (http://192.168.1.54:8000/api/auth/verify-otp/)
+url : (http://192.168.1.55:800/api/auth/verify-otp/)
 method : POST
 params :-
 mobile:9876543210
@@ -55,7 +55,7 @@ response :-
 
 
 API for User Signup with OTP
-url : (http://192.168.1.54:8000/api/user/otp-signup/)
+url : (http://192.168.1.55:800/api/user/otp-signup/)
 method : POST
 params :-
 name:Ananya Sharma
@@ -83,7 +83,7 @@ response :-
 
 
 API for User Signup with Password
-url : (http://192.168.1.54:8000/api/user/signup/)
+url : (http://192.168.1.55:800/api/user/signup/)
 method : POST
 params :-
 name:Ananya Sharma
@@ -111,7 +111,7 @@ response :-
 
 
 API for User Login with OTP
-url : (http://192.168.1.54:8000/api/user/otp-login/)
+url : (http://192.168.1.55:800/api/user/otp-login/)
 method : POST
 params :-
 mobile:9876543210
@@ -136,7 +136,7 @@ response :-
 
 
 API for User Login with Password
-url : (http://192.168.1.54:8000/api/user/login/)
+url : (http://192.168.1.55:800/api/user/login/)
 method : POST
 params :-
 username:ananya@example.com
@@ -161,7 +161,7 @@ response :-
 
 
 API for User Post Job
-url : (http://192.168.1.54:8000/api/user/post-job/)
+url : (http://192.168.1.55:800/api/user/post-job/)
 method : POST
 headers :-
 Authorization: Bearer <token>
@@ -226,7 +226,7 @@ response :-
 
 
 API for User Post Quick Service
-url : (http://192.168.1.54:8000/api/user/post-quick-service/)
+url : (http://192.168.1.55:800/api/user/post-quick-service/)
 method : POST
 headers :-
 Authorization: Bearer <token>
@@ -276,7 +276,7 @@ response :-
 
 
 API for Get Categories
-url : (http://192.168.1.54:8000/api/categories/)
+url : (http://192.168.1.55:800/api/categories/)
 method : GET
 response :-
 {
@@ -292,7 +292,7 @@ response :-
 
 
 API for Get Locations (States and Cities)
-url : (http://192.168.1.54:8000/api/locations/)
+url : (http://192.168.1.55:800/api/locations/)
 method : GET
 response :-
 {
@@ -309,7 +309,7 @@ response :-
 
 
 API for Get States
-url : (http://192.168.1.54:8000/api/states/)
+url : (http://192.168.1.55:800/api/states/)
 method : GET
 response :-
 {
@@ -326,7 +326,7 @@ response :-
 
 
 API for Get Cities
-url : (http://192.168.1.54:8000/api/cities/?state=Gujarat)
+url : (http://192.168.1.55:800/api/cities/?state=Gujarat)
 method : GET
 params :-
 state:Gujarat (Optional query parameter)
@@ -349,7 +349,7 @@ response :-
 
 
 API for Get Vendor Types
-url : (http://192.168.1.54:8000/api/vendor-types/)
+url : (http://192.168.1.55:800/api/vendor-types/)
 method : GET
 response :-
 {
