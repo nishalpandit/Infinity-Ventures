@@ -1869,7 +1869,7 @@ def get_states_api(request):
     Method: GET
     '''
     if request.method == 'GET':
-        states = Location.objects.filter(status='active').values_list('state', flat=True).distinct()
+        states = list(Location.objects.filter(status='active').values('state').distinct())
         return JsonResponse({'status': 'success', 'states': list(states)}, status=200)
     return JsonResponse({'status': 'error', 'message': 'Method not allowed'}, status=405)
 
@@ -1885,7 +1885,7 @@ def get_cities_api(request):
         qs = Location.objects.filter(status='active')
         if state:
             qs = qs.filter(state__iexact=state)
-        cities = qs.values_list('city', flat=True).distinct()
+        cities = list(qs.values('id', 'city', 'state'))
         return JsonResponse({'status': 'success', 'cities': list(cities)}, status=200)
     return JsonResponse({'status': 'error', 'message': 'Method not allowed'}, status=405)
 

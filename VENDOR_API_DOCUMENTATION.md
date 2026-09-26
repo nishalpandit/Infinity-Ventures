@@ -277,7 +277,14 @@ method : GET
 response :-
 {
 "status": "success",
-"states": ["Gujarat", "Maharashtra"]
+"states": [
+{
+"state": "Gujarat"
+},
+{
+"state": "Maharashtra"
+}
+]
 }
 
 
@@ -289,7 +296,18 @@ state:Gujarat (Optional query parameter)
 response :-
 {
 "status": "success",
-"cities": ["Ahmedabad", "Surat"]
+"cities": [
+{
+"id": 1,
+"city": "Ahmedabad",
+"state": "Gujarat"
+},
+{
+"id": 2,
+"city": "Surat",
+"state": "Gujarat"
+}
+]
 }
 
 
