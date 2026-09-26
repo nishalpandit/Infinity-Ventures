@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Selected Vendors — Suggu Admin</title>
+  <title>Selected Vendors - Suggu Admin</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
@@ -23,7 +23,7 @@
       <div class="page-head">
         <div class="ph-title">
           <h1>Selected Vendors</h1>
-          <p>Vendors selected by customers for jobs — including divided work assignments</p>
+          <p>Vendors selected by customers for jobs - including divided work assignments</p>
         </div>
         <div class="ph-actions">
           <a class="btn btn-outline btn-sm" href="index.html"><i class="fa-solid fa-gavel"></i> All Bids</a>
@@ -80,9 +80,9 @@
           { key: 'vendor', label: 'Vendor', sortable: true, render: function (r) { return U.userCell(r.vendor, r.vendorEmail, r.vendorId); } },
           { key: 'vendorType', label: 'Vendor Type', sortable: true, render: function (r) { return U.badge(r.vendorType); } },
           { key: 'quotation', label: 'Quotation', sortable: true, render: function (r) { return '<strong>' + U.inr(r.quotation) + '</strong>'; } },
-          { key: 'assignedWork', label: 'Assigned Work', render: function (r) { return r.assignedWork ? U.esc(r.assignedWork) : '<span class="text-muted">—</span>'; } },
+          { key: 'assignedWork', label: 'Assigned Work', render: function (r) { return r.assignedWork ? U.esc(r.assignedWork) : '<span class="text-muted">-</span>'; } },
           { key: 'status', label: 'Status', sortable: true, render: function (r) { return U.badge(r.status); } },
-          { key: 'selectionDate', label: 'Selection Date', sortable: true, render: function (r) { return r.selectionDate || '—'; } },
+          { key: 'selectionDate', label: 'Selection Date', sortable: true, render: function (r) { return r.selectionDate || '-'; } },
           {
             key: 'actions', label: 'Actions', csv: false, render: function (r) {
               return U.actionBtns([

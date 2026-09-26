@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>User Details — Suggu Admin</title>
+  <title>User Details - Suggu Admin</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
@@ -55,7 +55,7 @@
       var myJobs = serverJobs || D.jobs.filter(function (j) { return j.UserId === cust.id; });
       var myReviews = D.UserReviews ? D.UserReviews.filter(function (r) { return r.User === cust.name; }) : [];
       var myComplaints = D.complaints ? D.complaints.filter(function (c) { return c.raisedBy === cust.name; }) : [];
-      var vendorsSelected = myQS.filter(function (s) { return s.selectedVendor && s.selectedVendor !== '—'; }).length +
+      var vendorsSelected = myQS.filter(function (s) { return s.selectedVendor && s.selectedVendor !== '-'; }).length +
         myJobs.reduce(function (s, j) { return s + (j.selectedVendors || 0); }, 0);
 
       function render() {
@@ -158,7 +158,7 @@
 
         document.getElementById('editBtn').addEventListener('click', function () {
           U.modal({
-            title: 'Edit User — ' + cust.id,
+            title: 'Edit User - ' + cust.id,
             body:
               '<div class="row g-3">' +
               '<div class="col-md-6"><label class="form-label">Name</label><input class="form-control" id="eName" value="' + U.esc(cust.name) + '"></div>' +

@@ -1,9 +1,9 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta name="description" content="Suggu Services User Portal — My Quick Services">
+  <meta name="description" content="Suggu Services User Portal - My Quick Services">
   <title>My Quick Services · Suggu Services User</title>
   <link rel="stylesheet" href="../assets/styles.css">
   <script defer src="../assets/app.js"></script>
@@ -87,10 +87,10 @@
                   <td>₹{{ qs.budget|floatformat:0 }}</td>
                   <td><a class="link" href="details.html?id={{ qs.id }}">{{ qs.bids.count }} {% if qs.bids.count == 1 %}request{% else %}requests{% endif %}</a></td>
                   <td>
-                    {% if qs.selected_vendor_name and qs.selected_vendor_name != '—' %}
+                    {% if qs.selected_vendor_name and qs.selected_vendor_name != '-' %}
                     <div class="cell-user"><span class="avatar sm vendor">{{ qs.selected_vendor_name|slice:":2"|upper }}</span>{{ qs.selected_vendor_name }}</div>
                     {% else %}
-                    —
+                    -
                     {% endif %}
                   </td>
                   <td>{{ qs.created_at|date:"d M Y" }}</td>

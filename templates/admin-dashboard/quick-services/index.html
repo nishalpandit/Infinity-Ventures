@@ -1,9 +1,9 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Quick Services — Suggu Admin</title>
+  <title>Quick Services - Suggu Admin</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
@@ -163,7 +163,7 @@
                   <td>{{ qs.location }}</td>
                   <td><strong>₹{{ qs.budget|floatformat:0 }}</strong></td>
                   <td><span class="vendor-count"><i class="fa-solid fa-handshake"></i> {{ qs.vendorRequests }}</span></td>
-                  <td>{% if qs.selectedVendor != '—' %}<strong>{{ qs.selectedVendor }}</strong>{% else %}<span style="color:#9ca3af">—</span>{% endif %}</td>
+                  <td>{% if qs.selectedVendor != '-' %}<strong>{{ qs.selectedVendor }}</strong>{% else %}<span style="color:#9ca3af">-</span>{% endif %}</td>
                   <td>
                     {% if qs.status == 'open' %}<span class="qs-badge b-open"><span class="dot"></span>Open</span>
                     {% elif qs.status == 'active' %}<span class="qs-badge b-active"><span class="dot"></span>Active</span>
@@ -225,7 +225,7 @@
                 <td>{{ qs.location }}</td>
                 <td><strong>&#8377;{{ qs.budget|floatformat:0 }}</strong></td>
                 <td><span class="vendor-count"><i class="fa-solid fa-handshake"></i> {{ qs.vendorRequests }}</span></td>
-                <td>{% if qs.selectedVendor != '&mdash;' %}<strong>{{ qs.selectedVendor }}</strong>{% else %}<span style="color:#9ca3af">&#8212;</span>{% endif %}</td>
+                <td>{% if qs.selectedVendor != '-' %}<strong>{{ qs.selectedVendor }}</strong>{% else %}<span style="color:#9ca3af">&#8212;</span>{% endif %}</td>
                 <td>
                   {% if qs.status == 'completed' %}<span class="qs-badge b-completed"><span class="dot"></span>Completed</span>
                   {% elif qs.status == 'cancelled' %}<span class="qs-badge b-cancelled"><span class="dot"></span>Cancelled</span>
@@ -305,3 +305,4 @@
   </script>
 </body>
 </html>
+

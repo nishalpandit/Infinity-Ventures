@@ -619,6 +619,10 @@ class Testimonial(models.Model):
 
 
 class TrustMetric(models.Model):
+    title = models.CharField(max_length=255, null=True, blank=True, help_text="e.g. Aadhaar & Police Verified")
+    description = models.TextField(null=True, blank=True, help_text="Detailed trust point description")
+    badge_text = models.CharField(max_length=100, null=True, blank=True, help_text="e.g. 100% of active pros verified")
+    icon_svg = models.TextField(null=True, blank=True, help_text="SVG markup for icon")
     icon_class = models.CharField(max_length=100, default='fa-solid fa-shield-halved', help_text='FontAwesome icon class')
     stat_number = models.CharField(max_length=50, default='100%')
     label = models.CharField(max_length=100, default='Verified & Background Checked')
@@ -629,5 +633,6 @@ class TrustMetric(models.Model):
         ordering = ['order']
 
     def __str__(self):
-        return f"{self.stat_number} {self.label}"
+        return self.title or f"{self.stat_number} {self.label}"
+
 

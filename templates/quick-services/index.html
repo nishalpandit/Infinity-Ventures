@@ -1,10 +1,10 @@
-{% load static %}
+﻿{% load static %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Quick Services — Suggu Admin</title>
+  <title>Quick Services - Suggu Admin</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
@@ -100,7 +100,7 @@
           { key: 'location', label: 'Location', sortable: true, render: function (r) { return U.esc(r.location); } },
           { key: 'budget', label: 'Budget', sortable: true, render: function (r) { return '<strong>' + U.inr(r.budget) + '</strong>'; } },
           { key: 'vendorRequests', label: 'Vendor Requests', sortable: true, render: function (r) { return '<span class="count-pill">' + r.vendorRequests + '</span>'; } },
-          { key: 'selectedVendor', label: 'Selected Vendor', render: function (r) { return r.selectedVendor === '—' ? '<span class="text-muted">—</span>' : U.esc(r.selectedVendor); } },
+          { key: 'selectedVendor', label: 'Selected Vendor', render: function (r) { return r.selectedVendor === '-' ? '<span class="text-muted">-</span>' : U.esc(r.selectedVendor); } },
           { key: 'status', label: 'Status', sortable: true, render: function (r) { return U.badge(r.status); } },
           { key: 'created', label: 'Created', sortable: true, render: function (r) { return r.created; } },
           {

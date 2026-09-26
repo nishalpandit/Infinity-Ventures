@@ -1,9 +1,9 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta name="description" content="Suggu Services User Portal — My Jobs">
+  <meta name="description" content="Suggu Services User Portal - My Jobs">
   <title>My Jobs · Suggu Services User</title>
   <link rel="stylesheet" href="../assets/styles.css">
   <script defer src="../assets/app.js"></script>
@@ -78,10 +78,10 @@
                   <td>₹{{ job.budget|floatformat:0 }}</td>
                   <td><a class="link" href="details.html?id={{ job.id }}">{{ job.bids.count }} {% if job.bids.count == 1 %}bid{% else %}bids{% endif %}</a></td>
                   <td>
-                    {% if job.selected_vendor_name and job.selected_vendor_name != '—' %}
+                    {% if job.selected_vendor_name and job.selected_vendor_name != '-' %}
                     <span class="badge badge-selected">{{ job.selected_vendor_name }}</span>
                     {% else %}
-                    —
+                    -
                     {% endif %}
                   </td>
                   <td>{{ job.created_at|date:"d M Y" }}</td>

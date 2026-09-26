@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Bid Details — Suggu Admin</title>
+  <title>Bid Details - Suggu Admin</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
@@ -82,7 +82,7 @@
         html += '<div class="col-lg-6"><div class="card"><div class="card-header"><h6><i class="fa-solid fa-gavel"></i> Bid Information</h6></div><div class="card-body">' +
           infoRow('fa-hashtag', 'Bid ID', bid.id) +
           infoRow('fa-briefcase', 'Job', bid.jobTitle + ' (' + bid.jobId + ')') +
-          infoRow('fa-user', 'Customer', job ? job.customer : '—') +
+          infoRow('fa-user', 'Customer', job ? job.customer : '-') +
           infoRow('fa-file-invoice-dollar', 'Quotation Amount', U.inr(bid.quotation)) +
           infoRow('fa-coins', 'Bid Credit Used', bid.creditUsed + ' credit(s)') +
           infoRow('fa-calendar', 'Submitted Date', bid.submitted) +

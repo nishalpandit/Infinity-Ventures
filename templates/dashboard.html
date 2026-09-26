@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Area Admin Dashboard — Suggu Admin</title>
+  <title>Area Admin Dashboard - Suggu Admin</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
@@ -353,7 +353,7 @@
                       <div style="font-size:11px; color:#64748b;">VEN-{{ v.user.id|stringformat:"04d" }} · {{ v.vendor_type|title }}</div>
                     </td>
                     <td><span class="badge" style="background:#f1f5f9; color:#334155;">{{ v.category|default:"General" }}</span></td>
-                    <td style="color:#64748b; font-size:12px;">{{ v.location|default:admin_state|default:"—" }}</td>
+                    <td style="color:#64748b; font-size:12px;">{{ v.location|default:admin_state|default:"-" }}</td>
                     <td><span style="color:#eab308; font-weight:700;">★ {{ v.rating|default:"5.0" }}</span></td>
                   </tr>
                   {% empty %}

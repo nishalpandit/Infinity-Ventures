@@ -1,4 +1,4 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="description" content="Suggu Services Vendor Portal — Purchase History"><title>Purchase History · Suggu Services Vendor</title><link rel="stylesheet" href="/infinity-vendor-dashboard/assets/styles.css"><script defer src="/infinity-vendor-dashboard/assets/app.js"></script></head><body data-page="credit-history" data-title="Purchase History" data-root="../"><div class="app-shell"><div id="sidebar-root"></div><div class="workspace"><div id="topbar-root"></div><main class="page">
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="description" content="Suggu Services Vendor Portal - Purchase History"><title>Purchase History · Suggu Services Vendor</title><link rel="stylesheet" href="/infinity-vendor-dashboard/assets/styles.css"><script defer src="/infinity-vendor-dashboard/assets/app.js"></script></head><body data-page="credit-history" data-title="Purchase History" data-root="../"><div class="app-shell"><div id="sidebar-root"></div><div class="workspace"><div id="topbar-root"></div><main class="page">
 <section class="card" data-filter-scope><div class="toolbar"><div class="search-box"><span data-icon="search"></span><input class="input" data-search-input placeholder="Transaction ID or package"></div><select class="select" style="max-width:150px" data-filter="status"><option value="all">All statuses</option><option value="success">Paid</option><option value="failed">Failed</option></select><input class="input" type="date" style="max-width:145px"><button class="btn btn-secondary" data-toast="Statement downloaded" data-toast-message="Your purchase statement is ready."><span data-icon="download"></span> Download</button></div><div class="table-wrap"><table class="data-table"><thead><tr><th>Transaction ID</th><th>Package</th><th>Credits</th><th>Amount</th><th>Payment Status</th><th>Date</th></tr></thead><tbody data-rows>
 {% for sub in purchases %}
 <tr data-row data-status="{{ sub.status }}" data-search="TXN-BC-{{ sub.id }} {{ sub.package_name }}">
@@ -8,7 +8,7 @@
     {% if sub.status == 'success' %}
       <span class="balance-change positive">+{% if '100' in sub.package_name %}100{% elif '50' in sub.package_name %}50{% elif '25' in sub.package_name %}25{% elif '15' in sub.package_name %}15{% else %}10{% endif %}</span>
     {% else %}
-      —
+      -
     {% endif %}
   </td>
   <td>₹{{ sub.amount }}</td>

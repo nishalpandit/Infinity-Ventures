@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Quick Service Details — Suggu Admin</title>
+  <title>Quick Service Details - Suggu Admin</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
@@ -64,7 +64,7 @@
         var stats = [
           { label: 'Budget', value: U.inr(svc.budget), icon: 'fa-indian-rupee-sign', cls: 'icon-green' },
           { label: 'Vendor Requests', value: svc.vendorRequests, icon: 'fa-handshake', cls: 'icon-indigo' },
-          { label: 'Selected Vendor', value: svc.selectedVendor === '—' ? 'None' : svc.selectedVendor, icon: 'fa-user-check', cls: 'icon-teal' },
+          { label: 'Selected Vendor', value: svc.selectedVendor === '-' ? 'None' : svc.selectedVendor, icon: 'fa-user-check', cls: 'icon-teal' },
           { label: 'Status', value: svc.status, icon: 'fa-circle-info', cls: 'icon-blue' }
         ];
         html += '<div class="stat-grid" style="margin-top:20px;">' + stats.map(function (s) {
