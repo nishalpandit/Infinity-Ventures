@@ -466,7 +466,13 @@ def vendor_signup_api(request):
             location=location,
             address=address,
             vendor_type=vendor_type,
-            experience=experience
+            experience=experience,
+        mobile=mobile,
+        dob=dob,
+        gender=gender,
+        id_proof=id_proof,
+        about=about,
+        profile_image=profile_image
         )
 
         user_profile, _ = UserProfile.objects.get_or_create(user=user)
@@ -1278,8 +1284,13 @@ def vendor_otp_signup_api(request):
         location = f"{city}, {state}" if (city and state) else (data.get('location') or city or state or 'Ranchi, Jharkhand').strip()
         address = (data.get('address') or '').strip()
         vendor_type = (data.get('vendor_type') or ('company' if company_name else 'vendor')).strip()
+    dob = data.get('dob')
+    gender = (data.get('gender') or '').strip()
+    id_proof = (data.get('id_proof') or '').strip()
+    about = (data.get('about') or '').strip()
+    profile_image = request.FILES.get('profile_image') or request.FILES.get('image')
 
-        experience = data.get('experience', 0)
+    experience = data.get('experience', 0)
         try:
             experience = int(experience)
         except (ValueError, TypeError):
@@ -1347,7 +1358,13 @@ def vendor_otp_signup_api(request):
             location=location,
             address=address,
             vendor_type=vendor_type,
-            experience=experience
+            experience=experience,
+        mobile=mobile,
+        dob=dob,
+        gender=gender,
+        id_proof=id_proof,
+        about=about,
+        profile_image=profile_image
         )
 
         user_profile, _ = UserProfile.objects.get_or_create(user=user)

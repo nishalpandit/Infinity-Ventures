@@ -71,6 +71,11 @@ vendor_type:company
 experience:8
 email:info@reliablepower.com
 password:Password@123
+dob:1990-01-01 (optional)
+gender:Male (optional)
+id_proof:Aadhar/PAN (optional)
+about:Description (optional)
+profile_image: (File Upload - optional)
 response :-
 {
 "status": "success",
@@ -114,6 +119,11 @@ vendor_type:company
 experience:8
 password:Password@123
 confirm_password:Password@123
+dob:1990-01-01 (optional)
+gender:Male (optional)
+id_proof:Aadhar/PAN (optional)
+about:Description (optional)
+profile_image: (File Upload - optional)
 response :-
 {
 "status": "success",
