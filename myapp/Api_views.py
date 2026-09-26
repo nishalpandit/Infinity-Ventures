@@ -1796,3 +1796,29 @@ def user_post_quick_service_api(request):
     except Exception as e:
         return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
 
+
+
+@csrf_exempt
+def get_categories_api(request):
+    '''
+    API to fetch all active categories.
+    URL: /api/categories/
+    Method: GET
+    '''
+    if request.method == 'GET':
+        categories = Category.objects.filter(status='active').values('id', 'name', 'service_type')
+        return JsonResponse({'status': 'success', 'categories': list(categories)}, status=200)
+    return JsonResponse({'status': 'error', 'message': 'Method not allowed'}, status=405)
+
+@csrf_exempt
+def get_locations_api(request):
+    '''
+    API to fetch all active locations (states and cities).
+    URL: /api/locations/
+    Method: GET
+    '''
+    if request.method == 'GET':
+        locations = Location.objects.filter(status='active').values('id', 'state', 'city')
+        return JsonResponse({'status': 'success', 'locations': list(locations)}, status=200)
+    return JsonResponse({'status': 'error', 'message': 'Method not allowed'}, status=405)
+

@@ -19,6 +19,8 @@ urlpatterns = [
     path('user/dashboard', views.user_dashboard, name='user_dashboard'),
     path('admin-dashboard/create-company-vendor/', views.create_company_vendor_view, name='create_company_vendor'),
     path('api/manage-location/', views.manage_location_view, name='manage_location_view'),
+    path('api/categories/', Api_views.get_categories_api, name='get_categories_api'),
+    path('api/locations/', Api_views.get_locations_api, name='get_locations_api'),
 
     # Super Admin Dashboard
     path('super-admin/login/', super_admin_views.super_admin_login_view, name='super_admin_login'),

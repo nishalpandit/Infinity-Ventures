@@ -202,3 +202,36 @@ response :-
 "role": "VENDOR"
 }
 }
+
+
+API for Get Categories
+url : (http://192.168.1.54:8000/api/categories/)
+method : GET
+response :-
+{
+"status": "success",
+"categories": [
+{
+"id": 1,
+"name": "Electrical & Power Systems",
+"service_type": "both"
+}
+]
+}
+
+
+API for Get Locations (States and Cities)
+url : (http://192.168.1.54:8000/api/locations/)
+method : GET
+response :-
+{
+"status": "success",
+"locations": [
+{
+"id": 1,
+"state": "Gujarat",
+"city": "Ahmedabad"
+}
+]
+}
+
