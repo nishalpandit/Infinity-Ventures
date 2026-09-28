@@ -21,15 +21,7 @@
         </div>
 
         <section class="card" data-filter-scope>
-          <div class="tabs">
-            <button class="tab active" data-status="all">All <span class="count">{{ status_counts.all|default:0 }}</span></button>
-            <button class="tab" data-status="open">Open for Bidding <span class="count">{{ status_counts.open|default:0 }}</span></button>
-            <button class="tab" data-status="selected">Vendors Selected <span class="count">{{ status_counts.selected|default:0 }}</span></button>
-            <button class="tab" data-status="progress">In Progress <span class="count">{{ status_counts.progress|default:0 }}</span></button>
-            <button class="tab" data-status="completed">Completed <span class="count">{{ status_counts.completed|default:0 }}</span></button>
-            <button class="tab" data-status="cancelled">Cancelled <span class="count">{{ status_counts.cancelled|default:0 }}</span></button>
-            <button class="tab" data-status="closed">Closed <span class="count">{{ status_counts.closed|default:0 }}</span></button>
-          </div>
+
 
           <div class="toolbar">
             <div class="search-box">
@@ -41,6 +33,11 @@
               {% for cat in active_cats %}
               <option>{{ cat.name }}</option>
               {% endfor %}
+            </select>
+            <select class="select" style="max-width:160px" data-filter="status">
+              <option value="all">All Status</option>
+              <option value="open">Open</option>
+              <option value="closed">Closed</option>
             </select>
             <input class="input" type="date" style="max-width:145px">
             <select class="select" style="max-width:160px" data-sort>
@@ -87,9 +84,23 @@
                   <td>{{ job.created_at|date:"d M Y" }}</td>
                   <td><span class="badge badge-{{ job.status }}">{{ job.get_status_display }}</span></td>
                   <td>
-                    <div class="cell-actions">
+                    <div class="cell-actions" style="display:flex; gap:8px;">
                       <a class="btn btn-secondary btn-sm" href="details.html?id={{ job.id }}">View</a>
-
+                      {% if job.status == 'open' %}
+                      <form method="POST" style="margin:0;">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="toggle_job_status">
+                        <input type="hidden" name="job_id" value="{{ job.id }}">
+                        <button type="submit" class="btn btn-danger btn-sm">Close</button>
+                      </form>
+                      {% elif job.status == 'closed' %}
+                      <form method="POST" style="margin:0;">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="toggle_job_status">
+                        <input type="hidden" name="job_id" value="{{ job.id }}">
+                        <button type="submit" class="btn btn-primary btn-sm">Open</button>
+                      </form>
+                      {% endif %}
                     </div>
                   </td>
                 </tr>

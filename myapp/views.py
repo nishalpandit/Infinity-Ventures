@@ -316,6 +316,20 @@ def dashboard_view(request, path=''):
         qs.save()
         return redirect('/user/quick-services/index')
 
+    if request.method == 'POST' and request.POST.get('action') == 'toggle_job_status':
+        job_id = request.POST.get('job_id')
+        if job_id:
+            try:
+                job = Job.objects.get(id=job_id, user=request.user)
+                if job.status == 'open':
+                    job.status = 'closed'
+                elif job.status == 'closed':
+                    job.status = 'open'
+                job.save()
+            except Job.DoesNotExist:
+                pass
+        return redirect('/user/jobs/index.html')
+
     if request.method == 'POST' and path == 'user/jobs/create':
         job = Job(
             title=request.POST.get('title'),
