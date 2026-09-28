@@ -43,7 +43,7 @@
           </article>
         </div>
 
-        <div class="layout-main">
+        <div>
           <div class="stack">
             <section class="card">
               <div class="card-head">
@@ -296,53 +296,7 @@
             {% endif %}
           </div>
 
-          <aside class="stack">
-            <section class="card">
-              <div class="card-head">
-                <h3>Job Progress</h3>
-              </div>
-              <div class="card-body timeline">
-                <div class="timeline-item">
-                  <span class="timeline-dot"></span>
-                  <h4>Job published</h4>
-                  <p>Visible to matching contractors</p>
-                  <time>{{ job.created_at|date:"d M Y" }}</time>
-                </div>
-                {% if bids %}
-                <div class="timeline-item">
-                  <span class="timeline-dot"></span>
-                  <h4>{{ bids.count }} quotation{{ bids.count|pluralize }} received</h4>
-                  <p>All bids submitted</p>
-                  <time>Recent</time>
-                </div>
-                {% endif %}
-                {% if job.status == 'selected' %}
-                <div class="timeline-item">
-                  <span class="timeline-dot"></span>
-                  <h4>Vendor selected</h4>
-                  <p>Project assigned</p>
-                  <time>Active</time>
-                </div>
-                {% endif %}
-                {% if job.status == 'completed' %}
-                <div class="timeline-item">
-                  <span class="timeline-dot" style="background:#059669;"></span>
-                  <h4 style="color:#059669;">Project Completed</h4>
-                  <p>Work approved &amp; settled</p>
-                  <time>{{ completion_proof.completed_at|date:"d M Y"|default:"Recent" }}</time>
-                </div>
-                {% endif %}
-              </div>
-            </section>
-
-            <div class="callout neutral">
-              <span data-icon="info"></span>
-              <div>
-                <strong>Vendor bid privacy</strong>
-                You can see all quotation prices. Vendors cannot see competitors’ prices.
-              </div>
-            </div>
-          </aside>
+          
         </div>
       </main>
     </div>

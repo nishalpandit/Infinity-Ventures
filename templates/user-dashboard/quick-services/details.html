@@ -20,7 +20,7 @@
           </div>
         </div>
 
-        <div class="layout-main">
+        <div>
           <div class="stack">
             <section class="card">
               <div class="card-head">
@@ -252,73 +252,7 @@
             {% endif %}
           </div>
 
-          <aside class="stack">
-            <section class="card">
-              <div class="card-head">
-                <h3>Service Status</h3>
-              </div>
-              <div class="card-body timeline">
-                <div class="timeline-item">
-                  <span class="timeline-dot"></span>
-                  <h4>Service posted</h4>
-                  <p>Requirement published to verified vendors</p>
-                  <time>{{ qs.created_at|date:"d M, h:i A" }}</time>
-                </div>
-                {% if bids_data %}
-                <div class="timeline-item">
-                  <span class="timeline-dot"></span>
-                  <h4>{{ bids_data|length }} quotation{{ bids_data|length|pluralize }} received</h4>
-                  <p>Vendors submitted proposals</p>
-                  <time>Recent</time>
-                </div>
-                {% endif %}
-                {% if selected_bid_data %}
-                <div class="timeline-item">
-                  <span class="timeline-dot"></span>
-                  <h4>{{ selected_bid_data.vendor_name }} selected</h4>
-                  <p>Vendor confirmed for this task</p>
-                  <time>Active</time>
-                </div>
-                {% endif %}
-                {% if qs.status == 'completed' %}
-                <div class="timeline-item">
-                  <span class="timeline-dot" style="background:#059669;"></span>
-                  <h4 style="color:#059669;">Service Completed</h4>
-                  <p>Work verified &amp; settled</p>
-                  <time>{{ completion_proof.completed_at|date:"d M Y"|default:"Recent" }}</time>
-                </div>
-                {% endif %}
-              </div>
-            </section>
-
-            {% if selected_bid_data %}
-            <section class="card">
-              <div class="card-head">
-                <h3>Selected Vendor</h3>
-              </div>
-              <div class="card-body">
-                <div class="cell-user">
-                  <span class="avatar md vendor">{{ selected_bid_data.vendor_initials }}</span>
-                  <div>
-                    <strong>{{ selected_bid_data.vendor_name }}</strong>
-                    <div class="small muted">{{ selected_bid_data.vendor_type }} · ★ {{ selected_bid_data.rating }}</div>
-                  </div>
-                </div>
-                <div class="vendor-actions" style="margin-top:16px;">
-                  <a class="btn btn-soft" href="../messages/chat.html?vendor_id={{ selected_bid_data.bid.vendor.id }}">Open Chat</a>
-                </div>
-              </div>
-            </section>
-            {% endif %}
-
-            <div class="callout warning">
-              <span data-icon="info"></span>
-              <div>
-                <strong>Payment reminder</strong>
-                Service payment is arranged directly with the vendor. Suggu Services does not collect or hold your payment.
-              </div>
-            </div>
-          </aside>
+          
         </div>
       </main>
     </div>
