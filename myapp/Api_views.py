@@ -347,7 +347,7 @@ def user_login_api(request):
         password = data.get('password', '')
 
         if not identifier or not password:
-            return JsonResponse({'status': 'error', 'message': "Username/email/mobile and password are required."}, status=400)
+            return JsonResponse({'status': 'error', 'message': "Email/mobile and password are required."}, status=400)
 
         user = _resolve_user_identifier(identifier)
         if not user or not user.check_password(password):
@@ -530,7 +530,7 @@ def vendor_login_api(request):
         password = data.get('password', '')
 
         if not identifier or not password:
-            return JsonResponse({'status': 'error', 'message': "Username/email/mobile and password are required."}, status=400)
+            return JsonResponse({'status': 'error', 'message': "Email/mobile and password are required."}, status=400)
 
         user = _resolve_user_identifier(identifier)
         if not user or not user.check_password(password):
@@ -754,7 +754,7 @@ def delete_category_api(request):
 @require_POST
 def unified_login_api(request):
     """
-    API for Unified Login (Username / Email / Mobile + Password)
+    API for Unified Login (Email / Mobile + Password)
     URL: /api/auth/login/
     Method: POST
     Params: username or mobile or email (required), password (required)
@@ -765,7 +765,7 @@ def unified_login_api(request):
         password = data.get('password', '')
 
         if not identifier or not password:
-            return JsonResponse({'status': 'error', 'message': "Username/email/mobile and password are required."}, status=400)
+            return JsonResponse({'status': 'error', 'message': "Email/mobile and password are required."}, status=400)
 
         user = _resolve_user_identifier(identifier)
         if not user or not user.check_password(password):

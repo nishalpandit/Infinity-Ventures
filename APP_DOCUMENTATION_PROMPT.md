@@ -184,7 +184,7 @@ The application's data layer is strictly mapped to the following entities, field
 ### 3.1. Authentication & Onboarding
 - **Clean Segmented Login:**
   - Tab 1: **Mobile OTP Login** (Enter 10-digit mobile -> hits `/api/auth/check-phone/` -> hits `/api/auth/send-otp/` -> 6-box segmented OTP code entry -> hits `/api/auth/otp-login/`).
-  - Tab 2: **Password Login** (Enter mobile / email / username + password -> hits `/api/auth/login/`).
+  - Tab 2: **Password Login** (Enter mobile / email + password -> hits `/api/auth/login/`).
 - **Create Account Flow:**
   - Segmented choice: "Continue as User" (`/register/user/` or `/api/user/otp-signup/`).
   - Fields: Full Name, Mobile Number, Email, Password, Profile Avatar.

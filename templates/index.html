@@ -1,4 +1,4 @@
-﻿{% load static %}
+{% load static %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -3171,8 +3171,8 @@ img[data-live]:not([src]){opacity:0}                   /* only hide a slot that 
       <!-- Tab: Password -->
       <div class="tab-panel" data-auth-panel="password">
         <div class="field">
-          <label for="authUser">Username, Email or Mobile <em>*</em></label>
-          <input class="inp" type="text" id="authUser" placeholder="e.g. username, you@example.com or 9876543210" autocomplete="username" />
+          <label for="authUser">Email or Mobile <em>*</em></label>
+          <input class="inp" type="text" id="authUser" placeholder="e.g. you@example.com or 9876543210" autocomplete="username" />
         </div>
         <div class="field">
           <label for="authPass">Password <em>*</em></label>
@@ -4842,7 +4842,7 @@ img[data-live]:not([src]){opacity:0}                   /* only hide a slot that 
         } else {
           passBtn.removeAttribute("disabled");
           passBtn.innerHTML = "Sign In Securely";
-          toast("Authentication failed", (result.data && result.data.message) || "Invalid username or password. Please try again.", "err");
+          toast("Authentication failed", (result.data && result.data.message) || "Invalid email/mobile or password. Please try again.", "err");
         }
       })
       .catch(function () {

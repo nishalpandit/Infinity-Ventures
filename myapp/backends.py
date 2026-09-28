@@ -26,11 +26,7 @@ class PhoneEmailUsernameBackend(ModelBackend):
 
         candidate_users = []
 
-        # 1. Look up by exact username
-        try:
-            candidate_users.extend(User.objects.filter(username__iexact=identifier))
-        except Exception:
-            pass
+        
 
         # 2. Look up by exact email
         try:
