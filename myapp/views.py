@@ -1875,11 +1875,11 @@ def dashboard_view(request, path=''):
             })
         context['quotations_json'] = json.dumps(bids_data)
 
-    if path == 'user/jobs/quotation-details':
+    if path in ['user/jobs/quotation-details', 'user/quick-services/quotation-details']:
         bid_id = request.GET.get('bid_id')
         if bid_id:
             try:
-                bid = Bid.objects.select_related('vendor', 'job').get(id=bid_id)
+                bid = Bid.objects.select_related('vendor', 'job', 'quick_service').get(id=bid_id)
                 context['bid'] = bid
                 
                 vendor = bid.vendor
@@ -1901,9 +1901,9 @@ def dashboard_view(request, path=''):
                     'completed_jobs': Job.objects.filter(bids__vendor=vendor, status='completed').distinct().count()
                 }
             except Bid.DoesNotExist:
-                return redirect('/user/jobs/quotations.html')
+                return redirect('/user/jobs/quotations.html' if 'jobs' in path else '/user/quick-services/quotations.html')
         else:
-            return redirect('/user/jobs/quotations.html')
+            return redirect('/user/jobs/quotations.html' if 'jobs' in path else '/user/quick-services/quotations.html')
             
     if 'messages/index' in path or 'messages/chat' in path:
         u = request.user
