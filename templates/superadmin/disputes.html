@@ -5,23 +5,23 @@
 {% block content %}
 <!-- Metric Cards -->
 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 24px;">
-  <div class="card" style="padding: 18px; border-left: 4px solid #6366f1;">
+  <div class="card" style="padding: 18px;">
     <div style="font-size: 0.82rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase;">Total Disputes</div>
     <div style="font-size: 1.8rem; font-weight: 800; color: var(--text-main); margin-top: 4px;">{{ total_disputes }}</div>
   </div>
-  <div class="card" style="padding: 18px; border-left: 4px solid #f59e0b;">
+  <div class="card" style="padding: 18px;">
     <div style="font-size: 0.82rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase;">Open / Pending</div>
     <div style="font-size: 1.8rem; font-weight: 800; color: #d97706; margin-top: 4px;">{{ open_count }}</div>
   </div>
-  <div class="card" style="padding: 18px; border-left: 4px solid #0ea5e9;">
+  <div class="card" style="padding: 18px;">
     <div style="font-size: 0.82rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase;">In Investigation</div>
     <div style="font-size: 1.8rem; font-weight: 800; color: #0284c7; margin-top: 4px;">{{ investigating_count }}</div>
   </div>
-  <div class="card" style="padding: 18px; border-left: 4px solid #ef4444;">
+  <div class="card" style="padding: 18px;">
     <div style="font-size: 0.82rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase;">Urgent Attention</div>
     <div style="font-size: 1.8rem; font-weight: 800; color: #dc2626; margin-top: 4px;">{{ urgent_count }}</div>
   </div>
-  <div class="card" style="padding: 18px; border-left: 4px solid #10b981;">
+  <div class="card" style="padding: 18px;">
     <div style="font-size: 0.82rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase;">Resolved</div>
     <div style="font-size: 1.8rem; font-weight: 800; color: #059669; margin-top: 4px;">{{ resolved_count }}</div>
   </div>
