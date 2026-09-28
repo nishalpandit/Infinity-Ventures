@@ -16,12 +16,6 @@
       <main class="page">
         <div class="page-head">
           <div class="actions">
-            <a class="btn btn-secondary" href="../support/create-complaint.html?job_id={{ job.id }}" style="color: #b91c1c; border-color: #fecaca; background: #fff5f5;">
-              <span data-icon="alert"></span> Report Issue / Dispute
-            </a>
-            <a class="btn btn-primary" href="quotations.html?job_id={{ job.id }}"><span data-icon="quote"></span> View Quotations</a>
-            <a class="btn btn-secondary" href="compare.html?job_id={{ job.id }}"><span data-icon="chart"></span> Compare</a>
-            <a class="btn btn-secondary" href="selected-vendors.html?job_id={{ job.id }}"><span data-icon="users"></span> Selected Vendors</a>
             <a class="btn btn-secondary" href="index.html">← Back to Jobs</a>
           </div>
         </div>
@@ -190,6 +184,7 @@
                           <input type="hidden" name="bid_id" value="{{ b.id }}">
                           <button class="btn btn-primary btn-sm" type="submit">Select Vendor</button>
                         </form>
+<a class="btn btn-secondary btn-sm" href="quotation-details.html?bid_id={{ b.id }}" style="margin-left: 6px;">View Quotation</a>
                         {% endif %}
                       </td>
                     </tr>
