@@ -130,7 +130,10 @@ USE_TZ = False
 
 # ── Static files ────────────────────────────────────────────────────────────
 STATIC_URL = '/static/'
-STATICFILES_DIRS = [BASE_DIR / 'myapp' / 'static']
+STATICFILES_DIRS = [
+    BASE_DIR / 'myapp' / 'static',
+    BASE_DIR / 'static',
+]
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 
 MEDIA_URL = '/media/'

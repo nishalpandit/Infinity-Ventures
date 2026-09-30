@@ -15,6 +15,8 @@ class CustomUser(AbstractUser):
 
 class VendorProfile(models.Model):
     user = models.OneToOneField(CustomUser, on_delete=models.CASCADE, related_name='vendor_profile')
+    vendor_code = models.CharField(max_length=50, unique=True, null=True, blank=True)
+    mobile = models.CharField(max_length=20, null=True, blank=True)
     company_name = models.CharField(max_length=255, blank=True, null=True)
     category = models.CharField(max_length=100)
     location = models.CharField(max_length=255)
@@ -37,10 +39,17 @@ class VendorProfile(models.Model):
     about = models.TextField(null=True, blank=True)
     
     rating = models.DecimalField(max_digits=3, decimal_places=1, default=0.0)
+    available_bids = models.IntegerField(default=5)
     registered_date = models.DateTimeField(default=timezone.now)
 
     def __str__(self):
         return self.company_name or self.user.username
+
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+        if not self.vendor_code:
+            self.vendor_code = f"VEN{self.id:03d}"
+            self.save(update_fields=['vendor_code'])
 
 class VendorKYC(models.Model):
     STATUS_CHOICES = (
@@ -74,33 +83,53 @@ class UserProfile(models.Model):
 
 class QuickService(models.Model):
     STATUS_CHOICES = (
-        ('open', 'Open'),
-        ('progress', 'In Progress'),
-        ('completed', 'Completed'),
-        ('cancelled', 'Cancelled'),
-        ('closed', 'Closed'),
-        ('selected', 'Vendor Selected'),
+        ('active', 'Active'),
+        ('paused', 'Paused'),
+        ('draft', 'Draft'),
     )
+    vendor = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='vendor_services')
     title = models.CharField(max_length=255)
     category = models.ForeignKey('Category', on_delete=models.SET_NULL, null=True, blank=True)
     description = models.TextField(blank=True, null=True)
-    required_work = models.JSONField(default=list, blank=True, null=True)
-    budget = models.DecimalField(max_digits=10, decimal_places=2)
-    shift_availability = models.CharField(max_length=50, blank=True, null=True)
-    preferred_date = models.DateField(null=True, blank=True)
-    preferred_time = models.TimeField(null=True, blank=True)
+    base_price = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+    service_packages = models.JSONField(default=list, blank=True, null=True, help_text="List of packages/variants e.g. [{'name': 'Haircut', 'price': 150}]")
     location = models.ForeignKey('Location', on_delete=models.SET_NULL, null=True, blank=True)
-    address = models.TextField(blank=True, null=True)
-    additional_requirements = models.TextField(blank=True, null=True)
-    contact_name = models.CharField(max_length=255, blank=True, null=True)
-    contact_mobile = models.CharField(max_length=20, blank=True, null=True)
-    user = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='quick_services')
-    bids_count = models.IntegerField(default=0)
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='open')
+    latitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True, help_text="Vendor service latitude")
+    longitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True, help_text="Vendor service longitude")
+    locality = models.CharField(max_length=255, null=True, blank=True, help_text="Colony/Locality name e.g. Lalpur, Doranda")
+    service_radius_km = models.FloatField(default=10.0, help_text="Maximum service radius in km (default 10km)")
+    image = models.ImageField(upload_to='quick_services/', null=True, blank=True)
+    image_url = models.CharField(max_length=500, null=True, blank=True, help_text="Direct or preset image URL")
+    inclusions = models.JSONField(default=list, blank=True, null=True, help_text="List of inclusions")
+    exclusions = models.JSONField(default=list, blank=True, null=True, help_text="List of exclusions")
+    tags = models.CharField(max_length=255, blank=True, null=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='active')
     created_at = models.DateTimeField(default=timezone.now)
 
     def __str__(self):
-        return self.title
+        return f"{self.title} by {self.vendor.username}"
+
+class ServiceBooking(models.Model):
+    STATUS_CHOICES = (
+        ('pending', 'Pending'),
+        ('accepted', 'Accepted'),
+        ('completed', 'Completed'),
+        ('cancelled', 'Cancelled'),
+    )
+    customer = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='customer_bookings')
+    vendor = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='vendor_bookings')
+    quick_service = models.ForeignKey(QuickService, on_delete=models.SET_NULL, null=True, related_name='bookings')
+    package_name = models.CharField(max_length=255)
+    total_amount = models.DecimalField(max_digits=10, decimal_places=2)
+    scheduled_date = models.DateField()
+    scheduled_time = models.TimeField(null=True, blank=True)
+    service_address = models.TextField()
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+    created_at = models.DateTimeField(default=timezone.now)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"Booking #{self.id} - {self.quick_service.title if self.quick_service else 'Service'}"
 
 class Job(models.Model):
     STATUS_CHOICES = (
@@ -126,6 +155,9 @@ class Job(models.Model):
     shift_availability = models.CharField(max_length=50, blank=True, null=True)
     working_hours = models.CharField(max_length=100, blank=True, null=True)
     location = models.ForeignKey('Location', on_delete=models.SET_NULL, null=True, blank=True)
+    latitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True, help_text="Job location latitude")
+    longitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True, help_text="Job location longitude")
+    locality = models.CharField(max_length=255, null=True, blank=True, help_text="Colony/Locality name")
     address = models.TextField(blank=True, null=True)
     pincode = models.CharField(max_length=20, blank=True, null=True)
     contact_name = models.CharField(max_length=255, blank=True, null=True)
@@ -151,7 +183,7 @@ class Bid(models.Model):
     )
     vendor = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='bids')
     job = models.ForeignKey(Job, on_delete=models.CASCADE, related_name='bids', null=True, blank=True)
-    quick_service = models.ForeignKey(QuickService, on_delete=models.CASCADE, related_name='bids', null=True, blank=True)
+    quick_service = models.ForeignKey('QuickService', on_delete=models.SET_NULL, null=True, blank=True, related_name='legacy_bids')
     amount = models.DecimalField(max_digits=10, decimal_places=2)
     estimated_time = models.CharField(max_length=100, null=True, blank=True)
     message = models.TextField(null=True, blank=True)
@@ -161,7 +193,7 @@ class Bid(models.Model):
     created_at = models.DateTimeField(default=timezone.now)
 
     def __str__(self):
-        target_title = self.job.title if self.job else (self.quick_service.title if self.quick_service else 'Service')
+        target_title = self.job.title if self.job else 'Service'
         return f"{self.vendor.username} - {target_title}"
 
 class Subscription(models.Model):
@@ -173,11 +205,34 @@ class Subscription(models.Model):
     vendor = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='subscriptions')
     package_name = models.CharField(max_length=100)
     amount = models.DecimalField(max_digits=10, decimal_places=2)
+    credits_added = models.IntegerField(default=15, help_text="Number of bid credits added with this package")
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='success')
     created_at = models.DateTimeField(default=timezone.now)
 
     def __str__(self):
         return f"{self.vendor.username} - {self.package_name}"
+
+
+class BidCreditTransaction(models.Model):
+    TYPE_CHOICES = (
+        ('purchased', 'Credits Purchased'),
+        ('used', 'Bid Placed'),
+        ('refund', 'Credit Refund'),
+        ('bonus', 'Welcome / Bonus Credits'),
+    )
+    vendor = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='credit_transactions')
+    transaction_type = models.CharField(max_length=20, choices=TYPE_CHOICES)
+    credits = models.IntegerField(help_text="Positive for additions (+15), negative for usage (-1)")
+    description = models.CharField(max_length=255)
+    related_job = models.ForeignKey(Job, on_delete=models.SET_NULL, null=True, blank=True)
+    related_subscription = models.ForeignKey(Subscription, on_delete=models.SET_NULL, null=True, blank=True)
+    created_at = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.vendor.username} - {self.transaction_type}: {self.credits:+d}"
 
 
 class VendorWallet(models.Model):

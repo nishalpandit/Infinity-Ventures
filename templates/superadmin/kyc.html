@@ -28,6 +28,7 @@
           <th>Vendor</th>
           <th>ID Type</th>
           <th>ID Number</th>
+          <th>Identity Details</th>
           <th>Documents</th>
           <th>Status</th>
           <th>Submitted At</th>
@@ -56,6 +57,11 @@
           </td>
           <td><span class="badge" style="background: rgba(14,165,233,0.12); color: #0284c7;">{{ kyc.get_id_type_display }}</span></td>
           <td>{{ kyc.id_number }}</td>
+          <td>
+            <small style="display: block; font-size: 11.5px; color: var(--text-muted);"><strong style="color: var(--text-main);">DOB:</strong> {{ kyc.vendor.vendor_profile.dob|date:"Y-m-d"|default:"--" }}</small>
+            <small style="display: block; font-size: 11.5px; color: var(--text-muted);"><strong style="color: var(--text-main);">Gender:</strong> {{ kyc.vendor.vendor_profile.gender|default:"--" }}</small>
+            <small style="display: block; font-size: 11.5px; color: var(--text-muted);"><strong style="color: var(--text-main);">Address:</strong> {{ kyc.vendor.vendor_profile.address|default:"--"|truncatechars:35 }}</small>
+          </td>
           <td>
             <div style="display: flex; gap: 4px; flex-wrap: wrap;">
                 {% if kyc.id_document_front %}

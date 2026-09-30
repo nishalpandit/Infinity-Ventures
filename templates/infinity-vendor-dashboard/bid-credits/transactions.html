@@ -1,4 +1,176 @@
-﻿<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="description" content="Suggu Services Vendor Portal - Credit Transactions"><title>Credit Transactions · Suggu Services Vendor</title><link rel="stylesheet" href="/infinity-vendor-dashboard/assets/styles.css"><script defer src="/infinity-vendor-dashboard/assets/app.js"></script></head><body data-page="credit-transactions" data-title="Credit Transactions" data-root="../"><div class="app-shell"><div id="sidebar-root"></div><div class="workspace"><div id="topbar-root"></div><main class="page">
-<div class="grid grid-3" style="margin-bottom:18px"><article class="card stat-card"><div class="stat-label">Lifetime Purchased</div><div class="stat-value">80</div></article><article class="card stat-card"><div class="stat-label">Lifetime Used</div><div class="stat-value">75</div></article><article class="card stat-card credit-balance"><div class="stat-label">Available Balance</div><div class="stat-value">5</div></article></div><div class="callout warning" style="margin-bottom:18px"><span data-icon="info"></span><div><strong>Credit policy</strong>Credits never expire and are never automatically refunded. A withdrawn, rejected or customer-cancelled bid does not restore its used credit.</div></div><section class="card" data-filter-scope><div class="toolbar"><div class="search-box"><span data-icon="search"></span><input class="input" data-search-input placeholder="Transaction ID or description"></div><select class="select" style="max-width:160px" data-filter="type"><option value="all">All activity</option><option value="purchased">Purchased</option><option value="used">Bid Used</option><option value="withdrawn">Withdrawn Bid</option><option value="rejected">Rejected Bid</option></select><input class="input" type="date" style="max-width:145px"></div><div class="table-wrap"><table class="data-table"><thead><tr><th>Transaction ID</th><th>Type</th><th>Credits</th><th>Description</th><th>Date</th></tr></thead><tbody data-rows><tr data-row data-type="purchased" data-search="CTX-2026-1288 Purchased Basic"><td><strong>CTX-2026-1288</strong></td><td><span class="badge badge-success">Purchased</span></td><td><span class="balance-change positive">+15</span></td><td>Basic Package purchase</td><td>16 Aug 2026, 2:14 PM</td></tr><tr data-row data-type="used" data-search="CTX-2026-1294 Bid Used Full House"><td><strong>CTX-2026-1294</strong></td><td><span class="badge badge-purple">Bid Used</span></td><td><span class="balance-change negative">−1</span></td><td>Bid on JOB-2026-0438 · Full House Renovation</td><td>20 Aug 2026, 11:32 AM</td></tr><tr data-row data-type="used" data-search="CTX-2026-1274 Bid Used Office"><td><strong>CTX-2026-1274</strong></td><td><span class="badge badge-purple">Bid Used</span></td><td><span class="balance-change negative">−1</span></td><td>Bid on JOB-2026-0397 · Office electrical rewiring</td><td>28 Jul 2026, 3:20 PM</td></tr><tr data-row data-type="withdrawn" data-search="CTX-2026-1252 Withdrawn Retail"><td><strong>CTX-2026-1252</strong></td><td><span class="badge badge-gray">Withdrawn Bid</span></td><td>0</td><td>JOB-2026-0348 withdrawn · original credit not returned</td><td>21 Jun 2026, 10:05 AM</td></tr><tr data-row data-type="rejected" data-search="CTX-2026-1238 Rejected Terrace"><td><strong>CTX-2026-1238</strong></td><td><span class="badge badge-cancelled">Rejected Bid</span></td><td>0</td><td>JOB-2026-0364 rejected · original credit not returned</td><td>9 Jul 2026, 6:14 PM</td></tr><tr data-row data-type="purchased" data-search="CTX-2026-1201 Purchased Premium"><td><strong>CTX-2026-1201</strong></td><td><span class="badge badge-success">Purchased</span></td><td><span class="balance-change positive">+50</span></td><td>Premium Package purchase</td><td>22 Jun 2026, 11:08 AM</td></tr></tbody></table></div><div class="pagination"><span>Showing 1-6 of 86 credit transactions</span><div class="page-buttons"><button class="page-btn" data-page="previous"><span data-icon="chevron"></span></button><button class="page-btn active" data-page="1">1</button><button class="page-btn" data-page="2">2</button><button class="page-btn" data-page="3">3</button><button class="page-btn" data-page="next"><span data-icon="chevron"></span></button></div></div></section>
-</main></div></div></body></html>
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="Suggu Services Vendor Portal - Credit Transactions">
+  <title>Credit Transactions · Suggu Services Vendor</title>
+  <link rel="stylesheet" href="/infinity-vendor-dashboard/assets/styles.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+  <script defer src="/infinity-vendor-dashboard/assets/app.js"></script>
+  <style>
+    .stat-card-custom {
+      background: #fff;
+      border: 1px solid #e2e8f0;
+      border-radius: 14px;
+      padding: 20px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+    }
+    .stat-card-custom.highlight {
+      background: linear-gradient(135deg, #0f8a7c 0%, #0d7469 100%);
+      color: #fff;
+      border: none;
+      box-shadow: 0 8px 24px rgba(15,138,124,0.2);
+    }
+    .stat-card-custom.highlight .stat-lbl {
+      color: rgba(255,255,255,0.85);
+    }
+    .stat-card-custom.highlight .stat-val {
+      color: #fff;
+    }
+    .stat-lbl {
+      font-size: 12.5px;
+      color: #64748b;
+      font-weight: 600;
+      margin-bottom: 6px;
+    }
+    .stat-val {
+      font-size: 28px;
+      font-weight: 800;
+      color: #0f172a;
+      line-height: 1;
+    }
+  </style>
+</head>
+<body data-page="credit-transactions" data-title="Credit Transactions" data-root="../">
+  <div class="app-shell">
+    <div id="sidebar-root"></div>
+    <div class="workspace">
+      <div id="topbar-root"></div>
+      <main class="page">
 
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; flex-wrap:wrap; gap:12px;">
+          <div>
+            <h1 style="font-size:24px; font-weight:800; color:#0f172a; margin:0 0 4px;">Credit Activity &amp; Transactions</h1>
+            <p class="muted" style="margin:0; font-size:13px;">Complete audit trail of credits purchased and deducted on job bids.</p>
+          </div>
+          <a href="packages.html" class="btn btn-primary" style="padding:10px 20px; font-weight:700;">
+            <i class="fa-solid fa-plus"></i> Buy Credits
+          </a>
+        </div>
+
+        <!-- 3 Top Stats Cards -->
+        <div class="grid grid-3" style="margin-bottom:20px;">
+          <article class="stat-card-custom">
+            <div class="stat-lbl"><i class="fa-solid fa-arrow-down" style="color:#10b981; margin-right:4px;"></i> Total Purchased</div>
+            <div class="stat-val">+{{ lifetime_purchased }}</div>
+          </article>
+
+          <article class="stat-card-custom">
+            <div class="stat-lbl"><i class="fa-solid fa-arrow-up" style="color:#ef4444; margin-right:4px;"></i> Bids Placed (Used)</div>
+            <div class="stat-val">-{{ lifetime_used }}</div>
+          </article>
+
+          <article class="stat-card-custom highlight">
+            <div class="stat-lbl"><i class="fa-solid fa-bolt" style="margin-right:4px;"></i> Live Available Balance</div>
+            <div class="stat-val">{{ available_balance|default:5 }} Credits</div>
+          </article>
+        </div>
+
+        <section class="card" data-filter-scope style="border-radius:16px;">
+          <div class="toolbar" style="padding:16px 20px; display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
+            <div class="search-box" style="margin:0; flex:1; min-width:220px;">
+              <span data-icon="search"></span>
+              <input class="input" data-search-input placeholder="Search transaction ID or description...">
+            </div>
+            <select class="select" style="max-width:160px;" data-filter="type">
+              <option value="all">All Activity</option>
+              <option value="purchased">Purchased</option>
+              <option value="used">Bid Placed</option>
+              <option value="bonus">Bonus / Welcome</option>
+            </select>
+          </div>
+
+          <div class="table-wrap">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Transaction ID</th>
+                  <th>Activity Type</th>
+                  <th>Credits Change</th>
+                  <th>Description</th>
+                  <th>Date &amp; Time</th>
+                </tr>
+              </thead>
+              <tbody data-rows>
+                {% for txn in credit_transactions %}
+                <tr data-row data-type="{{ txn.transaction_type }}" data-search="CTX-{{ txn.id|stringformat:'04d' }} {{ txn.description }} {{ txn.get_transaction_type_display }}">
+                  <td>
+                    <strong style="color:#0f172a; font-size:13px;">CTX-{{ txn.id|stringformat:"04d" }}</strong>
+                  </td>
+                  <td>
+                    {% if txn.transaction_type == 'purchased' %}
+                      <span class="badge badge-success" style="font-weight:700;"><i class="fa-solid fa-cart-shopping"></i> Purchased</span>
+                    {% elif txn.transaction_type == 'used' %}
+                      <span class="badge badge-purple" style="font-weight:700;"><i class="fa-solid fa-gavel"></i> Bid Placed</span>
+                    {% elif txn.transaction_type == 'bonus' %}
+                      <span class="badge badge-info" style="font-weight:700;"><i class="fa-solid fa-gift"></i> Welcome Bonus</span>
+                    {% else %}
+                      <span class="badge badge-gray" style="font-weight:700;">{{ txn.get_transaction_type_display }}</span>
+                    {% endif %}
+                  </td>
+                  <td>
+                    {% if txn.credits > 0 %}
+                      <span class="balance-change positive" style="font-weight:800; color:#059669; background:#ecfdf5; padding:3px 8px; border-radius:6px; font-size:12px;">
+                        +{{ txn.credits }}
+                      </span>
+                    {% elif txn.credits < 0 %}
+                      <span class="balance-change negative" style="font-weight:800; color:#dc2626; background:#fef2f2; padding:3px 8px; border-radius:6px; font-size:12px;">
+                        {{ txn.credits }}
+                      </span>
+                    {% else %}
+                      <span style="color:#64748b; font-weight:700;">0</span>
+                    {% endif %}
+                  </td>
+                  <td>
+                    <span style="font-weight:600; color:#1e293b;">{{ txn.description }}</span>
+                    {% if txn.related_job %}
+                      <a href="../jobs/details.html?id={{ txn.related_job.id }}" style="font-size:11.5px; color:#0f8a7c; margin-left:6px; text-decoration:underline;">
+                        (View Job)
+                      </a>
+                    {% endif %}
+                  </td>
+                  <td style="color:#64748b; font-size:12px;">
+                    {{ txn.created_at|date:"d M Y, g:i A" }}
+                  </td>
+                </tr>
+                {% empty %}
+                <tr>
+                  <td colspan="5" style="text-align:center; padding: 48px 20px; color: var(--text-muted);">
+                    <div style="font-size:32px; color:#cbd5e1; margin-bottom:10px;"><i class="fa-solid fa-clock-rotate-left"></i></div>
+                    <h4 style="font-size:16px; font-weight:700; color:#334155; margin:0 0 6px;">No transactions recorded</h4>
+                    <p style="font-size:13px; margin:0 0 16px;">Credit events will appear here when you purchase packages or place bids on customer jobs.</p>
+                    <a href="packages.html" class="btn btn-primary btn-sm">Buy Bid Credits</a>
+                  </td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+
+          {% if credit_transactions %}
+          <div class="pagination" style="padding:14px 20px;">
+            <span>Showing {{ credit_transactions|length }} transaction record{{ credit_transactions|length|pluralize }}</span>
+          </div>
+          {% endif %}
+        </section>
+
+      </main>
+    </div>
+  </div>
+
+  <script>
+    window.VENDOR_CREDITS = {{ available_balance|default:5 }};
+  </script>
+</body>
+</html>

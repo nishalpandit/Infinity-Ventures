@@ -1,5 +1,5 @@
 API for Check Phone Number (User)
-url : (http://192.168.1.55:800/api/auth/check-phone/)
+url : (http://192.168.1.54:8000/api/auth/check-phone/)
 method : POST
 params :-
 mobile:9876543210
@@ -21,7 +21,7 @@ response :-
 
 
 API for Send OTP (User)
-url : (http://192.168.1.55:800/api/auth/send-otp/)
+url : (http://192.168.1.54:8000/api/auth/send-otp/)
 method : POST
 params :-
 mobile:9876543210
@@ -39,7 +39,7 @@ response :-
 
 
 API for Verify OTP (User)
-url : (http://192.168.1.55:800/api/auth/verify-otp/)
+url : (http://192.168.1.54:8000/api/auth/verify-otp/)
 method : POST
 params :-
 mobile:9876543210
@@ -55,7 +55,7 @@ response :-
 
 
 API for User Signup with OTP
-url : (http://192.168.1.55:800/api/user/otp-signup/)
+url : (http://192.168.1.54:8000/api/user/otp-signup/)
 method : POST
 params :-
 name:Ananya Sharma
@@ -83,7 +83,7 @@ response :-
 
 
 API for User Signup with Password
-url : (http://192.168.1.55:800/api/user/signup/)
+url : (http://192.168.1.54:8000/api/user/signup/)
 method : POST
 params :-
 name:Ananya Sharma
@@ -111,7 +111,7 @@ response :-
 
 
 API for User Login with OTP
-url : (http://192.168.1.55:800/api/user/otp-login/)
+url : (http://192.168.1.54:8000/api/user/otp-login/)
 method : POST
 params :-
 mobile:9876543210
@@ -136,7 +136,7 @@ response :-
 
 
 API for User Login with Password
-url : (http://192.168.1.55:800/api/user/login/)
+url : (http://192.168.1.54:8000/api/user/login/)
 method : POST
 params :-
 username:ananya@example.com
@@ -161,7 +161,7 @@ response :-
 
 
 API for User Post Job
-url : (http://192.168.1.55:800/api/user/post-job/)
+url : (http://192.168.1.54:8000/api/user/post-job/)
 method : POST
 headers :-
 Authorization: Bearer <token>
@@ -226,7 +226,7 @@ response :-
 
 
 API for User Post Quick Service
-url : (http://192.168.1.55:800/api/user/post-quick-service/)
+url : (http://192.168.1.54:8000/api/user/post-quick-service/)
 method : POST
 headers :-
 Authorization: Bearer <token>
@@ -273,96 +273,5 @@ response :-
 "created_at": "2026-09-16 18:04:35"
 }
 }
-
-
-API for Get Categories
-url : (http://192.168.1.55:800/api/categories/)
-method : GET
-response :-
-{
-"status": "success",
-"categories": [
-{
-"id": 1,
-"name": "Electrical & Power Systems",
-"service_type": "both"
-}
-]
-}
-
-
-API for Get Locations (States and Cities)
-url : (http://192.168.1.55:800/api/locations/)
-method : GET
-response :-
-{
-"status": "success",
-"locations": [
-{
-"id": 1,
-"state": "Gujarat",
-"city": "Ahmedabad"
-}
-]
-}
-
-
-
-API for Get States
-url : (http://192.168.1.55:800/api/states/)
-method : GET
-response :-
-{
-"status": "success",
-"states": [
-{
-"state": "Gujarat"
-},
-{
-"state": "Maharashtra"
-}
-]
-}
-
-
-API for Get Cities
-url : (http://192.168.1.55:800/api/cities/?state=Gujarat)
-method : GET
-params :-
-state:Gujarat (Optional query parameter)
-response :-
-{
-"status": "success",
-"cities": [
-{
-"id": 1,
-"city": "Ahmedabad",
-"state": "Gujarat"
-},
-{
-"id": 2,
-"city": "Surat",
-"state": "Gujarat"
-}
-]
-}
-
-
-API for Get Vendor Types
-url : (http://192.168.1.55:800/api/vendor-types/)
-method : GET
-response :-
-{
-"status": "success",
-"vendor_types": [
-{
-"id": "vendor",
-"name": "Vendor"
-},
-{
-"id": "company",
-"name": "Company Vendor"
-}
-]
 }
 

@@ -1,3 +1,216 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="description" content="Suggu Services Vendor Portal - Package Checkout"><title>Package Checkout · Suggu Services Vendor</title><link rel="stylesheet" href="/infinity-vendor-dashboard/assets/styles.css"><script defer src="/infinity-vendor-dashboard/assets/app.js"></script></head><body data-page="credit-checkout" data-title="Package Checkout" data-root="../"><div class="app-shell"><div id="sidebar-root"></div><div class="workspace"><div id="topbar-root"></div><main class="page">
-<div class="layout-main"><section class="card form-card"><form class="needs-validation" data-success-target="payment-success"><div class="form-section"><div class="form-section-head"><span class="section-number">1</span><div><h3>Vendor Details</h3><p>Billing information for this credit purchase.</p></div></div><div class="form-grid"><div class="field"><label>Business Name</label><input class="input" value="BuildRight Contractors" readonly></div><div class="field"><label>Contact Person</label><input class="input" value="Rahul Verma" readonly></div><div class="field"><label>Email</label><input class="input" value="accounts@buildright.in" readonly></div><div class="field"><label>Mobile</label><input class="input" value="+91 98760 11223" readonly></div></div></div><div class="form-section"><div class="form-section-head"><span class="section-number">2</span><div><h3>Payment Method</h3><p>Choose a secure online payment method.</p></div></div><div class="radio-row"><label class="radio"><input type="radio" name="payment" checked> UPI</label><label class="radio"><input type="radio" name="payment"> Credit / Debit Card</label><label class="radio"><input type="radio" name="payment"> Net Banking</label></div><div class="form-grid" style="margin-top:16px"><div class="field full"><label>UPI ID <span class="required">*</span></label><input class="input" required placeholder="business@upi"></div></div></div><div class="form-actions"><a class="btn btn-secondary" href="packages.html">Cancel</a><button class="btn btn-primary" type="submit"><span data-icon="lock"></span> Pay ₹250</button></div></form></section><aside class="stack"><section class="card"><div class="card-head"><h3>Order Summary</h3></div><div class="card-body"><div class="cell-user"><span class="package-icon" style="margin:0"><span data-icon="bolt"></span></span><div><strong>Basic Package</strong><div class="small muted">15 Bid Credits</div></div></div><div class="divider"></div><div class="setting-row"><div>Package price</div><strong>₹250</strong></div><div class="setting-row"><div>Taxes</div><strong>Included</strong></div><div class="setting-row"><div><strong>Total</strong></div><span class="price">₹250</span></div></div></section><div class="callout neutral"><span data-icon="shield"></span><div><strong>Secure payment</strong>This checkout is only for purchasing vendor bid credits. Customer service payments remain off platform.</div></div></aside></div><section class="card success-panel" id="payment-success" hidden><span class="success-icon"><span data-icon="check"></span></span><h2>Payment successful!</h2><p>15 bid credits have been added to your vendor account.</p><div class="success-summary"><div class="info-item"><span class="info-label">Transaction ID</span><strong>TXN-BC-2026-8821</strong></div><div class="info-item"><span class="info-label">Package</span><strong>Basic · 15 Credits</strong></div><div class="info-item"><span class="info-label">Amount</span><strong>₹250</strong></div><div class="info-item"><span class="info-label">New Balance</span><strong>20 Credits</strong></div></div><div class="actions" style="justify-content:center"><a class="btn btn-secondary" href="purchase-history.html">Purchase History</a><a class="btn btn-primary" href="../jobs/available.html">Browse Jobs</a></div></section>
-</main></div></div></body></html>
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="Suggu Services Vendor Portal - Package Checkout">
+  <title>Package Checkout · Suggu Services Vendor</title>
+  <link rel="stylesheet" href="/infinity-vendor-dashboard/assets/styles.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+  <script defer src="/infinity-vendor-dashboard/assets/app.js"></script>
+</head>
+<body data-page="credit-checkout" data-title="Package Checkout" data-root="../">
+  <div class="app-shell">
+    <div id="sidebar-root"></div>
+    <div class="workspace">
+      <div id="topbar-root"></div>
+      <main class="page">
+
+        {% if payment_success %}
+        <!-- ============================================== -->
+        <!-- PAYMENT SUCCESSFUL PANEL                       -->
+        <!-- ============================================== -->
+        <section class="card" style="max-width:620px; margin:20px auto; border-radius:18px; text-align:center; padding:36px 24px; box-shadow:0 12px 35px rgba(0,0,0,0.06); border:1.5px solid #a7f3d0;">
+          <div style="width:68px; height:68px; border-radius:50%; background:#ecfdf5; color:#10b981; display:flex; align-items:center; justify-content:center; font-size:32px; margin:0 auto 16px;">
+            <i class="fa-solid fa-circle-check"></i>
+          </div>
+
+          <h2 style="font-size:24px; font-weight:800; color:#0f172a; margin:0 0 6px;">Payment Successful!</h2>
+          <p style="font-size:14px; color:#64748b; margin:0 0 24px;">
+            <strong>{{ purchased_pkg.credits }} Bid Credits</strong> have been added to your vendor balance.
+          </p>
+
+          <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:14px; padding:18px; text-align:left; margin-bottom:24px;">
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px;">
+              <div>
+                <span style="font-size:11px; color:#64748b; text-transform:uppercase; font-weight:700; display:block;">Transaction ID</span>
+                <strong style="font-size:14px; color:#0f172a;">TXN-BC-{{ sub.id|stringformat:"04d" }}</strong>
+              </div>
+              <div>
+                <span style="font-size:11px; color:#64748b; text-transform:uppercase; font-weight:700; display:block;">Package Purchased</span>
+                <strong style="font-size:14px; color:#0f172a;">{{ purchased_pkg.name }} ({{ purchased_pkg.credits }} Credits)</strong>
+              </div>
+              <div>
+                <span style="font-size:11px; color:#64748b; text-transform:uppercase; font-weight:700; display:block;">Amount Paid</span>
+                <strong style="font-size:16px; color:#0f8a7c;">₹{{ purchased_pkg.price }}</strong>
+              </div>
+              <div>
+                <span style="font-size:11px; color:#64748b; text-transform:uppercase; font-weight:700; display:block;">New Credit Balance</span>
+                <strong style="font-size:16px; color:#047857;">{{ new_balance }} Credits</strong>
+              </div>
+            </div>
+          </div>
+
+          <div style="display:flex; justify-content:center; gap:12px; flex-wrap:wrap;">
+            <a href="purchase-history.html" class="btn btn-secondary" style="padding:10px 20px; font-weight:700;">
+              <i class="fa-solid fa-receipt"></i> Purchase History
+            </a>
+            <a href="../jobs/available.html" class="btn btn-primary" style="padding:10px 24px; font-weight:700;">
+              <i class="fa-solid fa-briefcase"></i> Browse Available Jobs
+            </a>
+          </div>
+        </section>
+
+        {% else %}
+
+        <!-- ============================================== -->
+        <!-- DYNAMIC CHECKOUT FORM                          -->
+        <!-- ============================================== -->
+        <div class="layout-main">
+          
+          <section class="card form-card" style="border-radius:16px;">
+            <form method="POST" action="{% url 'dashboard' 'vendor/bid-credits/checkout.html' %}" class="needs-validation">
+              {% csrf_token %}
+              <input type="hidden" name="package_id" value="{{ selected_pkg.id }}">
+
+              <!-- Section 1: Vendor Details -->
+              <div class="form-section">
+                <div class="form-section-head">
+                  <span class="section-number">1</span>
+                  <div>
+                    <h3 style="font-size:16px; font-weight:700; margin:0 0 2px;">Vendor Billing Profile</h3>
+                    <p style="font-size:12px; color:#64748b; margin:0;">Account details on file for invoice & receipts.</p>
+                  </div>
+                </div>
+
+                <div class="form-grid">
+                  <div class="field">
+                    <label>Business / Agency Name</label>
+                    <input class="input" value="{{ vendor_name|default:user.username }}" readonly style="background:#f8fafc; font-weight:600;">
+                  </div>
+                  <div class="field">
+                    <label>Contact Person</label>
+                    <input class="input" value="{{ user.get_full_name|default:user.username }}" readonly style="background:#f8fafc;">
+                  </div>
+                  <div class="field">
+                    <label>Email Address</label>
+                    <input class="input" value="{{ user.email|default:'accounts@vendor.in' }}" readonly style="background:#f8fafc;">
+                  </div>
+                  <div class="field">
+                    <label>Registered Mobile</label>
+                    <input class="input" value="{{ user.vendor_profile.mobile|default:'+91 Verified' }}" readonly style="background:#f8fafc;">
+                  </div>
+                </div>
+              </div>
+
+              <!-- Section 2: Payment Method -->
+              <div class="form-section" style="margin-top:20px; padding-top:20px; border-top:1px solid #f1f5f9;">
+                <div class="form-section-head">
+                  <span class="section-number">2</span>
+                  <div>
+                    <h3 style="font-size:16px; font-weight:700; margin:0 0 2px;">Payment Method</h3>
+                    <p style="font-size:12px; color:#64748b; margin:0;">Select secure checkout option for immediate credit activation.</p>
+                  </div>
+                </div>
+
+                <div class="radio-row" style="display:flex; flex-wrap:wrap; gap:12px; margin-top:14px;">
+                  <label class="radio" style="background:#f8fafc; padding:10px 14px; border:1px solid #e2e8f0; border-radius:10px; cursor:pointer; display:flex; align-items:center; gap:8px;">
+                    <input type="radio" name="payment" value="UPI" checked onclick="togglePaymentFields('upi')">
+                    <strong><i class="fa-solid fa-mobile-screen" style="color:#0f8a7c; margin-right:4px;"></i> UPI (Google Pay, PhonePe, Paytm)</strong>
+                  </label>
+                  <label class="radio" style="background:#f8fafc; padding:10px 14px; border:1px solid #e2e8f0; border-radius:10px; cursor:pointer; display:flex; align-items:center; gap:8px;">
+                    <input type="radio" name="payment" value="Card" onclick="togglePaymentFields('card')">
+                    <strong><i class="fa-solid fa-credit-card" style="color:#4f46e5; margin-right:4px;"></i> Debit / Credit Card</strong>
+                  </label>
+                  <label class="radio" style="background:#f8fafc; padding:10px 14px; border:1px solid #e2e8f0; border-radius:10px; cursor:pointer; display:flex; align-items:center; gap:8px;">
+                    <input type="radio" name="payment" value="NetBanking" onclick="togglePaymentFields('netbanking')">
+                    <strong><i class="fa-solid fa-building-columns" style="color:#0284c7; margin-right:4px;"></i> Net Banking</strong>
+                  </label>
+                </div>
+
+                <!-- UPI Input -->
+                <div id="payment-upi-box" class="form-grid" style="margin-top:16px;">
+                  <div class="field full">
+                    <label>Virtual Payment Address (VPA / UPI ID) <span class="required">*</span></label>
+                    <input type="text" name="upi_id" class="input" placeholder="e.g. 9876543210@paytm or business@okaxis" value="vendor@okhdfcbank">
+                  </div>
+                </div>
+              </div>
+
+              <!-- Form Action Buttons -->
+              <div class="form-actions" style="margin-top:24px; display:flex; justify-content:space-between; align-items:center;">
+                <a class="btn btn-secondary" href="packages.html">
+                  <i class="fa-solid fa-arrow-left"></i> Change Package
+                </a>
+                <button class="btn btn-primary" type="submit" style="padding:12px 28px; font-weight:800; font-size:14px;">
+                  <i class="fa-solid fa-lock"></i> Pay ₹{{ selected_pkg.price }} & Activate Credits
+                </button>
+              </div>
+
+            </form>
+          </section>
+
+          <!-- Order Summary Sidebar -->
+          <aside class="stack">
+            <section class="card" style="border-radius:16px;">
+              <div class="card-head" style="padding:16px 20px;">
+                <h3 style="font-size:15px; font-weight:700; margin:0;">Order Summary</h3>
+              </div>
+              <div class="card-body" style="padding:20px;">
+                <div style="display:flex; align-items:center; gap:12px; margin-bottom:16px;">
+                  <div style="width:44px; height:44px; border-radius:12px; background:#e8f7f4; color:#0f8a7c; display:flex; align-items:center; justify-content:center; font-size:18px;">
+                    <i class="fa-solid fa-bolt"></i>
+                  </div>
+                  <div>
+                    <strong style="font-size:15px; color:#0f172a;">{{ selected_pkg.name }}</strong>
+                    <div class="small muted" style="color:#059669; font-weight:600;">{{ selected_pkg.credits }} Bid Credits</div>
+                  </div>
+                </div>
+
+                <div class="divider" style="margin:14px 0;"></div>
+
+                <div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:8px; color:#475569;">
+                  <span>Package Base Rate:</span>
+                  <strong>₹{{ selected_pkg.price }}</strong>
+                </div>
+                <div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:12px; color:#475569;">
+                  <span>Taxes (GST 18%):</span>
+                  <span style="color:#10b981; font-weight:600;">Included</span>
+                </div>
+
+                <div class="divider" style="margin:14px 0;"></div>
+
+                <div style="display:flex; justify-content:space-between; align-items:baseline;">
+                  <strong style="font-size:15px; color:#0f172a;">Total Payable:</strong>
+                  <span style="font-size:22px; font-weight:800; color:#0f8a7c;">₹{{ selected_pkg.price }}</span>
+                </div>
+              </div>
+            </section>
+
+            <div class="callout neutral" style="border-radius:14px;">
+              <i class="fa-solid fa-shield-check" style="font-size:18px;"></i>
+              <div style="font-size:12.5px;">
+                <strong>Instant Credit Activation</strong>
+                <p style="margin:2px 0 0;">Credits are attached to your account instantly so you can bid on available customer requests.</p>
+              </div>
+            </div>
+          </aside>
+
+        </div>
+        {% endif %}
+
+      </main>
+    </div>
+  </div>
+
+  <script>
+    window.VENDOR_CREDITS = {{ remaining_credits|default:5 }};
+    function togglePaymentFields(type) {
+      const upiBox = document.getElementById('payment-upi-box');
+      if (upiBox) {
+        upiBox.style.display = (type === 'upi') ? 'block' : 'none';
+      }
+    }
+  </script>
+</body>
+</html>

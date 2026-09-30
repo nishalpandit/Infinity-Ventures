@@ -1,0 +1,76 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="description" content="Suggu Services Vendor Portal - My Bookings"><title>My Bookings · Suggu Services Vendor</title><link rel="stylesheet" href="/infinity-vendor-dashboard/assets/styles.css"><script defer src="/infinity-vendor-dashboard/assets/app.js"></script></head><body data-page="bookings" data-title="My Bookings" data-root="../"><div class="app-shell"><div id="sidebar-root"></div><div class="workspace"><div id="topbar-root"></div><main class="page">
+<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+  <h2 style="margin:0;">Manage Bookings</h2>
+</div>
+
+{% if messages %}
+  {% for message in messages %}
+  <div class="alert alert-{{ message.tags }}" style="margin-bottom: 20px;">
+    {{ message }}
+  </div>
+  {% endfor %}
+{% endif %}
+
+<section class="card" data-filter-scope>
+  <div class="toolbar">
+    <div class="search-box">
+      <span data-icon="search"></span>
+      <input class="input" data-search-input placeholder="Search bookings...">
+    </div>
+  </div>
+  <div class="card-body" style="padding:0;">
+    <div class="table-responsive">
+      <table class="table" style="width:100%;">
+        <thead>
+          <tr>
+            <th>Booking ID</th>
+            <th>Service</th>
+            <th>Customer</th>
+            <th>Date & Time</th>
+            <th>Amount</th>
+            <th>Status</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody data-rows>
+        {% for booking in my_bookings %}
+          <tr data-row data-search="{{ booking.id }} {{ booking.customer.get_full_name }} {{ booking.quick_service.title|default:'' }}">
+            <td><strong>#{{ booking.id }}</strong></td>
+            <td>
+              {{ booking.quick_service.title|default:"Deleted Service" }}<br>
+              <span class="tiny muted">{{ booking.package_name }}</span>
+            </td>
+            <td>{{ booking.customer.get_full_name|default:booking.customer.username }}<br><span class="tiny muted">{{ booking.service_address }}</span></td>
+            <td>{{ booking.scheduled_date|date:"d M Y" }}<br><span class="tiny muted">{{ booking.scheduled_time|default:"" }}</span></td>
+            <td><strong>₹{{ booking.total_amount }}</strong></td>
+            <td><span class="badge badge-{{ booking.status }}">{{ booking.get_status_display }}</span></td>
+            <td>
+              {% if booking.status == 'pending' %}
+              <form method="POST" action="{% url 'dashboard' 'vendor/bookings/index.html' %}" style="display:inline;">
+                {% csrf_token %}
+                <input type="hidden" name="booking_id" value="{{ booking.id }}">
+                <button type="submit" name="action" value="accept" class="btn btn-primary btn-sm">Accept</button>
+                <button type="submit" name="action" value="cancel" class="btn btn-secondary btn-sm" style="color:red; border-color:red;">Reject</button>
+              </form>
+              {% elif booking.status == 'accepted' %}
+              <form method="POST" action="{% url 'dashboard' 'vendor/bookings/index.html' %}" style="display:inline;">
+                {% csrf_token %}
+                <input type="hidden" name="booking_id" value="{{ booking.id }}">
+                <button type="submit" name="action" value="complete" class="btn btn-primary btn-sm">Mark Complete</button>
+              </form>
+              {% else %}
+              <span class="tiny muted">No actions available</span>
+              {% endif %}
+            </td>
+          </tr>
+        {% empty %}
+          <tr>
+            <td colspan="7" style="text-align: center; padding: 40px; color: var(--text-muted);">You have no bookings at the moment.</td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+</main></div></div></body></html>

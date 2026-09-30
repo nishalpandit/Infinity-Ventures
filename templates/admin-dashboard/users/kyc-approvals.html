@@ -1,0 +1,150 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>KYC Approvals - Suggu Admin</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
+  <link rel="stylesheet" href="{% static 'admin-dashboard/assets/css/admin.css' %}">
+  <link rel="stylesheet" href="{% static 'admin-dashboard/assets/css/sidebar.css' %}">
+  <link rel="stylesheet" href="{% static 'admin-dashboard/assets/css/responsive.css' %}">
+  <style>
+    .badge-status {
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+    .badge-pending { background-color: #fef3c7; color: #d97706; }
+    .badge-approved { background-color: #d1fae5; color: #059669; }
+    .badge-rejected { background-color: #fee2e2; color: #dc2626; }
+    .doc-link { text-decoration: none; color: #4F46E5; }
+    .doc-link:hover { text-decoration: underline; }
+  </style>
+</head>
+<body>
+  <div id="sidebar-mount"></div>
+  <div class="main-wrapper">
+    <div id="header-mount"></div>
+    <main class="main-content">
+      <div class="breadcrumb" id="breadcrumb">
+        <a href="/admin-dashboard">Dashboard</a> <span>/</span> Users <span>/</span> <strong>KYC Approvals</strong>
+      </div>
+      
+      <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>Vendor KYC Approvals</h2>
+        <form method="GET" class="d-flex gap-2">
+            <select name="status" class="form-select" onchange="this.form.submit()">
+                <option value="all" {% if request.GET.status == 'all' %}selected{% endif %}>All</option>
+                <option value="pending" {% if not request.GET.status or request.GET.status == 'pending' %}selected{% endif %}>Pending</option>
+                <option value="approved" {% if request.GET.status == 'approved' %}selected{% endif %}>Approved</option>
+                <option value="rejected" {% if request.GET.status == 'rejected' %}selected{% endif %}>Rejected</option>
+            </select>
+        </form>
+      </div>
+
+      <div class="card">
+        <div class="card-body p-0">
+          <div class="table-responsive">
+            <table class="table table-hover mb-0">
+              <thead class="table-light">
+                <tr>
+                  <th>ID</th>
+                  <th>Vendor</th>
+                  <th>ID Type / No</th>
+                  <th>Identity Details</th>
+                  <th>Documents</th>
+                  <th>Status</th>
+                  <th class="text-end">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for kyc in kycs %}
+                <tr>
+                  <td>#KYC-{{ kyc.id }}</td>
+                  <td>
+                    <strong>{{ kyc.vendor.get_full_name|default:kyc.vendor.username }}</strong><br>
+                    <small class="text-muted">{{ kyc.vendor.vendor_profile.company_name|default:"--" }}</small>
+                  </td>
+                  <td>
+                    {{ kyc.get_id_type_display }}<br>
+                    <small class="text-muted">{{ kyc.id_number }}</small>
+                  </td>
+                  <td>
+                    <small><strong>DOB:</strong> {{ kyc.vendor.vendor_profile.dob|date:"Y-m-d"|default:"--" }}</small><br>
+                    <small><strong>Gender:</strong> {{ kyc.vendor.vendor_profile.gender|default:"--" }}</small><br>
+                    <small><strong>Address:</strong> {{ kyc.vendor.vendor_profile.address|default:"--"|truncatechars:35 }}</small>
+                  </td>
+                  <td>
+                    {% if kyc.id_document_front %}
+                      <a href="{{ kyc.id_document_front.url }}" target="_blank" class="doc-link d-block"><i class="fa-solid fa-file"></i> ID Front</a>
+                    {% endif %}
+                    {% if kyc.id_document_back %}
+                      <a href="{{ kyc.id_document_back.url }}" target="_blank" class="doc-link d-block"><i class="fa-solid fa-file"></i> ID Back</a>
+                    {% endif %}
+                    {% if kyc.business_license %}
+                      <a href="{{ kyc.business_license.url }}" target="_blank" class="doc-link d-block"><i class="fa-solid fa-file-invoice"></i> License</a>
+                    {% endif %}
+                  </td>
+                  <td>
+                    <span class="badge-status badge-{{ kyc.status }}">{{ kyc.get_status_display }}</span>
+                  </td>
+                  <td class="text-end">
+                    {% if kyc.status == 'pending' %}
+                      <form method="POST" action="/api/admin/kyc/{{ kyc.id }}/approve/" style="display:inline;" onsubmit="return confirm('Approve this KYC?');">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-sm btn-success"><i class="fa-solid fa-check"></i> Approve</button>
+                      </form>
+                      <button type="button" class="btn btn-sm btn-danger ms-1" onclick="rejectKyc({{ kyc.id }})"><i class="fa-solid fa-xmark"></i> Reject</button>
+                    {% else %}
+                      <span class="text-muted">Reviewed</span>
+                    {% endif %}
+                  </td>
+                </tr>
+                {% empty %}
+                <tr>
+                  <td colspan="6" class="text-center py-4 text-muted">No KYC applications found.</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    function rejectKyc(id) {
+        let reason = prompt("Enter reason for rejection:");
+        if (reason) {
+            let form = document.createElement("form");
+            form.method = "POST";
+            form.action = "/api/admin/kyc/" + id + "/reject/";
+            
+            let csrf = document.createElement("input");
+            csrf.type = "hidden";
+            csrf.name = "csrfmiddlewaretoken";
+            csrf.value = "{{ csrf_token }}";
+            form.appendChild(csrf);
+            
+            let notes = document.createElement("input");
+            notes.type = "hidden";
+            notes.name = "admin_notes";
+            notes.value = reason;
+            form.appendChild(notes);
+            
+            document.body.appendChild(form);
+            form.submit();
+        }
+    }
+  </script>
+
+  <script src="/admin-dashboard/assets/js/sidebar.js"></script>
+  <script src="/admin-dashboard/assets/js/components.js"></script>
+</body>
+</html>

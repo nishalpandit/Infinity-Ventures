@@ -513,7 +513,51 @@
         </div>
       </div>
 
-      <!-- Section 3: Location & Account Security -->
+      <!-- Section 3: KYC Documents -->
+      <div class="section-heading sec-kyc" style="color: var(--amber); border-color: var(--amber-border);">
+        <i class="fa-solid fa-file-contract"></i> KYC Documents
+      </div>
+      <div class="form-grid">
+        <div class="form-group">
+          <label for="id_type">ID Type <em>*</em></label>
+          <div class="input-wrap">
+            <select id="id_type" name="id_type" class="form-control" required>
+              <option value="" disabled selected>Select ID Type</option>
+              <option value="aadhaar">Aadhaar Card</option>
+              <option value="pan">PAN Card</option>
+              <option value="voter_id">Voter ID</option>
+            </select>
+            <i class="fa-solid fa-id-card icon-left"></i>
+            <i class="fa-solid fa-chevron-down icon-chevron"></i>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="id_document_front">ID Document Front <em>*</em></label>
+          <div class="input-wrap">
+            <input type="file" id="id_document_front" name="id_document_front" class="form-control" required accept="image/*,.pdf">
+            <i class="fa-solid fa-file-arrow-up icon-left"></i>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="id_document_back">ID Document Back</label>
+          <div class="input-wrap">
+            <input type="file" id="id_document_back" name="id_document_back" class="form-control" accept="image/*,.pdf">
+            <i class="fa-solid fa-file-arrow-up icon-left"></i>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="business_license">Business License / GST</label>
+          <div class="input-wrap">
+            <input type="file" id="business_license" name="business_license" class="form-control" accept="image/*,.pdf">
+            <i class="fa-solid fa-file-invoice icon-left"></i>
+          </div>
+        </div>
+      </div>
+
+      <!-- Section 4: Location & Account Security -->
       <div class="section-heading sec-security">
         <i class="fa-solid fa-map-pin"></i> Location &amp; Account Security
       </div>

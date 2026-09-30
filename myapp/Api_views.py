@@ -10,7 +10,7 @@ from django.contrib.auth import get_user_model
 from django.utils import timezone
 from django.db.models import Q
 
-from .models import UserProfile, VendorProfile, Category, Location, OTPVerification, AuthToken, Job, QuickService
+from .models import UserProfile, VendorProfile, Category, Location, OTPVerification, AuthToken, Job, QuickService, VendorKYC
 
 User = get_user_model()
 
@@ -92,6 +92,22 @@ def _resolve_user_identifier(identifier):
 
     return None
 
+
+def _check_vendor_kyc_status(user):
+    """
+    Checks if a vendor user has completed KYC and is approved.
+    Returns (True, None) if verified or not a vendor.
+    Returns (False, message) if pending or rejected.
+    """
+    if user.role != 'VENDOR':
+        return True, None
+    try:
+        kyc = VendorKYC.objects.get(vendor=user)
+        if kyc.status != 'approved':
+            return False, f"Your profile is under verification by admins. Current status: {kyc.get_status_display()}. You can login once verified."
+        return True, None
+    except VendorKYC.DoesNotExist:
+        return False, "KYC verification pending. Please complete your registration."
 
 def _get_or_create_auth_token(user):
     """
@@ -421,6 +437,21 @@ def vendor_signup_api(request):
         address = (data.get('address') or '').strip()
         vendor_type = (data.get('vendor_type') or ('company' if company_name else 'vendor')).strip()
         
+        gender = (data.get('gender') or '').strip()
+        id_proof = (data.get('id_proof') or '').strip()
+        about = (data.get('about') or '').strip()
+        profile_image = request.FILES.get('profile_image')
+        
+        dob_raw = (data.get('dob') or '').strip()
+        if not dob_raw:
+            return JsonResponse({'status': 'error', 'message': "Field 'dob' is required."}, status=400)
+            
+        try:
+            from datetime import datetime
+            dob = datetime.strptime(dob_raw, "%d-%m-%Y").date()
+        except ValueError:
+            return JsonResponse({'status': 'error', 'message': "Invalid 'dob' format. Expected dd-mm-yyyy."}, status=400)
+        
         experience = data.get('experience', 0)
         try:
             experience = int(experience)
@@ -480,12 +511,28 @@ def vendor_signup_api(request):
             user_profile.phone_number = mobile
             user_profile.save()
 
+        # Handle KYC Documents
+        id_type = request.POST.get('id_type') or data.get('id_type')
+        id_document_front = request.FILES.get('id_document_front')
+        id_document_back = request.FILES.get('id_document_back')
+        business_license = request.FILES.get('business_license')
+        if id_type and id_document_front:
+            VendorKYC.objects.create(
+                vendor=user,
+                id_type=id_type,
+                id_number=id_proof or '',
+                id_document_front=id_document_front,
+                id_document_back=id_document_back,
+                business_license=business_license,
+                status='pending'
+            )
+
         code = f"VEN{vendor_profile.id:03d}"
         display_name = company_name or name
         token_key = _get_or_create_auth_token(user)
         response_data = {
             'status': 'success',
-            'message': f"Vendor '{display_name}' registered successfully",
+            'message': f"Vendor '{display_name}' registered successfully. Your profile is under verification by admins.",
             'token': token_key,
             'token_type': 'Bearer',
             'vendor': {
@@ -538,6 +585,10 @@ def vendor_login_api(request):
 
         if not user.is_active:
             return JsonResponse({'status': 'error', 'message': "Vendor account is suspended or inactive."}, status=403)
+
+        kyc_ok, kyc_msg = _check_vendor_kyc_status(user)
+        if not kyc_ok:
+            return JsonResponse({'status': 'error', 'message': kyc_msg}, status=403)
 
         if user.role != 'VENDOR' and not user.is_superuser:
             return JsonResponse({'status': 'error', 'message': f"Access denied. Account is registered as {user.role}, not a vendor."}, status=403)
@@ -774,6 +825,10 @@ def unified_login_api(request):
         if not user.is_active:
             return JsonResponse({'status': 'error', 'message': "Account is suspended or inactive."}, status=403)
 
+        kyc_ok, kyc_msg = _check_vendor_kyc_status(user)
+        if not kyc_ok:
+            return JsonResponse({'status': 'error', 'message': kyc_msg}, status=403)
+
         user.backend = 'django.contrib.auth.backends.ModelBackend'
         login(request, user)
 
@@ -877,6 +932,10 @@ def unified_otp_login_api(request):
 
         if not user.is_active:
             return JsonResponse({'status': 'error', 'message': "Account is suspended or inactive."}, status=403)
+
+        kyc_ok, kyc_msg = _check_vendor_kyc_status(user)
+        if not kyc_ok:
+            return JsonResponse({'status': 'error', 'message': kyc_msg}, status=403)
 
         # Invalidate the OTP so it cannot be reused
         OTPVerification.objects.filter(
@@ -1294,11 +1353,20 @@ def vendor_otp_signup_api(request):
         location = f"{city}, {state}" if (city and state) else (data.get('location') or city or state or 'Ranchi, Jharkhand').strip()
         address = (data.get('address') or '').strip()
         vendor_type = (data.get('vendor_type') or ('company' if company_name else 'vendor')).strip()
-        dob = data.get('dob')
         gender = (data.get('gender') or '').strip()
         id_proof = (data.get('id_proof') or '').strip()
         about = (data.get('about') or '').strip()
         profile_image = request.FILES.get('profile_image') or request.FILES.get('image')
+
+        dob_raw = (data.get('dob') or '').strip()
+        if not dob_raw:
+            return JsonResponse({'status': 'error', 'message': "Field 'dob' is required."}, status=400)
+            
+        try:
+            from datetime import datetime
+            dob = datetime.strptime(dob_raw, "%d-%m-%Y").date()
+        except ValueError:
+            return JsonResponse({'status': 'error', 'message': "Invalid 'dob' format. Expected dd-mm-yyyy."}, status=400)
 
         experience = data.get('experience', 0)
         try:
@@ -1381,21 +1449,34 @@ def vendor_otp_signup_api(request):
         user_profile.phone_number = mobile
         user_profile.save()
 
+        # Handle KYC Documents
+        id_type = request.POST.get('id_type') or data.get('id_type')
+        id_document_front = request.FILES.get('id_document_front')
+        id_document_back = request.FILES.get('id_document_back')
+        business_license = request.FILES.get('business_license')
+        if id_type and id_document_front:
+            VendorKYC.objects.create(
+                vendor=user,
+                id_type=id_type,
+                id_number=id_proof or '',
+                id_document_front=id_document_front,
+                id_document_back=id_document_back,
+                business_license=business_license,
+                status='pending'
+            )
+
         # Invalidate / consume the used OTP so it cannot be reused
         OTPVerification.objects.filter(
             Q(mobile=norm_phone) | Q(mobile=str(mobile).strip()),
             otp=otp
         ).update(is_verified=True, expires_at=timezone.now())
 
-        user.backend = 'django.contrib.auth.backends.ModelBackend'
-        login(request, user)
-
         code = f"VEN{vendor_profile.id:03d}"
         display_name = company_name or name
         token_key = _get_or_create_auth_token(user)
         response_data = {
             'status': 'success',
-            'message': f"Vendor '{display_name}' registered and logged in successfully via OTP",
+            'message': f"Vendor '{display_name}' registered successfully. Your profile is under verification by admins.",
             'token': token_key,
             'token_type': 'Bearer',
             'vendor': {
@@ -1460,6 +1541,10 @@ def vendor_otp_login_api(request):
 
         if not user.is_active:
             return JsonResponse({'status': 'error', 'message': "Vendor account is suspended or inactive."}, status=403)
+
+        kyc_ok, kyc_msg = _check_vendor_kyc_status(user)
+        if not kyc_ok:
+            return JsonResponse({'status': 'error', 'message': kyc_msg}, status=403)
 
         if user.role != 'VENDOR' and not user.is_superuser:
             return JsonResponse({

@@ -77,7 +77,8 @@
       label: 'Users', icon: 'fa-users', children: [
         { label: 'User', href: 'users/users.html' },
         { label: 'Vendor', href: 'users/vendors.html' },
-        { label: 'Company Vendor', href: 'users/company-vendors.html' }
+        { label: 'Company Vendor', href: 'users/company-vendors.html' },
+        { label: 'KYC Approvals', href: 'users/kyc-approvals.html' }
       ]
     },
     {

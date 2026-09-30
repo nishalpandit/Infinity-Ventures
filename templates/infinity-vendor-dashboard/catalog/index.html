@@ -1,0 +1,1559 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="Suggu Services Vendor Portal - My Services Catalog">
+  <title>My Services Catalog · Suggu Services Vendor</title>
+  <link rel="stylesheet" href="/infinity-vendor-dashboard/assets/styles.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+  <script defer src="/infinity-vendor-dashboard/assets/app.js"></script>
+  <style>
+    /* Service Form & Live Preview Layout */
+    .catalog-builder-grid {
+      display: grid;
+      grid-template-columns: 1.15fr 0.85fr;
+      gap: 24px;
+      align-items: flex-start;
+    }
+    @media (max-width: 1024px) {
+      .catalog-builder-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .builder-step-card {
+      background: #fff;
+      border: 1px solid #e2e8f0;
+      border-radius: 14px;
+      padding: 20px;
+      margin-bottom: 20px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+    }
+    .builder-step-head {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 16px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid #f1f5f9;
+    }
+    .step-badge {
+      width: 28px;
+      height: 28px;
+      border-radius: 8px;
+      background: #0f8a7c;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+    .step-title {
+      font-size: 15px;
+      font-weight: 700;
+      color: #0f172a;
+      margin: 0;
+    }
+    .step-subtitle {
+      font-size: 12px;
+      color: #64748b;
+      margin: 2px 0 0;
+    }
+
+    /* Image Preset Selector */
+    .img-preset-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+      gap: 10px;
+      margin-top: 10px;
+    }
+    .img-preset-item {
+      position: relative;
+      border-radius: 10px;
+      overflow: hidden;
+      cursor: pointer;
+      border: 2px solid transparent;
+      aspect-ratio: 16/10;
+      background: #f1f5f9;
+      transition: all 0.2s;
+    }
+    .img-preset-item img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+    .img-preset-item.selected {
+      border-color: #0f8a7c;
+      box-shadow: 0 0 0 3px rgba(15,138,124,0.25);
+    }
+    .img-preset-item .check-overlay {
+      position: absolute;
+      top: 4px;
+      right: 4px;
+      background: #0f8a7c;
+      color: #fff;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      font-size: 10px;
+    }
+    .img-preset-item.selected .check-overlay {
+      display: flex;
+    }
+    .img-preset-label {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: linear-gradient(transparent, rgba(0,0,0,0.75));
+      color: #fff;
+      font-size: 10px;
+      font-weight: 600;
+      padding: 4px 6px;
+      text-align: center;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    /* Package Options Repeater Cards */
+    .pkg-repeater-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .pkg-card {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      padding: 16px;
+      position: relative;
+      transition: all 0.2s;
+    }
+    .pkg-card:hover {
+      border-color: #cbd5e1;
+      background: #fff;
+    }
+    .pkg-card-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+    .pkg-card-title-tag {
+      font-size: 12px;
+      font-weight: 700;
+      color: #0f8a7c;
+      background: #e8f7f4;
+      padding: 3px 8px;
+      border-radius: 6px;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .pkg-del-btn {
+      background: none;
+      border: none;
+      color: #94a3b8;
+      cursor: pointer;
+      font-size: 13px;
+      padding: 4px 8px;
+      border-radius: 6px;
+      transition: color 0.15s;
+    }
+    .pkg-del-btn:hover {
+      color: #ef4444;
+      background: #fee2e2;
+    }
+    .pkg-grid-inputs {
+      display: grid;
+      grid-template-columns: 1.5fr 1fr 1fr;
+      gap: 12px;
+      align-items: flex-end;
+    }
+    @media (max-width: 640px) {
+      .pkg-grid-inputs {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* Inclusions & Guarantees Chips */
+    .inc-chips-wrap {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .inc-item-checkbox {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 12px;
+      border-radius: 8px;
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      cursor: pointer;
+      font-size: 13px;
+      color: #1e293b;
+      transition: all 0.15s;
+    }
+    .inc-item-checkbox:hover {
+      background: #f1f5f9;
+    }
+    .inc-item-checkbox.active {
+      background: #ecfdf5;
+      border-color: #a7f3d0;
+      color: #065f46;
+    }
+    .inc-item-checkbox input[type="checkbox"] {
+      accent-color: #0f8a7c;
+      width: 16px;
+      height: 16px;
+      cursor: pointer;
+    }
+
+    /* Location Picker */
+    .loc-picker-box {
+      background: #f8fafc;
+      border: 1.5px dashed #cbd5e1;
+      border-radius: 12px;
+      padding: 16px;
+    }
+    .gps-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: #0f8a7c;
+      color: #fff;
+      border: none;
+      padding: 10px 16px;
+      border-radius: 9px;
+      font-weight: 700;
+      font-size: 13px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .gps-btn:hover {
+      background: #0b6f65;
+      transform: translateY(-1px);
+    }
+    .quick-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 10px;
+    }
+    .quick-chip {
+      background: #fff;
+      border: 1px solid #e2e8f0;
+      padding: 5px 10px;
+      border-radius: 6px;
+      font-size: 11.5px;
+      font-weight: 600;
+      color: #334155;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .quick-chip:hover, .quick-chip.active {
+      background: #e8f7f4;
+      border-color: #0f8a7c;
+      color: #0f8a7c;
+    }
+    .loc-active-pill {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: #ecfdf5;
+      border: 1px solid #a7f3d0;
+      color: #047857;
+      padding: 10px 14px;
+      border-radius: 10px;
+      font-size: 13px;
+      font-weight: 600;
+      margin-top: 12px;
+    }
+    @keyframes pulseLive {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.4; transform: scale(1.15); }
+    }
+    .live-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #10b981;
+      display: inline-block;
+      animation: pulseLive 1.5s infinite;
+    }
+
+    /* Live Preview Sticky Container */
+    .preview-sticky-wrap {
+      position: sticky;
+      top: 20px;
+      background: #fff;
+      border: 1px solid #e2e8f0;
+      border-radius: 16px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.06);
+      overflow: hidden;
+    }
+    .preview-header {
+      background: #0f172a;
+      color: #fff;
+      padding: 12px 18px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .preview-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(16, 185, 129, 0.2);
+      color: #34d399;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 3px 8px;
+      border-radius: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    /* Modal Replica Inside Preview */
+    .modal-replica {
+      background: #fff;
+      display: flex;
+      flex-direction: column;
+      max-height: calc(100vh - 120px);
+      overflow-y: auto;
+    }
+    .modal-rep-hero {
+      position: relative;
+      height: 190px;
+      background: #1e293b;
+      overflow: hidden;
+    }
+    .modal-rep-hero img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+    .modal-rep-overlay {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(180deg, rgba(0,0,0,0.2) 0%, rgba(0,0,0,0.75) 100%);
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+      padding: 16px;
+      color: #fff;
+    }
+    .modal-rep-title {
+      font-size: 18px;
+      font-weight: 800;
+      line-height: 1.2;
+      margin-bottom: 4px;
+    }
+    .modal-rep-sub {
+      font-size: 11.5px;
+      color: #e2e8f0;
+      line-height: 1.3;
+    }
+    .modal-rep-close {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: rgba(0,0,0,0.5);
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+    }
+
+    .modal-rep-body {
+      padding: 16px;
+    }
+    .modal-rep-rating-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 14px;
+      font-size: 12px;
+    }
+    .rep-rating-tag {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      padding: 2px 7px;
+      border-radius: 6px;
+      font-weight: 700;
+      color: #0f172a;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .rep-discount-tag {
+      background: #ecfdf5;
+      color: #059669;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 6px;
+      font-size: 11px;
+    }
+
+    .modal-rep-sec-title {
+      font-size: 13.5px;
+      font-weight: 800;
+      color: #0f172a;
+      margin: 14px 0 10px;
+    }
+
+    /* Packages preview inside modal */
+    .rep-pkgs-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+    .rep-pkg-card {
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      padding: 10px;
+      background: #fff;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+    .rep-pkg-name {
+      font-size: 12px;
+      font-weight: 700;
+      color: #0f172a;
+      margin-bottom: 3px;
+    }
+    .rep-pkg-desc {
+      font-size: 10px;
+      color: #64748b;
+      line-height: 1.3;
+      margin-bottom: 8px;
+      min-height: 26px;
+    }
+    .rep-pkg-price-row {
+      display: flex;
+      align-items: baseline;
+      gap: 4px;
+      margin-bottom: 6px;
+    }
+    .rep-pkg-price {
+      font-size: 14px;
+      font-weight: 800;
+      color: #0f172a;
+    }
+    .rep-pkg-old {
+      font-size: 11px;
+      color: #94a3b8;
+      text-decoration: line-through;
+    }
+    .rep-pkg-add-btn {
+      width: 100%;
+      border: 1px solid #7c3aed;
+      color: #7c3aed;
+      background: #fff;
+      font-weight: 700;
+      font-size: 11px;
+      padding: 4px 0;
+      border-radius: 6px;
+      text-align: center;
+    }
+
+    /* Inclusions preview */
+    .rep-inclusions-box {
+      background: #f8fafc;
+      border: 1px solid #f1f5f9;
+      border-radius: 10px;
+      padding: 12px;
+    }
+    .rep-inc-title {
+      font-size: 11.5px;
+      font-weight: 700;
+      color: #1e293b;
+      margin-bottom: 8px;
+    }
+    .rep-inc-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 6px;
+      font-size: 11px;
+      color: #334155;
+      line-height: 1.3;
+      margin-bottom: 5px;
+    }
+    .rep-inc-item i.fa-circle-check {
+      color: #10b981;
+      font-size: 11px;
+      margin-top: 1px;
+      flex-shrink: 0;
+    }
+    .rep-inc-item i.fa-circle-xmark {
+      color: #ef4444;
+      font-size: 11px;
+      margin-top: 1px;
+      flex-shrink: 0;
+    }
+
+    .modal-rep-footer {
+      background: #fff;
+      border-top: 1px solid #f1f5f9;
+      padding: 12px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .rep-footer-btn {
+      background: #7c3aed;
+      color: #fff;
+      font-size: 12px;
+      font-weight: 700;
+      padding: 8px 14px;
+      border-radius: 8px;
+      border: none;
+    }
+
+    /* Active Services Listing Cards */
+    .service-catalog-card {
+      background: #fff;
+      border: 1px solid #e2e8f0;
+      border-radius: 14px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.02);
+      transition: all 0.2s;
+    }
+    .service-catalog-card:hover {
+      box-shadow: 0 10px 25px rgba(0,0,0,0.06);
+      border-color: #cbd5e1;
+    }
+    .scc-hero {
+      position: relative;
+      height: 140px;
+      background: #1e293b;
+      overflow: hidden;
+    }
+    .scc-hero img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+    .scc-badge-cat {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      background: rgba(15, 23, 42, 0.85);
+      backdrop-filter: blur(4px);
+      color: #fff;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 3px 8px;
+      border-radius: 6px;
+    }
+    .scc-badge-loc {
+      position: absolute;
+      bottom: 10px;
+      left: 10px;
+      background: rgba(16, 185, 129, 0.95);
+      color: #fff;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 3px 8px;
+      border-radius: 6px;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .scc-body {
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+    }
+    .scc-title {
+      font-size: 16px;
+      font-weight: 700;
+      color: #0f172a;
+      margin: 0 0 6px;
+    }
+    .scc-desc {
+      font-size: 12.5px;
+      color: #64748b;
+      line-height: 1.4;
+      margin-bottom: 12px;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    .scc-pkgs-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-bottom: 14px;
+    }
+    .scc-pkg-pill {
+      background: #f1f5f9;
+      border: 1px solid #e2e8f0;
+      font-size: 11.5px;
+      padding: 3px 8px;
+      border-radius: 6px;
+      color: #334155;
+      font-weight: 600;
+    }
+    .scc-pkg-pill strong {
+      color: #0f8a7c;
+    }
+    .scc-footer {
+      margin-top: auto;
+      padding-top: 12px;
+      border-top: 1px solid #f1f5f9;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+  </style>
+</head>
+<body data-page="catalog" data-title="My Services" data-root="../">
+  <div class="app-shell">
+    <div id="sidebar-root"></div>
+    <div class="workspace">
+      <div id="topbar-root"></div>
+      <main class="page">
+
+        <!-- Top Header Banner -->
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:24px; flex-wrap:wrap; gap:14px;">
+          <div>
+            <h1 style="font-size:24px; font-weight:800; margin:0 0 4px; color:#0f172a;">My Service Catalog</h1>
+            <p class="muted" style="margin:0; font-size:13.5px;">Create and manage quick services with packages, guarantee checklists, and live 10 km GPS delivery zone.</p>
+          </div>
+          <button class="btn btn-primary" onclick="toggleServiceForm()" id="toggleFormBtn" style="padding:10px 20px; font-weight:700;">
+            <i class="fa-solid fa-plus"></i> Add New Quick Service
+          </button>
+        </div>
+
+        {% if messages %}
+          {% for message in messages %}
+          <div class="callout success" style="margin-bottom:24px; padding:14px 18px; border-radius:10px;">
+            <i class="fa-solid fa-circle-check" style="font-size:18px;"></i>
+            <div style="font-weight:600;">{{ message }}</div>
+          </div>
+          {% endfor %}
+        {% endif %}
+
+        <!-- ============================================================== -->
+        <!-- COMPLETE ADD NEW QUICK SERVICE BUILDER (URBAN COMPANY PARITY)  -->
+        <!-- ============================================================== -->
+        <section class="card" id="add-service-form" style="display:none; margin-bottom:32px; border:2px solid #0f8a7c; box-shadow:0 12px 40px rgba(15,138,124,0.12); border-radius:18px; overflow:hidden;">
+          <div class="card-head" style="background:#f8fafc; border-bottom:1px solid #e2e8f0; padding:16px 24px;">
+            <div>
+              <div style="display:flex; align-items:center; gap:8px;">
+                <span style="background:#0f8a7c; color:#fff; font-size:11px; font-weight:800; padding:3px 8px; border-radius:6px; text-transform:uppercase;">Creator</span>
+                <h3 style="font-size:17px; font-weight:800; color:#0f172a; margin:0;">Create New Quick Service</h3>
+              </div>
+              <p class="muted" style="margin:4px 0 0; font-size:12.5px;">Define your service title, cover photo, package tiers, and 10 km live delivery location.</p>
+            </div>
+            <button class="icon-btn" onclick="toggleServiceForm()" title="Close Form">
+              <i class="fa-solid fa-xmark"></i>
+            </button>
+          </div>
+
+          <div class="card-body" style="padding:24px; background:#f8fafc;">
+            <form method="POST" action="{% url 'dashboard' 'vendor/catalog/index.html' %}" id="serviceCreateForm" enctype="multipart/form-data">
+              {% csrf_token %}
+
+              <div class="catalog-builder-grid">
+                
+                <!-- ============================================== -->
+                <!-- LEFT COLUMN: BUILDER CONTROLS                  -->
+                <!-- ============================================== -->
+                <div class="builder-controls-col">
+                  
+                  <!-- STEP 1: BASIC INFORMATION -->
+                  <div class="builder-step-card">
+                    <div class="builder-step-head">
+                      <div class="step-badge">1</div>
+                      <div>
+                        <h4 class="step-title">Basic Information</h4>
+                        <p class="step-subtitle">What service are you offering to customers?</p>
+                      </div>
+                    </div>
+
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-bottom:14px;">
+                      <!-- Category -->
+                      <div class="field" style="margin:0;">
+                        <label>Category <span class="required">*</span></label>
+                        <select name="category_id" id="formCategory" class="select" required onchange="handleCategoryChange(this)">
+                          <option value="">Select Category</option>
+                          {% for cat in categories %}
+                            <option value="{{ cat.id }}" data-name="{{ cat.name }}">{{ cat.name }}</option>
+                          {% endfor %}
+                        </select>
+                      </div>
+
+                      <!-- Service Title -->
+                      <div class="field" style="margin:0;">
+                        <label>Service Title <span class="required">*</span></label>
+                        <input type="text" name="title" id="formTitle" class="input" placeholder="e.g. Switchboard Repair" required autocomplete="off" oninput="updateLivePreview()">
+                      </div>
+                    </div>
+
+                    <!-- Category Quick Suggestions -->
+                    <div style="margin-bottom:14px;">
+                      <span style="font-size:11px; color:#64748b; font-weight:600; display:block; margin-bottom:6px;">Quick Title Suggestions:</span>
+                      <div class="quick-chips" id="quickTitleChips">
+                        <button type="button" class="quick-chip" onclick="applyTitleSuggestion('Switchboard Repair', 'Electrical')">Switchboard Repair</button>
+                        <button type="button" class="quick-chip" onclick="applyTitleSuggestion('Ceiling Fan Repair & Install', 'Electrical')">Ceiling Fan Repair</button>
+                        <button type="button" class="quick-chip" onclick="applyTitleSuggestion('Tap & Mixer Repair', 'Plumbing')">Tap & Mixer Repair</button>
+                        <button type="button" class="quick-chip" onclick="applyTitleSuggestion('Water Tank Cleaning', 'Cleaning')">Water Tank Cleaning</button>
+                        <button type="button" class="quick-chip" onclick="applyTitleSuggestion('AC Filter Clean & Gas Check', 'AC & Appliance')">AC Service</button>
+                      </div>
+                    </div>
+
+                    <!-- Short Description -->
+                    <div class="field" style="margin:0;">
+                      <label>Subtitle / Tagline</label>
+                      <input type="text" name="description" id="formDescription" class="input" placeholder="e.g. Professional switchboard repair service by verified experts." oninput="updateLivePreview()">
+                    </div>
+                  </div>
+
+                  <!-- STEP 2: SERVICE COVER PHOTO -->
+                  <div class="builder-step-card">
+                    <div class="builder-step-head">
+                      <div class="step-badge">2</div>
+                      <div>
+                        <h4 class="step-title">Service Cover Photo</h4>
+                        <p class="step-subtitle">Select from curated photo presets or upload your own work photo.</p>
+                      </div>
+                    </div>
+
+                    <!-- Preset Photos -->
+                    <div>
+                      <label style="font-size:12px; font-weight:700; color:#334155;">Curated Photo Presets (Click to choose):</label>
+                      <div class="img-preset-grid" id="presetImagesContainer">
+                        <div class="img-preset-item selected" onclick="selectPresetImage(this, 'https://images.unsplash.com/photo-1621905251189-08b45d6a269e?w=600&auto=format&fit=crop&q=80', 'Electrician')">
+                          <img src="https://images.unsplash.com/photo-1621905251189-08b45d6a269e?w=300&auto=format&fit=crop&q=80" alt="Electrician">
+                          <span class="check-overlay"><i class="fa-solid fa-check"></i></span>
+                          <span class="img-preset-label">Electrician</span>
+                        </div>
+                        <div class="img-preset-item" onclick="selectPresetImage(this, 'https://images.unsplash.com/photo-1585704032915-c3400ca199e7?w=600&auto=format&fit=crop&q=80', 'Plumbing')">
+                          <img src="https://images.unsplash.com/photo-1585704032915-c3400ca199e7?w=300&auto=format&fit=crop&q=80" alt="Plumbing">
+                          <span class="check-overlay"><i class="fa-solid fa-check"></i></span>
+                          <span class="img-preset-label">Plumbing</span>
+                        </div>
+                        <div class="img-preset-item" onclick="selectPresetImage(this, 'https://images.unsplash.com/photo-1581578731548-c64695cc6952?w=600&auto=format&fit=crop&q=80', 'Cleaning')">
+                          <img src="https://images.unsplash.com/photo-1581578731548-c64695cc6952?w=300&auto=format&fit=crop&q=80" alt="Cleaning">
+                          <span class="check-overlay"><i class="fa-solid fa-check"></i></span>
+                          <span class="img-preset-label">Cleaning</span>
+                        </div>
+                        <div class="img-preset-item" onclick="selectPresetImage(this, 'https://images.unsplash.com/photo-1585771724684-38269d6639fd?w=600&auto=format&fit=crop&q=80', 'AC Service')">
+                          <img src="https://images.unsplash.com/photo-1585771724684-38269d6639fd?w=300&auto=format&fit=crop&q=80" alt="AC Service">
+                          <span class="check-overlay"><i class="fa-solid fa-check"></i></span>
+                          <span class="img-preset-label">AC Service</span>
+                        </div>
+                        <div class="img-preset-item" onclick="selectPresetImage(this, 'https://images.unsplash.com/photo-1507652313519-d4e9174996dd?w=600&auto=format&fit=crop&q=80', 'Bathroom')">
+                          <img src="https://images.unsplash.com/photo-1507652313519-d4e9174996dd?w=300&auto=format&fit=crop&q=80" alt="Bathroom">
+                          <span class="check-overlay"><i class="fa-solid fa-check"></i></span>
+                          <span class="img-preset-label">Bathroom</span>
+                        </div>
+                      </div>
+                      <input type="hidden" name="image_preset" id="inputImagePreset" value="https://images.unsplash.com/photo-1621905251189-08b45d6a269e?w=600&auto=format&fit=crop&q=80">
+                    </div>
+
+                    <!-- Custom File Upload -->
+                    <div style="margin-top:14px; padding-top:12px; border-top:1px dashed #e2e8f0; display:flex; align-items:center; gap:12px;">
+                      <div style="flex:1;">
+                        <label style="font-size:12px; font-weight:700; color:#334155; margin-bottom:4px; display:block;">Or Upload Custom Service Image:</label>
+                        <input type="file" name="image" id="formImageFile" accept="image/*" class="input" style="padding:6px 10px; font-size:12px;" onchange="handleCustomImageUpload(this)">
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- STEP 3: PACKAGE OPTIONS BUILDER (URBAN COMPANY PARITY) -->
+                  <div class="builder-step-card">
+                    <div class="builder-step-head" style="justify-content:space-between;">
+                      <div style="display:flex; align-items:center; gap:10px;">
+                        <div class="step-badge">3</div>
+                        <div>
+                          <h4 class="step-title">Package Options Builder</h4>
+                          <p class="step-subtitle">Offer 1 to 4 package tiers with clear scopes & pricing.</p>
+                        </div>
+                      </div>
+                      <button type="button" class="btn btn-secondary btn-sm" onclick="addNewPackageCard()" style="font-size:12px; font-weight:700;">
+                        <i class="fa-solid fa-plus"></i> Add Package Tier
+                      </button>
+                    </div>
+
+                    <!-- Package Cards List -->
+                    <div class="pkg-repeater-list" id="packageCardsList">
+                      <!-- Default Package 1 -->
+                      <div class="pkg-card" data-pkg-idx="0">
+                        <div class="pkg-card-head">
+                          <span class="pkg-card-title-tag"><i class="fa-solid fa-box"></i> Package 1 (Basic)</span>
+                          <button type="button" class="pkg-del-btn" onclick="removePackageCard(this)" title="Remove package"><i class="fa-solid fa-trash"></i></button>
+                        </div>
+                        <div class="pkg-grid-inputs">
+                          <div>
+                            <label style="font-size:11px; font-weight:700; color:#64748b;">Package Name</label>
+                            <input type="text" name="package_name[]" class="input pkg-input-name" value="1 Point / Switch Fix" placeholder="e.g. 1 Point Fix" required oninput="updateLivePreview()">
+                          </div>
+                          <div>
+                            <label style="font-size:11px; font-weight:700; color:#64748b;">Selling Price (₹)</label>
+                            <input type="number" step="1" min="49" name="package_price[]" class="input pkg-input-price" value="149" placeholder="149" required oninput="handlePkgPriceChange(this)">
+                          </div>
+                          <div>
+                            <label style="font-size:11px; font-weight:700; color:#64748b;">Original Price (₹)</label>
+                            <input type="number" step="1" min="49" name="package_orig_price[]" class="input pkg-input-orig" value="229" placeholder="229" oninput="updateLivePreview()">
+                          </div>
+                        </div>
+                        <div style="margin-top:8px;">
+                          <label style="font-size:11px; font-weight:700; color:#64748b;">Scope / Work Description</label>
+                          <input type="text" name="package_desc[]" class="input pkg-input-desc" value="Switch, socket or holder repair" placeholder="e.g. Switch, socket or holder repair" oninput="updateLivePreview()">
+                        </div>
+                      </div>
+
+                      <!-- Default Package 2 -->
+                      <div class="pkg-card" data-pkg-idx="1">
+                        <div class="pkg-card-head">
+                          <span class="pkg-card-title-tag"><i class="fa-solid fa-box"></i> Package 2 (Standard)</span>
+                          <button type="button" class="pkg-del-btn" onclick="removePackageCard(this)" title="Remove package"><i class="fa-solid fa-trash"></i></button>
+                        </div>
+                        <div class="pkg-grid-inputs">
+                          <div>
+                            <label style="font-size:11px; font-weight:700; color:#64748b;">Package Name</label>
+                            <input type="text" name="package_name[]" class="input pkg-input-name" value="3-5 Points Checkup" placeholder="e.g. 3-5 Points" required oninput="updateLivePreview()">
+                          </div>
+                          <div>
+                            <label style="font-size:11px; font-weight:700; color:#64748b;">Selling Price (₹)</label>
+                            <input type="number" step="1" min="49" name="package_price[]" class="input pkg-input-price" value="349" placeholder="349" required oninput="handlePkgPriceChange(this)">
+                          </div>
+                          <div>
+                            <label style="font-size:11px; font-weight:700; color:#64748b;">Original Price (₹)</label>
+                            <input type="number" step="1" min="49" name="package_orig_price[]" class="input pkg-input-orig" value="499" placeholder="499" oninput="updateLivePreview()">
+                          </div>
+                        </div>
+                        <div style="margin-top:8px;">
+                          <label style="font-size:11px; font-weight:700; color:#64748b;">Scope / Work Description</label>
+                          <input type="text" name="package_desc[]" class="input pkg-input-desc" value="Fan, light & board diagnostic" placeholder="e.g. Diagnostic & wiring checkup" oninput="updateLivePreview()">
+                        </div>
+                      </div>
+
+                      <!-- Default Package 3 -->
+                      <div class="pkg-card" data-pkg-idx="2">
+                        <div class="pkg-card-head">
+                          <span class="pkg-card-title-tag"><i class="fa-solid fa-box"></i> Package 3 (Complete)</span>
+                          <button type="button" class="pkg-del-btn" onclick="removePackageCard(this)" title="Remove package"><i class="fa-solid fa-trash"></i></button>
+                        </div>
+                        <div class="pkg-grid-inputs">
+                          <div>
+                            <label style="font-size:11px; font-weight:700; color:#64748b;">Package Name</label>
+                            <input type="text" name="package_name[]" class="input pkg-input-name" value="Full Safety MCB Check" placeholder="e.g. Full Safety" required oninput="updateLivePreview()">
+                          </div>
+                          <div>
+                            <label style="font-size:11px; font-weight:700; color:#64748b;">Selling Price (₹)</label>
+                            <input type="number" step="1" min="49" name="package_price[]" class="input pkg-input-price" value="599" placeholder="599" required oninput="handlePkgPriceChange(this)">
+                          </div>
+                          <div>
+                            <label style="font-size:11px; font-weight:700; color:#64748b;">Original Price (₹)</label>
+                            <input type="number" step="1" min="49" name="package_orig_price[]" class="input pkg-input-orig" value="899" placeholder="899" oninput="updateLivePreview()">
+                          </div>
+                        </div>
+                        <div style="margin-top:8px;">
+                          <label style="font-size:11px; font-weight:700; color:#64748b;">Scope / Work Description</label>
+                          <input type="text" name="package_desc[]" class="input pkg-input-desc" value="Load distribution & earthing check" placeholder="e.g. Full house safety verification" oninput="updateLivePreview()">
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- Starting Price Computed Banner -->
+                    <div style="margin-top:14px; background:#e8f7f4; border:1px solid #a7f3d0; border-radius:8px; padding:10px 14px; display:flex; align-items:center; justify-content:space-between;">
+                      <div style="font-size:12px; color:#065f46; font-weight:600;">
+                        <i class="fa-solid fa-tag"></i> Starting Rate / Base Price:
+                      </div>
+                      <div style="font-size:14px; font-weight:800; color:#047857;" id="displayBaseRate">
+                        ₹149
+                      </div>
+                      <input type="hidden" name="base_price" id="formBasePrice" value="149">
+                    </div>
+                  </div>
+
+                  <!-- STEP 4: WHAT'S INCLUDED & PROTECTION GUARANTEES -->
+                  <div class="builder-step-card">
+                    <div class="builder-step-head">
+                      <div class="step-badge">4</div>
+                      <div>
+                        <h4 class="step-title">Inclusions & Guarantee Checklist</h4>
+                        <p class="step-subtitle">Check the verified trust assurances customers will see on your service modal.</p>
+                      </div>
+                    </div>
+
+                    <!-- Inclusions Checkboxes -->
+                    <div class="inc-chips-wrap" id="inclusionsListContainer">
+                      <label class="inc-item-checkbox active">
+                        <input type="checkbox" name="inclusions[]" value="Complete diagnostic inspection of existing fittings & components" checked onchange="toggleIncCheckbox(this)">
+                        <span><i class="fa-solid fa-circle-check" style="color:#10b981; margin-right:4px;"></i> Complete diagnostic inspection of existing fittings & components</span>
+                      </label>
+                      <label class="inc-item-checkbox active">
+                        <input type="checkbox" name="inclusions[]" value="Execution by certified, background-checked professional" checked onchange="toggleIncCheckbox(this)">
+                        <span><i class="fa-solid fa-circle-check" style="color:#10b981; margin-right:4px;"></i> Execution by certified, background-checked professional</span>
+                      </label>
+                      <label class="inc-item-checkbox active">
+                        <input type="checkbox" name="inclusions[]" value="Post-service sanitization and thorough debris cleanup" checked onchange="toggleIncCheckbox(this)">
+                        <span><i class="fa-solid fa-circle-check" style="color:#10b981; margin-right:4px;"></i> Post-service sanitization and thorough debris cleanup</span>
+                      </label>
+                      <label class="inc-item-checkbox active">
+                        <input type="checkbox" name="inclusions[]" value="30 days Suggu protection warranty on all workmanship" checked onchange="toggleIncCheckbox(this)">
+                        <span><i class="fa-solid fa-circle-check" style="color:#10b981; margin-right:4px;"></i> 30 days Suggu protection warranty on all workmanship</span>
+                      </label>
+                    </div>
+
+                    <!-- Add Custom Inclusion -->
+                    <div style="display:flex; gap:8px; margin-top:10px;">
+                      <input type="text" id="customIncInput" class="input" placeholder="Add custom guarantee (e.g. Free switch testing included)..." style="font-size:12.5px;">
+                      <button type="button" class="btn btn-secondary" onclick="addCustomInclusion()" style="white-space:nowrap; font-size:12px; font-weight:700;">
+                        <i class="fa-solid fa-plus"></i> Add
+                      </button>
+                    </div>
+
+                    <!-- Standard Exclusions Pre-Set -->
+                    <div style="margin-top:16px; padding-top:12px; border-top:1px dashed #e2e8f0;">
+                      <span style="font-size:11.5px; font-weight:700; color:#64748b; display:block; margin-bottom:6px;">Standard Exclusions:</span>
+                      <div style="display:flex; flex-direction:column; gap:4px; font-size:11.5px; color:#64748b;">
+                        <div><i class="fa-solid fa-circle-xmark" style="color:#ef4444; margin-right:4px;"></i> Major civil masonry, pipe embedding or wall tearing excluded</div>
+                        <div><i class="fa-solid fa-circle-xmark" style="color:#ef4444; margin-right:4px;"></i> Spare parts / extra hardware to be purchased or charged separately</div>
+                      </div>
+                      <input type="hidden" name="exclusions[]" value="Major civil masonry, pipe embedding or wall tearing excluded">
+                      <input type="hidden" name="exclusions[]" value="Spare parts / extra hardware to be purchased or charged separately">
+                    </div>
+                  </div>
+
+                  <!-- STEP 5: 10 KM LIVE DELIVERY LOCATION -->
+                  <div class="builder-step-card">
+                    <div class="builder-step-head">
+                      <div class="step-badge">5</div>
+                      <div>
+                        <h4 class="step-title">Service Base Location (10 km Delivery Zone)</h4>
+                        <p class="step-subtitle">Customers within 10 km radius of this location can discover and book your service.</p>
+                      </div>
+                    </div>
+
+                    <div class="loc-picker-box">
+                      <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
+                        <button type="button" class="gps-btn" id="btnDetectGps" onclick="detectVendorGps()">
+                          <i class="fa-solid fa-crosshairs" id="gpsIcon"></i>
+                          <span id="gpsBtnText">Use My Live GPS Location</span>
+                        </button>
+
+                        <div style="flex:1; min-width:200px; position:relative;">
+                          <input type="text" id="locSearchInput" class="input" placeholder="Or search colony name (e.g. Lalpur, Doranda, Harmu)..." autocomplete="off" oninput="handleLocSearch(this.value)">
+                          <div id="locSearchSpinner" style="display:none; position:absolute; right:12px; top:11px; color:#0f8a7c;">
+                            <i class="fa-solid fa-circle-notch fa-spin"></i>
+                          </div>
+                          <div id="locSearchResults" style="display:none; position:absolute; left:0; right:0; top:44px; z-index:50; background:#fff; border:1px solid #cbd5e1; border-radius:8px; box-shadow:0 10px 25px rgba(0,0,0,0.1); max-height:200px; overflow-y:auto;"></div>
+                        </div>
+                      </div>
+
+                      <!-- Quick Ranchi Chips -->
+                      <div class="quick-chips">
+                        <span style="font-size:11px; color:#64748b; font-weight:600; align-self:center;">Popular Localities:</span>
+                        <button type="button" class="quick-chip active" onclick="selectQuickLocality('Lalpur, Circular Road', 23.3697, 85.3346, this)">Lalpur</button>
+                        <button type="button" class="quick-chip" onclick="selectQuickLocality('Harmu Housing Colony', 23.3550, 85.3050, this)">Harmu</button>
+                        <button type="button" class="quick-chip" onclick="selectQuickLocality('Doranda High Court Area', 23.3340, 85.3218, this)">Doranda</button>
+                        <button type="button" class="quick-chip" onclick="selectQuickLocality('Morabadi Grounds', 23.3850, 85.3250, this)">Morabadi</button>
+                        <button type="button" class="quick-chip" onclick="selectQuickLocality('Bariatu Medical Road', 23.3950, 85.3500, this)">Bariatu</button>
+                        <button type="button" class="quick-chip" onclick="selectQuickLocality('Ashok Nagar, Kadru', 23.3380, 85.3120, this)">Ashok Nagar</button>
+                        <button type="button" class="quick-chip" onclick="selectQuickLocality('Kokar Industrial Area', 23.3750, 85.3550, this)">Kokar</button>
+                        <button type="button" class="quick-chip" onclick="selectQuickLocality('Main Road, Albert Ekka', 23.3500, 85.3250, this)">Main Road</button>
+                        <button type="button" class="quick-chip" onclick="selectQuickLocality('Hinoo Birsa Chowk', 23.3220, 85.3150, this)">Hinoo</button>
+                      </div>
+
+                      <!-- Active Live Location Pill -->
+                      <div class="loc-active-pill" id="locActiveDisplay">
+                        <span class="live-dot"></span>
+                        <div>
+                          <strong id="displayLocalityName">Lalpur, Circular Road</strong>
+                          <span style="color:#059669; font-size:12px; margin-left:6px;" id="displayCoords">(23.3697, 85.3346)</span>
+                          <span style="color:#065f46; font-size:11.5px; margin-left:8px;">• 10 km live radius active</span>
+                        </div>
+                      </div>
+
+                      <!-- Hidden Coordinate Fields -->
+                      <input type="hidden" name="locality" id="inputLocality" value="Lalpur, Circular Road">
+                      <input type="hidden" name="latitude" id="inputLat" value="23.3697">
+                      <input type="hidden" name="longitude" id="inputLon" value="85.3346">
+                      <input type="hidden" name="service_radius_km" value="10.0">
+                    </div>
+                  </div>
+
+                  <!-- Form Action Buttons -->
+                  <div style="display:flex; gap:12px; justify-content:flex-end; margin-top:8px;">
+                    <button type="button" class="btn btn-secondary" onclick="toggleServiceForm()">Cancel</button>
+                    <button type="submit" class="btn btn-primary" style="padding:12px 28px; font-size:14px; font-weight:800;">
+                      <i class="fa-solid fa-cloud-arrow-up"></i> Publish Service Listing
+                    </button>
+                  </div>
+
+                </div>
+
+                <!-- ============================================== -->
+                <!-- RIGHT COLUMN: REAL-TIME LIVE CUSTOMER PREVIEW  -->
+                <!-- ============================================== -->
+                <div class="builder-preview-col">
+                  <div class="preview-sticky-wrap">
+                    
+                    <div class="preview-header">
+                      <div style="display:flex; align-items:center; gap:8px;">
+                        <span class="preview-badge"><i class="fa-solid fa-circle-dot"></i> Live Preview</span>
+                        <span style="font-size:12px; font-weight:600; color:#94a3b8;">Customer Modal</span>
+                      </div>
+                      <span style="font-size:11px; color:#cbd5e1;"><i class="fa-solid fa-eye"></i> Real-time</span>
+                    </div>
+
+                    <!-- Modal Replica Container -->
+                    <div class="modal-replica">
+                      <!-- Hero Header Image -->
+                      <div class="modal-rep-hero">
+                        <img id="prevHeroImg" src="https://images.unsplash.com/photo-1621905251189-08b45d6a269e?w=600&auto=format&fit=crop&q=80" alt="Service Hero">
+                        <div class="modal-rep-close"><i class="fa-solid fa-xmark"></i></div>
+                        <div class="modal-rep-overlay">
+                          <div class="modal-rep-title" id="prevHeroTitle">Switchboard Repair</div>
+                          <div class="modal-rep-sub" id="prevHeroSub">Professional switchboard repair service by verified experts.</div>
+                        </div>
+                      </div>
+
+                      <div class="modal-rep-body">
+                        <!-- Rating & Offer Row -->
+                        <div class="modal-rep-rating-row">
+                          <span class="rep-rating-tag"><i class="fa-solid fa-star" style="color:#7c3aed;"></i> 4.8</span>
+                          <span style="color:#64748b;">(1.8K reviews)</span>
+                          <span class="rep-discount-tag"><i class="fa-solid fa-tag"></i> 25% Off Included</span>
+                        </div>
+
+                        <!-- Packages Grid -->
+                        <div class="modal-rep-sec-title">Select Package Option</div>
+                        <div class="rep-pkgs-grid" id="prevPkgsGrid">
+                          <!-- Populated live via JS -->
+                        </div>
+
+                        <!-- What's Included Box -->
+                        <div class="rep-inclusions-box">
+                          <div class="rep-inc-title">What's included in this service</div>
+                          <div id="prevInclusionsList">
+                            <!-- Populated live via JS -->
+                          </div>
+                        </div>
+                      </div>
+
+                      <!-- Modal Sticky Footer -->
+                      <div class="modal-rep-footer">
+                        <div style="font-size:12px; font-weight:700; color:#475569;">
+                          Selected: <span style="color:#0f172a;">0 items</span> • <span style="color:#7c3aed; font-size:13px;" id="prevFooterBasePrice">₹149</span>
+                        </div>
+                        <button type="button" class="rep-footer-btn">
+                          Done & Review Cart
+                        </button>
+                      </div>
+
+                    </div>
+
+                  </div>
+                </div>
+
+              </div>
+
+            </form>
+          </div>
+        </section>
+
+        <!-- ============================================== -->
+        <!-- ACTIVE SERVICES CATALOG LIST                   -->
+        <!-- ============================================== -->
+        <section class="card" data-filter-scope style="border-radius:16px;">
+          <div class="card-head" style="padding:16px 20px;">
+            <div style="display:flex; align-items:center; gap:10px;">
+              <h3 style="font-size:17px; font-weight:800; margin:0; color:#0f172a;">Active Service Listings</h3>
+              <span class="badge badge-success" style="font-weight:700;">{{ my_services|length }} Service{{ my_services|length|pluralize }}</span>
+            </div>
+            <div class="search-box" style="margin:0;">
+              <span data-icon="search"></span>
+              <input class="input" data-search-input placeholder="Filter services by title or locality..." style="width:240px;">
+            </div>
+          </div>
+
+          <div class="card-body" style="padding:20px;">
+            <div class="grid grid-2" data-rows style="gap:20px;">
+              {% for srv in my_services %}
+              <article class="service-catalog-card" data-row data-search="{{ srv.title }} {{ srv.category.name|default:'' }} {{ srv.locality|default:'' }}">
+                
+                <!-- Hero Image -->
+                <div class="scc-hero">
+                  {% if srv.image %}
+                    <img src="{{ srv.image.url }}" alt="{{ srv.title }}">
+                  {% elif srv.image_url %}
+                    <img src="{{ srv.image_url }}" alt="{{ srv.title }}">
+                  {% else %}
+                    <img src="https://images.unsplash.com/photo-1621905251189-08b45d6a269e?w=500&auto=format&fit=crop&q=80" alt="{{ srv.title }}">
+                  {% endif %}
+                  <span class="scc-badge-cat">{{ srv.category.name|default:"General" }}</span>
+                  <span class="scc-badge-loc">
+                    <i class="fa-solid fa-location-dot"></i> {{ srv.locality|default:"Ranchi" }} · 10 km live
+                  </span>
+                </div>
+
+                <!-- Body Content -->
+                <div class="scc-body">
+                  <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:6px;">
+                    <h3 class="scc-title">{{ srv.title }}</h3>
+                    <span class="badge badge-{{ srv.status }}" style="font-size:11px;">{{ srv.get_status_display }}</span>
+                  </div>
+
+                  <p class="scc-desc">{{ srv.description|default:"Professional home service by certified partners." }}</p>
+
+                  <!-- Packages Chips -->
+                  {% if srv.service_packages %}
+                  <div class="scc-pkgs-chips">
+                    {% for pkg in srv.service_packages %}
+                    <span class="scc-pkg-pill">
+                      {{ pkg.name }}: <strong>₹{{ pkg.price|floatformat:"0" }}</strong>
+                    </span>
+                    {% endfor %}
+                  </div>
+                  {% endif %}
+
+                  <!-- Inclusions Summary -->
+                  <div style="font-size:11.5px; color:#059669; font-weight:600; margin-bottom:12px; display:flex; align-items:center; gap:5px;">
+                    <i class="fa-solid fa-shield-check"></i>
+                    <span>{{ srv.inclusions|length|default:4 }} verified quality assurances & 30-day warranty</span>
+                  </div>
+
+                  <!-- Footer Actions -->
+                  <div class="scc-footer">
+                    <div>
+                      <span style="font-size:11px; color:#64748b; display:block;">Starting from</span>
+                      <strong style="font-size:17px; color:#0f172a;">₹{{ srv.base_price|floatformat:"0" }}</strong>
+                    </div>
+
+                    <div style="display:flex; gap:8px; align-items:center;">
+                      <a href="/services/browse?category={{ srv.category.id }}" target="_blank" class="btn btn-secondary btn-sm" style="font-size:12px; font-weight:700;">
+                        <i class="fa-solid fa-arrow-up-right-from-square"></i> Customer View
+                      </a>
+
+                      <form method="POST" action="{% url 'dashboard' 'vendor/catalog/index.html' %}" onsubmit="return confirm('Delete this service from catalog?');" style="margin:0;">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="delete_service">
+                        <input type="hidden" name="service_id" value="{{ srv.id }}">
+                        <button type="submit" class="btn btn-danger btn-sm" style="font-size:12px;">
+                          <i class="fa-solid fa-trash"></i>
+                        </button>
+                      </form>
+                    </div>
+                  </div>
+
+                </div>
+
+              </article>
+              {% empty %}
+              <div style="grid-column: 1 / -1; text-align: center; padding: 60px 20px; background:#fff; border-radius:14px; border:1px dashed #cbd5e1;">
+                <div style="width:60px; height:60px; border-radius:50%; background:#e8f7f4; color:#0f8a7c; display:flex; align-items:center; justify-content:center; font-size:24px; margin:0 auto 16px;">
+                  <i class="fa-solid fa-bolt"></i>
+                </div>
+                <h4 style="font-size:18px; font-weight:800; color:#0f172a; margin:0 0 6px;">No services in your catalog yet</h4>
+                <p style="font-size:13.5px; color:#64748b; margin:0 0 20px; max-width:440px; margin-left:auto; margin-right:auto;">
+                  Create your first service listing with package options and 10 km live GPS delivery zone to start receiving bookings from customers.
+                </p>
+                <button class="btn btn-primary" onclick="toggleServiceForm()" style="padding:10px 24px; font-weight:700;">
+                  <i class="fa-solid fa-plus"></i> Create Quick Service Now
+                </button>
+              </div>
+              {% endfor %}
+            </div>
+          </div>
+        </section>
+
+      </main>
+    </div>
+  </div>
+
+  <!-- Interactive JavaScript Engine -->
+  <script>
+    // Form Visibility Toggle
+    function toggleServiceForm() {
+      const form = document.getElementById('add-service-form');
+      const btn = document.getElementById('toggleFormBtn');
+      if (form.style.display === 'none') {
+        form.style.display = 'block';
+        form.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        if (btn) btn.style.display = 'none';
+        updateLivePreview();
+      } else {
+        form.style.display = 'none';
+        if (btn) btn.style.display = 'inline-flex';
+      }
+    }
+
+    // Category Change Handler
+    function handleCategoryChange(select) {
+      const catName = select.options[select.selectedIndex]?.getAttribute('data-name') || '';
+      const titleInput = document.getElementById('formTitle');
+      const descInput = document.getElementById('formDescription');
+
+      if (!titleInput.value || titleInput.value === 'Switchboard Repair') {
+        if (catName.includes('Plumb')) {
+          titleInput.value = 'Tap & Pipe Leakage Repair';
+          descInput.value = 'Complete plumbing inspection, pipe fitting & faucet repair.';
+        } else if (catName.includes('Clean')) {
+          titleInput.value = 'Deep Bathroom & Kitchen Cleaning';
+          descInput.value = 'Intensive scrub, stain removal and post-service sanitization.';
+        } else if (catName.includes('AC')) {
+          titleInput.value = 'AC Comprehensive Service';
+          descInput.value = 'Filter wash, gas pressure check and cooling coil cleaning.';
+        } else {
+          titleInput.value = 'Switchboard Repair';
+          descInput.value = 'Professional switchboard repair service by verified experts.';
+        }
+      }
+      updateLivePreview();
+    }
+
+    // Quick Title Suggestions
+    function applyTitleSuggestion(title, categoryName) {
+      document.getElementById('formTitle').value = title;
+      const descInput = document.getElementById('formDescription');
+      descInput.value = `Professional ${title.toLowerCase()} service by verified experts.`;
+
+      const catSelect = document.getElementById('formCategory');
+      for (let i = 0; i < catSelect.options.length; i++) {
+        if (catSelect.options[i].text.includes(categoryName)) {
+          catSelect.selectedIndex = i;
+          break;
+        }
+      }
+      updateLivePreview();
+    }
+
+    // Image Preset Picker
+    function selectPresetImage(el, url, label) {
+      document.querySelectorAll('.img-preset-item').forEach(item => item.classList.remove('selected'));
+      el.classList.add('selected');
+      document.getElementById('inputImagePreset').value = url;
+      document.getElementById('formImageFile').value = ''; // clear custom upload
+      document.getElementById('prevHeroImg').src = url;
+    }
+
+    // Custom Image File Upload Preview
+    function handleCustomImageUpload(input) {
+      if (input.files && input.files[0]) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+          document.getElementById('prevHeroImg').src = e.target.result;
+          document.querySelectorAll('.img-preset-item').forEach(item => item.classList.remove('selected'));
+          document.getElementById('inputImagePreset').value = '';
+        };
+        reader.readAsDataURL(input.files[0]);
+      }
+    }
+
+    // Package Price Change (Auto Calculate Original Price +30%)
+    function handlePkgPriceChange(input) {
+      const card = input.closest('.pkg-card');
+      const origInput = card.querySelector('.pkg-input-orig');
+      const val = parseFloat(input.value) || 0;
+      if (val > 0) {
+        origInput.value = Math.round(val * 1.35);
+      }
+      updateLivePreview();
+    }
+
+    // Add New Package Tier
+    function addNewPackageCard() {
+      const container = document.getElementById('packageCardsList');
+      const currentCards = container.querySelectorAll('.pkg-card');
+      if (currentCards.length >= 4) {
+        alert("Maximum 4 package options allowed per service.");
+        return;
+      }
+
+      const idx = currentCards.length;
+      const tierNames = ["Basic", "Standard", "Complete", "Premium"];
+      const tierName = tierNames[idx] || `Tier ${idx + 1}`;
+      const defaultPrice = 199 * (idx + 1);
+
+      const div = document.createElement('div');
+      div.className = 'pkg-card';
+      div.setAttribute('data-pkg-idx', idx);
+      div.innerHTML = `
+        <div class="pkg-card-head">
+          <span class="pkg-card-title-tag"><i class="fa-solid fa-box"></i> Package ${idx + 1} (${tierName})</span>
+          <button type="button" class="pkg-del-btn" onclick="removePackageCard(this)" title="Remove package"><i class="fa-solid fa-trash"></i></button>
+        </div>
+        <div class="pkg-grid-inputs">
+          <div>
+            <label style="font-size:11px; font-weight:700; color:#64748b;">Package Name</label>
+            <input type="text" name="package_name[]" class="input pkg-input-name" value="${tierName} Package" placeholder="e.g. ${tierName}" required oninput="updateLivePreview()">
+          </div>
+          <div>
+            <label style="font-size:11px; font-weight:700; color:#64748b;">Selling Price (₹)</label>
+            <input type="number" step="1" min="49" name="package_price[]" class="input pkg-input-price" value="${defaultPrice}" placeholder="${defaultPrice}" required oninput="handlePkgPriceChange(this)">
+          </div>
+          <div>
+            <label style="font-size:11px; font-weight:700; color:#64748b;">Original Price (₹)</label>
+            <input type="number" step="1" min="49" name="package_orig_price[]" class="input pkg-input-orig" value="${Math.round(defaultPrice * 1.35)}" placeholder="Original" oninput="updateLivePreview()">
+          </div>
+        </div>
+        <div style="margin-top:8px;">
+          <label style="font-size:11px; font-weight:700; color:#64748b;">Scope / Work Description</label>
+          <input type="text" name="package_desc[]" class="input pkg-input-desc" value="Full procedure & materials inspection" placeholder="Scope description" oninput="updateLivePreview()">
+        </div>
+      `;
+      container.appendChild(div);
+      updateLivePreview();
+    }
+
+    // Remove Package Card
+    function removePackageCard(btn) {
+      const container = document.getElementById('packageCardsList');
+      if (container.querySelectorAll('.pkg-card').length <= 1) {
+        alert("At least 1 package option is required.");
+        return;
+      }
+      btn.closest('.pkg-card').remove();
+      updateLivePreview();
+    }
+
+    // Inclusions Toggle
+    function toggleIncCheckbox(cb) {
+      const label = cb.closest('.inc-item-checkbox');
+      if (cb.checked) {
+        label.classList.add('active');
+      } else {
+        label.classList.remove('active');
+      }
+      updateLivePreview();
+    }
+
+    // Add Custom Inclusion
+    function addCustomInclusion() {
+      const input = document.getElementById('customIncInput');
+      const val = input.value.trim();
+      if (!val) return;
+
+      const container = document.getElementById('inclusionsListContainer');
+      const label = document.createElement('label');
+      label.className = 'inc-item-checkbox active';
+      label.innerHTML = `
+        <input type="checkbox" name="inclusions[]" value="${val}" checked onchange="toggleIncCheckbox(this)">
+        <span><i class="fa-solid fa-circle-check" style="color:#10b981; margin-right:4px;"></i> ${val}</span>
+      `;
+      container.appendChild(label);
+      input.value = '';
+      updateLivePreview();
+    }
+
+    // REAL-TIME LIVE PREVIEW UPDATER
+    function updateLivePreview() {
+      const title = document.getElementById('formTitle').value.trim() || 'Switchboard Repair';
+      const desc = document.getElementById('formDescription').value.trim() || 'Professional switchboard repair service by verified experts.';
+
+      // Update Hero Overlay
+      document.getElementById('prevHeroTitle').textContent = title;
+      document.getElementById('prevHeroSub').textContent = desc;
+
+      // Update Packages
+      const pkgCards = document.querySelectorAll('#packageCardsList .pkg-card');
+      const pkgsGrid = document.getElementById('prevPkgsGrid');
+      let minPrice = Infinity;
+
+      let pkgsHtml = '';
+      pkgCards.forEach(card => {
+        const name = card.querySelector('.pkg-input-name').value.trim() || 'Service';
+        const price = parseFloat(card.querySelector('.pkg-input-price').value) || 149;
+        const orig = parseFloat(card.querySelector('.pkg-input-orig').value) || Math.round(price * 1.35);
+        const pDesc = card.querySelector('.pkg-input-desc').value.trim() || 'Standard procedure';
+
+        if (price < minPrice) minPrice = price;
+
+        pkgsHtml += `
+          <div class="rep-pkg-card">
+            <div>
+              <div class="rep-pkg-name">${name}</div>
+              <div class="rep-pkg-desc">${pDesc}</div>
+            </div>
+            <div>
+              <div class="rep-pkg-price-row">
+                <span class="rep-pkg-price">₹${Math.round(price)}</span>
+                <span class="rep-pkg-old">₹${Math.round(orig)}</span>
+              </div>
+              <div class="rep-pkg-add-btn">Add</div>
+            </div>
+          </div>
+        `;
+      });
+
+      pkgsGrid.innerHTML = pkgsHtml;
+
+      // Update Lowest Base Price
+      if (minPrice === Infinity) minPrice = 149;
+      document.getElementById('displayBaseRate').textContent = `₹${Math.round(minPrice)}`;
+      document.getElementById('formBasePrice').value = minPrice;
+      document.getElementById('prevFooterBasePrice').textContent = `₹${Math.round(minPrice)}`;
+
+      // Update Inclusions List
+      const checkedIncs = document.querySelectorAll('#inclusionsListContainer input[type="checkbox"]:checked');
+      const incsContainer = document.getElementById('prevInclusionsList');
+      let incsHtml = '';
+      checkedIncs.forEach(cb => {
+        incsHtml += `
+          <div class="rep-inc-item">
+            <i class="fa-solid fa-circle-check"></i>
+            <span>${cb.value}</span>
+          </div>
+        `;
+      });
+      // Standard exclusions
+      incsHtml += `
+        <div class="rep-inc-item">
+          <i class="fa-solid fa-circle-xmark"></i>
+          <span>Major civil masonry, pipe embedding or wall tearing excluded</span>
+        </div>
+        <div class="rep-inc-item">
+          <i class="fa-solid fa-circle-xmark"></i>
+          <span>Spare parts / extra hardware to be purchased or charged separately</span>
+        </div>
+      `;
+      incsContainer.innerHTML = incsHtml;
+    }
+
+    // Quick Locality Selector
+    function selectQuickLocality(name, lat, lon, btn) {
+      document.getElementById('inputLocality').value = name;
+      document.getElementById('inputLat').value = lat;
+      document.getElementById('inputLon').value = lon;
+
+      document.getElementById('displayLocalityName').textContent = name;
+      document.getElementById('displayCoords').textContent = `(${lat.toFixed(4)}, ${lon.toFixed(4)})`;
+
+      if (btn) {
+        document.querySelectorAll('.quick-chip').forEach(c => c.classList.remove('active'));
+        btn.classList.add('active');
+      }
+
+      const searchInput = document.getElementById('locSearchInput');
+      if (searchInput) searchInput.value = '';
+      const searchRes = document.getElementById('locSearchResults');
+      if (searchRes) searchRes.style.display = 'none';
+    }
+
+    // HTML5 GPS Geolocation
+    function detectVendorGps() {
+      const icon = document.getElementById('gpsIcon');
+      const text = document.getElementById('gpsBtnText');
+
+      if (!navigator.geolocation) {
+        alert("Geolocation is not supported by your browser. Please select a locality from the list.");
+        return;
+      }
+
+      if (icon) icon.className = "fa-solid fa-circle-notch fa-spin";
+      if (text) text.textContent = "Detecting GPS coordinates...";
+
+      navigator.geolocation.getCurrentPosition(
+        async (pos) => {
+          const lat = pos.coords.latitude;
+          const lon = pos.coords.longitude;
+
+          try {
+            const res = await fetch(`/api/detect-location/?lat=${lat}&lon=${lon}`);
+            const data = await res.json();
+            const locName = data.primary ? `${data.primary}, ${data.city || 'Ranchi'}` : `${lat.toFixed(4)}, ${lon.toFixed(4)}`;
+
+            selectQuickLocality(locName, lat, lon, null);
+
+            if (icon) icon.className = "fa-solid fa-check";
+            if (text) text.textContent = "Live GPS Location Set!";
+            setTimeout(() => {
+              if (icon) icon.className = "fa-solid fa-crosshairs";
+              if (text) text.textContent = "Use My Live GPS Location";
+            }, 2000);
+          } catch(e) {
+            selectQuickLocality("Current Live Location", lat, lon, null);
+            if (icon) icon.className = "fa-solid fa-check";
+            if (text) text.textContent = "GPS Coordinates Set!";
+          }
+        },
+        (err) => {
+          if (icon) icon.className = "fa-solid fa-crosshairs";
+          if (text) text.textContent = "Use My Live GPS Location";
+          alert("Could not retrieve GPS location. Please allow browser location access or pick a locality below.");
+        },
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+      );
+    }
+
+    // Colony Search Autocomplete
+    let searchTimer = null;
+    function handleLocSearch(query) {
+      clearTimeout(searchTimer);
+      const spinner = document.getElementById('locSearchSpinner');
+      const resultsBox = document.getElementById('locSearchResults');
+
+      if (!query || query.length < 2) {
+        if (spinner) spinner.style.display = 'none';
+        if (resultsBox) resultsBox.style.display = 'none';
+        return;
+      }
+
+      if (spinner) spinner.style.display = 'block';
+
+      searchTimer = setTimeout(async () => {
+        try {
+          const res = await fetch(`/api/search-locations/?q=${encodeURIComponent(query)}`);
+          const data = await res.json();
+          if (spinner) spinner.style.display = 'none';
+
+          if (data && data.results && data.results.length > 0) {
+            resultsBox.innerHTML = data.results.map(r => `
+              <div style="padding:10px 14px; border-bottom:1px solid #f1f5f9; cursor:pointer; font-size:12.5px; transition:background 0.15s;"
+                   onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='white'"
+                   onclick="selectQuickLocality('${r.primary || r.name}', ${r.lat || 23.3697}, ${r.lon || 85.3346}, null)">
+                <strong style="color:#0f172a; display:block;">${r.primary || r.name}</strong>
+                <span style="color:#64748b; font-size:11px;">${r.secondary || ''}</span>
+              </div>
+            `).join('');
+            resultsBox.style.display = 'block';
+          } else {
+            resultsBox.innerHTML = `
+              <div style="padding:12px; color:#64748b; font-size:12px; text-align:center; cursor:pointer;"
+                   onclick="selectQuickLocality('${query}, Ranchi', 23.3697, 85.3346, null)">
+                Use "<strong>${query}</strong>" as locality
+              </div>
+            `;
+            resultsBox.style.display = 'block';
+          }
+        } catch(e) {
+          if (spinner) spinner.style.display = 'none';
+        }
+      }, 300);
+    }
+
+    // Initial Live Preview Render on Page Load
+    document.addEventListener('DOMContentLoaded', () => {
+      updateLivePreview();
+    });
+  </script>
+</body>
+</html>

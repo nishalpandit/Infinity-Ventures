@@ -29,8 +29,12 @@
 
   const nav = [
     {key:'dashboard', icon:'grid', label:'Dashboard', path:'dashboard.html'},
-    {key:'quick-group', icon:'bolt', label:'Quick Services', path:'quick-services/nearby.html'},
-
+    {key:'catalog', icon:'bolt', label:'My Services', path:'catalog/index.html'},
+    {key:'bookings', icon:'list', label:'My Bookings', path:'bookings/index.html'},
+    {key:'job-group', icon:'briefcase', label:'Jobs', path:'jobs/available.html', children:[
+      ['job-available','Available Jobs','jobs/available.html'],
+      ['selected-jobs','Selected Jobs','jobs/selected-jobs.html']
+    ]},
     {key:'messages', icon:'chat', label:'Messages', path:'messages/index.html'},
     {key:'wallet', icon:'wallet', label:'Wallet & Payouts', path:'wallet/index.html'},
 
@@ -44,14 +48,18 @@
     {key:'kyc', icon:'shield', label:'KYC Verification', path:'kyc/index.html'},
     {key:'settings', icon:'settings', label:'Settings', path:'settings/index.html'}
   ];
-  function route(path){ return root + path; }
+  function route(path){
+    if (!path) return '/vendor/dashboard.html';
+    if (path.startsWith('/')) return path;
+    return '/vendor/' + path;
+  }
   function navActive(k){
     if(pageKey === k) return true;
-    if(k==='quick-group' && pageKey.startsWith('quick-')) return true;
-    if(k==='quick-nearby' && ['quick-details','quick-quote'].includes(pageKey)) return true;
-    if(k==='job-group' && pageKey.startsWith('job-')) return true;
-    if(k==='job-available' && ['job-details','job-submit'].includes(pageKey)) return true;
-    if(k==='job-bids' && pageKey==='job-bid-details') return true;
+    if(k==='catalog' && pageKey.startsWith('catalog')) return true;
+    if(k==='bookings' && pageKey.startsWith('bookings')) return true;
+    if(k==='job-group' && (pageKey.startsWith('job-') || pageKey.startsWith('jobs-') || pageKey==='selected-jobs')) return true;
+    if(k==='job-available' && (pageKey==='jobs-available' || ['job-details','job-submit'].includes(pageKey))) return true;
+    if(k==='selected-jobs' && pageKey==='selected-jobs') return true;
     if(k==='credit-group' && pageKey.startsWith('credit-')) return true;
     if(k==='credit-packages' && pageKey==='credit-checkout') return true;
     if(k==='messages' && pageKey.startsWith('message')) return true;
@@ -94,7 +102,8 @@
     const avatarTopHtml = imgUrl ? `<img src="${imgUrl}" alt="Profile" class="avatar" style="object-fit:cover;width:32px;height:32px;border-radius:50%;">` : `<span class="avatar">${initials}</span>`;
 
     const walletBal = window.VENDOR_WALLET_BALANCE || '0.00';
-    topbarRoot.outerHTML = `<header class="topbar"><div class="topbar-left"><button class="icon-btn hamburger" id="mobile-menu" aria-label="Open menu">${icon('menu')}</button><button class="icon-btn desktop-collapse" id="collapse-menu" aria-label="Collapse sidebar">${icon('panel')}</button><div><div class="topbar-title">${pageTitle}</div><div class="breadcrumbs"><a href="${route('dashboard.html')}">Vendor</a> &nbsp;/&nbsp; ${pageTitle}</div></div></div><div class="topbar-actions"><a class="vendor-credit-pill" href="${route('wallet/index.html')}" style="background:#eef2ff; color:#4338ca; border-color:#c7d2fe;">${icon('rupee')} ₹${walletBal}</a><a class="vendor-credit-pill" href="${route('bid-credits/packages.html')}">${icon('bolt')} ${window.VENDOR_CREDITS || 5} credits</a><a class="icon-btn" href="${route('messages/index.html')}" aria-label="Messages">${icon('chat')}</a><div class="profile-menu"><button class="top-user profile-trigger" id="profile-trigger">${avatarTopHtml}<span class="top-user-copy"><strong>${name}</strong><span>${type}</span></span>${icon('down')}</button><div class="profile-dropdown" id="profile-dropdown"><a href="${route('profile/index.html')}">${icon('user')} View Profile</a><a href="${route('wallet/index.html')}">${icon('wallet')} Wallet &amp; Payouts</a><a href="${route('settings/index.html')}">${icon('settings')} Settings</a><a href="${route('bid-credits/packages.html')}">${icon('bolt')} Buy Bid Credits</a><button data-confirm="logout">${icon('logout')} Logout</button></div></div></div></header>`
+    const creditsCount = window.VENDOR_CREDITS !== undefined ? window.VENDOR_CREDITS : 0;
+    topbarRoot.outerHTML = `<header class="topbar"><div class="topbar-left"><button class="icon-btn hamburger" id="mobile-menu" aria-label="Open menu">${icon('menu')}</button><button class="icon-btn desktop-collapse" id="collapse-menu" aria-label="Collapse sidebar">${icon('panel')}</button><div><div class="topbar-title">${pageTitle}</div><div class="breadcrumbs"><a href="${route('dashboard.html')}">Vendor</a> &nbsp;/&nbsp; ${pageTitle}</div></div></div><div class="topbar-actions"><a class="vendor-credit-pill" href="${route('wallet/index.html')}" style="background:#eef2ff; color:#4338ca; border-color:#c7d2fe;">${icon('rupee')} ₹${walletBal}</a><a class="vendor-credit-pill" href="${route('bid-credits/packages.html')}">${icon('bolt')} ${creditsCount} credits</a><a class="icon-btn" href="${route('messages/index.html')}" aria-label="Messages">${icon('chat')}</a><div class="profile-menu"><button class="top-user profile-trigger" id="profile-trigger">${avatarTopHtml}<span class="top-user-copy"><strong>${name}</strong><span>${type}</span></span>${icon('down')}</button><div class="profile-dropdown" id="profile-dropdown"><a href="${route('profile/index.html')}">${icon('user')} View Profile</a><a href="${route('wallet/index.html')}">${icon('wallet')} Wallet &amp; Payouts</a><a href="${route('settings/index.html')}">${icon('settings')} Settings</a><a href="${route('bid-credits/packages.html')}">${icon('bolt')} Buy Bid Credits</a><button data-confirm="logout">${icon('logout')} Logout</button></div></div></div></header>`
   }
   if(!$('.mobile-overlay')) body.insertAdjacentHTML('beforeend','<div class="mobile-overlay" id="mobile-overlay"></div><div class="toast-container" id="toast-container" aria-live="polite"></div>');
   if(!$('#global-modal')) body.insertAdjacentHTML('beforeend',`<div class="modal-backdrop" id="global-modal" role="dialog" aria-modal="true"><div class="modal"><div class="modal-head"><h3 id="global-modal-title">Please confirm</h3><button class="modal-close" data-modal-close>${icon('x')}</button></div><div class="modal-body" id="global-modal-body"></div><div class="modal-actions"><button class="btn btn-secondary" data-modal-close>Cancel</button><button class="btn btn-primary" id="global-modal-confirm">Confirm</button></div></div></div>`);
@@ -160,7 +169,6 @@
       if(!valid){closeModal(btn.closest('.modal-backdrop'));showToast('Complete the bid form','All required fields must be completed before submitting.','error');return;}
     }
     closeModal(btn.closest('.modal-backdrop'));
-    localStorage.setItem('suggu-vendor-credits','4');
     const formCard=form?.closest('.form-card');if(formCard)formCard.classList.add('hidden-after-submit');
     const success=$('#bid-success');if(success){success.hidden=false;success.scrollIntoView({behavior:'smooth'});}
     showToast('Bid submitted','1 bid credit was used. Your quotation is now permanently locked.');
@@ -183,18 +191,18 @@
     const scope=tabs.closest('[data-filter-scope]')||tabs.parentElement;
     $$('.tab',tabs).forEach(tab=>tab.addEventListener('click',()=>{
       $$('.tab',tabs).forEach(x=>x.classList.remove('active')); tab.classList.add('active'); const f=tab.dataset.status||'all';
-      $$('[data-row]',scope).forEach(row=>row.hidden=!(f==='all'||row.dataset.status===f));
+      $$('[data-row]',scope).forEach(row=>row.style.display=(f==='all'||row.dataset.status===f)?'':'none');
       updateVisibleCount(scope);
     }));
   });
-  function updateVisibleCount(scope){ const visible=$$('[data-row]',scope).filter(r=>!r.hidden); const out=$('[data-result-count]',scope); if(out)out.textContent=`${visible.length} result${visible.length===1?'':'s'}`; }
+  function updateVisibleCount(scope){ const visible=$$('[data-row]',scope).filter(r=>r.style.display!=='none'); const out=$('[data-result-count]',scope); if(out)out.textContent=`${visible.length} result${visible.length===1?'':'s'}`; }
 
   // Search, select filters and sorting.
   $$('[data-search-input]').forEach(input=>input.addEventListener('input',()=>filterScope(input.closest('[data-filter-scope]')||document)));
   $$('[data-filter]').forEach(select=>select.addEventListener('change',()=>filterScope(select.closest('[data-filter-scope]')||document)));
   function filterScope(scope){
     const query=($('[data-search-input]',scope)?.value||'').toLowerCase().trim(); const filters=$$('[data-filter]',scope).filter(x=>x.value&&x.value!=='all');
-    $$('[data-row]',scope).forEach(row=>{ const text=(row.dataset.search||row.textContent).toLowerCase(); const searchOK=!query||text.includes(query); const filterOK=filters.every(f=>{const key=f.dataset.filter;return (row.dataset[key]||'').toLowerCase()===f.value.toLowerCase();}); row.hidden=!(searchOK&&filterOK); }); updateVisibleCount(scope);
+    $$('[data-row]',scope).forEach(row=>{ const text=(row.dataset.search||row.textContent).toLowerCase(); const searchOK=!query||text.includes(query); const filterOK=filters.every(f=>{const key=f.dataset.filter;return (row.dataset[key]||'').toLowerCase()===f.value.toLowerCase();}); row.style.display=(searchOK&&filterOK)?'':'none'; }); updateVisibleCount(scope);
   }
   $$('[data-sort]').forEach(select=>select.addEventListener('change',()=>{
     const scope=select.closest('[data-filter-scope]')||document, container=$('[data-rows]',scope); if(!container)return; const [key,dir]=select.value.split(':'); const rows=$$('[data-row]',container);

@@ -1,5 +1,6 @@
 from django.shortcuts import render, redirect
 from django.contrib.auth import authenticate, login, logout, get_user_model
+from django.contrib import messages
 from django.db.models import Q, Sum, Count, Avg, Prefetch
 import os
 import mimetypes
@@ -11,7 +12,8 @@ from .models import (
     UserProfile, Message, GlobalSettings, SiteBranding, HeroSection, 
     QuickServiceCard, FeaturedProjectCard, PackageCard, Testimonial, TrustMetric,
     VendorWallet, WalletTransaction, PayoutRequest, VendorKYC,
-    DisputeTicket, DisputeMessage, JobCompletionProof, ServiceReview
+    DisputeTicket, DisputeMessage, JobCompletionProof, ServiceReview, ServiceBooking,
+    BidCreditTransaction
 )
 
 User = get_user_model()
@@ -56,34 +58,28 @@ def get_user_dashboard_context(user):
     initials = (user.first_name[:1].upper() + user.last_name[:1].upper()) if (user.first_name and user.last_name) else (user.first_name[:2].upper() if user.first_name else user.username[:2].upper())
     date_str = datetime.now().strftime("%A, %d %B %Y")
     
-    qs_list = QuickService.objects.filter(user=user)
-    active_qs = qs_list.exclude(status__in=['completed', 'cancelled', 'closed']).count()
-    completed_qs = qs_list.filter(status='completed').count()
+    from .models import ServiceBooking
+    qs_bookings = ServiceBooking.objects.filter(customer=user)
+    active_qs = qs_bookings.exclude(status__in=['completed', 'cancelled']).count()
+    completed_qs = qs_bookings.filter(status='completed').count()
     
     job_list = Job.objects.filter(user=user)
     active_jobs = job_list.exclude(status__in=['completed', 'cancelled', 'closed']).count()
     completed_jobs = job_list.filter(status='completed').count()
     
-    pending_bids_qs = Bid.objects.filter(quick_service__user=user, status__in=['submitted', 'pending']).count()
     pending_bids_jobs = Bid.objects.filter(job__user=user, status__in=['submitted', 'pending']).count()
-    pending_quotations = pending_bids_qs + pending_bids_jobs
+    pending_quotations = pending_bids_jobs
     
-    selected_vendors_qs = Bid.objects.filter(quick_service__user=user, status='selected').count()
     selected_vendors_jobs = Bid.objects.filter(job__user=user, status='selected').count()
-    selected_vendors = selected_vendors_qs + selected_vendors_jobs
+    selected_vendors = selected_vendors_jobs
     
     from .models import VendorKYC
     approved_kyc_vendor_ids = set(VendorKYC.objects.filter(status='approved').values_list('vendor_id', flat=True))
 
-    recent_qs = qs_list.select_related('category', 'location').order_by('-created_at')[:5]
-    for qs in recent_qs:
-        sel_bid = qs.bids.filter(status='selected').select_related('vendor', 'vendor__vendor_profile').first()
-        if sel_bid:
-            qs.selected_vendor_name = sel_bid.vendor.vendor_profile.company_name if hasattr(sel_bid.vendor, 'vendor_profile') and sel_bid.vendor.vendor_profile.company_name else (sel_bid.vendor.get_full_name() or sel_bid.vendor.username)
-            qs.is_vendor_verified = sel_bid.vendor_id in approved_kyc_vendor_ids
-        else:
-            qs.selected_vendor_name = None
-            qs.is_vendor_verified = False
+    recent_qs = qs_bookings.select_related('quick_service', 'vendor', 'vendor__vendor_profile').order_by('-created_at')[:5]
+    for b in recent_qs:
+        b.selected_vendor_name = b.vendor.vendor_profile.company_name if hasattr(b.vendor, 'vendor_profile') and b.vendor.vendor_profile.company_name else (b.vendor.get_full_name() or b.vendor.username)
+        b.is_vendor_verified = b.vendor_id in approved_kyc_vendor_ids
 
     recent_jobs = job_list.select_related('category', 'location').order_by('-created_at')[:5]
     for j in recent_jobs:
@@ -100,10 +96,10 @@ def get_user_dashboard_context(user):
             j.is_vendor_verified = False
 
     activity_items = []
-    bids = Bid.objects.filter(Q(job__user=user) | Q(quick_service__user=user)).select_related('vendor', 'vendor__vendor_profile', 'job', 'quick_service').order_by('-created_at')[:5]
+    bids = Bid.objects.filter(job__user=user).select_related('vendor', 'vendor__vendor_profile', 'job').order_by('-created_at')[:5]
     for b in bids:
         vname = b.vendor.vendor_profile.company_name if hasattr(b.vendor, 'vendor_profile') and b.vendor.vendor_profile.company_name else (b.vendor.get_full_name() or b.vendor.username)
-        target = b.job.title if b.job else (b.quick_service.title if b.quick_service else 'Service')
+        target = b.job.title if b.job else 'Job'
         if b.status == 'selected':
             activity_items.append({
                 'title': 'Vendor selected',
@@ -139,6 +135,10 @@ def dashboard_view(request, path=''):
         
     if path.endswith('.html'):
         path = path[:-5]
+
+    # Enforce authentication for user/ pages before proceeding
+    if path.startswith('user/') and not request.user.is_authenticated:
+        return redirect('register_user')
 
     if request.method == 'POST' and request.POST.get('action') in ['complete_and_settle', 'submit_completion_proof']:
         from .wallet_services import settle_job_completion
@@ -286,35 +286,7 @@ def dashboard_view(request, path=''):
     if path in ['user/dashboard', 'user/index', 'user', 'user-dashboard/dashboard', 'user-dashboard/index', 'user-dashboard']:
         return user_dashboard(request)
         
-    if request.method == 'POST' and path == 'user/quick-services/create':
-        qs = QuickService(
-            title=request.POST.get('title'),
-            description=request.POST.get('description'),
-            required_work=request.POST.getlist('required_work[]'),
-            budget=request.POST.get('budget', 0),
-            shift_availability=request.POST.get('shift_availability'),
-            address=request.POST.get('address'),
-            additional_requirements=request.POST.get('additional_requirements'),
-            contact_name=request.POST.get('contact_name'),
-            contact_mobile=request.POST.get('contact_mobile'),
-            user=request.user,
-            status='open'
-        )
-        
-        cat_id = request.POST.get('category')
-        if cat_id: qs.category_id = cat_id
-            
-        loc_id = request.POST.get('location_id')
-        if loc_id: qs.location_id = loc_id
-            
-        pref_date = request.POST.get('preferred_date')
-        if pref_date: qs.preferred_date = pref_date
-            
-        pref_time = request.POST.get('preferred_time')
-        if pref_time: qs.preferred_time = pref_time
-            
-        qs.save()
-        return redirect('/user/quick-services/index')
+    # Deprecated user/quick-services/create endpoint removed
 
     if request.method == 'POST' and request.POST.get('action') == 'toggle_job_status':
         job_id = request.POST.get('job_id')
@@ -330,41 +302,226 @@ def dashboard_view(request, path=''):
                 pass
         return redirect('/user/jobs/index.html')
 
-    if request.method == 'POST' and path == 'user/jobs/create':
+    if request.method == 'POST' and path in ['user/jobs/create', 'jobs/create']:
+        title = request.POST.get('title', '').strip()
+        description = request.POST.get('description', '').strip()
+        cat_id = request.POST.get('category') or request.POST.get('category_id')
+        budget = request.POST.get('budget', 500)
+        locality = request.POST.get('locality', '').strip() or "Ranchi Central"
+        address = request.POST.get('address', '').strip() or locality
+        pincode = request.POST.get('pincode', '834001')
+        contact_name = request.POST.get('contact_name') or (request.user.get_full_name() or request.user.username)
+        contact_mobile = request.POST.get('contact_mobile', '')
+        pref_date = request.POST.get('preferred_start_date') or None
+        
+        lat_val = request.POST.get('latitude')
+        lon_val = request.POST.get('longitude')
+        lat = None
+        lon = None
+        if lat_val:
+            try: lat = float(lat_val)
+            except (ValueError, TypeError): pass
+        if lon_val:
+            try: lon = float(lon_val)
+            except (ValueError, TypeError): pass
+
         job = Job(
-            title=request.POST.get('title'),
-            description=request.POST.get('description'),
-            required_work=request.POST.getlist('required_work[]'),
-            scope_of_work=request.POST.get('scope_of_work'),
-            materials_details=request.POST.get('materials_details'),
-            additional_requirements=request.POST.get('additional_requirements'),
-            budget=request.POST.get('budget', 0),
-            budget_type=request.POST.get('budget_type'),
-            required_time=request.POST.get('required_time'),
-            shift_availability=request.POST.get('shift_availability'),
-            working_hours=request.POST.get('working_hours'),
-            address=request.POST.get('address'),
-            pincode=request.POST.get('pincode'),
-            contact_name=request.POST.get('contact_name'),
-            contact_mobile=request.POST.get('contact_mobile'),
+            title=title or "Home Service Job",
+            description=description or f"Requirement for {title}",
+            required_work=request.POST.getlist('required_work[]') or [title or "Work"],
+            scope_of_work=request.POST.get('scope_of_work', ''),
+            materials_details=request.POST.get('materials_details', ''),
+            additional_requirements=request.POST.get('additional_requirements', ''),
+            budget=budget if budget else 500,
+            budget_type=request.POST.get('budget_type', 'Fixed Price'),
+            preferred_start_date=pref_date,
+            expected_completion=request.POST.get('expected_completion') or None,
+            required_time=request.POST.get('required_time', 'Flexible'),
+            shift_availability=request.POST.get('shift_availability', 'Day shift'),
+            working_hours=request.POST.get('working_hours', 'Regular'),
+            locality=locality,
+            latitude=lat,
+            longitude=lon,
+            address=address,
+            pincode=pincode,
+            contact_name=contact_name,
+            contact_mobile=contact_mobile,
             user=request.user,
             status='open'
         )
+        if cat_id:
+            try: job.category_id = int(cat_id)
+            except: pass
         
-        cat_id = request.POST.get('category')
-        if cat_id: job.category_id = cat_id
-            
         loc_id = request.POST.get('location_id')
-        if loc_id: job.location_id = loc_id
-            
-        pref_date = request.POST.get('preferred_start_date')
-        if pref_date: job.preferred_start_date = pref_date
-            
-        exp_comp = request.POST.get('expected_completion')
-        if exp_comp: job.expected_completion = exp_comp
-            
+        if loc_id:
+            try: job.location_id = int(loc_id)
+            except: pass
+        if not job.location_id:
+            first_loc = Location.objects.filter(status='active').first()
+            if first_loc: job.location = first_loc
+
         job.save()
-        return redirect('/user/jobs/index')
+        return redirect('/user/jobs/index.html')
+
+    if request.method == 'POST' and (path in ['vendor/catalog/index', 'vendor/catalog', 'infinity-vendor-dashboard/catalog/index'] or 'catalog' in path):
+        if request.user.is_authenticated:
+            action = request.POST.get('action')
+            if action == 'delete_service':
+                srv_id = request.POST.get('service_id')
+                if srv_id:
+                    QuickService.objects.filter(id=srv_id, vendor=request.user).delete()
+                    messages.success(request, "Service removed from catalog successfully.")
+                return redirect('/vendor/catalog/index.html')
+
+            title = request.POST.get('title', '').strip() or "Quick Home Service"
+            category_id = request.POST.get('category_id')
+            base_price = request.POST.get('base_price', '199')
+            description = request.POST.get('description', '').strip()
+            locality = request.POST.get('locality', '').strip() or "Lalpur, Ranchi"
+            lat_val = request.POST.get('latitude')
+            lon_val = request.POST.get('longitude')
+            radius_val = request.POST.get('service_radius_km', 10.0)
+
+            try: lat = float(lat_val) if lat_val else 23.3697
+            except (ValueError, TypeError): lat = 23.3697
+
+            try: lon = float(lon_val) if lon_val else 85.3346
+            except (ValueError, TypeError): lon = 85.3346
+
+            try: radius = float(radius_val) if radius_val else 10.0
+            except (ValueError, TypeError): radius = 10.0
+
+            try: default_price = float(base_price) if base_price else 199.0
+            except (ValueError, TypeError): default_price = 199.0
+
+            cat_obj = Category.objects.filter(id=category_id).first() if category_id else Category.objects.filter(status='active').first()
+
+            # Parse Package Options
+            service_packages = []
+            packages_json = request.POST.get('packages_json')
+            if packages_json:
+                try:
+                    parsed_pkgs = json.loads(packages_json)
+                    if isinstance(parsed_pkgs, list):
+                        for p in parsed_pkgs:
+                            if isinstance(p, dict) and p.get('name'):
+                                p_price = float(p.get('price', default_price))
+                                p_orig = float(p.get('original_price', round(p_price * 1.3)))
+                                service_packages.append({
+                                    'name': str(p.get('name')).strip(),
+                                    'price': p_price,
+                                    'original_price': p_orig,
+                                    'desc': str(p.get('desc', '')).strip()
+                                })
+                except Exception:
+                    pass
+
+            if not service_packages:
+                pkg_names = request.POST.getlist('package_name[]')
+                pkg_prices = request.POST.getlist('package_price[]')
+                pkg_orig_prices = request.POST.getlist('package_orig_price[]')
+                pkg_descs = request.POST.getlist('package_desc[]')
+
+                for i, name in enumerate(pkg_names):
+                    if not name.strip():
+                        continue
+                    try: p_val = float(pkg_prices[i]) if i < len(pkg_prices) else default_price
+                    except (ValueError, TypeError): p_val = default_price
+
+                    try: orig_val = float(pkg_orig_prices[i]) if i < len(pkg_orig_prices) and pkg_orig_prices[i] else round(p_val * 1.3)
+                    except (ValueError, TypeError): orig_val = round(p_val * 1.3)
+
+                    d_val = pkg_descs[i].strip() if i < len(pkg_descs) else ""
+                    service_packages.append({
+                        'name': name.strip(),
+                        'price': p_val,
+                        'original_price': orig_val,
+                        'desc': d_val
+                    })
+
+            if not service_packages:
+                service_packages = [
+                    {
+                        'name': 'Standard Service',
+                        'price': default_price,
+                        'original_price': round(default_price * 1.3),
+                        'desc': description or f"Full {title} service by verified professional."
+                    }
+                ]
+
+            # Lowest package price sets the starting base rate
+            min_price = min(p['price'] for p in service_packages)
+
+            # Parse Inclusions
+            inclusions = []
+            inclusions_json = request.POST.get('inclusions_json')
+            if inclusions_json:
+                try:
+                    parsed_inc = json.loads(inclusions_json)
+                    if isinstance(parsed_inc, list):
+                        inclusions = [str(x).strip() for x in parsed_inc if str(x).strip()]
+                except Exception:
+                    pass
+
+            if not inclusions:
+                inclusions = [str(x).strip() for x in request.POST.getlist('inclusions[]') if str(x).strip()]
+
+            if not inclusions:
+                inclusions = [
+                    "Complete diagnostic inspection of existing fittings & components",
+                    "Execution by certified, background-checked professional",
+                    "Post-service sanitization and thorough debris cleanup",
+                    "30 days Suggu protection warranty on all workmanship"
+                ]
+
+            # Parse Exclusions
+            exclusions = [str(x).strip() for x in request.POST.getlist('exclusions[]') if str(x).strip()]
+            if not exclusions:
+                exclusions = [
+                    "Major civil masonry, pipe embedding or wall tearing excluded",
+                    "Spare parts / extra hardware to be purchased or charged separately"
+                ]
+
+            # Handle Image Upload or Preset
+            image_file = request.FILES.get('image')
+            image_preset = request.POST.get('image_preset', '').strip()
+
+            qs_obj = QuickService(
+                vendor=request.user,
+                title=title,
+                category=cat_obj,
+                description=description or f"Quality {title} service at your doorstep.",
+                base_price=min_price,
+                service_packages=service_packages,
+                inclusions=inclusions,
+                exclusions=exclusions,
+                image_url=image_preset or None,
+                locality=locality,
+                latitude=lat,
+                longitude=lon,
+                service_radius_km=radius,
+                status='active'
+            )
+            if image_file:
+                qs_obj.image = image_file
+            qs_obj.save()
+
+            messages.success(request, f"Service '{title}' published successfully with {len(service_packages)} package tier(s)!")
+            return redirect('/vendor/catalog/index.html')
+
+    # Redirect bare vendor routes to canonical /vendor/ routes
+    if path in ['catalog', 'catalog/index', 'catalog/index.html'] or path.startswith('catalog/'):
+        clean_sub = path if path.endswith('.html') else f"{path}.html"
+        return redirect(f'/vendor/{clean_sub}')
+
+    if path in ['bookings', 'bookings/index', 'bookings/index.html'] or path.startswith('bookings/'):
+        clean_sub = path if path.endswith('.html') else f"{path}.html"
+        return redirect(f'/vendor/{clean_sub}')
+
+    if path.startswith('bid-credits/'):
+        clean_sub = path if path.endswith('.html') else f"{path}.html"
+        return redirect(f'/vendor/{clean_sub}')
 
     # Map url prefixes to correct template directories
     mapped_path = path
@@ -403,7 +560,8 @@ def dashboard_view(request, path=''):
                 context['vendor_location'] = vendor_profile.location or "Unknown Location"
                 context['vendor_type'] = "Company Vendor" if vendor_profile.company_name else "Individual Vendor"
                 context['profile_image_url'] = vendor_profile.profile_image.url if vendor_profile.profile_image else None
-                context['remaining_credits'] = getattr(vendor_profile, 'bid_credits', 5)
+                context['remaining_credits'] = getattr(vendor_profile, 'available_bids', 5)
+                context['available_bids'] = getattr(vendor_profile, 'available_bids', 5)
             else:
                 name = request.user.get_full_name() or request.user.username
                 context['vendor_name'] = name
@@ -439,36 +597,19 @@ def dashboard_view(request, path=''):
         loc_data = [{'id': l.id, 'state': l.state, 'city': l.city, 'status': l.status} for l in active_locs]
         context['locations_json'] = json.dumps(loc_data)
 
-    if path in ['user/quick-services/index', 'user/quick-services']:
+    if 'catalog' in path:
+        context['categories'] = Category.objects.filter(status='active').order_by('name')
         if request.user.is_authenticated:
-            qs_list = QuickService.objects.filter(user=request.user).select_related('category', 'location').order_by('-created_at')
-            for q in qs_list:
-                sel = q.bids.filter(status='selected').select_related('vendor', 'vendor__vendor_profile').first()
-                if sel:
-                    q.selected_vendor_name = sel.vendor.vendor_profile.company_name if hasattr(sel.vendor, 'vendor_profile') and sel.vendor.vendor_profile.company_name else (sel.vendor.get_full_name() or sel.vendor.username)
-                else:
-                    q.selected_vendor_name = '—'
-            context['quick_services'] = qs_list
-            context['status_counts'] = {
-                'all': qs_list.count(),
-                'open': qs_list.filter(status='open').count(),
-                'selected': qs_list.filter(status='selected').count(),
-                'progress': qs_list.filter(status='progress').count(),
-                'completed': qs_list.filter(status='completed').count(),
-                'cancelled': qs_list.filter(status='cancelled').count(),
-                'closed': qs_list.filter(status='closed').count(),
-            }
-            context['active_cats'] = Category.objects.filter(status='active').order_by('name')
-        else:
-            context['quick_services'] = []
-            context['status_counts'] = {'all':0,'open':0,'selected':0,'progress':0,'completed':0,'cancelled':0,'closed':0}
-            context['active_cats'] = []
+            context['my_services'] = QuickService.objects.filter(vendor=request.user).select_related('category').order_by('-created_at')
+
+    if path in ['user/quick-services/index', 'user/quick-services', 'user/quick-services/create', 'user/quick-services/details']:
+        return redirect('/user/services/browse.html')
 
     if path in ['user/quick-services/details', 'quick-services/details'] and path.startswith('user/'):
         qs_id = request.GET.get('id')
         if qs_id:
             try:
-                qs = QuickService.objects.select_related('category', 'location').get(id=qs_id, user=request.user)
+                qs = ServiceBooking.objects.select_related("quick_service", "vendor").get(id=qs_id, customer=request.user)
                 context['qs'] = qs
                 
                 bids = Bid.objects.filter(quick_service_id=qs_id).select_related('vendor', 'vendor__vendor_profile')
@@ -524,7 +665,7 @@ def dashboard_view(request, path=''):
         qs_id = request.GET.get('id') or request.GET.get('qs_id')
         if qs_id:
             try:
-                qs = QuickService.objects.select_related('category', 'location').get(id=qs_id, user=request.user)
+                qs = ServiceBooking.objects.select_related("quick_service", "vendor").get(id=qs_id, customer=request.user)
                 context['qs'] = qs
                 bids = Bid.objects.filter(quick_service_id=qs_id).select_related('vendor', 'vendor__vendor_profile')
                 context['bids'] = bids
@@ -706,7 +847,7 @@ def dashboard_view(request, path=''):
 
             # GET: Load candidate jobs and quick services for the dropdown
             user_jobs = Job.objects.filter(user=request.user).order_by('-created_at')
-            user_qs = QuickService.objects.filter(user=request.user).order_by('-created_at')
+            user_qs = ServiceBooking.objects.filter(customer=request.user).order_by('-created_at')
             context['user_jobs'] = user_jobs
             context['user_quick_services'] = user_qs
 
@@ -878,7 +1019,7 @@ def dashboard_view(request, path=''):
 
         elif 'reviews/create' in path or path in ['user/reviews/create']:
             cand_jobs = Job.objects.filter(user=request.user, status__in=['selected', 'completed']).select_related('category', 'assigned_vendor', 'assigned_vendor__vendor_profile').order_by('-created_at')
-            cand_qs = QuickService.objects.filter(user=request.user, status__in=['selected', 'completed']).select_related('category').order_by('-created_at')
+            cand_qs = ServiceBooking.objects.filter(customer=request.user, status__in=['selected', 'completed']).select_related('category').order_by('-created_at')
 
             valid_cand_jobs = []
             for j in cand_jobs:
@@ -920,7 +1061,7 @@ def dashboard_view(request, path=''):
                         if sel:
                             target_vendor = sel.vendor
             elif preselected_qs_id:
-                target_qs = QuickService.objects.filter(id=preselected_qs_id, user=request.user).first()
+                target_qs = ServiceBooking.objects.filter(id=preselected_qs_id, customer=request.user).first()
                 if target_qs:
                     sel = Bid.objects.filter(quick_service=target_qs, status__in=['selected', 'completed']).first()
                     if sel:
@@ -935,11 +1076,11 @@ def dashboard_view(request, path=''):
 
     if path == 'user/profile/index' or path == 'user/profile':
         if request.user.is_authenticated:
-            qs_count = QuickService.objects.filter(user=request.user).count()
+            qs_count = ServiceBooking.objects.filter(customer=request.user).count()
             jobs_count = Job.objects.filter(user=request.user).count()
-            completed_qs = QuickService.objects.filter(user=request.user, status='completed').count()
+            completed_qs = ServiceBooking.objects.filter(customer=request.user, status='completed').count()
             completed_jobs = Job.objects.filter(user=request.user, status='completed').count()
-            vendors_selected = Bid.objects.filter(Q(job__user=request.user) | Q(quick_service__user=request.user), status='selected').count()
+            vendors_selected = Bid.objects.filter(Q(job__user=request.user) | Q(quick_service__vendor=request.user), status='selected').count()
             context.update({
                 'qs_count': qs_count,
                 'jobs_count': jobs_count,
@@ -1151,7 +1292,7 @@ def dashboard_view(request, path=''):
                 # Mark unread messages as read
                 Message.objects.filter(sender=vendor_user, receiver=request.user, is_read=False).update(is_read=True)
                 
-                messages = Message.objects.filter(
+                chat_msgs = Message.objects.filter(
                     Q(sender=request.user, receiver=vendor_user) | 
                     Q(sender=vendor_user, receiver=request.user)
                 ).order_by('created_at')
@@ -1170,7 +1311,7 @@ def dashboard_view(request, path=''):
                     'initials': company_name[:2].upper() if company_name else 'V',
                     'category': category
                 }
-                context['chat_messages'] = messages
+                context['chat_messages'] = chat_msgs
             except User.DoesNotExist:
                 context['chat_vendor'] = None
                 context['chat_messages'] = []
@@ -1193,7 +1334,7 @@ def dashboard_view(request, path=''):
         context['selected_bids'] = selected_bids
 
     if path == 'vendor/jobs/details' or path == 'vendor/jobs/send-quotation':
-        job_id = request.GET.get('id') or request.GET.get('job_id')
+        job_id = request.GET.get('id') or request.GET.get('job_id') or request.POST.get('job_id') or request.POST.get('id')
         
         if path == 'vendor/jobs/send-quotation' and request.method == 'POST' and request.user.is_authenticated:
             amount = request.POST.get('amount')
@@ -1213,15 +1354,30 @@ def dashboard_view(request, path=''):
                     is_open = job.status == 'open'
                     
                     if not is_limit_reached and not below_min and not above_max and is_open:
-                        if not Bid.objects.filter(job=job, vendor=request.user).exists():
-                            Bid.objects.create(
-                                vendor=request.user,
-                                job=job,
-                                amount=amount,
-                                estimated_time=estimated_time,
-                                proposal=proposal,
-                                attachment=attachment
-                            )
+                        if hasattr(request.user, 'vendor_profile') and request.user.vendor_profile.available_bids > 0:
+                            if not Bid.objects.filter(job=job, vendor=request.user).exists():
+                                Bid.objects.create(
+                                    vendor=request.user,
+                                    job=job,
+                                    amount=amount,
+                                    estimated_time=estimated_time,
+                                    proposal=proposal,
+                                    attachment=attachment
+                                )
+                                request.user.vendor_profile.available_bids -= 1
+                                request.user.vendor_profile.save(update_fields=['available_bids'])
+
+                                # Record dynamic credit transaction
+                                BidCreditTransaction.objects.create(
+                                    vendor=request.user,
+                                    transaction_type='used',
+                                    credits=-1,
+                                    description=f"Bid placed on {job.title}",
+                                    related_job=job
+                                )
+                                messages.success(request, f"Quotation submitted successfully! 1 credit deducted ({request.user.vendor_profile.available_bids} credits remaining).")
+                        else:
+                            messages.error(request, "Insufficient bid credits! You have 0 credits left. Please purchase a bid package.")
                 except (Job.DoesNotExist, ValueError, TypeError):
                     pass
             # Let the script handle the success state, or reload if JS doesn't prevent default
@@ -1239,50 +1395,78 @@ def dashboard_view(request, path=''):
         else:
             return redirect('/vendor/jobs/available.html')
 
-    if path == 'vendor/quick-services/nearby':
-        available_qs = QuickService.objects.filter(status='open').order_by('-created_at')
-        context['available_qs'] = available_qs
+    if path in ['vendor/catalog', 'vendor/catalog/index', 'vendor/catalog/index.html']:
+        if request.user.is_authenticated:
+            context['my_services'] = QuickService.objects.filter(vendor=request.user).select_related('category').order_by('-created_at')
+            context['categories'] = Category.objects.filter(status='active').order_by('name')
 
-    if path == 'vendor/quick-services/details' or path == 'vendor/quick-services/send-quotation':
-        qs_id = request.GET.get('id') or request.GET.get('qs_id')
-        
-        if path == 'vendor/quick-services/send-quotation' and request.method == 'POST' and request.user.is_authenticated:
-            amount = request.POST.get('amount')
-            estimated_time = request.POST.get('estimated_time')
-            proposal = request.POST.get('proposal')
-            attachment = request.FILES.get('attachment')
+    if path in ['vendor/bookings', 'vendor/bookings/index', 'vendor/bookings/index.html']:
+        if request.method == 'POST' and request.user.is_authenticated:
+            booking_id = request.POST.get('booking_id')
+            action = request.POST.get('action') # e.g. accept, complete, cancel
+            if booking_id and action:
+                try:
+                    booking = ServiceBooking.objects.get(id=booking_id, vendor=request.user)
+                    if action == 'accept':
+                        booking.status = 'accepted'
+                    elif action == 'complete':
+                        booking.status = 'completed'
+                    elif action == 'cancel':
+                        booking.status = 'cancelled'
+                    booking.save(update_fields=['status'])
+                    messages.success(request, f"Booking status updated to {booking.get_status_display()}.")
+                except ServiceBooking.DoesNotExist:
+                    pass
+            return redirect('/vendor/bookings/index.html')
+
+        if request.user.is_authenticated:
+            context['my_bookings'] = ServiceBooking.objects.filter(vendor=request.user).select_related('customer', 'quick_service').order_by('-created_at')
+    if path in ['user/services/browse', 'user/services/browse.html']:
+        if request.user.is_authenticated:
+            context['services'] = QuickService.objects.filter(status='open').select_related('vendor', 'category').order_by('-created_at')
+            context['categories'] = Category.objects.filter(status='active')
+
+    if path in ['user/services/book', 'user/services/book.html']:
+        if request.method == 'POST' and request.user.is_authenticated:
+            qs_id = request.POST.get('qs_id')
+            package_name = request.POST.get('package_name', 'Standard')
+            total_amount = request.POST.get('total_amount', 0)
+            scheduled_date = request.POST.get('scheduled_date')
+            scheduled_time = request.POST.get('scheduled_time', '')
+            service_address = request.POST.get('service_address')
             
-            if qs_id and amount:
+            if qs_id and scheduled_date and service_address:
                 try:
                     qs = QuickService.objects.get(id=qs_id)
-                    if not Bid.objects.filter(quick_service=qs, vendor=request.user).exists():
-                        Bid.objects.create(
-                            vendor=request.user,
-                            quick_service=qs,
-                            amount=amount,
-                            estimated_time=estimated_time,
-                            proposal=proposal,
-                            attachment=attachment
-                        )
+                    ServiceBooking.objects.create(
+                        customer=request.user,
+                        vendor=qs.vendor,
+                        quick_service=qs,
+                        package_name=package_name,
+                        total_amount=total_amount,
+                        scheduled_date=scheduled_date,
+                        scheduled_time=scheduled_time,
+                        service_address=service_address,
+                        status='pending'
+                    )
+                    messages.success(request, "Service booked successfully! Awaiting vendor acceptance.")
+                    return redirect('/user/services/my-bookings.html')
                 except QuickService.DoesNotExist:
                     pass
-                    
+
+        qs_id = request.GET.get('id') or request.GET.get('service_id')
         if qs_id:
             try:
-                qs = QuickService.objects.select_related('category', 'location', 'user').get(id=qs_id)
-                context['qs'] = qs
-                
-                if request.user.is_authenticated:
-                    has_bid = Bid.objects.filter(quick_service=qs, vendor=request.user).exists()
-                    context['has_bid'] = has_bid
+                context['service'] = QuickService.objects.select_related('vendor').get(id=qs_id)
+                context['selected_pkg'] = request.GET.get('pkg', 'Standard Service')
+                context['selected_amount'] = request.GET.get('amount')
             except QuickService.DoesNotExist:
-                return redirect('/vendor/quick-services/nearby.html')
-        else:
-            return redirect('/vendor/quick-services/nearby.html')
+                return redirect('/services/browse')
 
-    if path == 'vendor/quick-services/my-requests' and request.user.is_authenticated:
-        my_bids = Bid.objects.filter(vendor=request.user, quick_service__isnull=False).select_related('quick_service', 'quick_service__user').order_by('-created_at')
-        context['my_bids'] = my_bids
+    if path in ['user/services/my-bookings', 'user/services/my-bookings.html']:
+        if request.user.is_authenticated:
+            context['my_bookings'] = ServiceBooking.objects.filter(customer=request.user).select_related('vendor', 'quick_service').order_by('-created_at')
+
     if 'master/locations' in path:
         admin_state, is_area_admin, available_states, co_admins = get_admin_state_context(request)
         if admin_state:
@@ -1322,10 +1506,9 @@ def dashboard_view(request, path=''):
                 if is_area_admin and admin_state:
                     user_matches_state = bool(target_user.assigned_state and target_user.assigned_state.lower() == admin_state.lower())
                     has_job_in_state = Job.objects.filter(user=target_user).filter(Q(location__state__iexact=admin_state) | Q(address__icontains=admin_state)).exists()
-                    has_qs_in_state = QuickService.objects.filter(user=target_user).filter(Q(location__state__iexact=admin_state) | Q(address__icontains=admin_state)).exists()
+                    has_qs_in_state = ServiceBooking.objects.filter(customer=target_user).filter(Q(location__state__iexact=admin_state) | Q(address__icontains=admin_state)).exists()
 
                     if not (user_matches_state or has_job_in_state or has_qs_in_state):
-                        from django.contrib import messages
                         messages.error(request, f"Access Denied: Customer '{target_user.get_full_name() or target_user.username}' is outside your assigned territory ({admin_state}).")
                         return redirect('/admin-dashboard/users/users.html')
 
@@ -1336,7 +1519,7 @@ def dashboard_view(request, path=''):
                 except Exception:
                     pass
 
-                cust_qs_list = QuickService.objects.filter(user=target_user).select_related('category', 'location').order_by('-created_at')
+                cust_qs_list = ServiceBooking.objects.filter(customer=target_user).select_related('category', 'location').order_by('-created_at')
                 cust_jobs_list = Job.objects.filter(user=target_user).select_related('category', 'location').order_by('-created_at')
                 if admin_state:
                     cust_qs_list = cust_qs_list.filter(Q(location__state__iexact=admin_state) | Q(address__icontains=admin_state))
@@ -1412,7 +1595,6 @@ def dashboard_view(request, path=''):
                 if is_area_admin and admin_state:
                     vendor_in_state = (admin_state.lower() in (target_vendor.location or '').lower()) or (bool(target_vendor.user.assigned_state and target_vendor.user.assigned_state.lower() == admin_state.lower()))
                     if not vendor_in_state:
-                        from django.contrib import messages
                         messages.error(request, f"Access Denied: Vendor '{target_vendor}' is outside your assigned territory ({admin_state}).")
                         return redirect('/admin-dashboard/users/vendors.html')
 
@@ -1503,7 +1685,7 @@ def dashboard_view(request, path=''):
                 except Exception:
                     mobile = '—'
                     
-                quick_services_count = QuickService.objects.filter(user=u).count()
+                quick_services_count = ServiceBooking.objects.filter(customer=u).count()
                 jobs_count = Job.objects.filter(user=u).count()
                 completed_jobs = Job.objects.filter(user=u, status='completed').count()
                 
@@ -1573,7 +1755,6 @@ def dashboard_view(request, path=''):
                 if is_area_admin and admin_state:
                     job_in_state = (job_obj.location and job_obj.location.state and job_obj.location.state.lower() == admin_state.lower()) or (admin_state.lower() in (job_obj.address or '').lower()) or (bool(job_obj.user.assigned_state and job_obj.user.assigned_state.lower() == admin_state.lower()))
                     if not job_in_state:
-                        from django.contrib import messages
                         messages.error(request, f"Access Denied: Job is outside your assigned territory ({admin_state}).")
                         return redirect('/jobs/index.html')
 
@@ -1615,7 +1796,6 @@ def dashboard_view(request, path=''):
                 if is_area_admin and admin_state:
                     qs_in_state = (service.location and service.location.state and service.location.state.lower() == admin_state.lower()) or (admin_state.lower() in (service.address or '').lower()) or (bool(service.user.assigned_state and service.user.assigned_state.lower() == admin_state.lower()))
                     if not qs_in_state:
-                        from django.contrib import messages
                         messages.error(request, f"Access Denied: Quick Service is outside your assigned territory ({admin_state}).")
                         return redirect('/quick-services/index.html')
 
@@ -1820,9 +2000,9 @@ def dashboard_view(request, path=''):
             rev = sub_qs.aggregate(Sum('amount'))['amount__sum']
             context['actRevenue'] = rev if rev else 0
         else:
-            context['qs_count'] = QuickService.objects.filter(user=u).count()
+            context['qs_count'] = ServiceBooking.objects.filter(customer=u).count()
             context['jobs_count'] = Job.objects.filter(user=u).count()
-            context['completed_qs'] = QuickService.objects.filter(user=u, status='completed').count()
+            context['completed_qs'] = ServiceBooking.objects.filter(customer=u, status='completed').count()
             context['completed_jobs'] = Job.objects.filter(user=u, status='completed').count()
             context['vendors_selected'] = Bid.objects.filter(job__user=u, status='selected').count()
         
@@ -1841,7 +2021,7 @@ def dashboard_view(request, path=''):
         qs_id = request.GET.get('qs_id')
         if qs_id:
             try:
-                qs = QuickService.objects.get(id=qs_id, user=request.user)
+                qs = ServiceBooking.objects.get(id=qs_id, customer=request.user)
                 bids = Bid.objects.filter(quick_service=qs).select_related('vendor', 'vendor__vendor_profile')
                 context['qs'] = qs
                 context['bids'] = bids
@@ -2056,7 +2236,7 @@ def dashboard_view(request, path=''):
         if job_id:
             bids = Bid.objects.filter(job_id=job_id, status__in=['selected', 'completed']).select_related('vendor', 'vendor__vendor_profile', 'job')
         else:
-            bids = Bid.objects.filter(Q(job__user=request.user) | Q(quick_service__user=request.user), status__in=['selected', 'completed']).select_related('vendor', 'vendor__vendor_profile', 'job', 'quick_service')
+            bids = Bid.objects.filter(Q(job__user=request.user) | Q(quick_service__vendor=request.user), status__in=['selected', 'completed']).select_related('vendor', 'vendor__vendor_profile', 'job', 'quick_service')
         context['selected_bids'] = bids
 
     if 'user/vendors' in path or 'user-dashboard/vendors' in mapped_path:
@@ -2084,10 +2264,143 @@ def dashboard_view(request, path=''):
                 pass
 
     if 'bid-credits' in path and request.user.is_authenticated:
+        BID_CREDIT_PACKAGES = {
+            'starter': {
+                'id': 'starter',
+                'name': 'Starter Package',
+                'tagline': 'For occasional bidding',
+                'price': 100,
+                'credits': 5,
+                'cost_per_credit': 20,
+                'popular': False,
+                'features': [
+                    '5 Bid Credits',
+                    'Credits never expire',
+                    'Use on any available Long Job',
+                    'Instant credit after payment'
+                ]
+            },
+            'basic': {
+                'id': 'basic',
+                'name': 'Basic Package',
+                'tagline': 'Best value for active vendors',
+                'price': 250,
+                'credits': 15,
+                'cost_per_credit': 16.6,
+                'popular': True,
+                'features': [
+                    '15 Bid Credits',
+                    'Credits never expire',
+                    'Use on any available Long Job',
+                    'Instant credit after payment'
+                ]
+            },
+            'pro': {
+                'id': 'pro',
+                'name': 'Pro Package',
+                'tagline': 'High-volume contractor pack',
+                'price': 450,
+                'credits': 30,
+                'cost_per_credit': 15,
+                'popular': False,
+                'features': [
+                    '30 Bid Credits',
+                    'Credits never expire',
+                    'Use on any available Long Job',
+                    'Instant credit after payment'
+                ]
+            },
+            'premium': {
+                'id': 'premium',
+                'name': 'Premium Package',
+                'tagline': 'Maximum savings for agency vendors',
+                'price': 700,
+                'credits': 50,
+                'cost_per_credit': 14,
+                'popular': False,
+                'features': [
+                    '50 Bid Credits',
+                    'Credits never expire',
+                    'Use on any available Long Job',
+                    'Instant credit after payment'
+                ]
+            },
+        }
+
+        context['credit_packages'] = list(BID_CREDIT_PACKAGES.values())
+        curr_bids = getattr(request.user.vendor_profile, 'available_bids', 5)
+        context['available_bids'] = curr_bids
+        context['available_balance'] = curr_bids
+        context['remaining_credits'] = curr_bids
+
+        # Checkout Flow
+        if 'checkout' in path:
+            selected_pkg_id = request.GET.get('package', 'basic').lower()
+            selected_pkg = BID_CREDIT_PACKAGES.get(selected_pkg_id, BID_CREDIT_PACKAGES['basic'])
+            context['selected_pkg'] = selected_pkg
+
+            if request.method == 'POST':
+                pkg_key = request.POST.get('package_id', selected_pkg_id).lower()
+                pkg_to_buy = BID_CREDIT_PACKAGES.get(pkg_key, selected_pkg)
+                payment_method = request.POST.get('payment', 'UPI')
+                upi_id = request.POST.get('upi_id', '')
+
+                # Create Subscription Record
+                sub = Subscription.objects.create(
+                    vendor=request.user,
+                    package_name=f"{pkg_to_buy['name']} ({pkg_to_buy['credits']} Credits)",
+                    amount=pkg_to_buy['price'],
+                    credits_added=pkg_to_buy['credits'],
+                    status='success'
+                )
+
+                # Add Credits to Vendor Profile
+                vp = request.user.vendor_profile
+                vp.available_bids += pkg_to_buy['credits']
+                vp.save(update_fields=['available_bids'])
+
+                # Record BidCreditTransaction
+                txn = BidCreditTransaction.objects.create(
+                    vendor=request.user,
+                    transaction_type='purchased',
+                    credits=pkg_to_buy['credits'],
+                    description=f"{pkg_to_buy['name']} purchase via {payment_method}",
+                    related_subscription=sub
+                )
+
+                context['payment_success'] = True
+                context['txn'] = txn
+                context['sub'] = sub
+                context['purchased_pkg'] = pkg_to_buy
+                context['new_balance'] = vp.available_bids
+                context['remaining_credits'] = vp.available_bids
+                messages.success(request, f"Payment successful! {pkg_to_buy['credits']} bid credits added to your account.")
+
+        # Purchase History
         purchases = Subscription.objects.filter(vendor=request.user).order_by('-created_at')
         context['purchases'] = purchases
         context['subscriptions'] = purchases
         context['total_spent'] = purchases.filter(status='success').aggregate(Sum('amount'))['amount__sum'] or 0
+
+        # Credit Transactions Feed & Lifetime Stats
+        # Ensure default welcome credits record exists if brand new vendor
+        if not BidCreditTransaction.objects.filter(vendor=request.user).exists():
+            current_creds = getattr(request.user.vendor_profile, 'available_bids', 5)
+            if current_creds > 0:
+                BidCreditTransaction.objects.create(
+                    vendor=request.user,
+                    transaction_type='bonus',
+                    credits=current_creds,
+                    description="Welcome bonus credits on account registration"
+                )
+
+        credit_txns = BidCreditTransaction.objects.filter(vendor=request.user).select_related('related_job', 'related_subscription').order_by('-created_at')
+        context['credit_transactions'] = credit_txns
+
+        lifetime_purchased = credit_txns.filter(credits__gt=0).aggregate(Sum('credits'))['credits__sum'] or 0
+        lifetime_used = abs(credit_txns.filter(credits__lt=0).aggregate(Sum('credits'))['credits__sum'] or 0)
+        context['lifetime_purchased'] = lifetime_purchased
+        context['lifetime_used'] = lifetime_used
 
     if 'payments' in path or 'subscriptions' in path:
         admin_state, is_area_admin, available_states, co_admins = get_admin_state_context(request)
@@ -2131,6 +2444,21 @@ def dashboard_view(request, path=''):
             qs_uids = QuickService.objects.filter(Q(location__state__iexact=admin_state) | Q(address__icontains=admin_state)).values_list('user_id', flat=True)
             customers_qs = customers_qs.filter(Q(id__in=set(job_uids).union(set(qs_uids))) | Q(assigned_state__iexact=admin_state))
         context['customers'] = customers_qs.order_by('-date_joined')
+
+    if 'users/kyc-approvals' in path:
+        from .models import VendorKYC
+        admin_state, is_area_admin, available_states, co_admins = get_admin_state_context(request)
+        context['admin_state'] = admin_state
+        context['is_area_admin'] = is_area_admin
+        kycs = VendorKYC.objects.select_related('vendor', 'vendor__vendor_profile').all()
+        if admin_state:
+            kycs = kycs.filter(Q(vendor__vendor_profile__location__icontains=admin_state) | Q(vendor__assigned_state__iexact=admin_state))
+        
+        status_filter = request.GET.get('status', 'pending')
+        if status_filter != 'all':
+            kycs = kycs.filter(status=status_filter)
+        
+        context['kycs'] = kycs.order_by('-id')
 
     if 'reports/revenue' in path:
         admin_state, is_area_admin, available_states, co_admins = get_admin_state_context(request)
@@ -2215,6 +2543,158 @@ def admin_dashboard(request):
     }
     return render(request, 'admin-dashboard/dashboard.html', context)
 
+def public_browse_services(request):
+    categories = list(Category.objects.filter(status='active').order_by('id'))
+    category_id = request.GET.get('category')
+    search_query = request.GET.get('search', '').strip()
+    sub_query = request.GET.get('sub', '').strip()
+    
+    # If no category specified, default to the first active category
+    selected_category = None
+    if category_id and category_id.isdigit():
+        selected_category = next((c for c in categories if c.id == int(category_id)), None)
+    
+    if not selected_category and categories:
+        selected_category = categories[0]
+        category_id = str(selected_category.id)
+        
+    services_qs = QuickService.objects.filter(status='active').select_related('vendor', 'category').order_by('-created_at')
+    
+    if selected_category:
+        services_qs = services_qs.filter(category_id=selected_category.id)
+        
+    if search_query:
+        services_qs = services_qs.filter(title__icontains=search_query)
+        
+    if sub_query:
+        services_qs = services_qs.filter(title__icontains=sub_query)
+
+    services_list = list(services_qs)
+    
+    # Build enriched service payload for UI & detail drawers
+    enriched_services = []
+    category_name = selected_category.name if selected_category else "Home Services"
+    
+    # Category image mappings
+    cat_images = {
+        'Plumbing': [
+            'https://images.unsplash.com/photo-1585704032915-c3400ca199e7?w=600&auto=format&fit=crop&q=80',
+            'https://images.unsplash.com/photo-1542013936693-884638332954?w=600&auto=format&fit=crop&q=80',
+            'https://images.unsplash.com/photo-1507652313519-d4e9174996dd?w=600&auto=format&fit=crop&q=80'
+        ],
+        'Electrical': [
+            'https://images.unsplash.com/photo-1621905251189-08b45d6a269e?w=600&auto=format&fit=crop&q=80',
+            'https://images.unsplash.com/photo-1558494949-ef010cbdcc31?w=600&auto=format&fit=crop&q=80'
+        ],
+        'AC & Appliance': [
+            'https://images.unsplash.com/photo-1585771724684-38269d6639fd?w=600&auto=format&fit=crop&q=80',
+            'https://images.unsplash.com/photo-1626806787461-102c1bfaaea1?w=600&auto=format&fit=crop&q=80'
+        ],
+        'Cleaning': [
+            'https://images.unsplash.com/photo-1581578731548-c64695cc6952?w=600&auto=format&fit=crop&q=80',
+            'https://images.unsplash.com/photo-1584622650111-993a426fbf0a?w=600&auto=format&fit=crop&q=80'
+        ]
+    }
+    
+    default_imgs = cat_images.get(category_name, [
+        'https://images.unsplash.com/photo-1581578731548-c64695cc6952?w=600&auto=format&fit=crop&q=80'
+    ])
+    
+    user_lat = request.GET.get('lat')
+    user_lon = request.GET.get('lon')
+
+    def calculate_distance(lat1, lon1, lat2, lon2):
+        try:
+            import math
+            R = 6371.0
+            dlat = math.radians(float(lat2) - float(lat1))
+            dlon = math.radians(float(lon2) - float(lon1))
+            a = math.sin(dlat / 2)**2 + math.cos(math.radians(float(lat1))) * math.cos(math.radians(float(lat2))) * math.sin(dlon / 2)**2
+            c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+            return round(R * c, 1)
+        except Exception:
+            return None
+
+    for idx, s in enumerate(services_list):
+        orig_price = round(float(s.base_price) * 1.3)
+
+        # Image resolution: uploaded file > custom preset URL > category default
+        img_url = None
+        if s.image:
+            try:
+                img_url = s.image.url
+            except Exception:
+                img_url = None
+        if not img_url:
+            img_url = s.image_url or default_imgs[idx % len(default_imgs)]
+
+        packages = s.service_packages if (s.service_packages and len(s.service_packages) > 0) else [
+            {'name': 'Standard Service', 'price': float(s.base_price), 'original_price': orig_price, 'desc': 'Complete service inspection & resolution'}
+        ]
+
+        # Inclusions & Exclusions resolution
+        inclusions = s.inclusions if (s.inclusions and len(s.inclusions) > 0) else [
+            "Complete diagnostic inspection of existing fittings & components",
+            "Execution by certified, background-checked professional",
+            "Post-service sanitization and thorough debris cleanup",
+            "30 days Suggu protection warranty on all workmanship"
+        ]
+        exclusions = s.exclusions if (s.exclusions and len(s.exclusions) > 0) else [
+            "Major civil masonry, pipe embedding or wall tearing excluded",
+            "Spare parts / extra hardware to be purchased or charged separately"
+        ]
+        
+        s_lat = float(s.latitude) if s.latitude else 23.3697
+        s_lon = float(s.longitude) if s.longitude else 85.3346
+        radius = float(s.service_radius_km or 10.0)
+
+        dist = None
+        is_within_range = True
+        if user_lat and user_lon:
+            dist = calculate_distance(user_lat, user_lon, s_lat, s_lon)
+            if dist is not None:
+                is_within_range = dist <= radius
+        
+        enriched_services.append({
+            'id': s.id,
+            'title': s.title,
+            'category_id': s.category_id,
+            'category_name': category_name,
+            'vendor_name': s.vendor.get_full_name() or s.vendor.username,
+            'vendor_id': s.vendor_id,
+            'locality': s.locality or "Ranchi Central",
+            'latitude': s_lat,
+            'longitude': s_lon,
+            'service_radius_km': radius,
+            'distance_km': dist,
+            'is_within_range': is_within_range,
+            'base_price': float(s.base_price),
+            'original_price': orig_price,
+            'rating': 4.8,
+            'reviews_count': '1.8K',
+            'image_url': img_url,
+            'description': s.description or f"Professional {category_name.lower()} service by verified experts.",
+            'bullets': inclusions[:3],
+            'inclusions': inclusions,
+            'exclusions': exclusions,
+            'packages': packages
+        })
+        
+    context = {
+        'services': enriched_services,
+        'categories': categories,
+        'selected_category': selected_category,
+        'selected_category_id': selected_category.id if selected_category else None,
+        'search_query': search_query,
+        'sub_query': sub_query,
+        'user_lat': user_lat,
+        'user_lon': user_lon,
+        'services_json': json.dumps(enriched_services),
+        'user': request.user
+    }
+    return render(request, 'browse.html', context)
+
+    
 def home_view(request):
     error = None
     if request.method == 'POST':
@@ -2235,11 +2715,11 @@ def home_view(request):
 
     categories = Category.objects.filter(status='active').order_by('name')
     locations = Location.objects.filter(status='active').order_by('state', 'city')
-    recent_bids = Bid.objects.select_related('vendor', 'vendor__vendor_profile', 'job', 'job__location', 'quick_service', 'quick_service__location').order_by('-created_at')[:12]
-
+    recent_bids = Bid.objects.select_related('vendor', 'vendor__vendor_profile', 'job', 'job__location').order_by('-created_at')[:6]
+    
     recent_bids_data = []
     for b in recent_bids:
-        target = b.job or b.quick_service
+        target = b.job
         city = (target.location.city if target and target.location else "Ranchi")
         c_name = target.contact_name or (target.user.get_full_name() or target.user.username) if target and target.user else "Customer"
         recent_bids_data.append({
@@ -2250,6 +2730,23 @@ def home_view(request):
             "created": b.created_at.strftime("%I:%M %p") if b.created_at else "Just now",
             "type": "bid"
         })
+        
+    from .models import ServiceBooking
+    recent_bookings = ServiceBooking.objects.select_related('vendor', 'customer', 'quick_service').order_by('-created_at')[:6]
+    for b in recent_bookings:
+        target = b.quick_service
+        city = "Ranchi"
+        c_name = b.customer.get_full_name() or b.customer.username if b.customer else "Customer"
+        recent_bids_data.append({
+            "customer_name": c_name,
+            "city": city,
+            "service": target.title if target else "Home Service",
+            "price": float(b.total_amount),
+            "created": b.created_at.strftime("%I:%M %p") if b.created_at else "Just now",
+            "type": "booking"
+        })
+    
+    # Sort combined activity by created time (simulated via order, or just let them be mixed)
 
     branding = SiteBranding.objects.first()
     hero = HeroSection.objects.first()
@@ -2269,6 +2766,7 @@ def home_view(request):
         'cms_testimonials': cms_testimonials,
         'cms_trust_metrics': cms_trust_metrics,
         'categories': categories,
+        'top_services': QuickService.objects.filter(status='active').select_related('vendor', 'category').order_by('-created_at')[:8],
         'locations': locations,
         'recent_bids': recent_bids,
         'categories_json': json.dumps(list(categories.values("id", "name", "service_type", "status"))),
@@ -2295,6 +2793,17 @@ def user_login_view(request):
         password = request.POST.get('password', '')
         user = authenticate(request, username=username, password=password)
         if user is not None:
+            if user.role == 'VENDOR':
+                from .models import VendorKYC
+                try:
+                    kyc = VendorKYC.objects.get(vendor=user)
+                    if kyc.status != 'approved':
+                        error = f"Your profile is under verification by admins. Current status: {kyc.get_status_display()}. You can login once verified."
+                        return render(request, 'login.html', {'error': error})
+                except VendorKYC.DoesNotExist:
+                    error = "KYC verification pending. Please complete your registration."
+                    return render(request, 'login.html', {'error': error})
+
             login(request, user)
             if user.role == 'ADMIN' or user.is_superuser:
                 return redirect('admin_dashboard')
@@ -2388,8 +2897,27 @@ def register_vendor_view(request):
             # You could also create UserProfile to store the mobile number if desired
             UserProfile.objects.create(user=user, phone_number=mobile, profile_image=profile_img)
             
-            login(request, user)
-            return redirect('vendor_dashboard')
+            # Handle KYC Documents
+            id_type = request.POST.get('id_type')
+            id_document_front = request.FILES.get('id_document_front')
+            id_document_back = request.FILES.get('id_document_back')
+            business_license = request.FILES.get('business_license')
+            
+            if id_type and id_document_front:
+                from .models import VendorKYC
+                VendorKYC.objects.create(
+                    vendor=user,
+                    id_type=id_type,
+                    id_number=id_proof or '',
+                    id_document_front=id_document_front,
+                    id_document_back=id_document_back,
+                    business_license=business_license,
+                    status='pending'
+                )
+            
+            from django.contrib import messages
+            messages.success(request, f"Vendor '{name}' registered successfully. Your profile is under verification by admins. You can login once verified.")
+            return redirect('login')
 
     active_locations = Location.objects.filter(status='active').order_by('state', 'city')
     locations_dict = {}
@@ -2446,6 +2974,18 @@ def create_company_vendor_view(request):
             employee_code=employee_code,
             employee_details=employee_details
         )
+        
+        from .models import VendorKYC
+        from django.utils import timezone
+        VendorKYC.objects.create(
+            vendor=user,
+            id_type='aadhaar',
+            id_number='Admin Created',
+            status='approved',
+            reviewed_by=request.user,
+            reviewed_at=timezone.now()
+        )
+        
         messages.success(request, 'Company Vendor created successfully.')
     except Exception as e:
         messages.error(request, f'Error creating company vendor: {str(e)}')
@@ -2632,5 +3172,204 @@ def manage_location_view(request):
         
         return redirect('/master/locations')
     return redirect('/master/locations')
+
+
+from django.shortcuts import get_object_or_404, redirect
+from django.contrib.auth.decorators import login_required
+from django.contrib import messages
+from django.http import HttpResponseForbidden
+
+@login_required
+def approve_kyc_view(request, kyc_id):
+    if request.method == 'POST':
+        if request.user.role != 'ADMIN' and not request.user.is_superuser:
+            return HttpResponseForbidden("Access Denied")
+        from .models import VendorKYC
+        kyc = get_object_or_404(VendorKYC, id=kyc_id)
+        kyc.status = 'approved'
+        kyc.reviewed_by = request.user
+        kyc.save()
+        messages.success(request, f"KYC for {kyc.vendor.username} approved.")
+    return redirect('/admin-dashboard/users/kyc-approvals.html')
+
+@login_required
+def reject_kyc_view(request, kyc_id):
+    if request.method == 'POST':
+        if request.user.role != 'ADMIN' and not request.user.is_superuser:
+            return HttpResponseForbidden("Access Denied")
+        from .models import VendorKYC
+        kyc = get_object_or_404(VendorKYC, id=kyc_id)
+        kyc.status = 'rejected'
+        kyc.reviewed_by = request.user
+        kyc.admin_notes = request.POST.get('admin_notes', '')
+        kyc.save()
+        messages.warning(request, f"KYC for {kyc.vendor.username} rejected.")
+    return redirect('/admin-dashboard/users/kyc-approvals.html')
+
+def detect_location_api(request):
+    from django.http import JsonResponse
+    import urllib.request, urllib.parse, json
+
+    lat = request.GET.get('lat')
+    lon = request.GET.get('lon')
+    detected = None
+
+    # If coordinates provided directly from client GPS
+    if lat and lon:
+        try:
+            url = f"https://nominatim.openstreetmap.org/reverse?format=json&lat={lat}&lon={lon}"
+            req = urllib.request.Request(url, headers={'User-Agent': 'SugguLiveApp/1.0'})
+            with urllib.request.urlopen(req, timeout=3) as resp:
+                data = json.loads(resp.read().decode())
+                addr = data.get('address', {})
+                road = addr.get('road') or addr.get('suburb') or addr.get('neighbourhood') or addr.get('village')
+                city = addr.get('city') or addr.get('town') or addr.get('county') or addr.get('state_district') or "Ranchi"
+                state = addr.get('state', 'Jharkhand')
+                pincode = addr.get('postcode', '')
+                
+                primary = f"{road}" if road else city
+                full_display = f"{primary}, {city}" if road and primary != city else f"{city}, {state}"
+                
+                detected = {
+                    'name': full_display,
+                    'primary': primary,
+                    'secondary': f"{city}, {state} {pincode}".strip(),
+                    'full_address': data.get('display_name', ''),
+                    'city': city,
+                    'state': state,
+                    'lat': float(lat),
+                    'lon': float(lon),
+                    'source': 'live_gps'
+                }
+        except Exception:
+            pass
+
+    # If no coordinates or GPS reverse failed, detect via public network IP
+    if not detected:
+        client_ip = request.META.get('HTTP_X_FORWARDED_FOR', request.META.get('REMOTE_ADDR', '')).split(',')[0].strip()
+        ip_lat, ip_lon = None, None
+        city, region = None, None
+
+        # Try ipwho.is
+        try:
+            url = 'https://ipwho.is/' if client_ip.startswith(('192.168.', '10.', '172.', '127.')) else f'https://ipwho.is/{client_ip}'
+            req = urllib.request.Request(url, headers={'User-Agent': 'SugguLiveApp/1.0'})
+            with urllib.request.urlopen(req, timeout=3) as resp:
+                data = json.loads(resp.read().decode())
+                if data.get('success', False):
+                    city = data.get('city')
+                    region = data.get('region')
+                    ip_lat = data.get('latitude')
+                    ip_lon = data.get('longitude')
+        except Exception:
+            pass
+
+        # Secondary IP fallback
+        if not ip_lat:
+            try:
+                url = 'http://ip-api.com/json/' if client_ip.startswith(('192.168.', '10.', '172.', '127.')) else f'http://ip-api.com/json/{client_ip}'
+                req = urllib.request.Request(url, headers={'User-Agent': 'SugguLiveApp/1.0'})
+                with urllib.request.urlopen(req, timeout=3) as resp:
+                    data = json.loads(resp.read().decode())
+                    if data.get('status') == 'success':
+                        city = data.get('city')
+                        region = data.get('regionName')
+                        ip_lat = data.get('lat')
+                        ip_lon = data.get('lon')
+            except Exception:
+                pass
+
+        # If IP coordinates resolved, do reverse geocode for exact street/area
+        if ip_lat and ip_lon:
+            try:
+                url = f"https://nominatim.openstreetmap.org/reverse?format=json&lat={ip_lat}&lon={ip_lon}"
+                req = urllib.request.Request(url, headers={'User-Agent': 'SugguLiveApp/1.0'})
+                with urllib.request.urlopen(req, timeout=3) as resp:
+                    rdata = json.loads(resp.read().decode())
+                    addr = rdata.get('address', {})
+                    road = addr.get('road') or addr.get('suburb') or addr.get('neighbourhood') or addr.get('village')
+                    rcity = addr.get('city') or addr.get('town') or addr.get('state_district') or city or "Ranchi"
+                    rstate = addr.get('state') or region or "Jharkhand"
+                    rpincode = addr.get('postcode', '')
+                    
+                    primary = f"{road}" if road else rcity
+                    full_display = f"{primary}, {rcity}" if road and primary != rcity else f"{rcity}, {rstate}"
+                    
+                    detected = {
+                        'name': full_display,
+                        'primary': primary,
+                        'secondary': f"{rcity}, {rstate} {rpincode}".strip(),
+                        'full_address': rdata.get('display_name', ''),
+                        'city': rcity,
+                        'state': rstate,
+                        'lat': ip_lat,
+                        'lon': ip_lon,
+                        'source': 'live_network_reverse'
+                    }
+            except Exception:
+                pass
+
+        if not detected and city:
+            detected = {
+                'name': f"{city}, {region}",
+                'primary': city,
+                'secondary': region,
+                'city': city,
+                'state': region,
+                'lat': ip_lat,
+                'lon': ip_lon,
+                'source': 'network_ip'
+            }
+
+    if not detected:
+        detected = {
+            'name': "Ranchi, Jharkhand",
+            'primary': "Main Road, Ranchi",
+            'secondary': "Jharkhand 834001",
+            'city': "Ranchi",
+            'state': "Jharkhand",
+            'source': 'fallback'
+        }
+
+    return JsonResponse(detected)
+
+
+def search_locations_api(request):
+    from django.http import JsonResponse
+    import urllib.request, urllib.parse, json
+    
+    q = request.GET.get('q', '').strip()
+    if not q or len(q) < 2:
+        return JsonResponse({'results': []})
+
+    results = []
+    try:
+        encoded_q = urllib.parse.quote(q)
+        url = f"https://nominatim.openstreetmap.org/search?format=json&q={encoded_q}&countrycodes=in&limit=8&addressdetails=1"
+        req = urllib.request.Request(url, headers={'User-Agent': 'SugguLiveApp/1.0'})
+        with urllib.request.urlopen(req, timeout=3.5) as resp:
+            data = json.loads(resp.read().decode())
+            for item in data:
+                addr = item.get('address', {})
+                road = addr.get('road') or addr.get('suburb') or addr.get('neighbourhood') or addr.get('village') or item.get('name')
+                city = addr.get('city') or addr.get('town') or addr.get('county') or addr.get('state_district') or ''
+                state = addr.get('state', '')
+                postcode = addr.get('postcode', '')
+                
+                primary = f"{road}" if road else (city or item.get('name'))
+                sec = f"{city}, {state} {postcode}".strip(' ,')
+                disp = f"{primary}, {city}" if city and primary != city else f"{primary}, {state}"
+                
+                results.append({
+                    'name': disp,
+                    'primary': primary,
+                    'secondary': sec,
+                    'lat': item.get('lat'),
+                    'lon': item.get('lon')
+                })
+    except Exception as e:
+        pass
+
+    return JsonResponse({'results': results})
 
 

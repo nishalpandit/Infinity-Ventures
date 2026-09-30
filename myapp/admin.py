@@ -5,7 +5,7 @@ from .models import (
     Bid, Subscription, Category, Location, Message, GlobalSettings,
     SiteBranding, HeroSection, QuickServiceCard, FeaturedProjectCard,
     PackageCard, Testimonial, TrustMetric, VendorWallet, WalletTransaction, PayoutRequest,
-    DisputeTicket, DisputeMessage, JobCompletionProof, ServiceReview
+    DisputeTicket, DisputeMessage, JobCompletionProof, ServiceReview, ServiceBooking
 )
 
 @admin.action(description='Suspend selected users')
@@ -32,11 +32,18 @@ class VendorProfileAdmin(admin.ModelAdmin):
 admin.site.register(VendorProfile, VendorProfileAdmin)
 
 class QuickServiceAdmin(admin.ModelAdmin):
-    list_display = ('title', 'user', 'category', 'status', 'created_at')
+    list_display = ('title', 'vendor', 'category', 'status', 'created_at')
     list_filter = ('status', 'category')
-    search_fields = ('title', 'description', 'user__username')
+    search_fields = ('title', 'description', 'vendor__username')
 
 admin.site.register(QuickService, QuickServiceAdmin)
+
+class ServiceBookingAdmin(admin.ModelAdmin):
+    list_display = ('id', 'customer', 'vendor', 'quick_service', 'status', 'total_amount', 'scheduled_date')
+    list_filter = ('status',)
+    search_fields = ('customer__username', 'vendor__username', 'package_name')
+
+admin.site.register(ServiceBooking, ServiceBookingAdmin)
 
 class JobAdmin(admin.ModelAdmin):
     list_display = ('title', 'user', 'category', 'status', 'created_at')

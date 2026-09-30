@@ -73,13 +73,17 @@ email:info@reliablepower.com
 password:Password@123
 dob:1990-01-01 (optional)
 gender:Male (optional)
-id_proof:Aadhar/PAN (optional)
+id_type:aadhaar (required - aadhaar/pan/voter_id)
+id_proof:123456789012 (optional - ID Number)
+id_document_front: (File Upload - required)
+id_document_back: (File Upload - optional)
+business_license: (File Upload - optional)
 about:Description (optional)
 profile_image: (File Upload - optional)
 response :-
 {
 "status": "success",
-"message": "Vendor 'Reliable Power Systems Ltd' registered and logged in successfully via OTP",
+"message": "Vendor 'Reliable Power Systems Ltd' registered successfully. Your profile is under verification by admins.",
 "token": "add7ab8b0d28746c823055ba2e4d9b231ff61a6b0c201a44",
 "token_type": "Bearer",
 "vendor": {
@@ -99,7 +103,7 @@ response :-
 "experience": 8,
 "dob": "1990-01-01",
 "gender": "Male",
-"id_proof": "Aadhar/PAN",
+"id_proof": "123456789012",
 "about": "Description",
 "profile_image": "http://192.168.1.55:800/media/vendor_profiles/image.jpg",
 
@@ -109,7 +113,7 @@ response :-
 
 
 API for Vendor Signup with Password
-url : (http://192.168.1.55:800/api/vendor/signup/)
+url : (http://192.168.1.55:8000/api/vendor/signup/)
 method : POST
 params :-
 name:Rajesh Sharma
@@ -117,9 +121,22 @@ company_name:Reliable Power Systems Ltd
 contact:9123456780
 mobile:9123456780
 email:info@reliablepower.com
+password:securepassword123
+confirm_password:securepassword123
 category:Electrical & Power Systems
 city:Ahmedabad
 state:Gujarat
+address:GIDC Naroda, Ahmedabad
+vendor_type:company
+dob:20-09-2012 (Mandatory, format: dd-mm-yyyy)
+gender:Male
+id_type:pan
+id_proof:ygghi2555g
+about:good
+profile_image:(File)
+id_document_front:(File)
+id_document_back:(File)
+business_license:(File)
 address:GIDC Naroda, Ahmedabad
 vendor_type:company
 experience:8
@@ -127,13 +144,17 @@ password:Password@123
 confirm_password:Password@123
 dob:1990-01-01 (optional)
 gender:Male (optional)
-id_proof:Aadhar/PAN (optional)
+id_type:aadhaar (required - aadhaar/pan/voter_id)
+id_proof:123456789012 (optional - ID Number)
+id_document_front: (File Upload - required)
+id_document_back: (File Upload - optional)
+business_license: (File Upload - optional)
 about:Description (optional)
 profile_image: (File Upload - optional)
 response :-
 {
 "status": "success",
-"message": "Vendor 'Reliable Power Systems Ltd' registered successfully",
+"message": "Vendor 'Reliable Power Systems Ltd' registered successfully. Your profile is under verification by admins.",
 "token": "add7ab8b0d28746c823055ba2e4d9b231ff61a6b0c201a44",
 "token_type": "Bearer",
 "vendor": {
@@ -153,7 +174,7 @@ response :-
 "experience": 8,
 "dob": "1990-01-01",
 "gender": "Male",
-"id_proof": "Aadhar/PAN",
+"id_proof": "123456789012",
 "about": "Description",
 "profile_image": "http://192.168.1.55:800/media/vendor_profiles/image.jpg",
 

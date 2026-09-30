@@ -5,6 +5,7 @@ from . import super_admin_views
 
 urlpatterns = [
     path('', views.home_view, name='home'),
+    path('services/browse', views.public_browse_services, name='public_browse_services'),
     path('login/', views.user_login_view, name='login'),
     path('register/user/', views.register_user_view, name='register_user'),
     path('register/vendor/', views.register_vendor_view, name='register_vendor'),
@@ -24,10 +25,14 @@ urlpatterns = [
     path('api/states/', Api_views.get_states_api, name='get_states_api'),
     path('api/cities/', Api_views.get_cities_api, name='get_cities_api'),
     path('api/vendor-types/', Api_views.get_vendor_types_api, name='get_vendor_types_api'),
+    path('api/detect-location/', views.detect_location_api, name='detect_location_api'),
+    path('api/search-locations/', views.search_locations_api, name='search_locations_api'),
 
     # Super Admin Dashboard
-    path('super-admin/login/', super_admin_views.super_admin_login_view, name='super_admin_login'),
-    path('super-admin/', super_admin_views.super_admin_dashboard, name='super_admin_dashboard'),
+    path('super-admin/login/', super_admin_views.super_admin_login_view, name='super_admin_login_slash'),
+    path('super-admin/login', super_admin_views.super_admin_login_view, name='super_admin_login'),
+    path('super-admin/', super_admin_views.super_admin_dashboard, name='super_admin_dashboard_slash'),
+    path('super-admin', super_admin_views.super_admin_dashboard, name='super_admin_dashboard'),
     
     # Users CRUD
     path('super-admin/users/', super_admin_views.super_admin_users, name='super_admin_users'),
@@ -175,6 +180,9 @@ urlpatterns = [
     path('api/user/post-quick-service', Api_views.user_post_quick_service_api),
     path('api/user/quick-services/create/', Api_views.user_post_quick_service_api, name='user_quick_services_create_api'),
     path('api/user/quick-services/create', Api_views.user_post_quick_service_api),
+
+    path('api/admin/kyc/<int:kyc_id>/approve/', views.approve_kyc_view, name='approve_kyc_view'),
+    path('api/admin/kyc/<int:kyc_id>/reject/', views.reject_kyc_view, name='reject_kyc_view'),
 
     re_path(r'^(?P<path>.*)$', views.dashboard_view, name='dashboard'),
 ]

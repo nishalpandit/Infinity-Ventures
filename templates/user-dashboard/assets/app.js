@@ -28,17 +28,19 @@
 
   const nav = [
     ['dashboard','grid','Dashboard','dashboard.html'],
-    ['quick','bolt','My Quick Services','quick-services/index.html'],
+    ['browse','search','Browse Services','services/browse.html'],
+    ['bookings','list','My Bookings','services/my-bookings.html'],
     ['jobs','briefcase','My Jobs','jobs/index.html'],
 
     ['messages','chat','Messages','messages/index.html'],
     ['profile','user','Profile','profile/index.html'],
     ['settings','settings','Settings','settings/security.html']
   ];
-  function route(path){ return root + path; }
+  function route(path){ return '/user/' + path; }
   function navActive(k){
     if(pageKey === k) return true;
-    if(k==='quick' && pageKey.startsWith('quick-')) return true;
+    if(k==='browse' && pageKey.startsWith('browse')) return true;
+    if(k==='bookings' && pageKey.startsWith('bookings')) return true;
     if(k==='jobs' && pageKey.startsWith('job-') && !pageKey.includes('quotation') && pageKey!=='job-compare') return true;
     if(k==='quotations' && (pageKey.includes('quotation') || pageKey==='job-compare')) return true;
     if(k==='vendors' && pageKey.startsWith('vendor')) return true;
@@ -163,18 +165,18 @@
     const scope=tabs.closest('[data-filter-scope]')||tabs.parentElement;
     $$('.tab',tabs).forEach(tab=>tab.addEventListener('click',()=>{
       $$('.tab',tabs).forEach(x=>x.classList.remove('active')); tab.classList.add('active'); const f=tab.dataset.status||'all';
-      $$('[data-row]',scope).forEach(row=>row.hidden=!(f==='all'||row.dataset.status===f));
+      $$('[data-row]',scope).forEach(row=>row.style.display=(f==='all'||row.dataset.status===f)?'':'none');
       updateVisibleCount(scope);
     }));
   });
-  function updateVisibleCount(scope){ const visible=$$('[data-row]',scope).filter(r=>!r.hidden); const out=$('[data-result-count]',scope); if(out)out.textContent=`${visible.length} result${visible.length===1?'':'s'}`; }
+  function updateVisibleCount(scope){ const visible=$$('[data-row]',scope).filter(r=>r.style.display!=='none'); const out=$('[data-result-count]',scope); if(out)out.textContent=`${visible.length} result${visible.length===1?'':'s'}`; }
 
   // Search, select filters and sorting.
   $$('[data-search-input]').forEach(input=>input.addEventListener('input',()=>filterScope(input.closest('[data-filter-scope]')||document)));
   $$('[data-filter]').forEach(select=>select.addEventListener('change',()=>filterScope(select.closest('[data-filter-scope]')||document)));
   function filterScope(scope){
     const query=($('[data-search-input]',scope)?.value||'').toLowerCase().trim(); const filters=$$('[data-filter]',scope).filter(x=>x.value&&x.value!=='all');
-    $$('[data-row]',scope).forEach(row=>{ const text=(row.dataset.search||row.textContent).toLowerCase(); const searchOK=!query||text.includes(query); const filterOK=filters.every(f=>{const key=f.dataset.filter;return (row.dataset[key]||'').toLowerCase()===f.value.toLowerCase();}); row.hidden=!(searchOK&&filterOK); }); updateVisibleCount(scope);
+    $$('[data-row]',scope).forEach(row=>{ const text=(row.dataset.search||row.textContent).toLowerCase(); const searchOK=!query||text.includes(query); const filterOK=filters.every(f=>{const key=f.dataset.filter;return (row.dataset[key]||'').toLowerCase()===f.value.toLowerCase();}); row.style.display=(searchOK&&filterOK)?'':'none'; }); updateVisibleCount(scope);
   }
   $$('[data-sort]').forEach(select=>select.addEventListener('change',()=>{
     const scope=select.closest('[data-filter-scope]')||document, container=$('[data-rows]',scope); if(!container)return; const [key,dir]=select.value.split(':'); const rows=$$('[data-row]',container);

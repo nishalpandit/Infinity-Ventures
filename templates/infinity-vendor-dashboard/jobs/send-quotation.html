@@ -1,94 +1,161 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="description" content="Suggu Services Vendor Portal - Send Quotation"><title>Send Quotation · Suggu Services Vendor</title><link rel="stylesheet" href="/infinity-vendor-dashboard/assets/styles.css"><script defer src="/infinity-vendor-dashboard/assets/app.js"></script></head><body data-page="job-submit" data-title="Send Quotation" data-root="../"><div class="app-shell"><div id="sidebar-root"></div><div class="workspace"><div id="topbar-root"></div><main class="page">
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="Suggu Services Vendor Portal - Send Quotation">
+  <title>Send Quotation · Suggu Services Vendor</title>
+  <link rel="stylesheet" href="/infinity-vendor-dashboard/assets/styles.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+  <script defer src="/infinity-vendor-dashboard/assets/app.js"></script>
+</head>
+<body data-page="job-submit" data-title="Send Quotation" data-root="../">
+  <div class="app-shell">
+    <div id="sidebar-root"></div>
+    <div class="workspace">
+      <div id="topbar-root"></div>
+      <main class="page">
 
-<div class="layout-main">
-    <section class="card form-card">
-        <div class="card-head">
-            <div>
-                <h2>Send Quotation</h2>
-                <p>Submit your best offer for <strong>{{ job.title }}</strong></p>
+        {% if messages %}
+          {% for message in messages %}
+          <div class="callout {% if 'success' in message.tags %}success{% else %}warning{% endif %}" style="margin-bottom:20px; padding:12px 18px; border-radius:10px;">
+            <i class="fa-solid fa-{% if 'success' in message.tags %}circle-check{% else %}triangle-exclamation{% endif %}"></i>
+            <div>{{ message }}</div>
+          </div>
+          {% endfor %}
+        {% endif %}
+
+        <div class="layout-main">
+          <section class="card form-card" style="border-radius:16px;">
+            <div class="card-head">
+              <div>
+                <h2 style="font-size:18px; font-weight:800; margin:0 0 4px; color:#0f172a;">Send Quotation</h2>
+                <p class="muted" style="margin:0; font-size:13px;">Submit your best offer and timeline for <strong>{{ job.title }}</strong></p>
+              </div>
             </div>
-        </div>
-        <div class="card-body">
-            <form id="bid-form" class="stack" method="POST" action="" enctype="multipart/form-data">
-                {% csrf_token %}
-                <div class="form-group">
-                    <label class="label">Quotation Amount (₹)<span class="required">*</span></label>
-                    <input type="number" name="amount" class="input" placeholder="e.g. 15000" required>
-                </div>
-                <div class="form-group">
-                    <label class="label">Estimated Time</label>
-                    <input type="text" name="estimated_time" class="input" placeholder="e.g. 3 Days, 2 Weeks">
-                </div>
-                <div class="form-group">
-                    <label class="label">Detailed Proposal</label>
-                    <textarea name="proposal" class="input" rows="5" placeholder="Explain your approach, what's included, and any other relevant details..."></textarea>
-                </div>
-                <div class="form-group">
-                    <label class="label">Attachment</label>
-                    <input type="file" name="attachment" class="input" accept="image/*,.pdf,.doc,.docx" data-preview="attachment-preview">
-                    <div class="small muted" style="margin-top:5px;">You can attach an image, PDF, or Word document (max 10MB)</div>
-                    <div id="attachment-preview" class="file-list" style="margin-top:10px;"></div>
-                </div>
-                
-                <div class="form-actions" style="margin-top:20px;">
-                    <a href="details.html?id={{ job.id }}" class="btn btn-secondary">Cancel</a>
-                    <button type="button" class="btn btn-primary" data-modal-open="bid-confirm-modal">Review & Submit</button>
-                </div>
-            </form>
-        </div>
-    </section>
 
-    <!-- Success state, hidden by default -->
-    <section id="bid-success" class="card" hidden>
-        <div class="card-body" style="text-align: center; padding: 40px 20px;">
-            <div style="font-size: 48px; color: var(--success); margin-bottom: 20px;"><span data-icon="check"></span></div>
-            <h2>Quotation Sent Successfully!</h2>
-            <p class="muted" style="max-width: 400px; margin: 10px auto 20px;">Your quotation for {{ job.title }} has been submitted to the customer. We will notify you if you are selected.</p>
-            <a href="available.html" class="btn btn-primary">Return to Available Jobs</a>
-        </div>
-    </section>
-
-    <!-- Job summary sidebar -->
-    <aside class="stack">
-        <section class="card">
-            <div class="card-head"><h3>Job Summary</h3></div>
             <div class="card-body">
+              <form id="bid-form" class="stack" method="POST" action="" enctype="multipart/form-data">
+                {% csrf_token %}
+                <input type="hidden" name="job_id" value="{{ job.id }}">
+
+                <div class="form-group">
+                  <label class="label">Quotation Amount (₹) <span class="required">*</span></label>
+                  <input type="number" name="amount" class="input" placeholder="e.g. 15000" min="1" required>
+                  <div class="small muted" style="margin-top:4px;">Customer Budget: ₹{{ job.budget }} ({{ job.get_budget_type_display|default:'Fixed' }})</div>
+                </div>
+
+                <div class="form-group">
+                  <label class="label">Estimated Delivery / Completion Time <span class="required">*</span></label>
+                  <input type="text" name="estimated_time" class="input" placeholder="e.g. 3 Days, 2 Weeks" required>
+                </div>
+
+                <div class="form-group">
+                  <label class="label">Detailed Proposal &amp; Approach</label>
+                  <textarea name="proposal" class="input" rows="5" placeholder="Explain your scope of work, materials used, crew size, and post-service warranty..."></textarea>
+                </div>
+
+                <div class="form-group">
+                  <label class="label">Attachment / Estimate PDF (Optional)</label>
+                  <input type="file" name="attachment" class="input" accept="image/*,.pdf,.doc,.docx" data-preview="attachment-preview">
+                  <div class="small muted" style="margin-top:5px;">Attach image or estimate document (max 10MB)</div>
+                  <div id="attachment-preview" class="file-list" style="margin-top:10px;"></div>
+                </div>
+
+                <div class="form-actions" style="margin-top:20px; display:flex; justify-content:space-between; align-items:center;">
+                  <a href="details.html?id={{ job.id }}" class="btn btn-secondary">Cancel</a>
+                  {% if remaining_credits > 0 %}
+                    <button type="button" class="btn btn-primary" data-modal-open="bid-confirm-modal" style="font-weight:700; padding:10px 24px;">
+                      <i class="fa-solid fa-paper-plane"></i> Review &amp; Submit (1 Credit)
+                    </button>
+                  {% else %}
+                    <a href="../bid-credits/packages.html" class="btn btn-primary" style="font-weight:700; padding:10px 24px; background:#d97706; border-color:#d97706;">
+                      <i class="fa-solid fa-bolt"></i> Buy Credits to Submit
+                    </a>
+                  {% endif %}
+                </div>
+              </form>
+            </div>
+          </section>
+
+          <!-- Success state, hidden by default unless submitted -->
+          <section id="bid-success" class="card" hidden style="border-radius:16px;">
+            <div class="card-body" style="text-align: center; padding: 40px 20px;">
+              <div style="font-size: 48px; color: var(--success); margin-bottom: 20px;"><i class="fa-solid fa-circle-check"></i></div>
+              <h2 style="font-size:22px; font-weight:800; color:#0f172a; margin:0 0 6px;">Quotation Sent Successfully!</h2>
+              <p class="muted" style="max-width: 420px; margin: 10px auto 20px; font-size:13.5px;">Your quotation for {{ job.title }} has been submitted to the customer. 1 credit was deducted.</p>
+              <a href="available.html" class="btn btn-primary" style="font-weight:700;">Return to Available Jobs</a>
+            </div>
+          </section>
+
+          <!-- Job summary sidebar -->
+          <aside class="stack">
+            <section class="card" style="border-radius:16px;">
+              <div class="card-head">
+                <h3 style="font-size:15px; font-weight:700; margin:0;">Job Summary</h3>
+              </div>
+              <div class="card-body" style="padding:16px;">
                 <div class="info-list">
-                    <div class="info-item"><div class="info-label">Customer Budget</div><div class="info-value">₹{{ job.budget }}</div></div>
-                    <div class="info-item"><div class="info-label">Location</div><div class="info-value">{{ job.location.city|default:"Unknown" }}</div></div>
-                    <div class="info-item"><div class="info-label">Start Date</div><div class="info-value">{{ job.preferred_start_date|date:"d M Y"|default:"Flexible" }}</div></div>
+                  <div class="info-item"><div class="info-label">Customer Budget</div><div class="info-value">₹{{ job.budget }}</div></div>
+                  <div class="info-item"><div class="info-label">Category</div><div class="info-value">{{ job.category.name|default:"General" }}</div></div>
+                  <div class="info-item"><div class="info-label">Location</div><div class="info-value">{{ job.location.city|default:"Ranchi" }}</div></div>
+                  <div class="info-item"><div class="info-label">Start Date</div><div class="info-value">{{ job.preferred_start_date|date:"d M Y"|default:"Flexible" }}</div></div>
                 </div>
                 <div style="margin-top: 15px;">
-                    <a href="details.html?id={{ job.id }}" class="small">View full details →</a>
+                  <a href="details.html?id={{ job.id }}" class="small" style="color:#0f8a7c; font-weight:600;">View full requirements &rarr;</a>
                 </div>
-            </div>
-        </section>
-        <div class="callout neutral">
-            <span data-icon="award"></span>
-            <div>
-                <strong>Credit Cost</strong>
-                This action will consume 1 bid credit from your account.
-            </div>
-        </div>
-    </aside>
-</div>
+              </div>
+            </section>
 
-<!-- Confirmation Modal -->
-<div class="modal-backdrop" id="bid-confirm-modal" role="dialog" aria-modal="true">
-    <div class="modal">
-        <div class="modal-head">
-            <h3>Confirm Submission</h3>
-            <button class="modal-close" data-modal-close><span data-icon="x"></span></button>
+            <!-- Dynamic Credit Balance Callout -->
+            <div class="callout {% if remaining_credits > 0 %}neutral{% else %}warning{% endif %}" style="border-radius:14px; padding:16px;">
+              <i class="fa-solid fa-bolt" style="font-size:20px; color:{% if remaining_credits > 0 %}#0f8a7c{% else %}#d97706{% endif %};"></i>
+              <div>
+                <strong style="display:block; margin-bottom:2px;">Bid Credit Cost: 1 Credit</strong>
+                <div style="font-size:12.5px; color:#475569;">
+                  Your Available Balance: <strong style="color:{% if remaining_credits > 0 %}#0f8a7c{% else %}#ef4444{% endif %}; font-size:13.5px;">{{ remaining_credits|default:0 }} credits</strong>
+                </div>
+                {% if remaining_credits <= 0 %}
+                <div style="margin-top:8px;">
+                  <a href="../bid-credits/packages.html" class="btn btn-primary btn-sm" style="font-size:11.5px; padding:5px 12px; font-weight:700;">
+                    Buy Bid Credits Now
+                  </a>
+                </div>
+                {% endif %}
+              </div>
+            </div>
+          </aside>
         </div>
-        <div class="modal-body">
-            <p>Are you sure you want to submit this quotation? Once submitted, it cannot be modified.</p>
-            <p class="small muted" style="margin-top:10px;">This will deduct <strong>1 credit</strong> from your balance.</p>
+
+        <!-- Confirmation Modal -->
+        <div class="modal-backdrop" id="bid-confirm-modal" role="dialog" aria-modal="true">
+          <div class="modal" style="border-radius:16px;">
+            <div class="modal-head">
+              <h3 style="font-size:16px; font-weight:800;">Confirm Quotation Submission</h3>
+              <button class="modal-close" data-modal-close><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="modal-body">
+              <p>Are you sure you want to submit this quotation? Once submitted, the offer is transmitted to the customer.</p>
+              <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:12px; margin-top:12px; font-size:12.5px;">
+                <div>Current Available Balance: <strong>{{ remaining_credits|default:0 }} credits</strong></div>
+                <div style="color:#0f8a7c; font-weight:700; margin-top:4px;">Balance after submission: {{ remaining_credits|add:"-1" }} credits</div>
+              </div>
+            </div>
+            <div class="modal-actions" style="margin-top:16px;">
+              <button class="btn btn-secondary" data-modal-close>Cancel</button>
+              <button class="btn btn-primary" data-submit-bid style="font-weight:700;">
+                <i class="fa-solid fa-check"></i> Confirm &amp; Deduct 1 Credit
+              </button>
+            </div>
+          </div>
         </div>
-        <div class="modal-actions">
-            <button class="btn btn-secondary" data-modal-close>Cancel</button>
-            <button class="btn btn-primary" data-submit-bid>Submit Quotation</button>
-        </div>
+
+      </main>
     </div>
-</div>
+  </div>
 
-</main></div></div></body></html>
+  <script>
+    window.VENDOR_CREDITS = {{ remaining_credits|default:0 }};
+  </script>
+</body>
+</html>

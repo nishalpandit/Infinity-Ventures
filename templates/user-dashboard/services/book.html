@@ -1,0 +1,93 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="description" content="Suggu Services User Portal - Book Service"><title>Book Service · Suggu Services</title><link rel="stylesheet" href="/user-dashboard/assets/styles.css"><script defer src="/user-dashboard/assets/app.js"></script></head><body data-page="book" data-title="Book Service" data-root="../../"><div class="app-shell"><div id="sidebar-root"></div><div class="workspace"><div id="topbar-root"></div><main class="page">
+<div style="margin-bottom:20px;">
+  <a href="browse.html" class="btn btn-secondary btn-sm">← Back to Browse</a>
+</div>
+<section class="card">
+  <div class="card-header">
+    <h3>Book: {{ service.title }}</h3>
+    <p class="muted">By {{ service.vendor.vendor_profile.company_name|default:service.vendor.get_full_name }}</p>
+  </div>
+  <div class="card-body">
+    <form method="POST" action="{% url 'dashboard' 'user/services/book.html' %}">
+      {% csrf_token %}
+      <input type="hidden" name="qs_id" value="{{ service.id }}">
+      <input type="hidden" name="package_name" id="selected_package_name" value="Base Service">
+      <input type="hidden" name="total_amount" id="selected_total_amount" value="{{ service.base_price }}">
+      
+      <div class="grid grid-2">
+        <div class="field" style="grid-column: 1 / -1;">
+          <label class="label">Select a Package</label>
+          <div style="display:flex; flex-direction:column; gap:10px;">
+            <label style="display:flex; align-items:center; gap:10px; padding:15px; border:1px solid var(--border-color); border-radius:8px; cursor:pointer;">
+              <input type="radio" name="pkg_selector" value="{{ service.base_price }}" data-name="Base Service" checked onchange="updateBookingData(this)">
+              <div style="flex:1;">
+                <div style="font-weight:600;">Base Service</div>
+              </div>
+              <strong style="font-size:16px;">₹{{ service.base_price }}</strong>
+            </label>
+            
+            {% if service.service_packages %}
+              {% for pkg in service.service_packages %}
+              <label style="display:flex; align-items:center; gap:10px; padding:15px; border:1px solid var(--border-color); border-radius:8px; cursor:pointer;">
+                <input type="radio" name="pkg_selector" value="{{ pkg.price }}" data-name="{{ pkg.name }}" onchange="updateBookingData(this)">
+                <div style="flex:1;">
+                  <div style="font-weight:600;">{{ pkg.name }}</div>
+                </div>
+                <strong style="font-size:16px;">₹{{ pkg.price }}</strong>
+              </label>
+              {% endfor %}
+            {% endif %}
+          </div>
+        </div>
+        
+        <div class="field">
+          <label class="label">Preferred Date</label>
+          <input type="date" name="scheduled_date" class="input" required>
+        </div>
+        
+        <div class="field">
+          <label class="label">Preferred Time (Optional)</label>
+          <input type="time" name="scheduled_time" class="input">
+        </div>
+        
+        <div class="field" style="grid-column: 1 / -1;">
+          <label class="label">Service Address</label>
+          <textarea name="service_address" class="input" rows="3" placeholder="Enter your full address..." required></textarea>
+        </div>
+      </div>
+      
+      <div style="margin-top:20px; padding:20px; background:#f8fafc; border-radius:8px; display:flex; justify-content:space-between; align-items:center;">
+        <div>
+          <div style="font-size:14px; color:var(--text-muted);">Total Amount to Pay</div>
+          <div style="font-size:24px; font-weight:700; color:var(--primary-color);" id="display_amount">₹{{ service.base_price }}</div>
+        </div>
+        <button type="submit" class="btn btn-primary" style="padding:12px 24px; font-size:16px;">Confirm Booking</button>
+      </div>
+    </form>
+  </div>
+</section>
+
+<script>
+function updateBookingData(radio) {
+  document.getElementById('selected_package_name').value = radio.getAttribute('data-name');
+  document.getElementById('selected_total_amount').value = radio.value;
+  document.getElementById('display_amount').innerText = '₹' + radio.value;
+}
+
+// Auto-select passed package from UC cart if present
+document.addEventListener('DOMContentLoaded', () => {
+  const selectedPkgName = "{{ selected_pkg|default:'' }}";
+  const selectedAmt = "{{ selected_amount|default:'' }}";
+  if (selectedPkgName) {
+    const radios = document.querySelectorAll('input[name="pkg_selector"]');
+    for (let r of radios) {
+      if (r.getAttribute('data-name') === selectedPkgName || (selectedAmt && r.value === selectedAmt)) {
+        r.checked = true;
+        updateBookingData(r);
+        break;
+      }
+    }
+  }
+});
+</script>
+</main></div></div></body></html>

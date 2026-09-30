@@ -1,30 +1,117 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="description" content="Suggu Services Vendor Portal - Purchase History"><title>Purchase History · Suggu Services Vendor</title><link rel="stylesheet" href="/infinity-vendor-dashboard/assets/styles.css"><script defer src="/infinity-vendor-dashboard/assets/app.js"></script></head><body data-page="credit-history" data-title="Purchase History" data-root="../"><div class="app-shell"><div id="sidebar-root"></div><div class="workspace"><div id="topbar-root"></div><main class="page">
-<section class="card" data-filter-scope><div class="toolbar"><div class="search-box"><span data-icon="search"></span><input class="input" data-search-input placeholder="Transaction ID or package"></div><select class="select" style="max-width:150px" data-filter="status"><option value="all">All statuses</option><option value="success">Paid</option><option value="failed">Failed</option></select><input class="input" type="date" style="max-width:145px"><button class="btn btn-secondary" data-toast="Statement downloaded" data-toast-message="Your purchase statement is ready."><span data-icon="download"></span> Download</button></div><div class="table-wrap"><table class="data-table"><thead><tr><th>Transaction ID</th><th>Package</th><th>Credits</th><th>Amount</th><th>Payment Status</th><th>Date</th></tr></thead><tbody data-rows>
-{% for sub in purchases %}
-<tr data-row data-status="{{ sub.status }}" data-search="TXN-BC-{{ sub.id }} {{ sub.package_name }}">
-  <td><strong>TXN-BC-{{ sub.id|stringformat:"04d" }}</strong></td>
-  <td>{{ sub.package_name }}</td>
-  <td>
-    {% if sub.status == 'success' %}
-      <span class="balance-change positive">+{% if '100' in sub.package_name %}100{% elif '50' in sub.package_name %}50{% elif '25' in sub.package_name %}25{% elif '15' in sub.package_name %}15{% else %}10{% endif %}</span>
-    {% else %}
-      -
-    {% endif %}
-  </td>
-  <td>₹{{ sub.amount }}</td>
-  <td>
-    {% if sub.status == 'success' %}
-      <span class="badge badge-success">Paid</span>
-    {% elif sub.status == 'failed' %}
-      <span class="badge badge-cancelled">Failed</span>
-    {% else %}
-      <span class="badge badge-pending">{{ sub.status|title }}</span>
-    {% endif %}
-  </td>
-  <td>{{ sub.created_at|date:"d M Y, g:i A" }}</td>
-</tr>
-{% empty %}
-<tr><td colspan="6" style="text-align:center; padding: 32px; color: var(--text-muted);">No purchase records found.</td></tr>
-{% endfor %}
-</tbody></table></div><div class="pagination"><span>Showing {{ purchases|length }} purchase{{ purchases|length|pluralize }}</span><div class="page-buttons"><button class="page-btn" data-page="previous"><span data-icon="chevron"></span></button><button class="page-btn active" data-page="1">1</button><button class="page-btn" data-page="next"><span data-icon="chevron"></span></button></div></div></section>
-</main></div></div></body></html>
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="Suggu Services Vendor Portal - Purchase History">
+  <title>Purchase History · Suggu Services Vendor</title>
+  <link rel="stylesheet" href="/infinity-vendor-dashboard/assets/styles.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+  <script defer src="/infinity-vendor-dashboard/assets/app.js"></script>
+</head>
+<body data-page="credit-history" data-title="Purchase History" data-root="../">
+  <div class="app-shell">
+    <div id="sidebar-root"></div>
+    <div class="workspace">
+      <div id="topbar-root"></div>
+      <main class="page">
+
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; flex-wrap:wrap; gap:12px;">
+          <div>
+            <h1 style="font-size:24px; font-weight:800; color:#0f172a; margin:0 0 4px;">Credit Purchase History</h1>
+            <p class="muted" style="margin:0; font-size:13px;">View and track all bid package transactions and payment invoices.</p>
+          </div>
+          <a href="packages.html" class="btn btn-primary" style="padding:10px 20px; font-weight:700;">
+            <i class="fa-solid fa-plus"></i> Buy More Credits
+          </a>
+        </div>
+
+        <section class="card" data-filter-scope style="border-radius:16px;">
+          <div class="toolbar" style="padding:16px 20px; display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
+            <div class="search-box" style="margin:0; flex:1; min-width:220px;">
+              <span data-icon="search"></span>
+              <input class="input" data-search-input placeholder="Search transaction ID or package...">
+            </div>
+            <select class="select" style="max-width:160px;" data-filter="status">
+              <option value="all">All statuses</option>
+              <option value="success">Paid / Success</option>
+              <option value="failed">Failed</option>
+            </select>
+          </div>
+
+          <div class="table-wrap">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Transaction ID</th>
+                  <th>Package Name</th>
+                  <th>Credits Added</th>
+                  <th>Amount</th>
+                  <th>Payment Status</th>
+                  <th>Date &amp; Time</th>
+                </tr>
+              </thead>
+              <tbody data-rows>
+                {% for sub in purchases %}
+                <tr data-row data-status="{{ sub.status }}" data-search="TXN-BC-{{ sub.id|stringformat:'04d' }} {{ sub.package_name }}">
+                  <td>
+                    <strong style="color:#0f172a; font-size:13px;">TXN-BC-{{ sub.id|stringformat:"04d" }}</strong>
+                  </td>
+                  <td>
+                    <span style="font-weight:600; color:#1e293b;">{{ sub.package_name }}</span>
+                  </td>
+                  <td>
+                    {% if sub.status == 'success' %}
+                      <span class="balance-change positive" style="font-weight:700; color:#059669; background:#ecfdf5; padding:3px 8px; border-radius:6px; font-size:12px;">
+                        +{{ sub.credits_added|default:15 }} Credits
+                      </span>
+                    {% else %}
+                      <span style="color:#94a3b8;">—</span>
+                    {% endif %}
+                  </td>
+                  <td>
+                    <strong style="font-size:13.5px; color:#0f172a;">₹{{ sub.amount|floatformat:"0" }}</strong>
+                  </td>
+                  <td>
+                    {% if sub.status == 'success' %}
+                      <span class="badge badge-success" style="font-weight:700;">Paid</span>
+                    {% elif sub.status == 'failed' %}
+                      <span class="badge badge-danger" style="font-weight:700;">Failed</span>
+                    {% else %}
+                      <span class="badge badge-pending" style="font-weight:700;">{{ sub.status|title }}</span>
+                    {% endif %}
+                  </td>
+                  <td style="color:#64748b; font-size:12px;">
+                    {{ sub.created_at|date:"d M Y, g:i A" }}
+                  </td>
+                </tr>
+                {% empty %}
+                <tr>
+                  <td colspan="6" style="text-align:center; padding: 48px 20px; color: var(--text-muted);">
+                    <div style="font-size:32px; color:#cbd5e1; margin-bottom:10px;"><i class="fa-solid fa-receipt"></i></div>
+                    <h4 style="font-size:16px; font-weight:700; color:#334155; margin:0 0 6px;">No purchases found</h4>
+                    <p style="font-size:13px; margin:0 0 16px;">You haven't bought any bid credit packages yet.</p>
+                    <a href="packages.html" class="btn btn-primary btn-sm">Explore Bid Packages</a>
+                  </td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+
+          {% if purchases %}
+          <div class="pagination" style="padding:14px 20px;">
+            <span>Showing {{ purchases|length }} purchase transaction{{ purchases|length|pluralize }}</span>
+          </div>
+          {% endif %}
+        </section>
+
+      </main>
+    </div>
+  </div>
+
+  <script>
+    window.VENDOR_CREDITS = {{ remaining_credits|default:5 }};
+  </script>
+</body>
+</html>

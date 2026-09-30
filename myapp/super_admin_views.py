@@ -557,6 +557,17 @@ def super_admin_vendor_create(request):
             user_prof.profile_image = profile_img
         user_prof.save()
 
+        from .models import VendorKYC
+        from django.utils import timezone
+        VendorKYC.objects.create(
+            vendor=user,
+            id_type='aadhaar',
+            id_number='Admin Created',
+            status='approved',
+            reviewed_by=request.user,
+            reviewed_at=timezone.now()
+        )
+
         django_messages.success(request, f'Vendor "{company_name or username}" created successfully.')
         return redirect('super_admin_vendors')
 

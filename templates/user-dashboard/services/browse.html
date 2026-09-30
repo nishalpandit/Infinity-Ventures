@@ -1,0 +1,51 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="description" content="Suggu Services User Portal - Browse Services"><title>Browse Services · Suggu Services</title><link rel="stylesheet" href="/user-dashboard/assets/styles.css"><script defer src="/user-dashboard/assets/app.js"></script></head><body data-page="browse" data-title="Browse Services" data-root="../../"><div class="app-shell"><div id="sidebar-root"></div><div class="workspace"><div id="topbar-root"></div><main class="page">
+
+<section class="card" data-filter-scope>
+  <div class="toolbar">
+    <div class="search-box">
+      <span data-icon="search"></span>
+      <input class="input" data-search-input placeholder="Search haircut, plumbing, cleaning...">
+    </div>
+    <select class="select" style="max-width:200px" data-filter="category">
+      <option value="all">All categories</option>
+      {% for cat in categories %}
+        <option value="{{ cat.name }}">{{ cat.name }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="card-body">
+    <div class="grid grid-2" data-rows>
+    {% for srv in services %}
+      <article class="card service-card" data-row data-category="{{ srv.category.name|default:'General' }}" data-search="{{ srv.title }} {{ srv.category.name|default:'' }} {{ srv.tags }}">
+        <div class="service-top">
+          <div>
+            <div class="eyebrow">{{ srv.vendor.vendor_profile.company_name|default:srv.vendor.get_full_name }}</div>
+            <h3>{{ srv.title }}</h3>
+            <div class="small muted">{{ srv.category.name|default:"General" }}</div>
+          </div>
+          <span class="badge badge-success">Available</span>
+        </div>
+        <div class="service-meta">
+          <span><span data-icon="rupee"></span> Starts at <strong>₹{{ srv.base_price }}</strong></span>
+        </div>
+        <p class="service-description">{{ srv.description|truncatechars:120 }}</p>
+        <div class="service-footer">
+          <div class="cell-user">
+            <span class="avatar sm teal">V</span>
+            <div>
+              <strong>{{ srv.vendor.get_full_name|default:"Verified Vendor" }}</strong>
+              <div class="tiny muted">★ 4.8 Rating</div>
+            </div>
+          </div>
+          <div class="actions">
+            <a class="btn btn-primary btn-sm" href="book.html?id={{ srv.id }}">Book Now</a>
+          </div>
+        </div>
+      </article>
+    {% empty %}
+      <p style="grid-column: 1 / -1; text-align: center; padding: 40px; color: var(--text-muted);">No services found. Please try a different search or category.</p>
+    {% endfor %}
+    </div>
+  </div>
+</section>
+</main></div></div></body></html>
