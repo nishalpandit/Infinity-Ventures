@@ -1,6 +1,6 @@
-// Suggu Services - Urban Company High Accuracy Device Geolocation & Search Engine
+// Sugu - Urban Company High Accuracy Device Geolocation & Search Engine
 (function() {
-  const STORAGE_KEY = "suggu_selected_location";
+  const STORAGE_KEY = "sugu_selected_location";
 
   const DEFAULT_LOCATION = {
     name: "Bengaluru, Karnataka",
@@ -34,7 +34,7 @@
 
   function getStoredLocation() {
     try {
-      const saved = localStorage.getItem(STORAGE_KEY);
+      const saved = localStorage.getItem(STORAGE_KEY) || localStorage.getItem("suggu_selected_location");
       if (saved) {
         const parsed = JSON.parse(saved);
         if (parsed && parsed.name) return parsed;
@@ -57,7 +57,7 @@
     } catch(e) {}
     updateNavbarDisplay(locData.name, locData.is_live);
     try {
-      window.dispatchEvent(new CustomEvent('sugguLocationUpdated', { detail: locData }));
+      window.dispatchEvent(new CustomEvent('suguLocationUpdated', { detail: locData })); window.dispatchEvent(new CustomEvent('sugguLocationUpdated', { detail: locData }));
     } catch(err) {}
   }
 
@@ -175,7 +175,7 @@
               <i class="fa-solid fa-map-pin" style="color:#7c3aed;"></i>
               <span>High Precision Device Geolocation</span>
             </div>
-            <span>Suggu Services</span>
+            <span>Sugu</span>
           </div>
 
         </div>
@@ -458,7 +458,7 @@
     if (stored && stored.is_live) {
       updateNavbarDisplay(stored.name, true);
       try {
-        window.dispatchEvent(new CustomEvent('sugguLocationUpdated', { detail: stored }));
+        window.dispatchEvent(new CustomEvent('suguLocationUpdated', { detail: stored })); window.dispatchEvent(new CustomEvent('sugguLocationUpdated', { detail: stored }));
       } catch(e) {}
     } else {
       // Default to Bengaluru on navbar
@@ -475,7 +475,7 @@
 
   document.addEventListener('DOMContentLoaded', initLocation);
 
-  window.SugguLocation = {
+  window.SugguLocation = window.SuguLocation = {
     openModal,
     closeModal,
     getLocation: getStoredLocation,

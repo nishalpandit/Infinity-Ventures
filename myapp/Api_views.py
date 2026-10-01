@@ -898,7 +898,7 @@ def unified_otp_login_api(request):
                 while User.objects.filter(username=uname).exists():
                     uname = f"{base_username}_{c}"
                     c += 1
-                email = f"{uname}@sugguservices.local"
+                email = f"{uname}@sugu.local"
                 user = User.objects.create_user(
                     username=uname,
                     email=email,
@@ -921,7 +921,7 @@ def unified_otp_login_api(request):
                 while User.objects.filter(username=uname).exists():
                     uname = f"{base_username}_{c}"
                     c += 1
-                email = f"{uname}@sugguservices.local"
+                email = f"{uname}@sugu.local"
                 user = User.objects.create_user(
                     username=uname,
                     email=email,
@@ -1192,7 +1192,7 @@ def user_otp_signup_api(request):
             if User.objects.filter(email__iexact=email).exists():
                 return JsonResponse({'status': 'error', 'message': f"Email '{email}' is already registered."}, status=400)
         else:
-            email = f"user_{norm_phone}@sugguservices.local"
+            email = f"user_{norm_phone}@sugu.local"
 
         # 4. Generate unique username
         username = (data.get('username') or '').strip()
@@ -1408,7 +1408,7 @@ def vendor_otp_signup_api(request):
             if User.objects.filter(email__iexact=email).exists():
                 return JsonResponse({'status': 'error', 'message': f"Email '{email}' is already registered."}, status=400)
         else:
-            email = f"vendor_{norm_phone}@sugguservices.local"
+            email = f"vendor_{norm_phone}@sugu.local"
 
         # 4. Generate unique username
         username = (data.get('username') or '').strip()

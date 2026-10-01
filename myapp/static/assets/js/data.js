@@ -1,5 +1,5 @@
 /* ==========================================================================
-   Suggu Admin DASHBOARD — data.js
+   Sugu Admin DASHBOARD — data.js
    Centralized mock data for all modules (Cleared for Backend Integration).
    ========================================================================== */
 

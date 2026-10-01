@@ -1,4 +1,4 @@
-// Suggu Services - Urban Company Sub-Category Drill-Down Modal
+// Sugu - Urban Company Sub-Category Drill-Down Modal
 (function() {
   const SUB_CATEGORIES_MAP = {
     "Plumbing": {
@@ -284,7 +284,7 @@
     });
   });
 
-  window.SugguCategoryModal = {
+  window.SugguCategoryModal = window.SuguCategoryModal = {
     open: openCategoryModal,
     close: closeCategoryModal
   };

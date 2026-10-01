@@ -475,7 +475,7 @@ def dashboard_view(request, path=''):
                     "Complete diagnostic inspection of existing fittings & components",
                     "Execution by certified, background-checked professional",
                     "Post-service sanitization and thorough debris cleanup",
-                    "30 days Suggu protection warranty on all workmanship"
+                    "30 days Sugu protection warranty on all workmanship"
                 ]
 
             # Parse Exclusions
@@ -2668,7 +2668,7 @@ def public_browse_services(request):
             "Complete diagnostic inspection of existing fittings & components",
             "Execution by certified, background-checked professional",
             "Post-service sanitization and thorough debris cleanup",
-            "30 days Suggu protection warranty on all workmanship"
+            "30 days Sugu protection warranty on all workmanship"
         ]
         exclusions = s.exclusions if (s.exclusions and len(s.exclusions) > 0) else [
             "Major civil masonry, pipe embedding or wall tearing excluded",
@@ -3259,7 +3259,7 @@ def detect_location_api(request):
     if lat and lon:
         try:
             url = f"https://nominatim.openstreetmap.org/reverse?format=json&lat={lat}&lon={lon}"
-            req = urllib.request.Request(url, headers={'User-Agent': 'SugguLiveApp/1.0'})
+            req = urllib.request.Request(url, headers={'User-Agent': 'SuguLiveApp/1.0'})
             with urllib.request.urlopen(req, timeout=3) as resp:
                 data = json.loads(resp.read().decode())
                 addr = data.get('address', {})
@@ -3294,7 +3294,7 @@ def detect_location_api(request):
         # Try ipwho.is
         try:
             url = 'https://ipwho.is/' if client_ip.startswith(('192.168.', '10.', '172.', '127.')) else f'https://ipwho.is/{client_ip}'
-            req = urllib.request.Request(url, headers={'User-Agent': 'SugguLiveApp/1.0'})
+            req = urllib.request.Request(url, headers={'User-Agent': 'SuguLiveApp/1.0'})
             with urllib.request.urlopen(req, timeout=3) as resp:
                 data = json.loads(resp.read().decode())
                 if data.get('success', False):
@@ -3309,7 +3309,7 @@ def detect_location_api(request):
         if not ip_lat:
             try:
                 url = 'http://ip-api.com/json/' if client_ip.startswith(('192.168.', '10.', '172.', '127.')) else f'http://ip-api.com/json/{client_ip}'
-                req = urllib.request.Request(url, headers={'User-Agent': 'SugguLiveApp/1.0'})
+                req = urllib.request.Request(url, headers={'User-Agent': 'SuguLiveApp/1.0'})
                 with urllib.request.urlopen(req, timeout=3) as resp:
                     data = json.loads(resp.read().decode())
                     if data.get('status') == 'success':
@@ -3324,7 +3324,7 @@ def detect_location_api(request):
         if ip_lat and ip_lon:
             try:
                 url = f"https://nominatim.openstreetmap.org/reverse?format=json&lat={ip_lat}&lon={ip_lon}"
-                req = urllib.request.Request(url, headers={'User-Agent': 'SugguLiveApp/1.0'})
+                req = urllib.request.Request(url, headers={'User-Agent': 'SuguLiveApp/1.0'})
                 with urllib.request.urlopen(req, timeout=3) as resp:
                     rdata = json.loads(resp.read().decode())
                     addr = rdata.get('address', {})
@@ -3387,7 +3387,7 @@ def search_locations_api(request):
     try:
         encoded_q = urllib.parse.quote(q)
         url = f"https://nominatim.openstreetmap.org/search?format=json&q={encoded_q}&countrycodes=in&limit=8&addressdetails=1"
-        req = urllib.request.Request(url, headers={'User-Agent': 'SugguLiveApp/1.0'})
+        req = urllib.request.Request(url, headers={'User-Agent': 'SuguLiveApp/1.0'})
         with urllib.request.urlopen(req, timeout=3.5) as resp:
             data = json.loads(resp.read().decode())
             for item in data:

@@ -4,7 +4,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>{{ branding.site_title|default:"Suggu Services" }} — Home services at your doorstep</title>
+<title>{{ branding.site_title|default:"Sugu" }} — Home services at your doorstep</title>
 <meta name="description" content="Book verified professionals for plumbing, electrical, AC repair, cleaning, painting and more. Transparent pricing, quality guarantee.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -321,7 +321,7 @@ button{cursor:pointer}
       {% else %}
       <div class="logo-icon">S</div>
       {% endif %}
-      <span class="logo-text">{{ branding.site_title|default:"Suggu Services" }}</span>
+      <span class="logo-text">{{ branding.site_title|default:"Sugu" }}</span>
     </a>
     
     <!-- UC Live Location Picker -->
@@ -541,7 +541,7 @@ button{cursor:pointer}
           {% else %}
           <div class="logo-icon">S</div>
           {% endif %}
-          <span class="logo-text">{{ branding.site_title|default:"Suggu Services" }}</span>
+          <span class="logo-text">{{ branding.site_title|default:"Sugu" }}</span>
         </div>
         <p>Book verified professionals for all your home service needs. Transparent pricing, quality guarantee.</p>
       </div>
@@ -581,9 +581,9 @@ button{cursor:pointer}
 </footer>
 
 <script>
-if (window.SugguCart) {
-  SugguCart.subscribe(function() {
-    var summary = SugguCart.getCartSummary();
+if (window.SuguCart) {
+  SuguCart.subscribe(function() {
+    var summary = SuguCart.getCartSummary();
     var badge = document.getElementById('headerCartBadge');
     if (badge) {
       if (summary.count > 0) {
@@ -631,7 +631,7 @@ function initHomepageLocationFiltering() {
       }
     }
 
-    var activeLoc = window.SugguLocation ? window.SugguLocation.getLocation() : null;
+    var activeLoc = window.SuguLocation ? window.SuguLocation.getLocation() : null;
     if (!activeLoc) activeLoc = { lat: 12.9716, lon: 77.5946, name: 'Bengaluru, Karnataka' };
     filterLandingCards(activeLoc);
   };
@@ -698,11 +698,11 @@ function initHomepageLocationFiltering() {
     }
   }
 
-  window.addEventListener('sugguLocationUpdated', function(e) {
+  window.addEventListener('suguLocationUpdated', function(e) {
     if (e.detail) filterLandingCards(e.detail);
   });
 
-  var activeLoc = window.SugguLocation ? window.SugguLocation.getLocation() : null;
+  var activeLoc = window.SuguLocation ? window.SuguLocation.getLocation() : null;
   if (activeLoc) {
     filterLandingCards(activeLoc);
   } else {

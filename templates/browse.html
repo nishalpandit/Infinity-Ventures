@@ -4,7 +4,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>{{ selected_category.name|default:"Browse Services" }} — Suggu Services</title>
+<title>{{ selected_category.name|default:"Browse Services" }} — Sugu</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
@@ -317,7 +317,7 @@ button{cursor:pointer}
   position:sticky;top:88px;display:flex;flex-direction:column;gap:20px;
 }
 
-/* Suggu Promise Box */
+/* Sugu Promise Box */
 .uc-promise-card{
   background:#fff;border-radius:18px;border:1px solid #e9ecef;padding:20px;
   box-shadow:0 2px 8px rgba(0,0,0,0.02);position:relative;overflow:hidden;
@@ -507,7 +507,7 @@ button{cursor:pointer}
   <div class="uc-header-inner">
     <a href="/" class="uc-logo">
       <div class="uc-logo-icon">S</div>
-      <span class="uc-logo-text">Suggu Services</span>
+      <span class="uc-logo-text">Sugu</span>
     </a>
 
     <!-- Urban Company Location Button -->
@@ -580,7 +580,7 @@ button{cursor:pointer}
         <span class="star"><i class="fa-solid fa-star"></i> 4.78</span>
         <span>(14.1 M bookings)</span>
         <span>•</span>
-        <span style="color:#059669; font-weight:600;"><i class="fa-solid fa-shield-check"></i> Suggu Verified</span>
+        <span style="color:#059669; font-weight:600;"><i class="fa-solid fa-shield-check"></i> Sugu Verified</span>
       </div>
     </div>
 
@@ -711,10 +711,10 @@ button{cursor:pointer}
   <!-- ============================================== -->
   <aside class="uc-col-right">
 
-    <!-- Suggu Promise Box -->
+    <!-- Sugu Promise Box -->
     <div class="uc-promise-card">
       <div class="uc-promise-header">
-        <div class="uc-promise-title">Suggu Promise</div>
+        <div class="uc-promise-title">Sugu Promise</div>
         <div class="uc-promise-seal">
           <span>Quality</span>
           <span>Assured</span>
@@ -769,7 +769,7 @@ button{cursor:pointer}
 </div>
 
 <!-- Global Footer -->
-<footer class="suggu-global-footer" style="background:#ffffff; border-top:1px solid #e2e8f0; padding:16px 24px; display:flex; justify-content:flex-end; align-items:center; font-size:12.5px; color:#64748b; margin-top:40px; width:100%; box-sizing:border-box;">
+<footer class="sugu-global-footer" style="background:#ffffff; border-top:1px solid #e2e8f0; padding:16px 24px; display:flex; justify-content:flex-end; align-items:center; font-size:12.5px; color:#64748b; margin-top:40px; width:100%; box-sizing:border-box;">
   <div style="display:flex; align-items:center; gap:6px;">
     <span>Designed by</span>
     <a href="https://www.brightcodess.com/" target="_blank" rel="noopener noreferrer" style="display:inline-flex; align-items:center; text-decoration:none;">
@@ -828,7 +828,7 @@ button{cursor:pointer}
           </div>
           <div class="uc-inclusions-item inc">
             <i class="fa-solid fa-circle-check"></i>
-            <span>30 days Suggu protection warranty on all workmanship</span>
+            <span>30 days Sugu protection warranty on all workmanship</span>
           </div>
           <div class="uc-inclusions-item exc">
             <i class="fa-solid fa-circle-xmark"></i>
@@ -959,7 +959,7 @@ function syncCardActionButtons(cart) {
     const box = document.getElementById(`action-box-${svc.id}`);
     if (!box) return;
 
-    const totalQty = SugguCart.getServiceTotalQuantity(svc.id);
+    const totalQty = SuguCart.getServiceTotalQuantity(svc.id);
     const firstPkg = (svc.packages && svc.packages.length > 0) ? svc.packages[0] : { name: 'Standard Service', price: svc.base_price, original_price: svc.original_price };
     const defaultKey = `svc_${svc.id}_${firstPkg.name}`;
 
@@ -991,7 +991,7 @@ function handleAddServiceClick(serviceId) {
     original_price: svc.original_price
   };
 
-  SugguCart.addItem({
+  SuguCart.addItem({
     uniqueKey: `svc_${svc.id}_${pkg.name}`,
     serviceId: svc.id,
     title: svc.title,
@@ -1005,7 +1005,7 @@ function handleAddServiceClick(serviceId) {
 }
 
 function handleCardQtyChange(key, delta) {
-  SugguCart.updateQuantity(key, delta);
+  SuguCart.updateQuantity(key, delta);
 }
 
 // Right Sidebar Live Cart UI Sync
@@ -1013,7 +1013,7 @@ function syncRightSidebarCart(cart) {
   const emptyState = document.getElementById('ucCartEmpty');
   const populatedState = document.getElementById('ucCartPopulated');
   const itemsList = document.getElementById('ucCartItemsList');
-  const summary = SugguCart.getCartSummary();
+  const summary = SuguCart.getCartSummary();
 
   if (summary.count === 0) {
     emptyState.style.display = 'block';
@@ -1029,9 +1029,9 @@ function syncRightSidebarCart(cart) {
           <div class="uc-cart-item-sub">${item.packageName}</div>
         </div>
         <div class="uc-cart-item-stepper">
-          <button onclick="SugguCart.updateQuantity('${item.key}', -1)">-</button>
+          <button onclick="SuguCart.updateQuantity('${item.key}', -1)">-</button>
           <span>${item.quantity}</span>
-          <button onclick="SugguCart.updateQuantity('${item.key}', 1)">+</button>
+          <button onclick="SuguCart.updateQuantity('${item.key}', 1)">+</button>
         </div>
         <div class="uc-cart-item-price">
           ₹${Math.round(item.price * item.quantity)}
@@ -1104,7 +1104,7 @@ function renderModalVariants(svc) {
 
   container.innerHTML = pkgs.map(pkg => {
     const key = `svc_${svc.id}_${pkg.name}`;
-    const qty = SugguCart.getItemQuantity(key);
+    const qty = SuguCart.getItemQuantity(key);
 
     return `
       <div class="uc-variant-card">
@@ -1138,7 +1138,7 @@ function handleVariantAdd(serviceId, pkgName, price, origPrice) {
   const svc = SERVICES_DATA.find(s => s.id == serviceId);
   if (!svc) return;
 
-  SugguCart.addItem({
+  SuguCart.addItem({
     uniqueKey: `svc_${svc.id}_${pkgName}`,
     serviceId: svc.id,
     title: svc.title,
@@ -1156,21 +1156,21 @@ function handleVariantAdd(serviceId, pkgName, price, origPrice) {
 }
 
 function handleVariantQtyChange(key, delta) {
-  SugguCart.updateQuantity(key, delta);
+  SuguCart.updateQuantity(key, delta);
   if (activeModalService) {
     renderModalVariants(activeModalService);
   }
 }
 
 function updateModalFooter() {
-  const summary = SugguCart.getCartSummary();
+  const summary = SuguCart.getCartSummary();
   document.getElementById('modalFooterCount').textContent = `${summary.count} item${summary.count === 1 ? '' : 's'}`;
   document.getElementById('modalFooterSubtotal').textContent = `₹${summary.subtotal}`;
 }
 
 // Proceed to Checkout Handler
 function handleProceedToCheckout() {
-  const summary = SugguCart.getCartSummary();
+  const summary = SuguCart.getCartSummary();
   if (summary.count === 0) return;
 
   const firstItem = summary.items[0];
@@ -1262,7 +1262,7 @@ function applyLocationDistanceFilter(locData) {
 document.addEventListener('DOMContentLoaded', () => {
   renderLeftSubcatNav();
 
-  SugguCart.subscribe((cart) => {
+  SuguCart.subscribe((cart) => {
     syncCardActionButtons(cart);
     syncRightSidebarCart(cart);
     if (activeModalService) {
@@ -1279,13 +1279,13 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // Register live location listener
-  window.addEventListener('sugguLocationUpdated', (e) => {
+  window.addEventListener('suguLocationUpdated', (e) => {
     if (e.detail) {
       applyLocationDistanceFilter(e.detail);
     }
   });
 
-  const activeLoc = window.SugguLocation ? window.SugguLocation.getLocation() : null;
+  const activeLoc = window.SuguLocation ? window.SuguLocation.getLocation() : null;
   if (activeLoc) {
     applyLocationDistanceFilter(activeLoc);
   } else {
