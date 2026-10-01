@@ -19,8 +19,11 @@ from .models import (
 User = get_user_model()
 
 import json
-from django.utils import timezone
+import base64
+import uuid
 from datetime import datetime
+from django.utils import timezone
+from django.core.files.base import ContentFile
 
 def get_admin_state_context(request):
     """
@@ -129,7 +132,92 @@ def get_user_dashboard_context(user):
         'recent_activity': activity_items,
     }
 
+def save_vendor_profile_changes(request, user):
+    """
+    Saves vendor profile details, contact information, and handles profile image upload/removal.
+    Works seamlessly for both settings/index and profile/edit views.
+    """
+    v_prof, _ = VendorProfile.objects.get_or_create(user=user)
+    u_prof, _ = UserProfile.objects.get_or_create(user=user)
+    
+    company_name = request.POST.get('company_name')
+    if company_name is not None and company_name.strip():
+        v_prof.company_name = company_name.strip()
+    
+    category = request.POST.get('category')
+    if category is not None and category.strip():
+        v_prof.category = category.strip()
+        
+    location = request.POST.get('location')
+    if location is not None and location.strip():
+        v_prof.location = location.strip()
+        
+    address = request.POST.get('address')
+    if address is not None:
+        v_prof.address = address.strip()
+        
+    about = request.POST.get('about')
+    if about is not None:
+        v_prof.about = about.strip()
+        
+    experience = request.POST.get('experience')
+    if experience is not None and str(experience).strip():
+        try:
+            v_prof.experience = int(experience)
+        except (ValueError, TypeError):
+            pass
+            
+    phone_number = request.POST.get('phone_number') or request.POST.get('mobile')
+    if phone_number is not None and phone_number.strip():
+        v_prof.mobile = phone_number.strip()
+        u_prof.phone_number = phone_number.strip()
+        u_prof.save()
+        
+    first_name = request.POST.get('first_name')
+    if first_name is not None and first_name.strip():
+        user.first_name = first_name.strip()
+        
+    email = request.POST.get('email')
+    if email is not None and email.strip():
+        user.email = email.strip()
+        
+    user.save()
+    
+    # Profile picture handling: Remove / Base64 / File upload
+    remove_img = request.POST.get('remove_profile_image') in ['1', 'true', 'yes', True]
+    if remove_img:
+        if v_prof.profile_image:
+            try:
+                v_prof.profile_image.delete(save=False)
+            except Exception:
+                pass
+            v_prof.profile_image = None
+        if u_prof.profile_image:
+            try:
+                u_prof.profile_image.delete(save=False)
+            except Exception:
+                pass
+            u_prof.profile_image = None
+            u_prof.save()
+    else:
+        profile_image_base64 = request.POST.get('profile_image_base64', '').strip()
+        if profile_image_base64 and ';base64,' in profile_image_base64:
+            format_part, imgstr = profile_image_base64.split(';base64,', 1)
+            ext = 'png' if 'png' in format_part else ('webp' if 'webp' in format_part else 'jpg')
+            try:
+                decoded = base64.b64decode(imgstr)
+                fname = f"vendor_{user.id}_{uuid.uuid4().hex[:6]}.{ext}"
+                v_prof.profile_image.save(fname, ContentFile(decoded), save=False)
+            except Exception as err:
+                print("Error saving cropped base64 image:", err)
+        elif 'profile_image' in request.FILES and request.FILES['profile_image']:
+            v_prof.profile_image = request.FILES['profile_image']
+            
+    v_prof.save()
+    return v_prof, u_prof
+
 def dashboard_view(request, path=''):
+    from .models import VendorKYC, Category, VendorProfile, UserProfile
     if not path:
         path = 'index'
         
@@ -555,26 +643,42 @@ def dashboard_view(request, path=''):
             wallet = get_or_create_wallet(request.user)
             context['wallet_balance'] = f"{wallet.available_balance:.2f}"
             context['vendor_wallet'] = wallet
+            
             vendor_profile = getattr(request.user, 'vendor_profile', None)
-            if vendor_profile:
-                name = vendor_profile.company_name or request.user.get_full_name() or request.user.username
-                context['vendor_name'] = name
-                context['vendor_initials'] = name[:2].upper() if name else "VN"
-                context['vendor_location'] = vendor_profile.location or "Unknown Location"
-                context['vendor_type'] = "Company Vendor" if vendor_profile.company_name else "Individual Vendor"
-                context['profile_image_url'] = vendor_profile.profile_image.url if vendor_profile.profile_image else None
-                context['remaining_credits'] = getattr(vendor_profile, 'available_bids', 5)
-                context['available_bids'] = getattr(vendor_profile, 'available_bids', 5)
-            else:
-                name = request.user.get_full_name() or request.user.username
-                context['vendor_name'] = name
-                context['vendor_initials'] = name[:2].upper() if name else "VN"
-                context['vendor_location'] = "Unknown Location"
-                context['vendor_type'] = "Vendor"
-                context['profile_image_url'] = None
-                context['remaining_credits'] = 5
-        except Exception:
-            pass
+            if not vendor_profile and request.user.role == 'VENDOR':
+                vendor_profile, _ = VendorProfile.objects.get_or_create(user=request.user)
+            user_profile, _ = UserProfile.objects.get_or_create(user=request.user)
+            
+            context['vendor_profile'] = vendor_profile
+            context['user_profile'] = user_profile
+            
+            kyc_doc = VendorKYC.objects.filter(vendor=request.user).first()
+            context['kyc'] = kyc_doc
+            context['is_kyc_verified'] = (kyc_doc.status == 'approved') if kyc_doc else False
+            context['all_categories'] = Category.objects.filter(status='active').order_by('name')
+
+            name = (vendor_profile.company_name if (vendor_profile and vendor_profile.company_name) else None) or request.user.get_full_name() or request.user.username
+            context['vendor_name'] = name
+            context['vendor_initials'] = name[:2].upper() if name else "VN"
+            context['vendor_location'] = (vendor_profile.location if (vendor_profile and vendor_profile.location) else "Ranchi")
+            context['vendor_type'] = "Company Vendor" if (vendor_profile and vendor_profile.company_name) else "Individual Vendor"
+            
+            prof_img = None
+            if vendor_profile and vendor_profile.profile_image:
+                try:
+                    prof_img = vendor_profile.profile_image.url
+                except Exception:
+                    prof_img = None
+            if not prof_img and user_profile and user_profile.profile_image:
+                try:
+                    prof_img = user_profile.profile_image.url
+                except Exception:
+                    prof_img = None
+            context['profile_image_url'] = prof_img
+            context['remaining_credits'] = getattr(vendor_profile, 'available_bids', 5) if vendor_profile else 5
+            context['available_bids'] = getattr(vendor_profile, 'available_bids', 5) if vendor_profile else 5
+        except Exception as e:
+            print("Error initializing vendor context:", e)
             
     # Inject dynamic user data
     if 'master/categories' in path:
@@ -1141,36 +1245,48 @@ def dashboard_view(request, path=''):
                 'profile': v_profile,
             })
 
-    if path == 'vendor/profile/edit':
-        if request.method == 'POST' and request.user.is_authenticated:
-            company_name = request.POST.get('company_name')
-            category = request.POST.get('category')
-            location = request.POST.get('location')
-            experience = request.POST.get('experience')
-            about = request.POST.get('about')
+    if path in ['vendor/settings', 'vendor/settings/index', 'vendor/settings/index.html'] or path.startswith('vendor/settings'):
+        if not request.user.is_authenticated:
+            return redirect('/login/?next=/vendor/settings/index.html')
             
-            try:
-                profile = request.user.vendor_profile
-                if company_name is not None:
-                    profile.company_name = company_name
-                if category is not None:
-                    profile.category = category
-                if location is not None:
-                    profile.location = location
-                if experience is not None:
-                    try:
-                        profile.experience = int(experience)
-                    except:
-                        pass
-                if about is not None:
-                    profile.about = about
-                profile.save()
-            except Exception:
-                pass
+        v_prof, _ = VendorProfile.objects.get_or_create(user=request.user)
+        u_prof, _ = UserProfile.objects.get_or_create(user=request.user)
+        
+        if request.method == 'POST':
+            if 'security' in path:
+                from django.contrib.auth import update_session_auth_hash
+                current_pwd = request.POST.get('current_password', '')
+                new_pwd = request.POST.get('new_password', '')
+                confirm_pwd = request.POST.get('confirm_password', '')
+                
+                if not current_pwd or not new_pwd or not confirm_pwd:
+                    messages.error(request, "All password fields are required.")
+                elif not request.user.check_password(current_pwd):
+                    messages.error(request, "Current password is incorrect.")
+                elif new_pwd != confirm_pwd:
+                    messages.error(request, "New passwords do not match.")
+                elif len(new_pwd) < 8:
+                    messages.error(request, "New password must be at least 8 characters long.")
+                else:
+                    request.user.set_password(new_pwd)
+                    request.user.save()
+                    update_session_auth_hash(request, request.user)
+                    messages.success(request, "Password changed successfully!")
+                return redirect('/vendor/settings/security.html')
+            else:
+                save_vendor_profile_changes(request, request.user)
+                messages.success(request, "Account settings and profile picture updated successfully!")
+                return redirect('/vendor/settings/index.html')
+
+    if path in ['vendor/profile/edit', 'vendor/profile/edit.html']:
+        if not request.user.is_authenticated:
+            return redirect('/login/?next=/vendor/profile/edit.html')
+        if request.method == 'POST':
+            save_vendor_profile_changes(request, request.user)
+            messages.success(request, "Profile updated successfully!")
             return redirect('/vendor/profile/index.html')
 
     if path == 'vendor/kyc/index' or path == 'vendor/kyc':
-        from .models import VendorKYC
         if request.user.is_authenticated:
             kyc = VendorKYC.objects.filter(vendor=request.user).first()
             if not kyc:
@@ -1981,39 +2097,8 @@ def dashboard_view(request, path=''):
             vendor_profile = None
             
         if request.method == 'POST' and 'edit' in path:
-            if vendor_profile:
-                vendor_profile.company_name = request.POST.get('company_name', vendor_profile.company_name)
-                vendor_profile.address = request.POST.get('address', vendor_profile.address)
-                vendor_profile.about = request.POST.get('about', vendor_profile.about)
-                
-                profile_image_base64 = request.POST.get('profile_image_base64')
-                if profile_image_base64:
-                    import base64
-                    from django.core.files.base import ContentFile
-                    # Format: data:image/png;base64,iVBORw0KGgo...
-                    format, imgstr = profile_image_base64.split(';base64,') 
-                    ext = format.split('/')[-1] 
-                    vendor_profile.profile_image = ContentFile(base64.b64decode(imgstr), name=f'profile_{u.id}.{ext}')
-                elif 'profile_image' in request.FILES:
-                    vendor_profile.profile_image = request.FILES['profile_image']
-                    
-                vendor_profile.save()
-            
-            # Update user details
-            u.first_name = request.POST.get('first_name', u.first_name)
-            u.email = request.POST.get('email', u.email)
-            u.save()
-            
-            # Update UserProfile mobile
-            try:
-                user_profile, _ = UserProfile.objects.get_or_create(user=u)
-                new_mobile = request.POST.get('phone_number') or request.POST.get('mobile')
-                if new_mobile:
-                    user_profile.phone_number = new_mobile.strip()
-                    user_profile.save()
-            except Exception:
-                pass
-                
+            save_vendor_profile_changes(request, u)
+            messages.success(request, "Vendor profile updated successfully!")
             return redirect('/vendor/profile/index.html')
             
         # Context for rendering profile
@@ -2477,7 +2562,6 @@ def dashboard_view(request, path=''):
         context['customers'] = customers_qs.order_by('-date_joined')
 
     if 'users/kyc-approvals' in path:
-        from .models import VendorKYC
         admin_state, is_area_admin, available_states, co_admins = get_admin_state_context(request)
         context['admin_state'] = admin_state
         context['is_area_admin'] = is_area_admin

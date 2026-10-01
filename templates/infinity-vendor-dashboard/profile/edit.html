@@ -1,8 +1,17 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="description" content="Sugu Vendor Portal - Edit Profile"><title>Edit Profile · Sugu Vendor</title><link rel="stylesheet" href="/infinity-vendor-dashboard/assets/styles.css"><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.css"><script defer src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.js"></script><script defer src="/infinity-vendor-dashboard/assets/app.js"></script></head><body data-page="profile-edit" data-title="Edit Profile" data-root="../"><div class="app-shell"><div id="sidebar-root"></div><div class="workspace"><div id="topbar-root"></div><main class="page">
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="description" content="Sugu Vendor Portal - Edit Profile"><title>Edit Profile · Sugu Vendor</title><link rel="stylesheet" href="/infinity-vendor-dashboard/assets/styles.css"><script>
+  window.VENDOR_INITIALS = "{{ vendor_initials|default:'VN'|escapejs }}";
+  window.VENDOR_NAME = "{{ vendor_name|default:user.username|escapejs }}";
+  window.VENDOR_TYPE = "{{ vendor_type|default:'Vendor'|escapejs }}";
+  window.VENDOR_LOCATION = "{{ vendor_location|default:'Ranchi'|escapejs }}";
+  window.PROFILE_IMAGE_URL = "{{ profile_image_url|default:''|escapejs }}" || null;
+  window.VENDOR_WALLET_BALANCE = "{{ wallet_balance|default:'0.00'|escapejs }}";
+  window.VENDOR_CREDITS = {{ available_bids|default:0 }};
+</script><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.css"><script defer src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.js"></script><script defer src="/infinity-vendor-dashboard/assets/app.js"></script></head><body data-page="profile-edit" data-title="Edit Profile" data-root="../"><div class="app-shell"><div id="sidebar-root"></div><div class="workspace"><div id="topbar-root"></div><main class="page">
 <section class="card" style="max-width:980px">
   <form method="POST" action="" enctype="multipart/form-data">
     {% csrf_token %}
     <input type="hidden" name="profile_image_base64" id="profile_image_base64">
+    <input type="hidden" name="remove_profile_image" id="remove_profile_image" value="0">
     <div class="form-section">
       <div class="field">
         <label>Profile Image</label>
@@ -16,7 +25,7 @@
             <label class="btn btn-secondary btn-sm"><span data-icon="camera"></span> Change Image
               <input type="file" name="profile_image" accept="image/*" hidden data-preview="profile-image">
             </label>
-            <button type="button" class="btn btn-ghost btn-sm" data-toast="Image removed">Remove</button>
+            <button type="button" class="btn btn-ghost btn-sm" id="btn-remove-avatar" style="color:var(--red);">Remove</button>
           </div>
         </div>
         <div class="preview-list" id="profile-image"></div>
@@ -133,6 +142,20 @@
       cropper.destroy();
       cropper = null;
     }
+  });
+
+  document.getElementById('btn-remove-avatar')?.addEventListener('click', function() {
+    document.getElementById('remove_profile_image').value = '1';
+    document.getElementById('profile_image_base64').value = '';
+    const img = document.getElementById('profile-preview-img');
+    if (img) {
+      const span = document.createElement('span');
+      span.id = 'profile-preview-span';
+      span.className = 'avatar xl vendor';
+      span.textContent = '{{ vendor_initials|default:"VN" }}';
+      img.parentNode.replaceChild(span, img);
+    }
+    if (window.showToast) window.showToast('Photo Marked for Removal', 'Click Save to apply changes.', 'info');
   });
 </script>
 </main></div></div></body></html>

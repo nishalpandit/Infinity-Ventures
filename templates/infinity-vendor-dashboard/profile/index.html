@@ -1,4 +1,12 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="description" content="Sugu Vendor Portal - Vendor Profile"><title>Vendor Profile · Sugu Vendor</title><link rel="stylesheet" href="/infinity-vendor-dashboard/assets/styles.css"><script defer src="/infinity-vendor-dashboard/assets/app.js"></script></head><body data-page="profile" data-title="Vendor Profile" data-root="../"><div class="app-shell"><div id="sidebar-root"></div><div class="workspace"><div id="topbar-root"></div><main class="page">
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="description" content="Sugu Vendor Portal - Vendor Profile"><title>Vendor Profile · Sugu Vendor</title><link rel="stylesheet" href="/infinity-vendor-dashboard/assets/styles.css"><script>
+  window.VENDOR_INITIALS = "{{ vendor_initials|default:'VN'|escapejs }}";
+  window.VENDOR_NAME = "{{ vendor_name|default:user.username|escapejs }}";
+  window.VENDOR_TYPE = "{{ vendor_type|default:'Vendor'|escapejs }}";
+  window.VENDOR_LOCATION = "{{ vendor_location|default:'Ranchi'|escapejs }}";
+  window.PROFILE_IMAGE_URL = "{{ profile_image_url|default:''|escapejs }}" || null;
+  window.VENDOR_WALLET_BALANCE = "{{ wallet_balance|default:'0.00'|escapejs }}";
+  window.VENDOR_CREDITS = {{ available_bids|default:0 }};
+</script><script defer src="/infinity-vendor-dashboard/assets/app.js"></script></head><body data-page="profile" data-title="Vendor Profile" data-root="../"><div class="app-shell"><div id="sidebar-root"></div><div class="workspace"><div id="topbar-root"></div><main class="page">
 <section class="card profile-hero">
   {% if vendor_profile and vendor_profile.profile_image %}
     <img src="{{ vendor_profile.profile_image.url }}" alt="Profile" class="avatar xl vendor" style="object-fit:cover;">
