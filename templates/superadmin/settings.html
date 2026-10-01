@@ -1,45 +1,299 @@
 {% extends 'superadmin/base.html' %}
-{% block title %}Global Settings{% endblock %}
-{% block header_title %}Global Platform Settings{% endblock %}
+{% block title %}Platform & Financial Settings{% endblock %}
+{% block header_title %}Global Platform & Financial Settings{% endblock %}
 
 {% block content %}
-<div class="card form-card">
-  <form method="POST">
-    {% csrf_token %}
+<div class="settings-grid" style="display:grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); gap: 24px; align-items: start;">
+
+  <!-- LEFT COLUMN: SETTINGS FORM -->
+  <div class="stack" style="display:flex; flex-direction:column; gap:24px;">
     
-    <div class="form-group">
-      <label>Site Title</label>
-      <input type="text" name="site_title" class="form-control" value="{{ settings.site_title }}">
-    </div>
-    
-    <div class="form-row">
-      <div class="form-group">
-        <label>Contact Email</label>
-        <input type="email" name="contact_email" class="form-control" value="{{ settings.contact_email }}">
+    <form method="POST" id="settingsForm">
+      {% csrf_token %}
+
+      <!-- SECTION 1: FINANCIAL & COMMISSION LEVERS -->
+      <div class="card form-card" style="border-radius:16px; margin-bottom:24px; box-shadow:0 4px 20px rgba(0,0,0,0.04); border:1px solid #e2e8f0;">
+        <div class="card-header" style="border-bottom:1px solid #f1f5f9; padding:18px 24px;">
+          <div style="display:flex; align-items:center; gap:12px;">
+            <div style="width:38px; height:38px; border-radius:10px; background:#eff6ff; color:#2563eb; display:flex; align-items:center; justify-content:center; font-size:18px;">
+              <i class="fa-solid fa-percent"></i>
+            </div>
+            <div>
+              <h3 style="font-size:16px; font-weight:700; margin:0; color:#0f172a;">Commission &amp; Tax Engine</h3>
+              <p style="font-size:12.5px; color:#64748b; margin:2px 0 0;">Control platform profit cuts, GST tax slabs, and pricing rules.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="card-body" style="padding:24px;">
+          <div class="form-row" style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:18px;">
+            <div class="form-group">
+              <label style="font-weight:600; font-size:13px; color:#334155; margin-bottom:6px; display:block;">
+                Platform Commission Cut (%) <span style="color:#ef4444;">*</span>
+              </label>
+              <div style="position:relative;">
+                <input type="number" step="0.01" min="0" max="100" id="input_comm" name="platform_commission_percent" class="form-control" value="{{ settings.platform_commission_percent }}" required style="padding-right:32px; font-weight:700; font-size:15px; color:#0f172a;">
+                <span style="position:absolute; right:12px; top:50%; transform:translateY(-50%); color:#94a3b8; font-weight:700;">%</span>
+              </div>
+              <span style="font-size:11.5px; color:#64748b; display:block; margin-top:4px;">Standard platform profit on services</span>
+            </div>
+
+            <div class="form-group">
+              <label style="font-weight:600; font-size:13px; color:#334155; margin-bottom:6px; display:block;">
+                Fixed Convenience Fee (₹)
+              </label>
+              <div style="position:relative;">
+                <span style="position:absolute; left:12px; top:50%; transform:translateY(-50%); color:#94a3b8; font-weight:700;">₹</span>
+                <input type="number" step="0.01" min="0" id="input_flat" name="platform_flat_fee" class="form-control" value="{{ settings.platform_flat_fee|default:'0.00' }}" style="padding-left:28px; font-weight:700; font-size:15px; color:#0f172a;">
+              </div>
+              <span style="font-size:11.5px; color:#64748b; display:block; margin-top:4px;">Optional fixed service fee per booking</span>
+            </div>
+          </div>
+
+          <!-- GST TAX SLABS -->
+          <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px; padding:16px; margin-bottom:18px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+              <span style="font-size:13px; font-weight:700; color:#1e293b;">
+                <i class="fa-solid fa-scale-balanced" style="color:#0f8a7c; margin-right:6px;"></i> GST Tax Slabs (India)
+              </span>
+              <span id="badge_total_gst" style="font-size:12px; font-weight:800; background:#e0f2fe; color:#0369a1; padding:3px 10px; border-radius:20px;">
+                Total GST: 18.00%
+              </span>
+            </div>
+
+            <div class="form-row" style="display:grid; grid-template-columns:1fr 1fr; gap:14px;">
+              <div class="form-group" style="margin:0;">
+                <label style="font-weight:600; font-size:12px; color:#475569; margin-bottom:4px; display:block;">Central GST (CGST %)</label>
+                <div style="position:relative;">
+                  <input type="number" step="0.01" min="0" max="50" id="input_cgst" name="cgst_percent" class="form-control" value="{{ settings.cgst_percent|default:'9.00' }}" required style="padding-right:28px; font-weight:600;">
+                  <span style="position:absolute; right:10px; top:50%; transform:translateY(-50%); color:#94a3b8; font-size:13px;">%</span>
+                </div>
+              </div>
+
+              <div class="form-group" style="margin:0;">
+                <label style="font-weight:600; font-size:12px; color:#475569; margin-bottom:4px; display:block;">State GST (SGST %)</label>
+                <div style="position:relative;">
+                  <input type="number" step="0.01" min="0" max="50" id="input_sgst" name="sgst_percent" class="form-control" value="{{ settings.sgst_percent|default:'9.00' }}" required style="padding-right:28px; font-weight:600;">
+                  <span style="position:absolute; right:10px; top:50%; transform:translateY(-50%); color:#94a3b8; font-size:13px;">%</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-group" style="margin-bottom:0;">
+            <label style="font-weight:600; font-size:13px; color:#334155; margin-bottom:6px; display:block;">Tax Calculation Method</label>
+            <select name="tax_calculation_mode" id="input_tax_mode" class="form-control" style="font-weight:600;">
+              <option value="commission_only" {% if settings.tax_calculation_mode == 'commission_only' %}selected{% endif %}>
+                Tax on Platform Commission Only (Recommended for Marketplaces)
+              </option>
+              <option value="total_invoice" {% if settings.tax_calculation_mode == 'total_invoice' %}selected{% endif %}>
+                Tax on Full Service Invoice
+              </option>
+            </select>
+            <span style="font-size:11.5px; color:#64748b; display:block; margin-top:4px;">GST is collected by platform on its facilitation earnings.</span>
+          </div>
+
+        </div>
       </div>
-      <div class="form-group">
-        <label>Support Phone</label>
-        <input type="text" name="support_phone" class="form-control" value="{{ settings.support_phone }}">
+
+      <!-- SECTION 2: GENERAL PLATFORM SETTINGS -->
+      <div class="card form-card" style="border-radius:16px; margin-bottom:24px; box-shadow:0 4px 20px rgba(0,0,0,0.04); border:1px solid #e2e8f0;">
+        <div class="card-header" style="border-bottom:1px solid #f1f5f9; padding:18px 24px;">
+          <div style="display:flex; align-items:center; gap:12px;">
+            <div style="width:38px; height:38px; border-radius:10px; background:#f3f4f6; color:#475569; display:flex; align-items:center; justify-content:center; font-size:18px;">
+              <i class="fa-solid fa-sliders"></i>
+            </div>
+            <div>
+              <h3 style="font-size:16px; font-weight:700; margin:0; color:#0f172a;">General Settings</h3>
+              <p style="font-size:12.5px; color:#64748b; margin:2px 0 0;">Basic platform metadata and operational mode.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="card-body" style="padding:24px;">
+          <div class="form-group" style="margin-bottom:16px;">
+            <label style="font-weight:600; font-size:13px; color:#334155; margin-bottom:6px; display:block;">Site Title</label>
+            <input type="text" name="site_title" class="form-control" value="{{ settings.site_title }}" required style="font-weight:600;">
+          </div>
+          
+          <div class="form-row" style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:16px;">
+            <div class="form-group" style="margin:0;">
+              <label style="font-weight:600; font-size:13px; color:#334155; margin-bottom:6px; display:block;">Contact Email</label>
+              <input type="email" name="contact_email" class="form-control" value="{{ settings.contact_email }}" required>
+            </div>
+            <div class="form-group" style="margin:0;">
+              <label style="font-weight:600; font-size:13px; color:#334155; margin-bottom:6px; display:block;">Support Phone</label>
+              <input type="text" name="support_phone" class="form-control" value="{{ settings.support_phone }}" required>
+            </div>
+          </div>
+          
+          <div class="form-group" style="margin:0; padding-top:12px; border-top:1px solid #f1f5f9; display:flex; align-items:center; justify-content:space-between;">
+            <div>
+              <label style="font-weight:700; font-size:13.5px; color:#0f172a; margin:0; display:block;">Maintenance Mode</label>
+              <p style="font-size:12px; color:#64748b; margin:2px 0 0;">Display a maintenance screen to customers while you perform system upgrades.</p>
+            </div>
+            <label class="toggle-switch">
+              <input type="checkbox" name="maintenance_mode" {% if settings.maintenance_mode %}checked{% endif %}>
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+        </div>
+
+        <div class="form-actions" style="padding:16px 24px; background:#f8fafc; border-top:1px solid #e2e8f0; border-radius:0 0 16px 16px; display:flex; justify-content:flex-end;">
+          <button type="submit" class="btn btn-primary" style="padding:12px 28px; font-weight:800; font-size:14px;">
+            <i class="fa-solid fa-check"></i> Save Global Settings
+          </button>
+        </div>
+      </div>
+    </form>
+  </div>
+
+  <!-- RIGHT COLUMN: INTERACTIVE REAL-TIME LIVE SIMULATOR -->
+  <aside class="stack" style="position:sticky; top:20px;">
+    <div class="card" style="border-radius:16px; box-shadow:0 8px 30px rgba(0,0,0,0.06); border:1.5px solid #cbd5e1; background:#ffffff; overflow:hidden;">
+      <div style="background:linear-gradient(135deg, #0f172a 0%, #1e293b 100%); padding:20px; color:#ffffff;">
+        <div style="display:flex; align-items:center; justify-content:space-between;">
+          <span style="font-size:11px; text-transform:uppercase; letter-spacing:0.8px; font-weight:800; color:#38bdf8;">
+            <i class="fa-solid fa-calculator"></i> Live Simulator
+          </span>
+          <span style="font-size:11px; background:rgba(255,255,255,0.15); padding:2px 8px; border-radius:12px;">Real-Time</span>
+        </div>
+        <h4 style="font-size:17px; font-weight:800; margin:8px 0 2px;">Commission &amp; Price Breakdown</h4>
+        <p style="font-size:12px; color:#94a3b8; margin:0;">Test how any vendor quotation will be computed and billed.</p>
+      </div>
+
+      <div style="padding:20px;">
+        <!-- Test Amount Input -->
+        <div style="margin-bottom:18px;">
+          <label style="font-size:12px; font-weight:700; color:#475569; display:block; margin-bottom:6px;">
+            Test Vendor Net Asking Price (₹):
+          </label>
+          <div style="position:relative;">
+            <span style="position:absolute; left:12px; top:50%; transform:translateY(-50%); font-weight:800; color:#0f8a7c; font-size:16px;">₹</span>
+            <input type="number" id="sim_vendor_amount" value="150" min="1" step="1" style="width:100%; border:2px solid #0f8a7c; border-radius:10px; padding:10px 12px 10px 32px; font-size:18px; font-weight:800; color:#0f172a; outline:none; background:#f0fdfa;">
+          </div>
+          <span style="font-size:11px; color:#64748b; margin-top:4px; display:block;">Try typing 150, 600, or 3500 to test instant calculations</span>
+        </div>
+
+        <!-- Breakdown List -->
+        <div style="background:#f8fafc; border-radius:12px; border:1px solid #e2e8f0; padding:16px; display:flex; flex-direction:column; gap:10px; font-size:13px;">
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <span style="color:#475569;">Vendor Net Payout:</span>
+            <strong id="sim_res_vendor" style="color:#0f172a; font-weight:700;">₹150.00</strong>
+          </div>
+
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <span style="color:#475569;">Platform Commission (<span id="sim_lbl_comm">10%</span>):</span>
+            <span id="sim_res_comm" style="color:#2563eb; font-weight:700;">+ ₹15.00</span>
+          </div>
+
+          <div id="sim_row_flat" style="display:none; justify-content:space-between; align-items:center;">
+            <span style="color:#475569;">Flat Convenience Fee:</span>
+            <span id="sim_res_flat" style="color:#2563eb; font-weight:700;">+ ₹0.00</span>
+          </div>
+
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <span style="color:#475569;">CGST (<span id="sim_lbl_cgst">9%</span>):</span>
+            <span id="sim_res_cgst" style="color:#059669; font-weight:700;">+ ₹1.35</span>
+          </div>
+
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <span style="color:#475569;">SGST (<span id="sim_lbl_sgst">9%</span>):</span>
+            <span id="sim_res_sgst" style="color:#059669; font-weight:700;">+ ₹1.35</span>
+          </div>
+
+          <div style="border-top:1.5px dashed #cbd5e1; margin-top:4px; padding-top:10px; display:flex; justify-content:space-between; align-items:baseline;">
+            <strong style="font-size:14px; color:#0f172a;">Customer Total Payable:</strong>
+            <span id="sim_res_total" style="font-size:22px; font-weight:900; color:#0f8a7c;">₹167.70</span>
+          </div>
+        </div>
+
+        <!-- Settlement Summary Card -->
+        <div style="margin-top:16px; background:#eff6ff; border:1px solid #bfdbfe; border-radius:12px; padding:14px; font-size:12.5px;">
+          <div style="font-weight:700; color:#1e40af; margin-bottom:4px;">
+            <i class="fa-solid fa-handshake"></i> Settlement On Job Completion:
+          </div>
+          <div style="color:#1e3a8a; line-height:1.5;">
+            • Vendor Wallet receives: <strong id="sim_sum_vendor">₹150.00</strong><br>
+            • Platform Treasury keeps: <strong id="sim_sum_platform">₹17.70</strong> (₹15.00 Comm + ₹2.70 GST)
+          </div>
+        </div>
+
       </div>
     </div>
-    
-    <div class="form-group">
-      <label>Platform Commission (%)</label>
-      <input type="number" step="0.01" name="platform_commission_percent" class="form-control" value="{{ settings.platform_commission_percent }}">
-    </div>
-    
-    <div class="form-group">
-      <label>Maintenance Mode</label>
-      <label class="toggle-switch">
-        <input type="checkbox" name="maintenance_mode" {% if settings.maintenance_mode %}checked{% endif %}>
-        <span class="toggle-slider"></span>
-      </label>
-      <p style="font-size: 13px; color: var(--text-muted); margin-top: 8px;">When enabled, the public-facing site will display a maintenance page.</p>
-    </div>
-    
-    <div class="form-actions">
-      <button type="submit" class="btn btn-primary"><i class="fa-solid fa-check"></i> Save Settings</button>
-    </div>
-  </form>
+  </aside>
+
 </div>
+
+<script>
+  function recalculateSimulator() {
+    const vendorNet = parseFloat(document.getElementById('sim_vendor_amount').value) || 0;
+    const commPct = parseFloat(document.getElementById('input_comm').value) || 0;
+    const flatFee = parseFloat(document.getElementById('input_flat').value) || 0;
+    const cgstPct = parseFloat(document.getElementById('input_cgst').value) || 0;
+    const sgstPct = parseFloat(document.getElementById('input_sgst').value) || 0;
+    const taxMode = document.getElementById('input_tax_mode').value;
+
+    // Update labels
+    document.getElementById('sim_lbl_comm').textContent = commPct.toFixed(1) + '%';
+    document.getElementById('sim_lbl_cgst').textContent = cgstPct.toFixed(1) + '%';
+    document.getElementById('sim_lbl_sgst').textContent = sgstPct.toFixed(1) + '%';
+    document.getElementById('badge_total_gst').textContent = 'Total GST: ' + (cgstPct + sgstPct).toFixed(2) + '%';
+
+    // Commission amount
+    const commAmount = (vendorNet * commPct / 100.0) + flatFee;
+
+    // GST calculation
+    let cgstAmount = 0.0;
+    let sgstAmount = 0.0;
+    if (taxMode === 'commission_only') {
+      cgstAmount = (commAmount * cgstPct / 100.0);
+      sgstAmount = (commAmount * sgstPct / 100.0);
+    } else {
+      const taxableBase = vendorNet + commAmount;
+      cgstAmount = (taxableBase * cgstPct / 100.0);
+      sgstAmount = (taxableBase * sgstPct / 100.0);
+    }
+
+    const totalCustomer = vendorNet + commAmount + cgstAmount + sgstAmount;
+    const platformRetains = commAmount + cgstAmount + sgstAmount;
+
+    // Render results
+    document.getElementById('sim_res_vendor').textContent = '₹' + vendorNet.toFixed(2);
+    document.getElementById('sim_res_comm').textContent = '+ ₹' + (vendorNet * commPct / 100.0).toFixed(2);
+
+    const flatRow = document.getElementById('sim_row_flat');
+    if (flatFee > 0) {
+      flatRow.style.display = 'flex';
+      document.getElementById('sim_res_flat').textContent = '+ ₹' + flatFee.toFixed(2);
+    } else {
+      flatRow.style.display = 'none';
+    }
+
+    document.getElementById('sim_res_cgst').textContent = '+ ₹' + cgstAmount.toFixed(2);
+    document.getElementById('sim_res_sgst').textContent = '+ ₹' + sgstAmount.toFixed(2);
+    document.getElementById('sim_res_total').textContent = '₹' + totalCustomer.toFixed(2);
+
+    document.getElementById('sim_sum_vendor').textContent = '₹' + vendorNet.toFixed(2);
+    document.getElementById('sim_sum_platform').textContent = '₹' + platformRetains.toFixed(2) + ' (₹' + commAmount.toFixed(2) + ' Comm + ₹' + (cgstAmount + sgstAmount).toFixed(2) + ' GST)';
+  }
+
+  // Attach listeners
+  ['sim_vendor_amount', 'input_comm', 'input_flat', 'input_cgst', 'input_sgst'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) {
+      el.addEventListener('input', recalculateSimulator);
+      el.addEventListener('change', recalculateSimulator);
+    }
+  });
+
+  const taxModeEl = document.getElementById('input_tax_mode');
+  if (taxModeEl) {
+    taxModeEl.addEventListener('change', recalculateSimulator);
+  }
+
+  // Initial run on page load
+  document.addEventListener('DOMContentLoaded', recalculateSimulator);
+  recalculateSimulator();
+</script>
 {% endblock %}

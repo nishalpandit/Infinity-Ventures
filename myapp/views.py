@@ -1339,6 +1339,19 @@ def dashboard_view(request, path=''):
     if path == 'vendor/jobs/details' or path == 'vendor/jobs/send-quotation':
         job_id = request.GET.get('id') or request.GET.get('job_id') or request.POST.get('job_id') or request.POST.get('id')
         
+        gs_obj = GlobalSettings.objects.first()
+        comm_pct = Decimal(str(gs_obj.platform_commission_percent if gs_obj and gs_obj.platform_commission_percent is not None else '10.00'))
+        cgst_pct = Decimal(str(gs_obj.cgst_percent if gs_obj and gs_obj.cgst_percent is not None else '9.00'))
+        sgst_pct = Decimal(str(gs_obj.sgst_percent if gs_obj and gs_obj.sgst_percent is not None else '9.00'))
+        flat_fee = Decimal(str(gs_obj.platform_flat_fee if gs_obj and gs_obj.platform_flat_fee is not None else '0.00'))
+        tax_mode = gs_obj.tax_calculation_mode if gs_obj and gs_obj.tax_calculation_mode else 'commission_only'
+
+        context['platform_commission_percent'] = float(comm_pct)
+        context['cgst_percent'] = float(cgst_pct)
+        context['sgst_percent'] = float(sgst_pct)
+        context['platform_flat_fee'] = float(flat_fee)
+        context['tax_calculation_mode'] = tax_mode
+
         if path == 'vendor/jobs/send-quotation' and request.method == 'POST' and request.user.is_authenticated:
             amount = request.POST.get('amount')
             estimated_time = request.POST.get('estimated_time')
@@ -1357,18 +1370,42 @@ def dashboard_view(request, path=''):
                     is_open = job.status == 'open'
                     
                     if not is_limit_reached and not below_min and not above_max and is_open:
-                        if hasattr(request.user, 'vendor_profile') and request.user.vendor_profile.available_bids > 0:
+                        vp = getattr(request.user, 'vendor_profile', None)
+                        if vp and (vp.available_bids or 0) > 0:
                             if not Bid.objects.filter(job=job, vendor=request.user).exists():
+                                # Itemized Financial Computation
+                                vendor_base = Decimal(str(amount_float)).quantize(Decimal('0.01'))
+                                comm_amount = ((vendor_base * comm_pct) / Decimal('100.00') + flat_fee).quantize(Decimal('0.01'))
+
+                                if tax_mode == 'commission_only':
+                                    cgst_amount = ((comm_amount * cgst_pct) / Decimal('100.00')).quantize(Decimal('0.01'))
+                                    sgst_amount = ((comm_amount * sgst_pct) / Decimal('100.00')).quantize(Decimal('0.01'))
+                                else:
+                                    taxable_base = vendor_base + comm_amount
+                                    cgst_amount = ((taxable_base * cgst_pct) / Decimal('100.00')).quantize(Decimal('0.01'))
+                                    sgst_amount = ((taxable_base * sgst_pct) / Decimal('100.00')).quantize(Decimal('0.01'))
+
+                                total_customer = (vendor_base + comm_amount + cgst_amount + sgst_amount).quantize(Decimal('0.01'))
+
                                 Bid.objects.create(
                                     vendor=request.user,
                                     job=job,
-                                    amount=amount,
+                                    amount=total_customer,
+                                    vendor_base_amount=vendor_base,
+                                    commission_percent_applied=comm_pct,
+                                    commission_amount=comm_amount,
+                                    cgst_percent_applied=cgst_pct,
+                                    cgst_amount=cgst_amount,
+                                    sgst_percent_applied=sgst_pct,
+                                    sgst_amount=sgst_amount,
+                                    flat_fee_amount=flat_fee,
+                                    total_customer_amount=total_customer,
                                     estimated_time=estimated_time,
                                     proposal=proposal,
                                     attachment=attachment
                                 )
-                                request.user.vendor_profile.available_bids -= 1
-                                request.user.vendor_profile.save(update_fields=['available_bids'])
+                                vp.available_bids = int(vp.available_bids or 0) - 1
+                                vp.save(update_fields=['available_bids'])
 
                                 # Record dynamic credit transaction
                                 BidCreditTransaction.objects.create(
@@ -1378,7 +1415,7 @@ def dashboard_view(request, path=''):
                                     description=f"Bid placed on {job.title}",
                                     related_job=job
                                 )
-                                messages.success(request, f"Quotation submitted successfully! 1 credit deducted ({request.user.vendor_profile.available_bids} credits remaining).")
+                                messages.success(request, f"Quotation submitted successfully! 1 credit deducted ({vp.available_bids} credits remaining).")
                         else:
                             messages.error(request, "Insufficient bid credits! You have 0 credits left. Please purchase a bid package.")
                 except (Job.DoesNotExist, ValueError, TypeError):

@@ -3,7 +3,8 @@ from django.db import transaction
 from django.utils import timezone
 from .models import (
     VendorWallet, WalletTransaction, PayoutRequest, 
-    GlobalSettings, Job, QuickService, Bid, CustomUser
+    GlobalSettings, Job, QuickService, Bid, CustomUser,
+    PlatformRevenueLedger
 )
 
 def get_or_create_wallet(vendor):
@@ -21,7 +22,8 @@ def get_platform_commission_percent():
 def settle_job_completion(job=None, quick_service=None, vendor=None, custom_amount=None):
     """
     Settles earnings for a completed Job or QuickService.
-    Applies the platform commission deduction, credits the vendor's wallet,
+    Applies the platform commission deduction, credits the vendor's wallet with
+    their exact net asking payout, records platform revenue & GST,
     and logs itemized transactions. Prevents duplicate settlements.
     """
     target = job or quick_service
@@ -62,17 +64,41 @@ def settle_job_completion(job=None, quick_service=None, vendor=None, custom_amou
     if existing.exists():
         return False, f"Earnings for '{title}' have already been settled to {vendor.username}'s wallet."
 
-    # Determine agreed gross amount
+    # Fetch winning bid
+    sel_bid = None
+    if is_job:
+        if vendor:
+            sel_bid = Bid.objects.filter(job=job, vendor=vendor).first()
+        if not sel_bid:
+            sel_bid = Bid.objects.filter(job=job, status__in=['selected', 'completed', 'accepted']).first()
+    else:
+        if vendor:
+            sel_bid = Bid.objects.filter(quick_service=quick_service, vendor=vendor).first()
+        if not sel_bid:
+            sel_bid = Bid.objects.filter(quick_service=quick_service, status__in=['selected', 'completed', 'accepted']).first()
+
+    # Determine financial split
     if custom_amount is not None:
         gross_amount = Decimal(str(custom_amount))
+        commission_percent = get_platform_commission_percent()
+        commission_amount = (gross_amount * commission_percent / Decimal('100.00')).quantize(Decimal('0.01'))
+        net_earning = gross_amount - commission_amount
+        cgst_amount = Decimal('0.00')
+        sgst_amount = Decimal('0.00')
+        flat_fee_amount = Decimal('0.00')
+        total_customer_paid = gross_amount
+    elif sel_bid and sel_bid.vendor_base_amount is not None:
+        # Itemized Model: Vendor gets their exact guaranteed base payout
+        net_earning = Decimal(str(sel_bid.vendor_base_amount))
+        commission_amount = Decimal(str(sel_bid.commission_amount or 0.00))
+        flat_fee_amount = Decimal(str(sel_bid.flat_fee_amount or 0.00))
+        cgst_amount = Decimal(str(sel_bid.cgst_amount or 0.00))
+        sgst_amount = Decimal(str(sel_bid.sgst_amount or 0.00))
+        total_customer_paid = Decimal(str(sel_bid.total_customer_amount or (net_earning + commission_amount + cgst_amount + sgst_amount)))
+        gross_amount = total_customer_paid
+        commission_percent = sel_bid.commission_percent_applied or get_platform_commission_percent()
     else:
-        # Check winning bid first
-        sel_bid = None
-        if is_job:
-            sel_bid = Bid.objects.filter(job=job, status__in=['selected', 'completed']).first()
-        else:
-            sel_bid = Bid.objects.filter(quick_service=quick_service, status__in=['selected', 'completed']).first()
-
+        # Legacy Bid / Fallback
         if sel_bid and sel_bid.amount:
             gross_amount = Decimal(str(sel_bid.amount))
         elif target.budget:
@@ -80,40 +106,51 @@ def settle_job_completion(job=None, quick_service=None, vendor=None, custom_amou
         else:
             gross_amount = Decimal('0.00')
 
-    if gross_amount <= Decimal('0.00'):
-        return False, "Settlement amount must be greater than zero."
+        if gross_amount <= Decimal('0.00'):
+            return False, "Settlement amount must be greater than zero."
 
-    commission_percent = get_platform_commission_percent()
-    commission_amount = (gross_amount * commission_percent / Decimal('100.00')).quantize(Decimal('0.01'))
-    net_earning = gross_amount - commission_amount
+        commission_percent = get_platform_commission_percent()
+        commission_amount = (gross_amount * commission_percent / Decimal('100.00')).quantize(Decimal('0.01'))
+        net_earning = gross_amount - commission_amount
+        cgst_amount = Decimal('0.00')
+        sgst_amount = Decimal('0.00')
+        flat_fee_amount = Decimal('0.00')
+        total_customer_paid = gross_amount
+
+    if net_earning <= Decimal('0.00'):
+        return False, "Vendor net earnings must be greater than zero."
 
     with transaction.atomic():
-        # Update wallet balance
+        # Update vendor wallet balance with net earnings
         wallet.available_balance = Decimal(str(wallet.available_balance or 0)) + net_earning
         wallet.total_earned = Decimal(str(wallet.total_earned or 0)) + net_earning
         wallet.save()
 
-        # Log Gross Credit Transaction
+        # Log Credit Transaction in Vendor Wallet
         WalletTransaction.objects.create(
             wallet=wallet,
-            amount=gross_amount,
+            amount=net_earning,
             transaction_type='credit',
             related_job=job,
             related_quick_service=quick_service,
-            description=f"Earnings from completed {'Job' if is_job else 'Quick Service'}: '{title}'"
+            description=f"Net Payout for '{title}' (Gross ₹{total_customer_paid:.2f})"
         )
 
-        # Log Commission Deduction Transaction
-        WalletTransaction.objects.create(
-            wallet=wallet,
-            amount=commission_amount,
-            transaction_type='commission',
+        # Record Platform Revenue & GST Ledger Entry for CA/Tax Compliance
+        PlatformRevenueLedger.objects.create(
+            related_bid=sel_bid,
             related_job=job,
             related_quick_service=quick_service,
-            description=f"Platform Commission ({commission_percent}%) on '{title}'"
+            vendor=vendor,
+            vendor_payout=net_earning,
+            platform_commission=commission_amount,
+            cgst_collected=cgst_amount,
+            sgst_collected=sgst_amount,
+            flat_fee_collected=flat_fee_amount,
+            total_customer_paid=total_customer_paid
         )
 
-    return True, f"Successfully settled ₹{net_earning:.2f} (Gross ₹{gross_amount:.2f} - ₹{commission_amount:.2f} fee) to {vendor.username}."
+    return True, f"Successfully settled ₹{net_earning:.2f} net payout (Customer paid ₹{total_customer_paid:.2f}, Platform kept ₹{commission_amount + cgst_amount + sgst_amount:.2f}) to {vendor.username}."
 
 def request_payout(vendor, amount, payout_method, account_holder_name=None, 
                    account_number=None, ifsc_code=None, bank_name=None, upi_id=None):

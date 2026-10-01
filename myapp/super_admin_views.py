@@ -1051,10 +1051,37 @@ def super_admin_job_bids(request, job_id):
                     django_messages.error(request, f'Job has reached the maximum limit of {job.max_bids} bids.')
                     return redirect('super_admin_job_bids', job_id=job.id)
 
+                gs_obj = GlobalSettings.objects.first()
+                c_pct = Decimal(str(gs_obj.platform_commission_percent if gs_obj and gs_obj.platform_commission_percent is not None else '10.00'))
+                cg_pct = Decimal(str(gs_obj.cgst_percent if gs_obj and gs_obj.cgst_percent is not None else '9.00'))
+                sg_pct = Decimal(str(gs_obj.sgst_percent if gs_obj and gs_obj.sgst_percent is not None else '9.00'))
+                f_fee = Decimal(str(gs_obj.platform_flat_fee if gs_obj and gs_obj.platform_flat_fee is not None else '0.00'))
+                t_mode = gs_obj.tax_calculation_mode if gs_obj and gs_obj.tax_calculation_mode else 'commission_only'
+
+                v_base = Decimal(str(amount)).quantize(Decimal('0.01'))
+                c_amt = ((v_base * c_pct) / Decimal('100.00') + f_fee).quantize(Decimal('0.01'))
+                if t_mode == 'commission_only':
+                    cg_amt = ((c_amt * cg_pct) / Decimal('100.00')).quantize(Decimal('0.01'))
+                    sg_amt = ((c_amt * sg_pct) / Decimal('100.00')).quantize(Decimal('0.01'))
+                else:
+                    taxable_b = v_base + c_amt
+                    cg_amt = ((taxable_b * cg_pct) / Decimal('100.00')).quantize(Decimal('0.01'))
+                    sg_amt = ((taxable_b * sg_pct) / Decimal('100.00')).quantize(Decimal('0.01'))
+                tot_cust = (v_base + c_amt + cg_amt + sg_amt).quantize(Decimal('0.01'))
+
                 bid = Bid.objects.create(
                     vendor=vendor,
                     job=job,
-                    amount=amount,
+                    amount=tot_cust,
+                    vendor_base_amount=v_base,
+                    commission_percent_applied=c_pct,
+                    commission_amount=c_amt,
+                    cgst_percent_applied=cg_pct,
+                    cgst_amount=cg_amt,
+                    sgst_percent_applied=sg_pct,
+                    sgst_amount=sg_amt,
+                    flat_fee_amount=f_fee,
+                    total_customer_amount=tot_cust,
                     estimated_time=estimated_time,
                     proposal=proposal,
                     status=status_bid
@@ -1207,11 +1234,38 @@ def super_admin_bid_create(request):
         elif target_type == 'quick_service' and target_id:
             qs_obj = get_object_or_404(QuickService, pk=target_id)
 
+        gs_obj = GlobalSettings.objects.first()
+        c_pct = Decimal(str(gs_obj.platform_commission_percent if gs_obj and gs_obj.platform_commission_percent is not None else '10.00'))
+        cg_pct = Decimal(str(gs_obj.cgst_percent if gs_obj and gs_obj.cgst_percent is not None else '9.00'))
+        sg_pct = Decimal(str(gs_obj.sgst_percent if gs_obj and gs_obj.sgst_percent is not None else '9.00'))
+        f_fee = Decimal(str(gs_obj.platform_flat_fee if gs_obj and gs_obj.platform_flat_fee is not None else '0.00'))
+        t_mode = gs_obj.tax_calculation_mode if gs_obj and gs_obj.tax_calculation_mode else 'commission_only'
+
+        v_base = Decimal(str(amount)).quantize(Decimal('0.01'))
+        c_amt = ((v_base * c_pct) / Decimal('100.00') + f_fee).quantize(Decimal('0.01'))
+        if t_mode == 'commission_only':
+            cg_amt = ((c_amt * cg_pct) / Decimal('100.00')).quantize(Decimal('0.01'))
+            sg_amt = ((c_amt * sg_pct) / Decimal('100.00')).quantize(Decimal('0.01'))
+        else:
+            taxable_b = v_base + c_amt
+            cg_amt = ((taxable_b * cg_pct) / Decimal('100.00')).quantize(Decimal('0.01'))
+            sg_amt = ((taxable_b * sg_pct) / Decimal('100.00')).quantize(Decimal('0.01'))
+        tot_cust = (v_base + c_amt + cg_amt + sg_amt).quantize(Decimal('0.01'))
+
         bid = Bid.objects.create(
             vendor=vendor,
             job=job_obj,
             quick_service=qs_obj,
-            amount=amount,
+            amount=tot_cust,
+            vendor_base_amount=v_base,
+            commission_percent_applied=c_pct,
+            commission_amount=c_amt,
+            cgst_percent_applied=cg_pct,
+            cgst_amount=cg_amt,
+            sgst_percent_applied=sg_pct,
+            sgst_amount=sg_amt,
+            flat_fee_amount=f_fee,
+            total_customer_amount=tot_cust,
             status=status,
             proposal=proposal
         )
@@ -1475,9 +1529,33 @@ def super_admin_settings(request):
         settings_obj.contact_email = request.POST.get('contact_email', settings_obj.contact_email)
         settings_obj.support_phone = request.POST.get('support_phone', settings_obj.support_phone)
         settings_obj.maintenance_mode = request.POST.get('maintenance_mode') == 'on'
-        settings_obj.platform_commission_percent = request.POST.get('platform_commission_percent', settings_obj.platform_commission_percent)
+        
+        # Financial Levers
+        if 'platform_commission_percent' in request.POST:
+            try:
+                settings_obj.platform_commission_percent = float(request.POST.get('platform_commission_percent', 10.0))
+            except (ValueError, TypeError):
+                pass
+        if 'cgst_percent' in request.POST:
+            try:
+                settings_obj.cgst_percent = float(request.POST.get('cgst_percent', 9.0))
+            except (ValueError, TypeError):
+                pass
+        if 'sgst_percent' in request.POST:
+            try:
+                settings_obj.sgst_percent = float(request.POST.get('sgst_percent', 9.0))
+            except (ValueError, TypeError):
+                pass
+        if 'platform_flat_fee' in request.POST:
+            try:
+                settings_obj.platform_flat_fee = float(request.POST.get('platform_flat_fee', 0.0))
+            except (ValueError, TypeError):
+                pass
+        if 'tax_calculation_mode' in request.POST:
+            settings_obj.tax_calculation_mode = request.POST.get('tax_calculation_mode', 'commission_only')
+            
         settings_obj.save()
-        django_messages.success(request, 'Global settings saved.')
+        django_messages.success(request, 'Global platform & financial tax settings saved successfully.')
         return redirect('super_admin_settings')
     return render(request, 'superadmin/settings.html', {'settings': settings_obj})
 
