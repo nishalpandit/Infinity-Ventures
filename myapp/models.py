@@ -109,6 +109,24 @@ class QuickService(models.Model):
     def __str__(self):
         return f"{self.title} by {self.vendor.username}"
 
+    @property
+    def user(self):
+        """Backward-compatibility alias for vendor"""
+        return self.vendor
+
+    @user.setter
+    def user(self, val):
+        self.vendor = val
+
+    @property
+    def budget(self):
+        """Backward-compatibility alias for base_price"""
+        return self.base_price
+
+    @budget.setter
+    def budget(self, val):
+        self.base_price = val
+
 class ServiceBooking(models.Model):
     STATUS_CHOICES = (
         ('pending', 'Pending'),

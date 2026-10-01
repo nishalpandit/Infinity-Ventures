@@ -1829,7 +1829,7 @@ def dashboard_view(request, path=''):
             try:
                 # e.g., 'QS-0001' -> 1
                 qs_id = int(qs_id_raw.replace('QS-', '')) if isinstance(qs_id_raw, str) and qs_id_raw.startswith('QS-') else int(qs_id_raw)
-                service = QuickService.objects.select_related('user', 'category', 'location').get(id=qs_id)
+                service = QuickService.objects.select_related('vendor', 'category', 'location').get(id=qs_id)
 
                 # Strict territory check for Area Admin
                 admin_state, is_area_admin, available_states, co_admins = get_admin_state_context(request)
@@ -1869,7 +1869,7 @@ def dashboard_view(request, path=''):
         admin_state, is_area_admin, available_states, co_admins = get_admin_state_context(request)
         context['admin_state'] = admin_state
         context['is_area_admin'] = is_area_admin
-        quick_services = QuickService.objects.exclude(category__service_type='job').select_related('user', 'category', 'location').annotate(vendor_requests_count=Count('bids')).prefetch_related(Prefetch('bids', queryset=Bid.objects.filter(status='selected').select_related('vendor', 'vendor__vendor_profile'), to_attr='selected_bids')).order_by('-created_at')
+        quick_services = QuickService.objects.exclude(category__service_type='job').select_related('vendor', 'category', 'location').annotate(vendor_requests_count=Count('bids')).prefetch_related(Prefetch('bids', queryset=Bid.objects.filter(status='selected').select_related('vendor', 'vendor__vendor_profile'), to_attr='selected_bids')).order_by('-created_at')
         if admin_state:
             quick_services = quick_services.filter(Q(location__state__iexact=admin_state) | Q(address__icontains=admin_state))
         qs_data = []
@@ -2507,17 +2507,17 @@ def admin_dashboard(request):
     user_qs = User.objects.filter(role='USER')
     vendor_qs = VendorProfile.objects.select_related('user')
     job_qs = Job.objects.select_related('user', 'category', 'location')
-    qs_qs = QuickService.objects.select_related('user', 'category', 'location')
+    qs_qs = QuickService.objects.select_related('vendor', 'category', 'location')
     bid_qs = Bid.objects.select_related('vendor', 'job', 'quick_service', 'vendor__vendor_profile')
     sub_qs = Subscription.objects.select_related('vendor', 'vendor__vendor_profile')
 
     if admin_state:
         job_qs = job_qs.filter(Q(location__state__iexact=admin_state) | Q(address__icontains=admin_state))
-        qs_qs = qs_qs.filter(Q(location__state__iexact=admin_state) | Q(address__icontains=admin_state))
+        qs_qs = qs_qs.filter(Q(location__state__iexact=admin_state) | Q(locality__icontains=admin_state))
         vendor_qs = vendor_qs.filter(Q(location__icontains=admin_state) | Q(user__assigned_state__iexact=admin_state))
         
         state_customer_ids = set(job_qs.values_list('user_id', flat=True)).union(
-            set(qs_qs.values_list('user_id', flat=True))
+            set(qs_qs.values_list('vendor_id', flat=True))
         )
         user_qs = user_qs.filter(Q(id__in=state_customer_ids) | Q(assigned_state__iexact=admin_state))
         

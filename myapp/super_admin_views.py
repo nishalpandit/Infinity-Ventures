@@ -1111,7 +1111,7 @@ def super_admin_job_bids(request, job_id):
 # ─────────────────────────────────────────────
 @sa_required
 def super_admin_quick_services(request):
-    qs_list = QuickService.objects.all().select_related('user', 'category', 'location').order_by('-created_at')
+    qs_list = QuickService.objects.all().select_related('vendor', 'category', 'location').order_by('-created_at')
     paginator = Paginator(qs_list, 10)
     page_num = request.GET.get('page', 1)
     try:
@@ -1123,41 +1123,39 @@ def super_admin_quick_services(request):
 
 @sa_required
 def super_admin_qs_create(request):
-    users = CustomUser.objects.filter(role='USER').order_by('username')
+    vendors = CustomUser.objects.filter(role='VENDOR').order_by('username')
     categories = Category.objects.all().order_by('name')
     locations = Location.objects.all().order_by('state', 'city')
 
     if request.method == 'POST':
-        user_id = request.POST.get('user')
+        vendor_id = request.POST.get('vendor') or request.POST.get('user')
         title = request.POST.get('title', '').strip()
         cat_id = request.POST.get('category')
         loc_id = request.POST.get('location')
-        budget = request.POST.get('budget', 0) or 0
-        status = request.POST.get('status', 'open')
+        base_price = request.POST.get('base_price') or request.POST.get('budget', 0) or 0
+        status = request.POST.get('status', 'active')
         description = request.POST.get('description', '').strip()
-        address = request.POST.get('address', '').strip()
 
-        customer = get_object_or_404(CustomUser, pk=user_id)
+        vendor = get_object_or_404(CustomUser, pk=vendor_id)
         cat_obj = Category.objects.filter(id=cat_id).first() if cat_id else None
         loc_obj = Location.objects.filter(id=loc_id).first() if loc_id else None
 
         qs = QuickService.objects.create(
-            user=customer,
+            vendor=vendor,
             title=title,
             category=cat_obj,
             location=loc_obj,
-            budget=budget,
+            base_price=base_price,
             status=status,
-            description=description,
-            address=address,
-            contact_name=customer.get_full_name() or customer.username
+            description=description
         )
         django_messages.success(request, f'Quick Service "{qs.title}" created successfully.')
         return redirect('super_admin_quick_services')
 
     return render(request, 'superadmin/qs_form.html', {
         'mode': 'create',
-        'users': users,
+        'vendors': vendors,
+        'users': vendors,
         'categories': categories,
         'locations': locations
     })
@@ -1167,27 +1165,32 @@ def super_admin_qs_edit(request, qs_id):
     qs = get_object_or_404(QuickService, pk=qs_id)
     categories = Category.objects.all()
     locations = Location.objects.all().order_by('state', 'city')
-    users = CustomUser.objects.filter(role='USER').order_by('username')
+    vendors = CustomUser.objects.filter(role='VENDOR').order_by('username')
     if request.method == 'POST':
-        old_status = qs.status
         qs.title = request.POST.get('title', qs.title)
         qs.status = request.POST.get('status', qs.status)
-        qs.budget = request.POST.get('budget', qs.budget)
+        qs.base_price = request.POST.get('base_price') or request.POST.get('budget', qs.base_price)
         cat_id = request.POST.get('category')
         if cat_id:
             qs.category = get_object_or_404(Category, pk=cat_id)
         loc_id = request.POST.get('location')
         if loc_id:
             qs.location = Location.objects.filter(id=loc_id).first()
+        vendor_id = request.POST.get('vendor') or request.POST.get('user')
+        if vendor_id:
+            qs.vendor = get_object_or_404(CustomUser, pk=vendor_id)
         qs.description = request.POST.get('description', qs.description)
         qs.save()
-        if qs.status == 'completed' and old_status != 'completed':
-            settled, msg = settle_job_completion(quick_service=qs)
-            if settled:
-                django_messages.info(request, msg)
         django_messages.success(request, f'Quick Service "{qs.title}" updated.')
         return redirect('super_admin_quick_services')
-    return render(request, 'superadmin/qs_form.html', {'mode': 'edit', 'qs': qs, 'categories': categories, 'locations': locations, 'users': users})
+    return render(request, 'superadmin/qs_form.html', {
+        'mode': 'edit',
+        'qs': qs,
+        'categories': categories,
+        'locations': locations,
+        'vendors': vendors,
+        'users': vendors
+    })
 
 @sa_required
 def super_admin_qs_delete(request, qs_id):
@@ -1215,7 +1218,7 @@ def super_admin_bids(request):
 def super_admin_bid_create(request):
     vendors = CustomUser.objects.filter(role='VENDOR').order_by('username')
     jobs = Job.objects.filter(status__in=['open', 'progress']).order_by('-created_at')
-    qservices = QuickService.objects.filter(status__in=['open', 'progress']).order_by('-created_at')
+    qservices = QuickService.objects.filter(status='active').order_by('-created_at')
 
     if request.method == 'POST':
         vendor_id = request.POST.get('vendor')
