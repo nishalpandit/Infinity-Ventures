@@ -2766,6 +2766,7 @@ def home_view(request):
         'cms_testimonials': cms_testimonials,
         'cms_trust_metrics': cms_trust_metrics,
         'categories': categories,
+        'landing_services': QuickService.objects.filter(status='active').select_related('vendor', 'category').order_by('-created_at'),
         'top_services': QuickService.objects.filter(status='active').select_related('vendor', 'category').order_by('-created_at')[:8],
         'locations': locations,
         'recent_bids': recent_bids,

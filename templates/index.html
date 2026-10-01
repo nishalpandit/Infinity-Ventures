@@ -175,6 +175,28 @@ button{cursor:pointer}
 }
 .svc-card-vendor{font-size:12px;color:#888;margin-top:2px}
 
+/* Category filter tabs */
+.category-tabs-container{
+  margin-bottom:24px;overflow-x:auto;padding-bottom:6px;
+  -webkit-overflow-scrolling:touch;scrollbar-width:none;
+}
+.category-tabs-container::-webkit-scrollbar{display:none}
+.category-tabs{display:inline-flex;gap:8px;min-width:max-content}
+.cat-pill{
+  display:inline-flex;align-items:center;gap:8px;padding:9px 18px;
+  background:#f3f4f6;color:#4b5563;border-radius:9999px;
+  font-size:13.5px;font-weight:600;border:1px solid #e5e7eb;
+  cursor:pointer;transition:all .2s ease;white-space:nowrap;user-select:none;
+}
+.cat-pill i{font-size:12.5px;color:#6b7280;transition:color .2s}
+.cat-pill:hover{background:#e5e7eb;color:#111827;border-color:#d1d5db}
+.cat-pill:hover i{color:#111827}
+.cat-pill.active{
+  background:#111827;color:#ffffff;border-color:#111827;
+  box-shadow:0 4px 12px rgba(17,24,39,0.15);
+}
+.cat-pill.active i{color:#a78bfa}
+
 /* ===== BANNER ===== */
 .promo-banner{
   max-width:1280px;margin:0 auto 80px;padding:0 40px;
@@ -342,7 +364,7 @@ button{cursor:pointer}
     <div class="cat-box">
       <div class="cat-grid">
         {% for cat in categories %}
-        <a href="/services/browse?category={{ cat.id }}" class="cat-tile">
+        <a href="/services/browse?category={{ cat.id }}" class="cat-tile" onclick="jumpToCategory('{{ cat.id }}', event)">
           <div class="cat-tile-icon">
             {% if cat.name == "Plumbing" %}
               <i class="fa-solid fa-wrench"></i>
@@ -396,73 +418,59 @@ button{cursor:pointer}
   </div>
 </section>
 
-<!-- ===== MOST BOOKED SERVICES ===== -->
-{% if top_services %}
-<div class="section">
-  <div class="section-header">
+<!-- ===== SERVICES NEAR YOU / BY CATEGORY ===== -->
+<div class="section" id="servicesSection" style="padding-top:24px; padding-bottom:48px;">
+  <div class="section-header" style="align-items:flex-end; margin-bottom:20px;">
     <div>
-      <h2 class="section-title">Most booked services</h2>
+      <h2 class="section-title" style="margin-bottom:6px;">Services near you</h2>
+      <p style="font-size:13px; color:#6b7280; margin:0;" id="servicesSectionSubtitle">
+        Showing verified professionals in your area
+      </p>
     </div>
-    <a href="/services/browse" class="see-all">See all</a>
+    <a href="/services/browse" class="see-all" id="exploreAllLink" style="font-size:14px; font-weight:600; color:#1a1a1a; display:inline-flex; align-items:center; gap:6px;">
+      <span id="exploreAllText">See all in catalog</span> <i class="fa-solid fa-arrow-right" style="font-size:12px;"></i>
+    </a>
   </div>
-  
-    <div class="svc-grid" id="topServicesGrid">
-      {% for service in top_services %}
-      <a href="/services/browse?category={{ service.category_id }}" class="svc-card"
-         data-service-id="{{ service.id }}"
-         data-lat="{{ service.latitude }}"
-         data-lon="{{ service.longitude }}"
-         data-radius="{{ service.service_radius_km|default:10.0 }}"
-         data-locality="{{ service.locality|default:'Ranchi' }}">
-        <div class="svc-card-img">
-          <img src="https://images.unsplash.com/photo-1581578731548-c64695cc6952?w=400&auto=format&fit=crop&q=60" alt="{{ service.title }}">
-        </div>
-        <div class="svc-card-title">{{ service.title }}</div>
-        <div class="svc-card-rating">
-          <i class="fa-solid fa-star"></i> 4.8
-          <span style="color:#ccc;margin:0 4px">·</span>
-          <span class="eta svc-card-dist"><i class="fa-solid fa-location-dot" style="font-size:10px"></i> <span class="dist-val">Available</span></span>
-        </div>
-        <div class="svc-card-price">
-          ₹{{ service.base_price|floatformat:"0" }}
-        </div>
-        <div class="svc-card-vendor">by {{ service.vendor.get_full_name|default:service.vendor.username }} · {{ service.locality|default:"Ranchi" }}</div>
-      </a>
+
+  <!-- Interactive Category Tabs Bar -->
+  <div class="category-tabs-container">
+    <div class="category-tabs">
+      <button type="button" class="cat-pill active" data-cat="all" onclick="selectLandingCategory('all', this, '/services/browse')">
+        <i class="fa-solid fa-sparkles"></i> All Services
+      </button>
+      {% for cat in categories %}
+      <button type="button" class="cat-pill" data-cat="{{ cat.id }}" onclick="selectLandingCategory('{{ cat.id }}', this, '/services/browse?category={{ cat.id }}')">
+        {% if cat.name == "Plumbing" %}
+          <i class="fa-solid fa-wrench"></i>
+        {% elif cat.name == "Electrical" %}
+          <i class="fa-solid fa-bolt"></i>
+        {% elif "AC" in cat.name or "Appliance" in cat.name %}
+          <i class="fa-solid fa-snowflake"></i>
+        {% elif cat.name == "Cleaning" %}
+          <i class="fa-solid fa-spray-can-sparkles"></i>
+        {% elif cat.name == "Painting" %}
+          <i class="fa-solid fa-paint-roller"></i>
+        {% elif cat.name == "Carpentry" %}
+          <i class="fa-solid fa-hammer"></i>
+        {% elif "Pest" in cat.name %}
+          <i class="fa-solid fa-bug-slash"></i>
+        {% elif "Renovation" in cat.name %}
+          <i class="fa-solid fa-trowel-bricks"></i>
+        {% else %}
+          <i class="fa-solid fa-screwdriver-wrench"></i>
+        {% endif %}
+        {{ cat.name }}
+      </button>
       {% endfor %}
     </div>
-</div>
-{% endif %}
-
-<!-- ===== PROMO BANNER ===== -->
-<div class="promo-banner">
-  <div class="promo-inner">
-    <div class="promo-copy">
-      <h2>Quality service, guaranteed</h2>
-      <p>Book verified professionals at transparent prices. From plumbing to painting — we've got your home covered.</p>
-      <a href="/services/browse" class="cta">
-        Explore services <i class="fa-solid fa-arrow-right"></i>
-      </a>
-    </div>
-    <div class="promo-img">
-      <img src="https://images.unsplash.com/photo-1584622650111-993a426fbf0a?w=700&auto=format&fit=crop&q=80" alt="Home cleaning">
-    </div>
   </div>
-</div>
 
-<!-- ===== PER-CATEGORY ROWS ===== -->
-{% for cat in categories %}
-{% if cat.quickservice_set.exists %}
-<div class="section">
-  <div class="section-header">
-    <div>
-      <h2 class="section-title">{{ cat.name }}</h2>
-    </div>
-    <a href="/services/browse?category={{ cat.id }}" class="see-all">See all</a>
-  </div>
-  <div class="svc-grid">
-    {% for service in cat.quickservice_set.all|slice:":4" %}
-    <a href="/services/browse?category={{ cat.id }}" class="svc-card"
+  <!-- Compact Services Grid -->
+  <div class="svc-grid" id="landingServicesGrid">
+    {% for service in landing_services|default:top_services %}
+    <a href="/services/browse?category={{ service.category_id }}" class="svc-card"
        data-service-id="{{ service.id }}"
+       data-category-id="{{ service.category_id }}"
        data-lat="{{ service.latitude }}"
        data-lon="{{ service.longitude }}"
        data-radius="{{ service.service_radius_km|default:10.0 }}"
@@ -487,9 +495,37 @@ button{cursor:pointer}
     </a>
     {% endfor %}
   </div>
+
+  <!-- Empty state for category when no services in range -->
+  <div id="landingEmptyServices" style="display:none; text-align:center; padding:44px 20px; background:#f9fafb; border-radius:16px; border:1px dashed #e5e7eb; margin-top:8px;">
+    <div style="font-size:32px; color:#9ca3af; margin-bottom:12px;">
+      <i class="fa-solid fa-magnifying-glass-location"></i>
+    </div>
+    <h3 style="font-size:15px; font-weight:600; color:#1f2937; margin-bottom:6px;">No services nearby for this category</h3>
+    <p style="font-size:13px; color:#6b7280; max-width:420px; margin:0 auto 16px;">
+      We couldn't find verified professionals in this category within 10 km of your selected location.
+    </p>
+    <a href="/services/browse" id="emptyBrowseBtn" style="display:inline-flex; align-items:center; gap:8px; padding:10px 20px; background:#111827; color:#fff; border-radius:10px; font-size:13px; font-weight:600; text-decoration:none;">
+      Browse all services in catalog <i class="fa-solid fa-arrow-right" style="font-size:11px;"></i>
+    </a>
+  </div>
 </div>
-{% endif %}
-{% endfor %}
+
+<!-- ===== PROMO BANNER ===== -->
+<div class="promo-banner">
+  <div class="promo-inner">
+    <div class="promo-copy">
+      <h2>Quality service, guaranteed</h2>
+      <p>Book verified professionals at transparent prices. From plumbing to painting — we've got your home covered.</p>
+      <a href="/services/browse" class="cta">
+        Explore services <i class="fa-solid fa-arrow-right"></i>
+      </a>
+    </div>
+    <div class="promo-img">
+      <img src="https://images.unsplash.com/photo-1584622650111-993a426fbf0a?w=700&auto=format&fit=crop&q=80" alt="Home cleaning">
+    </div>
+  </div>
+</div>
 
 <!-- ===== FOOTER ===== -->
 <footer class="footer">
@@ -557,7 +593,7 @@ if (window.SugguCart) {
   });
 }
 
-// 10 KM Radius Card Distance Engine for Homepage
+// 10 KM Radius Card Distance Engine & Category Filtering for Homepage
 function initHomepageLocationFiltering() {
   function calculateHaversineKm(lat1, lon1, lat2, lon2) {
     var R = 6371;
@@ -570,57 +606,104 @@ function initHomepageLocationFiltering() {
     return Math.round((R * c) * 10) / 10;
   }
 
-  function filterCards(locData) {
+  var currentSelectedCat = 'all';
+
+  window.selectLandingCategory = function(catId, btn, browseUrl) {
+    currentSelectedCat = String(catId);
+    document.querySelectorAll('.cat-pill').forEach(function(p) { p.classList.remove('active'); });
+    if (btn) btn.classList.add('active');
+
+    var exploreLink = document.getElementById('exploreAllLink');
+    var exploreText = document.getElementById('exploreAllText');
+    var emptyBtn = document.getElementById('emptyBrowseBtn');
+
+    if (exploreLink) exploreLink.href = browseUrl || '/services/browse';
+    if (emptyBtn) emptyBtn.href = browseUrl || '/services/browse';
+    if (exploreText) {
+      if (currentSelectedCat === 'all') {
+        exploreText.textContent = 'See all in catalog';
+      } else {
+        var catName = btn ? btn.textContent.trim() : 'category';
+        exploreText.textContent = 'See all ' + catName;
+      }
+    }
+
+    var activeLoc = window.SugguLocation ? window.SugguLocation.getLocation() : null;
+    if (!activeLoc) activeLoc = { lat: 12.9716, lon: 77.5946, name: 'Bengaluru, Karnataka' };
+    filterLandingCards(activeLoc);
+  };
+
+  window.jumpToCategory = function(catId, ev) {
+    if (ev) ev.preventDefault();
+    var pill = document.querySelector('.cat-pill[data-cat="' + catId + '"]');
+    if (pill) {
+      pill.click();
+      var sec = document.getElementById('servicesSection');
+      if (sec) sec.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    } else {
+      window.location.href = '/services/browse?category=' + catId;
+    }
+  };
+
+  function filterLandingCards(locData) {
     if (!locData) return;
     var userLat = locData.lat ? parseFloat(locData.lat) : 12.9716;
     var userLon = locData.lon ? parseFloat(locData.lon) : 77.5946;
 
+    var allCards = document.querySelectorAll('#landingServicesGrid .svc-card');
+    var emptyState = document.getElementById('landingEmptyServices');
     var visibleCount = 0;
-    var allCards = document.querySelectorAll('.svc-card');
+    var maxCardsToShow = 8; // Compact display: maximum 8 cards to eliminate endless scrolling
 
     allCards.forEach(function(card) {
       var sLat = parseFloat(card.getAttribute('data-lat'));
       var sLon = parseFloat(card.getAttribute('data-lon'));
       var radius = parseFloat(card.getAttribute('data-radius')) || 10.0;
+      var cardCat = String(card.getAttribute('data-category-id'));
       var distEl = card.querySelector('.dist-val');
 
-      if (isNaN(sLat) || isNaN(sLon)) return;
+      if (isNaN(sLat) || isNaN(sLon)) {
+        card.style.display = 'none';
+        return;
+      }
 
       var dist = calculateHaversineKm(userLat, userLon, sLat, sLon);
-      var isWithinRange = dist <= radius; // 10 km rule
+      var isWithinRange = dist <= radius;
+      var matchesCat = (currentSelectedCat === 'all' || cardCat === currentSelectedCat);
 
-      if (distEl) {
-        if (isWithinRange) {
-          distEl.textContent = dist + ' km away';
-          card.style.display = 'block';
-          visibleCount++;
-        } else {
-          distEl.textContent = dist + ' km';
-          card.style.display = 'none'; // Filter out if beyond 10 km
-        }
+      if (distEl && !isNaN(dist)) {
+        distEl.textContent = dist + ' km away';
+      }
+
+      if (isWithinRange && matchesCat && visibleCount < maxCardsToShow) {
+        card.style.display = 'block';
+        visibleCount++;
+      } else {
+        card.style.display = 'none';
       }
     });
 
-    // If 0 cards are in range (e.g. before user clicks 'Detect my location'), keep cards visible
-    // so the page never looks empty, displaying available tag
     if (visibleCount === 0) {
-      allCards.forEach(function(card) {
-        card.style.display = 'block';
-        var distEl = card.querySelector('.dist-val');
-        if (distEl) distEl.textContent = 'Available';
-      });
+      if (emptyState) emptyState.style.display = 'block';
+    } else {
+      if (emptyState) emptyState.style.display = 'none';
+    }
+
+    var subtitle = document.getElementById('servicesSectionSubtitle');
+    if (subtitle && locData.name) {
+      subtitle.textContent = 'Showing verified professionals near ' + locData.name.split(',')[0] + ' (within 10 km)';
     }
   }
 
   window.addEventListener('sugguLocationUpdated', function(e) {
-    if (e.detail) filterCards(e.detail);
+    if (e.detail) filterLandingCards(e.detail);
   });
 
   var activeLoc = window.SugguLocation ? window.SugguLocation.getLocation() : null;
   if (activeLoc) {
-    filterCards(activeLoc);
+    filterLandingCards(activeLoc);
   } else {
-    filterCards({ lat: 12.9716, lon: 77.5946, name: 'Bengaluru, Karnataka' });
+    filterLandingCards({ lat: 12.9716, lon: 77.5946, name: 'Bengaluru, Karnataka' });
   }
 }
 
