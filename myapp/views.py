@@ -1933,7 +1933,7 @@ def dashboard_view(request, path=''):
                 if is_area_admin and admin_state:
                     user_matches_state = bool(target_user.assigned_state and target_user.assigned_state.lower() == admin_state.lower())
                     has_job_in_state = Job.objects.filter(user=target_user).filter(Q(location__state__iexact=admin_state) | Q(address__icontains=admin_state)).exists()
-                    has_qs_in_state = ServiceBooking.objects.filter(customer=target_user).filter(Q(location__state__iexact=admin_state) | Q(address__icontains=admin_state)).exists()
+                    has_qs_in_state = ServiceBooking.objects.filter(customer=target_user).filter(Q(quick_service__location__state__iexact=admin_state) | Q(service_address__icontains=admin_state)).exists()
 
                     if not (user_matches_state or has_job_in_state or has_qs_in_state):
                         messages.error(request, f"Access Denied: Customer '{target_user.get_full_name() or target_user.username}' is outside your assigned territory ({admin_state}).")
@@ -1946,10 +1946,10 @@ def dashboard_view(request, path=''):
                 except Exception:
                     pass
 
-                cust_qs_list = ServiceBooking.objects.filter(customer=target_user).select_related('category', 'location').order_by('-created_at')
+                cust_qs_list = ServiceBooking.objects.filter(customer=target_user).select_related('quick_service', 'vendor').order_by('-created_at')
                 cust_jobs_list = Job.objects.filter(user=target_user).select_related('category', 'location').order_by('-created_at')
                 if admin_state:
-                    cust_qs_list = cust_qs_list.filter(Q(location__state__iexact=admin_state) | Q(address__icontains=admin_state))
+                    cust_qs_list = cust_qs_list.filter(Q(quick_service__location__state__iexact=admin_state) | Q(service_address__icontains=admin_state))
                     cust_jobs_list = cust_jobs_list.filter(Q(location__state__iexact=admin_state) | Q(address__icontains=admin_state))
 
                 completed_jobs = cust_jobs_list.filter(status='completed').count()
@@ -2028,7 +2028,7 @@ def dashboard_view(request, path=''):
                 u = target_vendor.user
                 total_bids = Bid.objects.filter(vendor=u)
                 if admin_state:
-                    total_bids = total_bids.filter(Q(job__location__state__iexact=admin_state) | Q(quick_service__location__state__iexact=admin_state) | Q(job__address__icontains=admin_state) | Q(quick_service__address__icontains=admin_state))
+                    total_bids = total_bids.filter(Q(job__location__state__iexact=admin_state) | Q(quick_service__location__state__iexact=admin_state) | Q(job__address__icontains=admin_state) | Q(quick_service__locality__icontains=admin_state))
 
                 successful_bids = total_bids.filter(status='selected').count()
                 completed_jobs = Job.objects.filter(bids__vendor=u, status='completed').distinct()
@@ -2221,7 +2221,7 @@ def dashboard_view(request, path=''):
                 # Strict territory check for Area Admin
                 admin_state, is_area_admin, available_states, co_admins = get_admin_state_context(request)
                 if is_area_admin and admin_state:
-                    qs_in_state = (service.location and service.location.state and service.location.state.lower() == admin_state.lower()) or (admin_state.lower() in (service.address or '').lower()) or (bool(service.user.assigned_state and service.user.assigned_state.lower() == admin_state.lower()))
+                    qs_in_state = (service.location and service.location.state and service.location.state.lower() == admin_state.lower()) or (admin_state.lower() in (service.locality or '').lower()) or (bool(service.user.assigned_state and service.user.assigned_state.lower() == admin_state.lower()))
                     if not qs_in_state:
                         messages.error(request, f"Access Denied: Quick Service is outside your assigned territory ({admin_state}).")
                         return redirect('/quick-services/index.html')
@@ -2258,7 +2258,11 @@ def dashboard_view(request, path=''):
         context['is_area_admin'] = is_area_admin
         quick_services = QuickService.objects.exclude(category__service_type='job').select_related('vendor', 'category', 'location').annotate(vendor_requests_count=Count('legacy_bids')).prefetch_related(Prefetch('legacy_bids', queryset=Bid.objects.filter(status='selected').select_related('vendor', 'vendor__vendor_profile'), to_attr='selected_bids')).order_by('-created_at')
         if admin_state:
-            quick_services = quick_services.filter(Q(location__state__iexact=admin_state) | Q(address__icontains=admin_state))
+            quick_services = quick_services.filter(
+                Q(location__state__iexact=admin_state) |
+                Q(locality__icontains=admin_state) |
+                Q(vendor__assigned_state__iexact=admin_state)
+            )
         qs_data = []
         for qs in quick_services:
             u = qs.user
