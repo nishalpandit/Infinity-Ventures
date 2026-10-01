@@ -626,9 +626,9 @@
         <i class="fa-solid fa-handshake"></i>
         <span>Bids & Quotations</span>
       </a>
-      <a href="{% url 'super_admin_subscriptions' %}" class="nav-item {% if 'subscriptions' in request.path %}active{% endif %}">
-        <i class="fa-solid fa-crown"></i>
-        <span>Subscriptions</span>
+      <a href="{% url 'super_admin_bid_plans' %}" class="nav-item {% if 'bid-plans' in request.path or 'subscriptions' in request.path %}active{% endif %}">
+        <i class="fa-solid fa-coins"></i>
+        <span>Bid Management</span>
       </a>
       <a href="{% url 'super_admin_payouts' %}" class="nav-item {% if 'payouts' in request.path %}active{% endif %}">
         <i class="fa-solid fa-wallet"></i>
@@ -647,10 +647,6 @@
       <a href="{% url 'super_admin_landing_quick_services' %}" class="nav-item {% if '/landing/quick-services' in request.path %}active{% endif %}">
         <i class="fa-solid fa-bolt-lightning"></i>
         <span>Quick Service Cards</span>
-      </a>
-      <a href="{% url 'super_admin_landing_packages' %}" class="nav-item {% if '/landing/packages' in request.path %}active{% endif %}">
-        <i class="fa-solid fa-cubes-stacked"></i>
-        <span>Service Packages</span>
       </a>
       <a href="{% url 'super_admin_landing_testimonials' %}" class="nav-item {% if '/landing/testimonials' in request.path %}active{% endif %}">
         <i class="fa-solid fa-star-half-stroke"></i>

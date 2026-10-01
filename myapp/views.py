@@ -13,7 +13,7 @@ from .models import (
     QuickServiceCard, FeaturedProjectCard, PackageCard, Testimonial, TrustMetric,
     VendorWallet, WalletTransaction, PayoutRequest, VendorKYC,
     DisputeTicket, DisputeMessage, JobCompletionProof, ServiceReview, ServiceBooking,
-    BidCreditTransaction
+    BidCreditTransaction, BidPlan
 )
 
 User = get_user_model()
@@ -2264,68 +2264,36 @@ def dashboard_view(request, path=''):
                 pass
 
     if 'bid-credits' in path and request.user.is_authenticated:
-        BID_CREDIT_PACKAGES = {
-            'starter': {
-                'id': 'starter',
-                'name': 'Starter Package',
-                'tagline': 'For occasional bidding',
-                'price': 100,
-                'credits': 5,
-                'cost_per_credit': 20,
-                'popular': False,
+        gs_obj = GlobalSettings.objects.first()
+        single_bid_cost = float(gs_obj.single_bid_cost) if gs_obj and gs_obj.single_bid_cost else 20.0
+        context['single_bid_cost'] = single_bid_cost
+
+        db_plans = list(BidPlan.objects.filter(is_active=True).order_by('order', 'price'))
+        BID_CREDIT_PACKAGES = {}
+        for p in db_plans:
+            BID_CREDIT_PACKAGES[str(p.id)] = {
+                'id': str(p.id),
+                'name': p.name,
+                'tagline': p.tagline or f'{p.credits} Bids Pack',
+                'price': float(p.price),
+                'original_price': float(p.original_price) if p.original_price else None,
+                'credits': p.credits,
+                'cost_per_credit': p.cost_per_bid,
+                'popular': p.is_popular,
                 'features': [
-                    '5 Bid Credits',
+                    f'{p.credits} Bid Credits added',
                     'Credits never expire',
                     'Use on any available Long Job',
-                    'Instant credit after payment'
+                    'Instant activation upon payment'
                 ]
-            },
-            'basic': {
-                'id': 'basic',
-                'name': 'Basic Package',
-                'tagline': 'Best value for active vendors',
-                'price': 250,
-                'credits': 15,
-                'cost_per_credit': 16.6,
-                'popular': True,
-                'features': [
-                    '15 Bid Credits',
-                    'Credits never expire',
-                    'Use on any available Long Job',
-                    'Instant credit after payment'
-                ]
-            },
-            'pro': {
-                'id': 'pro',
-                'name': 'Pro Package',
-                'tagline': 'High-volume contractor pack',
-                'price': 450,
-                'credits': 30,
-                'cost_per_credit': 15,
-                'popular': False,
-                'features': [
-                    '30 Bid Credits',
-                    'Credits never expire',
-                    'Use on any available Long Job',
-                    'Instant credit after payment'
-                ]
-            },
-            'premium': {
-                'id': 'premium',
-                'name': 'Premium Package',
-                'tagline': 'Maximum savings for agency vendors',
-                'price': 700,
-                'credits': 50,
-                'cost_per_credit': 14,
-                'popular': False,
-                'features': [
-                    '50 Bid Credits',
-                    'Credits never expire',
-                    'Use on any available Long Job',
-                    'Instant credit after payment'
-                ]
-            },
-        }
+            }
+
+        if not BID_CREDIT_PACKAGES:
+            BID_CREDIT_PACKAGES = {
+                'starter': {'id': 'starter', 'name': 'Starter Pack', 'tagline': '5 bids for ₹100', 'price': 100, 'credits': 5, 'cost_per_credit': 20, 'popular': False, 'features': ['5 Bid Credits', 'Credits never expire', 'Use on any available Long Job', 'Instant activation']},
+                'value': {'id': 'value', 'name': 'Value Pack', 'tagline': '10 bids for ₹200', 'price': 200, 'credits': 10, 'cost_per_credit': 20, 'popular': True, 'features': ['10 Bid Credits', 'Credits never expire', 'Use on any available Long Job', 'Instant activation']},
+                'pro': {'id': 'pro', 'name': 'Pro Pack', 'tagline': '30 bids for ₹500', 'price': 500, 'credits': 30, 'cost_per_credit': 16.6, 'popular': False, 'features': ['30 Bid Credits', 'Credits never expire', 'Use on any available Long Job', 'Instant activation']}
+            }
 
         context['credit_packages'] = list(BID_CREDIT_PACKAGES.values())
         curr_bids = getattr(request.user.vendor_profile, 'available_bids', 5)
@@ -2335,12 +2303,13 @@ def dashboard_view(request, path=''):
 
         # Checkout Flow
         if 'checkout' in path:
-            selected_pkg_id = request.GET.get('package', 'basic').lower()
-            selected_pkg = BID_CREDIT_PACKAGES.get(selected_pkg_id, BID_CREDIT_PACKAGES['basic'])
+            first_pkg_key = next(iter(BID_CREDIT_PACKAGES))
+            selected_pkg_id = request.GET.get('package', first_pkg_key)
+            selected_pkg = BID_CREDIT_PACKAGES.get(selected_pkg_id, BID_CREDIT_PACKAGES[first_pkg_key])
             context['selected_pkg'] = selected_pkg
 
             if request.method == 'POST':
-                pkg_key = request.POST.get('package_id', selected_pkg_id).lower()
+                pkg_key = request.POST.get('package_id', selected_pkg_id)
                 pkg_to_buy = BID_CREDIT_PACKAGES.get(pkg_key, selected_pkg)
                 payment_method = request.POST.get('payment', 'UPI')
                 upi_id = request.POST.get('upi_id', '')

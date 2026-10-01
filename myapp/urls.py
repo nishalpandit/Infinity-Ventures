@@ -85,7 +85,16 @@ urlpatterns = [
     path('super-admin/bids/<int:bid_id>/edit/', super_admin_views.super_admin_bid_edit, name='super_admin_bid_edit'),
     path('super-admin/bids/<int:bid_id>/delete/', super_admin_views.super_admin_bid_delete, name='super_admin_bid_delete'),
     
-    # Subscriptions
+    # Bid Management & Pricing Plans (replaces old subscriptions & service packages)
+    path('super-admin/bid-plans/', super_admin_views.super_admin_bid_plans, name='super_admin_bid_plans'),
+    path('super-admin/bid-plans/settings/', super_admin_views.super_admin_bid_settings_update, name='super_admin_bid_settings_update'),
+    path('super-admin/bid-plans/create/', super_admin_views.super_admin_bid_plan_create, name='super_admin_bid_plan_create'),
+    path('super-admin/bid-plans/<int:plan_id>/edit/', super_admin_views.super_admin_bid_plan_edit, name='super_admin_bid_plan_edit'),
+    path('super-admin/bid-plans/<int:plan_id>/delete/', super_admin_views.super_admin_bid_plan_delete, name='super_admin_bid_plan_delete'),
+    path('super-admin/bid-plans/<int:plan_id>/toggle/', super_admin_views.super_admin_bid_plan_toggle, name='super_admin_bid_plan_toggle'),
+    path('super-admin/bid-plans/grant/', super_admin_views.super_admin_manual_bid_grant, name='super_admin_manual_bid_grant'),
+    
+    # Old Subscriptions aliases (redirect to super_admin_bid_plans)
     path('super-admin/subscriptions/', super_admin_views.super_admin_subscriptions, name='super_admin_subscriptions'),
     path('super-admin/subscriptions/create/', super_admin_views.super_admin_subscription_create, name='super_admin_subscription_create'),
     path('super-admin/subscriptions/<int:sub_id>/delete/', super_admin_views.super_admin_subscription_delete, name='super_admin_subscription_delete'),
@@ -120,12 +129,8 @@ urlpatterns = [
     path('super-admin/landing/featured-projects/<int:card_id>/delete/', super_admin_views.super_admin_landing_featured_project_delete, name='super_admin_landing_featured_project_delete'),
     path('super-admin/landing/featured-projects/<int:card_id>/toggle/', super_admin_views.super_admin_landing_featured_project_toggle, name='super_admin_landing_featured_project_toggle'),
 
-    # Packages
+    # Service Packages alias (redirected to super_admin_bid_plans)
     path('super-admin/landing/packages/', super_admin_views.super_admin_landing_packages, name='super_admin_landing_packages'),
-    path('super-admin/landing/packages/create/', super_admin_views.super_admin_landing_package_create, name='super_admin_landing_package_create'),
-    path('super-admin/landing/packages/<int:card_id>/edit/', super_admin_views.super_admin_landing_package_edit, name='super_admin_landing_package_edit'),
-    path('super-admin/landing/packages/<int:card_id>/delete/', super_admin_views.super_admin_landing_package_delete, name='super_admin_landing_package_delete'),
-    path('super-admin/landing/packages/<int:card_id>/toggle/', super_admin_views.super_admin_landing_package_toggle, name='super_admin_landing_package_toggle'),
 
     # Testimonials
     path('super-admin/landing/testimonials/', super_admin_views.super_admin_landing_testimonials, name='super_admin_landing_testimonials'),

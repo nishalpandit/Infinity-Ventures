@@ -527,12 +527,42 @@ class GlobalSettings(models.Model):
     support_phone = models.CharField(max_length=20, default='+91 0000000000')
     maintenance_mode = models.BooleanField(default=False)
     platform_commission_percent = models.DecimalField(max_digits=5, decimal_places=2, default=10.00)
+    single_bid_cost = models.DecimalField(max_digits=8, decimal_places=2, default=20.00, help_text="Cost of a single bid credit in INR")
+    free_starter_bids = models.IntegerField(default=5, help_text="Free starter bids given to newly registered vendors")
+    min_bids_per_job = models.IntegerField(default=1, help_text="Bids deducted per job quotation proposal")
 
     class Meta:
         verbose_name_plural = "Global Settings"
 
     def __str__(self):
         return "Platform Settings"
+
+
+class BidPlan(models.Model):
+    name = models.CharField(max_length=150, help_text="Plan Name e.g. Starter Pack, Value Pack, Pro Contractor")
+    tagline = models.CharField(max_length=255, blank=True, null=True, help_text="Short subtitle e.g. For occasional bidding")
+    credits = models.PositiveIntegerField(help_text="Number of bids / credits provided (e.g. 5, 10, 30)")
+    price = models.DecimalField(max_digits=10, decimal_places=2, help_text="Price in INR (e.g. 100.00, 200.00, 500.00)")
+    original_price = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True, help_text="Original price for strikethrough comparison")
+    is_popular = models.BooleanField(default=False, help_text="Highlight with Most Popular / Best Value badge")
+    is_active = models.BooleanField(default=True, help_text="Enable or disable this plan for vendors")
+    order = models.IntegerField(default=0, help_text="Display sort order")
+    created_at = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        ordering = ['order', 'price']
+        verbose_name = "Bid Plan"
+        verbose_name_plural = "Bid Plans"
+
+    def __str__(self):
+        return f"{self.name} - {self.credits} Bids (₹{self.price})"
+
+    @property
+    def cost_per_bid(self):
+        if self.credits and self.credits > 0:
+            return round(float(self.price) / float(self.credits), 1)
+        return float(self.price)
+
 
 
 # ==============================================================================

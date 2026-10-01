@@ -14,7 +14,7 @@ from .models import (
     SiteBranding, HeroSection, QuickServiceCard, FeaturedProjectCard,
     PackageCard, Testimonial, TrustMetric, VendorKYC,
     VendorWallet, WalletTransaction, PayoutRequest,
-    DisputeTicket, DisputeMessage
+    DisputeTicket, DisputeMessage, BidPlan
 )
 from .wallet_services import (
     settle_job_completion, approve_payout, reject_payout, get_or_create_wallet
@@ -1244,58 +1244,203 @@ def super_admin_bid_delete(request, bid_id):
     return redirect('super_admin_bids')
 
 # ─────────────────────────────────────────────
-# SUBSCRIPTIONS (List + Create + Delete)
+# BID PLANS & PRICING MANAGEMENT (Super Admin)
 # ─────────────────────────────────────────────
 @sa_required
-def super_admin_subscriptions(request):
-    subscriptions_qs = Subscription.objects.all().select_related('vendor').order_by('-created_at')
-    paginator = Paginator(subscriptions_qs, 10)
+def super_admin_bid_plans(request):
+    """
+    Unified Bid Management page for Super Admin.
+    Replaces old Subscription & Landing Package pages.
+    Allows managing:
+    - Global bid cost (cost of single bid in INR)
+    - Free starter credits on registration
+    - Min bids per job proposal
+    - Create/Edit/Delete/Toggle Bid Plans (e.g. 5 bids for ₹100, 10 for ₹200, 30 for ₹500)
+    - View vendor bid purchases / subscriptions log
+    - Manual credit grants
+    """
+    settings_obj = GlobalSettings.objects.first()
+    if not settings_obj:
+        settings_obj = GlobalSettings.objects.create(single_bid_cost=20.00, free_starter_bids=5, min_bids_per_job=1)
+
+    plans = BidPlan.objects.all().order_by('order', 'price')
+    total_plans = plans.count()
+    active_plans = plans.filter(is_active=True).count()
+
+    # Vendor Bid Purchases / Subscriptions log
+    purchases_qs = Subscription.objects.all().select_related('vendor').order_by('-created_at')
+    total_purchases_count = purchases_qs.count()
+    total_revenue = purchases_qs.aggregate(total=Sum('amount'))['total'] or 0
+    total_credits_sold = purchases_qs.aggregate(total=Sum('credits_added'))['total'] or 0
+
+    paginator = Paginator(purchases_qs, 10)
     page_num = request.GET.get('page', 1)
     try:
-        subscriptions = paginator.page(page_num)
+        purchases = paginator.page(page_num)
     except (EmptyPage, PageNotAnInteger):
-        subscriptions = paginator.page(1)
-    page_range = paginator.get_elided_page_range(subscriptions.number, on_each_side=2, on_ends=1)
-    return render(request, 'superadmin/subscriptions.html', {'subscriptions': subscriptions, 'page_range': page_range})
+        purchases = paginator.page(1)
+    page_range = paginator.get_elided_page_range(purchases.number, on_each_side=2, on_ends=1)
+
+    vendors = CustomUser.objects.filter(role='VENDOR').order_by('username')
+
+    context = {
+        'settings': settings_obj,
+        'plans': plans,
+        'total_plans': total_plans,
+        'active_plans': active_plans,
+        'purchases': purchases,
+        'page_range': page_range,
+        'total_purchases_count': total_purchases_count,
+        'total_revenue': total_revenue,
+        'total_credits_sold': total_credits_sold,
+        'vendors': vendors,
+    }
+    return render(request, 'superadmin/bid_plans.html', context)
+
+
+@sa_required
+def super_admin_bid_settings_update(request):
+    if request.method == 'POST':
+        settings_obj = GlobalSettings.objects.first()
+        if not settings_obj:
+            settings_obj = GlobalSettings.objects.create()
+
+        try:
+            cost = Decimal(request.POST.get('single_bid_cost', '20.00'))
+            if cost > 0:
+                settings_obj.single_bid_cost = cost
+        except Exception:
+            pass
+
+        try:
+            free_bids = int(request.POST.get('free_starter_bids', 5))
+            if free_bids >= 0:
+                settings_obj.free_starter_bids = free_bids
+        except Exception:
+            pass
+
+        try:
+            min_bids = int(request.POST.get('min_bids_per_job', 1))
+            if min_bids > 0:
+                settings_obj.min_bids_per_job = min_bids
+        except Exception:
+            pass
+
+        settings_obj.save()
+        django_messages.success(request, f'Bid settings updated! Single bid cost is now ₹{settings_obj.single_bid_cost}.')
+    return redirect('super_admin_bid_plans')
+
+
+@sa_required
+def super_admin_bid_plan_create(request):
+    if request.method == 'POST':
+        name = request.POST.get('name', '').strip()
+        tagline = request.POST.get('tagline', '').strip()
+        credits = int(request.POST.get('credits', 10) or 10)
+        price = Decimal(request.POST.get('price', '200.00') or '200.00')
+        original_price = request.POST.get('original_price')
+        orig_dec = Decimal(original_price) if original_price else None
+        is_popular = request.POST.get('is_popular') in ['on', 'true', '1']
+        is_active = request.POST.get('is_active') in ['on', 'true', '1']
+        order = int(request.POST.get('order', 0) or 0)
+
+        if not name:
+            name = f"{credits} Bids Pack"
+
+        plan = BidPlan.objects.create(
+            name=name,
+            tagline=tagline,
+            credits=credits,
+            price=price,
+            original_price=orig_dec,
+            is_popular=is_popular,
+            is_active=is_active,
+            order=order
+        )
+        django_messages.success(request, f'Bid Plan "{plan.name}" ({plan.credits} bids for ₹{plan.price}) created successfully!')
+    return redirect('super_admin_bid_plans')
+
+
+@sa_required
+def super_admin_bid_plan_edit(request, plan_id):
+    plan = get_object_or_404(BidPlan, pk=plan_id)
+    if request.method == 'POST':
+        name = request.POST.get('name', '').strip()
+        if name:
+            plan.name = name
+        plan.tagline = request.POST.get('tagline', '').strip()
+        plan.credits = int(request.POST.get('credits', plan.credits) or plan.credits)
+        plan.price = Decimal(request.POST.get('price', str(plan.price)) or str(plan.price))
+        original_price = request.POST.get('original_price')
+        plan.original_price = Decimal(original_price) if original_price else None
+        plan.is_popular = request.POST.get('is_popular') in ['on', 'true', '1']
+        plan.is_active = request.POST.get('is_active') in ['on', 'true', '1']
+        plan.order = int(request.POST.get('order', plan.order) or 0)
+        plan.save()
+        django_messages.success(request, f'Bid Plan "{plan.name}" updated successfully!')
+    return redirect('super_admin_bid_plans')
+
+
+@sa_required
+def super_admin_bid_plan_delete(request, plan_id):
+    plan = get_object_or_404(BidPlan, pk=plan_id)
+    name = plan.name
+    plan.delete()
+    django_messages.success(request, f'Bid Plan "{name}" deleted.')
+    return redirect('super_admin_bid_plans')
+
+
+@sa_required
+def super_admin_bid_plan_toggle(request, plan_id):
+    plan = get_object_or_404(BidPlan, pk=plan_id)
+    plan.is_active = not plan.is_active
+    plan.save(update_fields=['is_active'])
+    status_str = "activated" if plan.is_active else "deactivated"
+    django_messages.success(request, f'Bid Plan "{plan.name}" {status_str}.')
+    return redirect('super_admin_bid_plans')
+
+
+@sa_required
+def super_admin_manual_bid_grant(request):
+    """Allows Super Admin to directly grant bid credits to a vendor."""
+    if request.method == 'POST':
+        vendor_id = request.POST.get('vendor_id')
+        credits = int(request.POST.get('credits', 0) or 0)
+        reason = request.POST.get('reason', 'Admin Grant').strip()
+        vendor = get_object_or_404(CustomUser, pk=vendor_id)
+        if hasattr(vendor, 'vendor_profile'):
+            vp = vendor.vendor_profile
+            vp.available_bids = (vp.available_bids or 0) + credits
+            vp.save(update_fields=['available_bids'])
+
+            Subscription.objects.create(
+                vendor=vendor,
+                package_name=f"Admin Grant: {reason}",
+                amount=0,
+                credits_added=credits,
+                status='success'
+            )
+            django_messages.success(request, f'Successfully granted {credits} bid credits to {vendor.username}!')
+    return redirect('super_admin_bid_plans')
+
+
+# Aliases for backward compatibility
+@sa_required
+def super_admin_subscriptions(request):
+    return redirect('super_admin_bid_plans')
 
 @sa_required
 def super_admin_subscription_create(request):
-    vendors = CustomUser.objects.filter(role='VENDOR').order_by('username')
-    if request.method == 'POST':
-        vendor_id = request.POST.get('vendor')
-        package_name = request.POST.get('package_name', 'Pro Growth Tier')
-        amount = request.POST.get('amount', 0) or 0
-        status = request.POST.get('status', 'success')
-        credits = int(request.POST.get('credits', 50) or 50)
-
-        vendor = get_object_or_404(CustomUser, pk=vendor_id)
-        sub = Subscription.objects.create(
-            vendor=vendor,
-            package_name=package_name,
-            amount=amount,
-            status=status
-        )
-
-        # Update vendor profile credits if success
-        if status == 'success' and hasattr(vendor, 'vendor_profile'):
-            vp = vendor.vendor_profile
-            vp.bid_credits = getattr(vp, 'bid_credits', 0) + credits
-            vp.save()
-
-        django_messages.success(request, f'Subscription of ₹{sub.amount} added for {vendor.username}.')
-        return redirect('super_admin_subscriptions')
-
-    return render(request, 'superadmin/subscription_form.html', {
-        'mode': 'create',
-        'vendors': vendors
-    })
+    return redirect('super_admin_bid_plans')
 
 @sa_required
 def super_admin_subscription_delete(request, sub_id):
-    sub = get_object_or_404(Subscription, pk=sub_id)
-    sub.delete()
-    django_messages.success(request, 'Subscription deleted.')
-    return redirect('super_admin_subscriptions')
+    return redirect('super_admin_bid_plans')
+
+@sa_required
+def super_admin_landing_packages(request):
+    return redirect('super_admin_bid_plans')
+
 
 # ─────────────────────────────────────────────
 # MESSAGES (List + Delete)
@@ -1512,66 +1657,8 @@ def super_admin_landing_featured_project_toggle(request, card_id):
 
 
 # ── PACKAGES & PRICING ────────────────────────────────────────────────────────
-@sa_required
-def super_admin_landing_packages(request):
-    packages_qs = PackageCard.objects.all().order_by('order', '-created_at')
-    paginator = Paginator(packages_qs, 10)
-    page_num = request.GET.get('page', 1)
-    try:
-        packages = paginator.page(page_num)
-    except (EmptyPage, PageNotAnInteger):
-        packages = paginator.page(1)
-    page_range = paginator.get_elided_page_range(packages.number, on_each_side=2, on_ends=1)
-    return render(request, 'superadmin/cms_packages.html', {'packages': packages, 'page_range': page_range})
+# ── (Service Packages removed - redirects to super_admin_bid_plans) ───────────
 
-@sa_required
-def super_admin_landing_package_create(request):
-    if request.method == 'POST':
-        form = PackageCardForm(request.POST)
-        if form.is_valid():
-            form.save()
-            django_messages.success(request, 'Service Package created!')
-            return redirect('super_admin_landing_packages')
-    else:
-        form = PackageCardForm()
-    return render(request, 'superadmin/cms_card_form.html', {
-        'form': form,
-        'title': 'Add Service Package',
-        'back_url': 'super_admin_landing_packages'
-    })
-
-@sa_required
-def super_admin_landing_package_edit(request, card_id):
-    pkg = get_object_or_404(PackageCard, pk=card_id)
-    if request.method == 'POST':
-        form = PackageCardForm(request.POST, instance=pkg)
-        if form.is_valid():
-            form.save()
-            django_messages.success(request, 'Service Package updated!')
-            return redirect('super_admin_landing_packages')
-    else:
-        form = PackageCardForm(instance=pkg)
-    return render(request, 'superadmin/cms_card_form.html', {
-        'form': form,
-        'card': pkg,
-        'title': f'Edit Package: {pkg.title}',
-        'back_url': 'super_admin_landing_packages'
-    })
-
-@sa_required
-def super_admin_landing_package_delete(request, card_id):
-    pkg = get_object_or_404(PackageCard, pk=card_id)
-    pkg.delete()
-    django_messages.success(request, 'Package deleted.')
-    return redirect('super_admin_landing_packages')
-
-@sa_required
-def super_admin_landing_package_toggle(request, card_id):
-    pkg = get_object_or_404(PackageCard, pk=card_id)
-    pkg.is_active = not pkg.is_active
-    pkg.save()
-    django_messages.success(request, f'Package "{pkg.title}" status updated.')
-    return redirect('super_admin_landing_packages')
 
 
 # ── TESTIMONIALS ──────────────────────────────────────────────────────────────
