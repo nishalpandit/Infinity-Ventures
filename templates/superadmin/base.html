@@ -652,6 +652,12 @@
         <i class="fa-solid fa-star-half-stroke"></i>
         <span>Testimonials</span>
       </a>
+
+      <div class="nav-section" style="color: var(--warning); font-weight: 800;">Platform Settings</div>
+      <a href="{% url 'super_admin_settings' %}" class="nav-item {% if '/super-admin/settings' in request.path %}active{% endif %}">
+        <i class="fa-solid fa-sliders"></i>
+        <span>Financial &amp; Tax Config</span>
+      </a>
     </div>
     
     <div class="sidebar-footer">

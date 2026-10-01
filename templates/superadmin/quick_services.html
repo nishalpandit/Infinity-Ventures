@@ -16,9 +16,9 @@
       <thead>
         <tr>
           <th>Title</th>
-          <th>Customer</th>
+          <th>Vendor</th>
           <th>Category</th>
-          <th>Budget</th>
+          <th>Base Price</th>
           <th>Status</th>
           <th>Actions</th>
         </tr>
@@ -27,10 +27,10 @@
         {% for qs in qservices %}
         <tr>
           <td><strong>{{ qs.title }}</strong></td>
-          <td>{{ qs.user.username }}</td>
+          <td>{{ qs.vendor.username }}</td>
           <td>{{ qs.category.name|default:"-" }}</td>
-          <td style="color: var(--success); font-weight: 600;">₹{{ qs.budget }}</td>
-          <td><span class="badge {% if qs.status == 'open' %}active{% elif qs.status == 'cancelled' or qs.status == 'closed' %}inactive{% else %}warn{% endif %}">{{ qs.get_status_display }}</span></td>
+          <td style="color: var(--success); font-weight: 600;">₹{{ qs.base_price }}</td>
+          <td><span class="badge {% if qs.status == 'active' %}active{% elif qs.status == 'draft' %}inactive{% else %}warn{% endif %}">{{ qs.get_status_display }}</span></td>
           <td>
             <div style="display: flex; gap: 8px;">
               <a href="{% url 'super_admin_qs_edit' qs.id %}" class="btn btn-outline btn-sm"><i class="fa-solid fa-pen-to-square"></i> Edit</a>
