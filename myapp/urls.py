@@ -48,6 +48,13 @@ urlpatterns = [
     path('super-admin/users/<int:user_id>/delete/', super_admin_views.super_admin_user_delete, name='super_admin_user_delete'),
     path('super-admin/users/<int:user_id>/toggle/', super_admin_views.super_admin_user_toggle, name='super_admin_user_toggle'),
     
+    # Area Admins Management
+    path('super-admin/area-admins/', super_admin_views.super_admin_area_admins, name='super_admin_area_admins'),
+    path('super-admin/area-admins/create/', super_admin_views.super_admin_area_admin_create, name='super_admin_area_admin_create'),
+    path('super-admin/area-admins/<int:admin_id>/edit/', super_admin_views.super_admin_area_admin_edit, name='super_admin_area_admin_edit'),
+    path('super-admin/area-admins/<int:admin_id>/delete/', super_admin_views.super_admin_area_admin_delete, name='super_admin_area_admin_delete'),
+    path('super-admin/area-admins/<int:admin_id>/toggle/', super_admin_views.super_admin_area_admin_toggle, name='super_admin_area_admin_toggle'),
+
     # Vendors CRUD
     path('super-admin/vendors/', super_admin_views.super_admin_vendors, name='super_admin_vendors'),
     path('super-admin/vendors/create/', super_admin_views.super_admin_vendor_create, name='super_admin_vendor_create'),

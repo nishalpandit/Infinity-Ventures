@@ -1,0 +1,330 @@
+{% extends 'superadmin/base.html' %}
+{% load static %}
+{% block title %}{% if mode == 'create' %}Provision Area Admin{% else %}Edit Area Admin: {{ admin_obj.username }}{% endif %} - Super Admin{% endblock %}
+{% block header_title %}{% if mode == 'create' %}Provision Area Admin{% else %}Edit Area Admin{% endif %}{% endblock %}
+
+{% block header_actions %}
+<a href="{% url 'super_admin_area_admins' %}" class="btn btn-outline btn-sm">
+  <i class="fa-solid fa-arrow-left"></i>
+  <span>Back to Area Admins</span>
+</a>
+{% endblock %}
+
+{% block content %}
+<div class="card form-card" style="max-width: 920px; margin: 0 auto; padding: 32px 36px; box-shadow: var(--shadow-sm); background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px;">
+
+  <!-- Header & Authority Banner -->
+  <div style="display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #e2e8f0; padding-bottom: 20px; margin-bottom: 28px; flex-wrap: wrap; gap: 14px;">
+    <div style="display: flex; align-items: center; gap: 14px;">
+      {% if mode == 'edit' and admin_obj.user_profile.profile_image %}
+        <img src="{{ admin_obj.user_profile.profile_image.url }}" alt="{{ admin_obj.username }}" style="width: 52px; height: 52px; border-radius: 50%; object-fit: cover; border: 2px solid #4f46e5; flex-shrink: 0; box-shadow: 0 4px 10px rgba(79, 70, 229, 0.2);">
+      {% else %}
+        <div style="width: 52px; height: 52px; border-radius: 12px; background: linear-gradient(135deg, #4f46e5, #7c3aed); color: white; display: flex; align-items: center; justify-content: center; font-size: 22px; flex-shrink: 0; box-shadow: 0 4px 10px rgba(79, 70, 229, 0.3);">
+          <i class="fa-solid fa-user-shield"></i>
+        </div>
+      {% endif %}
+      <div>
+        <h3 style="font-size: 20px; font-weight: 800; color: #0f172a; margin: 0 0 4px 0;">
+          {% if mode == 'create' %}Provision New Area Admin{% else %}Edit: {{ admin_obj.username }}{% endif %}
+        </h3>
+        <p style="font-size: 13px; color: #64748b; margin: 0;">
+          {% if mode == 'create' %}
+            Assign an administrative territory (State / City) and set credentials. Area Admins can only be created by Super Admin.
+          {% else %}
+            Admin ID: #{{ admin_obj.id }} &middot; Appointed on {{ admin_obj.date_joined|date:"M d, Y" }}
+          {% endif %}
+        </p>
+      </div>
+    </div>
+
+    <div>
+      <span class="badge" style="background: rgba(79, 70, 229, 0.12); color: #4338ca; border: 1px solid rgba(79, 70, 229, 0.25); font-size: 12.5px; padding: 6px 12px; border-radius: 20px; font-weight: 700;">
+        <i class="fa-solid fa-map-pin" style="font-size: 11px;"></i> Role: Area Admin (ADMIN)
+      </span>
+    </div>
+  </div>
+
+  <!-- Operational Scope Notice -->
+  <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-left: 4px solid #4f46e5; border-radius: 6px; padding: 12px 16px; margin-bottom: 28px; display: flex; align-items: flex-start; gap: 12px;">
+    <i class="fa-solid fa-circle-info" style="color: #4f46e5; font-size: 16px; margin-top: 2px;"></i>
+    <div style="font-size: 12.5px; color: #334155; line-height: 1.5;">
+      <strong>Territory Scope Guarantee:</strong> Once provisioned, this admin will log in via the main admin portal (<code>/admin-dashboard</code>) and their access will be strictly restricted to their designated territory. They will only see local vendors, regional job postings, quick service bookings, and customer requests within their assigned state/city.
+    </div>
+  </div>
+
+  <form method="POST" enctype="multipart/form-data" id="areaAdminForm">
+    {% csrf_token %}
+
+    <!-- SECTION 1: CREDENTIALS & PERSONAL DETAILS -->
+    <div style="margin-bottom: 28px;">
+      <h4 style="font-size: 13px; font-weight: 800; color: #0f172a; text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 16px; display: flex; align-items: center; gap: 8px;">
+        <i class="fa-solid fa-id-badge" style="color: #4f46e5;"></i> Personal &amp; Account Details
+      </h4>
+
+      <!-- Name Row -->
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
+        <div class="form-group" style="margin-bottom: 0;">
+          <label class="form-label" style="display: block; font-size: 12px; font-weight: 700; color: #475569; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px;">First Name</label>
+          <input 
+            type="text" 
+            name="first_name" 
+            class="form-control" 
+            value="{% if mode == 'create' %}{{ form_data.first_name|default:'' }}{% else %}{{ admin_obj.first_name|default:'' }}{% endif %}" 
+            placeholder="e.g. Rahul"
+            style="width: 100%; padding: 9px 12px; font-size: 13.5px; border: 1px solid #cbd5e1; border-radius: 6px;"
+          >
+        </div>
+        <div class="form-group" style="margin-bottom: 0;">
+          <label class="form-label" style="display: block; font-size: 12px; font-weight: 700; color: #475569; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px;">Last Name</label>
+          <input 
+            type="text" 
+            name="last_name" 
+            class="form-control" 
+            value="{% if mode == 'create' %}{{ form_data.last_name|default:'' }}{% else %}{{ admin_obj.last_name|default:'' }}{% endif %}" 
+            placeholder="e.g. Sharma"
+            style="width: 100%; padding: 9px 12px; font-size: 13.5px; border: 1px solid #cbd5e1; border-radius: 6px;"
+          >
+        </div>
+      </div>
+
+      <!-- Username & Email Row -->
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
+        <div class="form-group" style="margin-bottom: 0;">
+          <label class="form-label" style="display: block; font-size: 12px; font-weight: 700; color: #475569; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px;">
+            Username <span style="color: #dc2626;">*</span>
+          </label>
+          <input 
+            type="text" 
+            name="username" 
+            class="form-control" 
+            value="{% if mode == 'create' %}{{ form_data.username|default:'' }}{% else %}{{ admin_obj.username }}{% endif %}" 
+            {% if mode == 'edit' %}readonly style="opacity: 0.75; background: #f8fafc; cursor: not-allowed; width: 100%; padding: 9px 12px; font-size: 13.5px; border: 1px solid #cbd5e1; border-radius: 6px;"{% else %}required placeholder="e.g. admin_jharkhand" style="width: 100%; padding: 9px 12px; font-size: 13.5px; border: 1px solid #cbd5e1; border-radius: 6px;"{% endif %}
+          >
+          {% if mode == 'edit' %}
+            <small style="color: #94a3b8; font-size: 11px; margin-top: 4px; display: block;">Username cannot be modified after account creation.</small>
+          {% endif %}
+        </div>
+
+        <div class="form-group" style="margin-bottom: 0;">
+          <label class="form-label" style="display: block; font-size: 12px; font-weight: 700; color: #475569; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px;">
+            Email Address <span style="color: #dc2626;">*</span>
+          </label>
+          <input 
+            type="email" 
+            name="email" 
+            class="form-control" 
+            value="{% if mode == 'create' %}{{ form_data.email|default:'' }}{% else %}{{ admin_obj.email }}{% endif %}" 
+            required 
+            placeholder="admin.jharkhand@sugu.in"
+            style="width: 100%; padding: 9px 12px; font-size: 13.5px; border: 1px solid #cbd5e1; border-radius: 6px;"
+          >
+        </div>
+      </div>
+
+      <!-- Phone Number -->
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
+        <div class="form-group" style="margin-bottom: 0;">
+          <label class="form-label" style="display: block; font-size: 12px; font-weight: 700; color: #475569; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px;">
+            Mobile / Phone Number
+          </label>
+          <input 
+            type="text" 
+            name="phone_number" 
+            class="form-control" 
+            value="{% if mode == 'create' %}{{ form_data.phone_number|default:'' }}{% else %}{{ admin_obj.user_profile.phone_number|default:'' }}{% endif %}" 
+            placeholder="e.g. +91 9876543210"
+            style="width: 100%; padding: 9px 12px; font-size: 13.5px; border: 1px solid #cbd5e1; border-radius: 6px;"
+          >
+        </div>
+
+        <div class="form-group" style="margin-bottom: 0;">
+          <label class="form-label" style="display: block; font-size: 12px; font-weight: 700; color: #475569; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px;">
+            Profile Avatar (Optional)
+          </label>
+          <input 
+            type="file" 
+            name="profile_image" 
+            accept="image/*" 
+            class="form-control"
+            style="width: 100%; padding: 6px 10px; font-size: 13px; border: 1px solid #cbd5e1; border-radius: 6px; background: white;"
+          >
+        </div>
+      </div>
+
+      <!-- Password Row -->
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+        <div class="form-group" style="margin-bottom: 0;">
+          <label class="form-label" style="display: block; font-size: 12px; font-weight: 700; color: #475569; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px;">
+            Password {% if mode == 'create' %}<span style="color: #dc2626;">*</span>{% endif %}
+          </label>
+          <input 
+            type="password" 
+            name="password" 
+            id="adminPassword"
+            class="form-control" 
+            {% if mode == 'create' %}required{% endif %} 
+            placeholder="{% if mode == 'create' %}Enter strong password (min 6 chars){% else %}Leave empty to keep current password{% endif %}"
+            style="width: 100%; padding: 9px 12px; font-size: 13.5px; border: 1px solid #cbd5e1; border-radius: 6px;"
+          >
+        </div>
+
+        <div class="form-group" style="margin-bottom: 0;">
+          <label class="form-label" style="display: block; font-size: 12px; font-weight: 700; color: #475569; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px;">
+            Confirm Password {% if mode == 'create' %}<span style="color: #dc2626;">*</span>{% endif %}
+          </label>
+          <input 
+            type="password" 
+            name="confirm_password" 
+            id="adminConfirmPassword"
+            class="form-control" 
+            {% if mode == 'create' %}required{% endif %} 
+            placeholder="{% if mode == 'create' %}Repeat password to confirm{% else %}Repeat new password to confirm{% endif %}"
+            style="width: 100%; padding: 9px 12px; font-size: 13.5px; border: 1px solid #cbd5e1; border-radius: 6px;"
+          >
+        </div>
+      </div>
+    </div>
+
+    <!-- SECTION 2: TERRITORY ASSIGNMENT -->
+    <div style="margin-bottom: 28px; padding-top: 20px; border-top: 1px solid #e2e8f0;">
+      <h4 style="font-size: 13px; font-weight: 800; color: #0f172a; text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 16px; display: flex; align-items: center; gap: 8px;">
+        <i class="fa-solid fa-map-location-dot" style="color: #4f46e5;"></i> Operational Territory Assignment
+      </h4>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+        
+        <!-- Assigned State -->
+        <div class="form-group" style="margin-bottom: 0;">
+          <label class="form-label" style="display: block; font-size: 12px; font-weight: 700; color: #475569; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px;">
+            Assigned State / Operational Territory <span style="color: #dc2626;">*</span>
+          </label>
+          <select 
+            name="assigned_state" 
+            id="assignedStateSelect"
+            class="form-control" 
+            required 
+            style="width: 100%; padding: 9px 12px; font-size: 13.5px; border: 1px solid #cbd5e1; border-radius: 6px; background: white;"
+            onchange="updateCitySuggestions()"
+          >
+            <option value="">-- Select Indian State / Territory --</option>
+            {% for st in states %}
+              <option value="{{ st }}" 
+                {% if mode == 'create' %}
+                  {% if form_data.assigned_state == st %}selected{% endif %}
+                {% else %}
+                  {% if admin_obj.assigned_state == st %}selected{% endif %}
+                {% endif %}
+              >
+                {{ st }}
+              </option>
+            {% endfor %}
+          </select>
+          <small style="color: #64748b; font-size: 11.5px; margin-top: 4px; display: block;">
+            The admin will have regional control over this entire state.
+          </small>
+        </div>
+
+        <!-- Assigned City -->
+        <div class="form-group" style="margin-bottom: 0;">
+          <label class="form-label" style="display: block; font-size: 12px; font-weight: 700; color: #475569; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px;">
+            Assigned City (Optional Hub)
+          </label>
+          <input 
+            type="text" 
+            name="assigned_city" 
+            id="assignedCityInput"
+            list="citiesDataList"
+            class="form-control" 
+            value="{% if mode == 'create' %}{{ form_data.assigned_city|default:'' }}{% else %}{{ admin_obj.assigned_city|default:'' }}{% endif %}" 
+            placeholder="e.g. Ranchi, Mumbai, Bengaluru (or leave empty for all cities)"
+            style="width: 100%; padding: 9px 12px; font-size: 13.5px; border: 1px solid #cbd5e1; border-radius: 6px;"
+          >
+          <datalist id="citiesDataList"></datalist>
+          <small style="color: #64748b; font-size: 11.5px; margin-top: 4px; display: block;">
+            Leave blank if the Area Admin oversees all cities across the state.
+          </small>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- SECTION 3: ACCOUNT STATUS & PERMISSIONS -->
+    <div style="margin-bottom: 28px; padding-top: 20px; border-top: 1px solid #e2e8f0;">
+      <h4 style="font-size: 13px; font-weight: 800; color: #0f172a; text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 16px; display: flex; align-items: center; gap: 8px;">
+        <i class="fa-solid fa-sliders" style="color: #4f46e5;"></i> Account Status
+      </h4>
+
+      <div style="display: flex; align-items: center; gap: 14px; background: #f8fafc; border: 1px solid #e2e8f0; padding: 14px 18px; border-radius: 8px;">
+        <label class="toggle-switch" style="margin: 0;">
+          <input 
+            type="checkbox" 
+            name="is_active" 
+            {% if mode == 'create' %}
+              {% if form_data.is_active == 'on' or not form_data %}checked{% endif %}
+            {% else %}
+              {% if admin_obj.is_active %}checked{% endif %}
+            {% endif %}
+          >
+          <span class="toggle-slider"></span>
+        </label>
+        <div>
+          <div style="font-size: 13.5px; font-weight: 700; color: #0f172a;">Active Account</div>
+          <div style="font-size: 12px; color: #64748b;">
+            When active, the Area Admin can log in to <code>/admin-dashboard</code> and manage regional operations.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SUBMIT ACTIONS -->
+    <div style="display: flex; justify-content: flex-end; gap: 12px; padding-top: 20px; border-top: 1px solid #e2e8f0;">
+      <a href="{% url 'super_admin_area_admins' %}" class="btn btn-outline" style="padding: 10px 20px; font-size: 13.5px;">
+        Cancel
+      </a>
+      <button type="submit" class="btn btn-primary" style="padding: 10px 24px; font-size: 13.5px; font-weight: 700; background: #0f172a; border-color: #0f172a; box-shadow: 0 4px 10px rgba(15, 23, 42, 0.2);">
+        <i class="fa-solid fa-check"></i>
+        <span>{% if mode == 'create' %}Provision Area Admin{% else %}Save Changes{% endif %}</span>
+      </button>
+    </div>
+
+  </form>
+
+</div>
+
+<!-- City auto-suggestion based on state -->
+<script>
+  const citiesByState = {{ cities_by_state|safe }};
+
+  function updateCitySuggestions() {
+    const stateSelect = document.getElementById('assignedStateSelect');
+    const selectedState = stateSelect.value;
+    const datalist = document.getElementById('citiesDataList');
+    datalist.innerHTML = '';
+
+    if (selectedState && citiesByState[selectedState]) {
+      citiesByState[selectedState].forEach(function(cityName) {
+        const opt = document.createElement('option');
+        opt.value = cityName;
+        datalist.appendChild(opt);
+      });
+    }
+  }
+
+  // Initial populate if state is pre-selected
+  document.addEventListener('DOMContentLoaded', function() {
+    updateCitySuggestions();
+  });
+
+  // Client side password verification check
+  document.getElementById('areaAdminForm').addEventListener('submit', function(e) {
+    const pass = document.getElementById('adminPassword').value;
+    const conf = document.getElementById('adminConfirmPassword').value;
+    if (pass || conf) {
+      if (pass !== conf) {
+        e.preventDefault();
+        alert('Password and Confirm Password do not match. Please verify your entries.');
+      }
+    }
+  });
+</script>
+{% endblock %}

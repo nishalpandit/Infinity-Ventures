@@ -596,7 +596,11 @@
       </a>
       
       <div class="nav-section">Directory & Users</div>
-      <a href="{% url 'super_admin_users' %}" class="nav-item {% if 'users' in request.path and 'landing' not in request.path %}active{% endif %}">
+      <a href="{% url 'super_admin_area_admins' %}" class="nav-item {% if 'area-admins' in request.path %}active{% endif %}">
+        <i class="fa-solid fa-user-shield"></i>
+        <span>Area Admins</span>
+      </a>
+      <a href="{% url 'super_admin_users' %}" class="nav-item {% if 'users' in request.path and 'area-admins' not in request.path and 'landing' not in request.path %}active{% endif %}">
         <i class="fa-solid fa-users"></i>
         <span>All Users</span>
       </a>
