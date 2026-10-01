@@ -69,6 +69,13 @@ urlpatterns = [
     path('super-admin/cms/category/create/', super_admin_views.super_admin_category_create, name='super_admin_category_create'),
     path('super-admin/cms/category/<int:cat_id>/edit/', super_admin_views.super_admin_category_edit, name='super_admin_category_edit'),
     path('super-admin/cms/category/<int:cat_id>/delete/', super_admin_views.super_admin_category_delete, name='super_admin_category_delete'),
+    # States CRUD
+    path('super-admin/cms/state/create/', super_admin_views.super_admin_state_create, name='super_admin_state_create'),
+    path('super-admin/cms/state/<int:state_id>/edit/', super_admin_views.super_admin_state_edit, name='super_admin_state_edit'),
+    path('super-admin/cms/state/<int:state_id>/delete/', super_admin_views.super_admin_state_delete, name='super_admin_state_delete'),
+    
+    # Cities / Locations CRUD
+    path('super-admin/cms/city/create/', super_admin_views.super_admin_location_create, name='super_admin_city_create'),
     path('super-admin/cms/location/create/', super_admin_views.super_admin_location_create, name='super_admin_location_create'),
     path('super-admin/cms/location/<int:loc_id>/edit/', super_admin_views.super_admin_location_edit, name='super_admin_location_edit'),
     path('super-admin/cms/location/<int:loc_id>/delete/', super_admin_views.super_admin_location_delete, name='super_admin_location_delete'),

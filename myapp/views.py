@@ -57,11 +57,44 @@ def get_admin_state_context(request):
 
     return admin_state, is_area_admin, available_states, co_admins
 
-def get_user_dashboard_context(user):
+def get_user_dashboard_context(user, request=None):
     name = user.get_full_name() or user.username
     initials = (user.first_name[:1].upper() + user.last_name[:1].upper()) if (user.first_name and user.last_name) else (user.first_name[:2].upper() if user.first_name else user.username[:2].upper())
     date_str = datetime.now().strftime("%A, %d %B %Y")
     
+    # Resolve user's location
+    u_prof = getattr(user, 'user_profile', None)
+    user_city = None
+    user_state = None
+    if u_prof and u_prof.city:
+        user_city = u_prof.city.strip()
+        user_state = u_prof.state.strip() if u_prof.state else None
+    
+    if not user_city and request:
+        user_city = request.session.get('user_city') or request.COOKIES.get('sugu_user_city')
+        user_state = request.session.get('user_state') or request.COOKIES.get('sugu_user_state')
+
+    if not user_city and getattr(user, 'assigned_city', None):
+        user_city = user.assigned_city.strip()
+        user_state = user.assigned_state.strip() if user.assigned_state else None
+
+    if not user_city and hasattr(user, 'vendor_profile') and user.vendor_profile and user.vendor_profile.location:
+        parts = user.vendor_profile.location.split(',')
+        user_city = parts[0].strip()
+        if len(parts) > 1:
+            user_state = parts[1].strip()
+
+    if not user_city:
+        user_city = "Ranchi"
+        user_state = "Jharkhand"
+
+    user_location_str = f"{user_city}, {user_state}" if user_state else user_city
+
+    # Check whether user_city is listed in Super Admin dashboard active locations
+    active_cities = list(Location.objects.filter(status='active').values_list('city', flat=True))
+    active_cities_lower = {c.lower().strip() for c in active_cities if c}
+    is_service_available = user_city.lower().strip() in active_cities_lower
+
     from .models import ServiceBooking
     qs_bookings = ServiceBooking.objects.filter(customer=user)
     active_qs = qs_bookings.exclude(status__in=['completed', 'cancelled']).count()
@@ -121,7 +154,12 @@ def get_user_dashboard_context(user):
         'user_name': name,
         'user_initials': initials,
         'current_date': date_str,
-        'user_location': 'Ranchi, Jharkhand',
+        'user_location': user_location_str,
+        'user_city': user_city,
+        'user_state': user_state,
+        'is_service_available': is_service_available,
+        'service_not_available': not is_service_available,
+        'service_unavailable_city': user_city,
         'active_qs': active_qs,
         'active_jobs': active_jobs,
         'pending_quotations': pending_quotations,
@@ -1291,6 +1329,8 @@ def dashboard_view(request, path=''):
             first_name = request.POST.get('first_name')
             phone_number = request.POST.get('phone_number')
             email = request.POST.get('email')
+            city = request.POST.get('city')
+            state = request.POST.get('state')
             
             if first_name:
                 request.user.first_name = first_name
@@ -1298,10 +1338,16 @@ def dashboard_view(request, path=''):
                 request.user.email = email
             request.user.save()
             
-            if phone_number:
-                profile, _ = UserProfile.objects.get_or_create(user=request.user)
+            profile, _ = UserProfile.objects.get_or_create(user=request.user)
+            if phone_number is not None:
                 profile.phone_number = phone_number
-                profile.save()
+            if city is not None:
+                profile.city = city.strip()
+                request.session['user_city'] = city.strip()
+            if state is not None:
+                profile.state = state.strip()
+                request.session['user_state'] = state.strip()
+            profile.save()
                 
             return redirect('/user/profile/index.html')
 
@@ -2573,7 +2619,7 @@ def dashboard_view(request, path=''):
                     context['chat_vendor'] = context['chat_user'] # alias for templates
             
     if (path in ['user/dashboard', 'user/index', 'user', 'dashboard', 'index'] or mapped_path in ['user-dashboard/dashboard', 'user-dashboard/index']) and request.user.is_authenticated and getattr(request.user, 'role', '') in ['USER', 'CUSTOMER']:
-        context.update(get_user_dashboard_context(request.user))
+        context.update(get_user_dashboard_context(request.user, request=request))
 
     if 'user/jobs/selected-vendors' in path or 'jobs/selected-vendors' in mapped_path:
         job_id = request.GET.get('job_id') or request.GET.get('id')
@@ -3076,6 +3122,30 @@ def home_view(request):
     cms_testimonials = Testimonial.objects.filter(is_active=True).order_by('order', '-created_at')
     cms_trust_metrics = TrustMetric.objects.filter(is_active=True).order_by('order')
 
+    user_city = None
+    user_state = None
+    is_service_available = True
+    if request.user.is_authenticated:
+        u_prof = getattr(request.user, 'user_profile', None)
+        if u_prof and u_prof.city:
+            user_city = u_prof.city.strip()
+            user_state = u_prof.state.strip() if u_prof.state else None
+        if not user_city:
+            user_city = request.session.get('user_city') or request.COOKIES.get('sugu_user_city')
+            user_state = request.session.get('user_state') or request.COOKIES.get('sugu_user_state')
+        if not user_city and getattr(request.user, 'assigned_city', None):
+            user_city = request.user.assigned_city.strip()
+            user_state = request.user.assigned_state.strip() if request.user.assigned_state else None
+        if not user_city and hasattr(request.user, 'vendor_profile') and request.user.vendor_profile and request.user.vendor_profile.location:
+            parts = request.user.vendor_profile.location.split(',')
+            user_city = parts[0].strip()
+            if len(parts) > 1:
+                user_state = parts[1].strip()
+
+        if user_city:
+            active_cities_set = {c.lower().strip() for c in locations.values_list('city', flat=True) if c}
+            is_service_available = user_city.lower().strip() in active_cities_set
+
     context = {
         'error': error,
         'branding': branding,
@@ -3095,6 +3165,11 @@ def home_view(request):
         'recent_bids_json': json.dumps(recent_bids_data),
         'now': timezone.now(),
         'user': request.user,
+        'user_city': user_city,
+        'user_state': user_state,
+        'is_service_available': is_service_available,
+        'service_not_available': not is_service_available if user_city else False,
+        'service_unavailable_city': user_city,
     }
     return render(request, 'index.html', context)
 
@@ -3484,7 +3559,7 @@ def user_dashboard(request):
                 pass
         return redirect('/user/dashboard')
 
-    context = get_user_dashboard_context(request.user)
+    context = get_user_dashboard_context(request.user, request=request)
     return render(request, 'user-dashboard/dashboard.html', context)
 
 # Re-export APIs from Api_views module

@@ -713,8 +713,40 @@ def user_nav_data_api(request):
         u = request.user
         name = u.get_full_name() or u.username
         initials = (u.first_name[:1].upper() + u.last_name[:1].upper()) if u.first_name else u.username[:2].upper()
-        return JsonResponse({'name': name, 'initials': initials})
-    return JsonResponse({'name': 'Guest', 'initials': 'GU'})
+        
+        user_city = None
+        user_state = None
+        u_prof = getattr(u, 'user_profile', None)
+        if u_prof and u_prof.city:
+            user_city = u_prof.city.strip()
+            user_state = u_prof.state.strip() if u_prof.state else None
+        if not user_city:
+            user_city = request.session.get('user_city') or request.COOKIES.get('sugu_user_city')
+            user_state = request.session.get('user_state') or request.COOKIES.get('sugu_user_state')
+        if not user_city and getattr(u, 'assigned_city', None):
+            user_city = u.assigned_city.strip()
+            user_state = u.assigned_state.strip() if u.assigned_state else None
+        if not user_city and hasattr(u, 'vendor_profile') and u.vendor_profile and u.vendor_profile.location:
+            parts = u.vendor_profile.location.split(',')
+            user_city = parts[0].strip()
+            if len(parts) > 1:
+                user_state = parts[1].strip()
+
+        if not user_city:
+            user_city = "Ranchi"
+            user_state = "Jharkhand"
+
+        active_cities = {c.lower().strip() for c in Location.objects.filter(status='active').values_list('city', flat=True) if c}
+        is_service_available = user_city.lower().strip() in active_cities
+
+        return JsonResponse({
+            'name': name,
+            'initials': initials,
+            'city': user_city,
+            'state': user_state,
+            'is_service_available': is_service_available,
+        })
+    return JsonResponse({'name': 'Guest', 'initials': 'GU', 'is_service_available': True})
 
 
 @csrf_exempt

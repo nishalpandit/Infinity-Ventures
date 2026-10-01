@@ -37,6 +37,14 @@
                   <label>Email <span class="required">*</span></label>
                   <input class="input" type="email" name="email" required value="{{ request.user.email|default:'' }}">
                 </div>
+                <div class="field">
+                  <label>City</label>
+                  <input class="input" name="city" value="{{ request.user.user_profile.city|default:'' }}" placeholder="e.g. Ranchi, Mumbai, Pune">
+                </div>
+                <div class="field">
+                  <label>State</label>
+                  <input class="input" name="state" value="{{ request.user.user_profile.state|default:'' }}" placeholder="e.g. Jharkhand, Maharashtra">
+                </div>
               </div>
             </div>
 

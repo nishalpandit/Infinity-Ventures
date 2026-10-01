@@ -1,45 +1,70 @@
 {% extends 'superadmin/base.html' %}
-{% block title %}{{ mode|title }} Location{% endblock %}
-{% block header_title %}{{ mode|title }} Location{% endblock %}
+{% block title %}{{ mode|title }} City · Service Locations{% endblock %}
+{% block header_title %}{{ mode|title }} City{% endblock %}
 
 {% block header_actions %}
 <a href="{% url 'super_admin_cms' %}" class="btn btn-outline btn-sm">
   <i class="fa-solid fa-arrow-left"></i>
-  <span>Back to Locations</span>
+  <span>Back to CMS</span>
 </a>
 {% endblock %}
 
 {% block content %}
-<div class="card form-card">
-  <h3 style="font-size: 20px; font-weight: 700; margin-bottom: 24px;">
-    {% if mode == 'create' %}Add New Location{% else %}Edit: {{ loc }}{% endif %}
-  </h3>
+<div class="card form-card" style="max-width: 680px; margin: 0 auto;">
+  <div style="margin-bottom: 24px;">
+    <span class="badge" style="background: rgba(16, 185, 129, 0.1); color: #059669; font-weight: 700; margin-bottom: 8px; display: inline-block;">
+      Step 2: Operational City
+    </span>
+    <h3 style="font-size: 20px; font-weight: 700; margin: 0 0 6px;">
+      {% if mode == 'create' %}Add New City{% else %}Edit City: {{ loc.city }}, {{ loc.state }}{% endif %}
+    </h3>
+    <p style="color: var(--text-muted); font-size: 13.5px; margin: 0;">
+      Select the parent state from previously created states, then specify the city name.
+    </p>
+  </div>
   
   <form method="POST">
     {% csrf_token %}
     
-    <div class="form-row">
-      <div class="form-group">
-        <label>State</label>
-        <input type="text" name="state" class="form-control" value="{{ loc.state|default:'' }}" required>
+    <div class="form-group" style="margin-bottom: 20px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+        <label style="font-weight: 600; margin: 0;">Select State <span style="color: var(--danger);">*</span></label>
+        <a href="{% url 'super_admin_state_create' %}" style="font-size: 12.5px; color: var(--accent); font-weight: 600; text-decoration: none;">
+          <i class="fa-solid fa-plus"></i> Create new State first
+        </a>
       </div>
-      <div class="form-group">
-        <label>City</label>
-        <input type="text" name="city" class="form-control" value="{{ loc.city|default:'' }}" required>
-      </div>
+      <select name="state" class="form-control" required>
+        <option value="">-- Choose an existing State --</option>
+        {% for st in states %}
+          <option value="{{ st.name }}" {% if loc.state == st.name or preselected_state == st.name %}selected{% endif %}>
+            {{ st.name }}{% if st.status == 'inactive' %} (Inactive){% endif %}
+          </option>
+        {% endfor %}
+      </select>
+      <small style="color: var(--text-muted); font-size: 12px; margin-top: 4px; display: block;">
+        States must be created before adding cities under them.
+      </small>
     </div>
     
-    <div class="form-group">
-      <label>Status</label>
+    <div class="form-group" style="margin-bottom: 20px;">
+      <label style="font-weight: 600; margin-bottom: 8px; display: block;">City Name <span style="color: var(--danger);">*</span></label>
+      <input type="text" name="city" class="form-control" placeholder="e.g. Mumbai, Pune, Ranchi, Bengaluru" value="{{ loc.city|default:'' }}" required>
+      <small style="color: var(--text-muted); font-size: 12px; margin-top: 4px; display: block;">
+        Enter the city where vendors and customers can book services.
+      </small>
+    </div>
+    
+    <div class="form-group" style="margin-bottom: 24px;">
+      <label style="font-weight: 600; margin-bottom: 8px; display: block;">Operational Status</label>
       <select name="status" class="form-control">
-        <option value="active" {% if loc.status == 'active' %}selected{% endif %}>Active</option>
-        <option value="inactive" {% if loc.status == 'inactive' %}selected{% endif %}>Inactive</option>
+        <option value="active" {% if loc.status == 'active' or not loc %}selected{% endif %}>Active (Services Live)</option>
+        <option value="inactive" {% if loc.status == 'inactive' %}selected{% endif %}>Inactive (Paused / Unavailable)</option>
       </select>
     </div>
     
-    <div class="form-actions">
+    <div class="form-actions" style="display: flex; gap: 12px; align-items: center; border-top: 1px solid var(--border); padding-top: 20px;">
       <button type="submit" class="btn btn-primary">
-        <i class="fa-solid fa-check"></i> {% if mode == 'create' %}Create Location{% else %}Save Changes{% endif %}
+        <i class="fa-solid fa-check"></i> {% if mode == 'create' %}Create City{% else %}Save Changes{% endif %}
       </button>
       <a href="{% url 'super_admin_cms' %}" class="btn btn-outline">Cancel</a>
     </div>

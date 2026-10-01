@@ -95,6 +95,33 @@
     .then(d => {
       $$('.avatar:not(.xl)').forEach(el => el.textContent = d.initials);
       $$('.side-user-copy strong, .top-user-copy strong').forEach(el => el.textContent = d.name);
+      if (d.is_service_available === false && !$('.service-alert-banner')) {
+        const page = $('main.page');
+        if (page) {
+          const bannerHtml = `
+            <div class="service-alert-banner" style="background: linear-gradient(135deg, #fff1f2, #ffe4e6); border: 1.5px solid #fda4af; border-radius: 14px; padding: 16px 20px; margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between; gap: 16px; box-shadow: 0 4px 14px rgba(225, 29, 72, 0.08);">
+              <div style="display: flex; align-items: center; gap: 14px;">
+                <div style="width: 44px; height: 44px; border-radius: 12px; background: #f43f5e; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0; box-shadow: 0 4px 10px rgba(244,63,94,0.3);">
+                  ⚠️
+                </div>
+                <div>
+                  <div style="font-weight: 800; color: #9f1239; font-size: 15px; margin-bottom: 3px;">
+                    Service not available at your location
+                  </div>
+                  <div style="color: #be123c; font-size: 13.5px; line-height: 1.4;">
+                    Our home services are currently not available in <strong>${d.city || 'your location'}</strong>. We are expanding rapidly to new cities! You can update your location in your profile settings.
+                  </div>
+                </div>
+              </div>
+              <div style="display: flex; gap: 8px; flex-shrink: 0;">
+                <a href="/user/profile/edit.html" class="btn btn-secondary btn-sm" style="background:#fff; border-color:#fda4af; color:#9f1239; font-weight:700;">
+                  Change Location
+                </a>
+              </div>
+            </div>`;
+          page.insertAdjacentHTML('afterbegin', bannerHtml);
+        }
+      }
     }).catch(e => console.error(e));
   if(!$('.mobile-overlay')) body.insertAdjacentHTML('beforeend','<div class="mobile-overlay" id="mobile-overlay"></div><div class="toast-container" id="toast-container" aria-live="polite"></div>');
   if(!$('#global-modal')) body.insertAdjacentHTML('beforeend',`<div class="modal-backdrop" id="global-modal" role="dialog" aria-modal="true"><div class="modal"><div class="modal-head"><h3 id="global-modal-title">Please confirm</h3><button class="modal-close" data-modal-close>${icon('x')}</button></div><div class="modal-body" id="global-modal-body"></div><div class="modal-actions"><button class="btn btn-secondary" data-modal-close>Cancel</button><button class="btn btn-primary" id="global-modal-confirm">Confirm</button></div></div></div>`);

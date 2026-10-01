@@ -10,7 +10,7 @@ from django.core.paginator import Paginator, PageNotAnInteger, EmptyPage
 from django.db.models import Q, Sum, Count
 from .models import (
     CustomUser, VendorProfile, UserProfile, Job, QuickService, 
-    Category, GlobalSettings, Location, Bid, Subscription, Message,
+    Category, GlobalSettings, Location, State, Bid, Subscription, Message,
     SiteBranding, HeroSection, QuickServiceCard, FeaturedProjectCard,
     PackageCard, Testimonial, TrustMetric, VendorKYC,
     VendorWallet, WalletTransaction, PayoutRequest,
@@ -698,10 +698,13 @@ from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 # ─────────────────────────────────────────────
 # CMS: CATEGORIES (List + Create + Edit + Delete)
 # ─────────────────────────────────────────────
+# CMS: CATEGORIES, STATES & LOCATIONS
+# ─────────────────────────────────────────────
 @sa_required
 def super_admin_cms(request):
     cat_queryset = Category.objects.all().order_by('-created_at')
     loc_queryset = Location.objects.all().order_by('-created_at')
+    state_queryset = State.objects.all().order_by('-created_at')
     
     # 8 per page for categories
     cat_paginator = Paginator(cat_queryset, 8)
@@ -711,7 +714,7 @@ def super_admin_cms(request):
     except (EmptyPage, PageNotAnInteger):
         categories = cat_paginator.page(1)
         
-    # 8 per page for locations
+    # 8 per page for locations / cities
     loc_paginator = Paginator(loc_queryset, 8)
     loc_page = request.GET.get('loc_page', 1)
     try:
@@ -719,13 +722,28 @@ def super_admin_cms(request):
     except (EmptyPage, PageNotAnInteger):
         locations = loc_paginator.page(1)
 
+    # 8 per page for states
+    state_paginator = Paginator(state_queryset, 8)
+    state_page = request.GET.get('state_page', 1)
+    try:
+        states = state_paginator.page(state_page)
+    except (EmptyPage, PageNotAnInteger):
+        states = state_paginator.page(1)
+
+    # Attach city count for each state
+    for s in states:
+        s.cities_count = Location.objects.filter(state__iexact=s.name).count()
+
     return render(request, 'superadmin/cms_manager.html', {
         'categories': categories,
         'locations': locations,
+        'states': states,
         'cat_page': categories.number,
         'loc_page': locations.number,
+        'state_page': states.number,
         'total_categories': cat_queryset.count(),
         'total_locations': loc_queryset.count(),
+        'total_states': state_queryset.count(),
     })
 
 @sa_required
@@ -760,37 +778,121 @@ def super_admin_category_delete(request, cat_id):
     return redirect('super_admin_cms')
 
 # ─────────────────────────────────────────────
-# CMS: LOCATIONS (Create + Edit + Delete)
+# CMS: STATES (Create + Edit + Delete)
+# ─────────────────────────────────────────────
+@sa_required
+def super_admin_state_create(request):
+    if request.method == 'POST':
+        name = request.POST.get('name', '').strip()
+        status = request.POST.get('status', 'active')
+        if not name:
+            django_messages.error(request, 'State name is required.')
+        elif State.objects.filter(name__iexact=name).exists():
+            django_messages.error(request, f'State "{name}" already exists.')
+        else:
+            State.objects.create(name=name, status=status)
+            django_messages.success(request, f'State "{name}" created successfully. You can now create cities under this state.')
+            return redirect('super_admin_cms')
+    return render(request, 'superadmin/state_form.html', {'mode': 'create'})
+
+@sa_required
+def super_admin_state_edit(request, state_id):
+    st = get_object_or_404(State, pk=state_id)
+    old_name = st.name
+    if request.method == 'POST':
+        name = request.POST.get('name', '').strip()
+        status = request.POST.get('status', 'active')
+        if not name:
+            django_messages.error(request, 'State name is required.')
+        else:
+            st.name = name
+            st.status = status
+            st.save()
+            if old_name != name:
+                Location.objects.filter(state__iexact=old_name).update(state=name)
+            django_messages.success(request, f'State "{st.name}" updated.')
+            return redirect('super_admin_cms')
+    return render(request, 'superadmin/state_form.html', {'mode': 'edit', 'state': st})
+
+@sa_required
+def super_admin_state_delete(request, state_id):
+    st = get_object_or_404(State, pk=state_id)
+    st_name = st.name
+    st.delete()
+    django_messages.success(request, f'State "{st_name}" deleted.')
+    return redirect('super_admin_cms')
+
+# ─────────────────────────────────────────────
+# CMS: CITIES / LOCATIONS (Create + Edit + Delete)
 # ─────────────────────────────────────────────
 @sa_required
 def super_admin_location_create(request):
+    states = State.objects.filter(status='active').order_by('name')
+    if not states.exists():
+        for s_name in Location.objects.values_list('state', flat=True).distinct():
+            if s_name and s_name.strip():
+                State.objects.get_or_create(name=s_name.strip(), defaults={'status': 'active'})
+        states = State.objects.filter(status='active').order_by('name')
+
+    preselected_state = request.GET.get('state', '')
+
     if request.method == 'POST':
-        Location.objects.create(
-            state=request.POST.get('state'),
-            city=request.POST.get('city'),
-            status=request.POST.get('status', 'active'),
-        )
-        django_messages.success(request, 'Location created.')
-        return redirect('super_admin_cms')
-    return render(request, 'superadmin/location_form.html', {'mode': 'create'})
+        state = request.POST.get('state', '').strip()
+        city = request.POST.get('city', '').strip()
+        status = request.POST.get('status', 'active')
+
+        if not state:
+            django_messages.error(request, 'Please select a state. Create a state first if none is listed.')
+        elif not city:
+            django_messages.error(request, 'Please enter a city name.')
+        elif Location.objects.filter(state__iexact=state, city__iexact=city).exists():
+            django_messages.error(request, f'City "{city}" in state "{state}" already exists.')
+        else:
+            Location.objects.create(
+                state=state,
+                city=city,
+                status=status,
+            )
+            django_messages.success(request, f'City "{city}, {state}" created successfully.')
+            return redirect('super_admin_cms')
+
+    return render(request, 'superadmin/location_form.html', {
+        'mode': 'create',
+        'states': states,
+        'preselected_state': preselected_state,
+    })
 
 @sa_required
 def super_admin_location_edit(request, loc_id):
     loc = get_object_or_404(Location, pk=loc_id)
+    states = State.objects.order_by('name')
     if request.method == 'POST':
-        loc.state = request.POST.get('state', loc.state)
-        loc.city = request.POST.get('city', loc.city)
-        loc.status = request.POST.get('status', loc.status)
-        loc.save()
-        django_messages.success(request, f'Location "{loc}" updated.')
-        return redirect('super_admin_cms')
-    return render(request, 'superadmin/location_form.html', {'mode': 'edit', 'loc': loc})
+        state = request.POST.get('state', loc.state).strip()
+        city = request.POST.get('city', loc.city).strip()
+        status = request.POST.get('status', loc.status)
+        if not state:
+            django_messages.error(request, 'Please select a state.')
+        elif not city:
+            django_messages.error(request, 'City name is required.')
+        else:
+            loc.state = state
+            loc.city = city
+            loc.status = status
+            loc.save()
+            django_messages.success(request, f'City "{loc.city}, {loc.state}" updated.')
+            return redirect('super_admin_cms')
+    return render(request, 'superadmin/location_form.html', {
+        'mode': 'edit',
+        'loc': loc,
+        'states': states,
+    })
 
 @sa_required
 def super_admin_location_delete(request, loc_id):
     loc = get_object_or_404(Location, pk=loc_id)
+    loc_str = str(loc)
     loc.delete()
-    django_messages.success(request, 'Location deleted.')
+    django_messages.success(request, f'City "{loc_str}" deleted.')
     return redirect('super_admin_cms')
 
 # ─────────────────────────────────────────────

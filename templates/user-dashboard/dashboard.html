@@ -14,6 +14,30 @@
     <div class="workspace">
       <div id="topbar-root"></div>
       <main class="page">
+
+        {% if service_not_available or not is_service_available %}
+        <div class="service-alert-banner" style="background: linear-gradient(135deg, #fff1f2, #ffe4e6); border: 1.5px solid #fda4af; border-radius: 14px; padding: 16px 20px; margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between; gap: 16px; box-shadow: 0 4px 14px rgba(225, 29, 72, 0.08);">
+          <div style="display: flex; align-items: center; gap: 14px;">
+            <div style="width: 44px; height: 44px; border-radius: 12px; background: #f43f5e; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0; box-shadow: 0 4px 10px rgba(244,63,94,0.3);">
+              ⚠️
+            </div>
+            <div>
+              <div style="font-weight: 800; color: #9f1239; font-size: 15px; margin-bottom: 3px;">
+                Service not available at your location
+              </div>
+              <div style="color: #be123c; font-size: 13.5px; line-height: 1.4;">
+                Our home services are currently not available in <strong>{{ user_city|default:user_location|default:"your location" }}</strong>. We are expanding rapidly to new cities! You can update your location in your profile settings.
+              </div>
+            </div>
+          </div>
+          <div style="display: flex; gap: 8px; flex-shrink: 0;">
+            <a href="/user/profile/edit.html" class="btn btn-secondary btn-sm" style="background:#fff; border-color:#fda4af; color:#9f1239; font-weight:700;">
+              Change Location
+            </a>
+          </div>
+        </div>
+        {% endif %}
+
         <section class="card hero">
           <div class="welcome">
             <span class="avatar lg">{{ user_initials|default:"US" }}</span>

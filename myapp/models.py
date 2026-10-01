@@ -76,6 +76,8 @@ class VendorKYC(models.Model):
 class UserProfile(models.Model):
     user = models.OneToOneField(CustomUser, on_delete=models.CASCADE, related_name='user_profile')
     phone_number = models.CharField(max_length=20, blank=True, null=True)
+    city = models.CharField(max_length=100, blank=True, null=True)
+    state = models.CharField(max_length=100, blank=True, null=True)
     profile_image = models.ImageField(upload_to='user_profiles/', null=True, blank=True)
 
     def __str__(self):
@@ -489,6 +491,18 @@ class Category(models.Model):
     )
     name = models.CharField(max_length=100)
     service_type = models.CharField(max_length=20, choices=SERVICE_TYPE_CHOICES, default='both')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='active')
+    created_at = models.DateTimeField(default=timezone.now)
+
+    def __str__(self):
+        return self.name
+
+class State(models.Model):
+    STATUS_CHOICES = (
+        ('active', 'Active'),
+        ('inactive', 'Inactive'),
+    )
+    name = models.CharField(max_length=100, unique=True)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='active')
     created_at = models.DateTimeField(default=timezone.now)
 

@@ -359,6 +359,14 @@ button{cursor:pointer}
   </div>
 </header>
 
+{% if request.user.is_authenticated and service_not_available %}
+<div id="service-unavailable-alert-banner" style="background: linear-gradient(90deg, #fff1f2, #ffe4e6); border-bottom: 1.5px solid #fda4af; padding: 14px 24px; text-align: center; color: #9f1239; font-size: 14px; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 12px; box-shadow: 0 2px 8px rgba(225,29,72,0.06);">
+  <span style="font-size: 18px;">⚠️</span>
+  <span><strong>Service not available at your location</strong>: We are not yet operational in <strong>{{ user_city|default:"your location" }}</strong>. We are expanding to new cities soon!</span>
+  <a href="/user/profile/edit.html" style="background: #fff; border: 1px solid #fda4af; padding: 4px 12px; border-radius: 6px; color: #9f1239; text-decoration: none; font-size: 12.5px; font-weight: 700; margin-left: 8px;">Update City</a>
+</div>
+{% endif %}
+
 <!-- ===== HERO ===== -->
 <section class="hero">
   <div class="hero-left">
