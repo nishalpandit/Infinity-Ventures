@@ -22,6 +22,7 @@ import json
 import base64
 import uuid
 from datetime import datetime
+from decimal import Decimal
 from django.utils import timezone
 from django.core.files.base import ContentFile
 
@@ -131,6 +132,63 @@ def get_user_dashboard_context(user):
         'recent_jobs': recent_jobs,
         'recent_activity': activity_items,
     }
+
+CITY_COORDINATES_MAP = {
+    'mumbai': (19.0760, 72.8777),
+    'bombay': (19.0760, 72.8777),
+    'ranchi': (23.3697, 85.3346),
+    'bengaluru': (12.9716, 77.5946),
+    'bangalore': (12.9716, 77.5946),
+    'delhi': (28.6139, 77.2090),
+    'new delhi': (28.6139, 77.2090),
+    'noida': (28.5355, 77.3910),
+    'pune': (18.5204, 73.8567),
+    'kolkata': (22.5726, 88.3639),
+    'chennai': (13.0827, 80.2707),
+    'hyderabad': (17.3850, 78.4867),
+    'ahmedabad': (23.0225, 72.5714),
+    'jaipur': (26.9124, 75.7873),
+    'lucknow': (26.8467, 80.9462),
+    'nagpur': (21.1458, 79.0882),
+    'nashik': (19.9975, 73.7898),
+    'indore': (22.7196, 75.8577),
+    'chandigarh': (30.7333, 76.7794),
+    'coimbatore': (11.0168, 76.9558),
+    'mysuru': (12.2958, 76.6394),
+    'jamshedpur': (22.8046, 86.2029),
+    'dhanbad': (23.7957, 86.4304),
+    'harmu': (23.3550, 85.3050),
+    'morabadi': (23.3850, 85.3250),
+    'doranda': (23.3340, 85.3218),
+    'lalpur': (23.3697, 85.3346),
+    'bariatu': (23.3950, 85.3500),
+    'bandra': (19.0596, 72.8295),
+    'andheri': (19.1136, 72.8697),
+    'dadar': (19.0178, 72.8478),
+}
+
+def haversine_distance_km(lat1, lon1, lat2, lon2):
+    """Calculates great-circle distance between two GPS coordinates in kilometers."""
+    try:
+        import math
+        R = 6371.0 # Earth radius in km
+        dlat = math.radians(float(lat2) - float(lat1))
+        dlon = math.radians(float(lon2) - float(lon1))
+        a = math.sin(dlat / 2)**2 + math.cos(math.radians(float(lat1))) * math.cos(math.radians(float(lat2))) * math.sin(dlon / 2)**2
+        c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+        return round(R * c, 1)
+    except Exception:
+        return None
+
+def resolve_coordinates_for_location(loc_string, default_coords=(23.3697, 85.3346)):
+    """Resolves coordinates from location string using CITY_COORDINATES_MAP."""
+    if not loc_string:
+        return default_coords
+    s = loc_string.lower().strip()
+    for key, coords in CITY_COORDINATES_MAP.items():
+        if key in s:
+            return coords
+    return default_coords
 
 def save_vendor_profile_changes(request, user):
     """
@@ -1509,6 +1567,97 @@ def dashboard_view(request, path=''):
 
         context['available_jobs'] = jobs_qs
 
+    if path == 'vendor/quick-services/nearby':
+        v_lat = None
+        v_lon = None
+        vendor_city = None
+        if request.user.is_authenticated:
+            v_prof = getattr(request.user, 'vendor_profile', None)
+            if not v_prof and request.user.role == 'VENDOR':
+                v_prof, _ = VendorProfile.objects.get_or_create(user=request.user)
+            if v_prof and v_prof.location and v_prof.location.strip():
+                vendor_city = v_prof.location.strip().split(',')[0].strip()
+
+        req_lat = request.GET.get('lat')
+        req_lon = request.GET.get('lon')
+        if req_lat and req_lon:
+            try:
+                v_lat = float(req_lat)
+                v_lon = float(req_lon)
+            except (ValueError, TypeError):
+                v_lat = None
+                v_lon = None
+
+        if v_lat is None or v_lon is None:
+            v_lat, v_lon = resolve_coordinates_for_location(vendor_city or (v_prof.location if v_prof else ''))
+
+        max_distance_km = 10.0
+        try:
+            custom_radius = float(request.GET.get('distance') or request.GET.get('radius') or 10.0)
+            max_distance_km = min(custom_radius, 10.0)
+        except (ValueError, TypeError):
+            max_distance_km = 10.0
+
+        all_qs = QuickService.objects.filter(status__in=['active', 'open']).select_related('category', 'location', 'vendor').order_by('-created_at')
+        nearby_services = []
+        for qs in all_qs:
+            q_lat = float(qs.latitude) if qs.latitude else None
+            q_lon = float(qs.longitude) if qs.longitude else None
+            if q_lat is None or q_lon is None:
+                loc_name = (qs.locality or '') + ' ' + (qs.location.city if qs.location else '')
+                q_lat, q_lon = resolve_coordinates_for_location(loc_name, default_coords=(None, None))
+            if q_lat is not None and q_lon is not None:
+                d = haversine_distance_km(v_lat, v_lon, q_lat, q_lon)
+                if d is not None and d <= max_distance_km:
+                    qs.distance_km = d
+                    qs.budget = float(qs.base_price)
+                    nearby_services.append(qs)
+
+        nearby_services.sort(key=lambda x: getattr(x, 'distance_km', 999.0))
+        context['available_qs'] = nearby_services
+        context['vendor_city'] = vendor_city
+        context['vendor_lat'] = v_lat
+        context['vendor_lon'] = v_lon
+        context['max_distance_km'] = max_distance_km
+
+    if path == 'vendor/quick-services/details':
+        qs_id = request.GET.get('id')
+        if qs_id:
+            try:
+                qs = QuickService.objects.select_related('category', 'location', 'vendor').get(id=qs_id)
+                qs.budget = float(qs.base_price)
+                context['qs'] = qs
+            except QuickService.DoesNotExist:
+                return redirect('/vendor/quick-services/nearby.html')
+
+    if path == 'vendor/quick-services/send-quotation':
+        qs_id = request.GET.get('qs_id') or request.GET.get('id') or request.POST.get('qs_id') or request.POST.get('id')
+        if qs_id:
+            try:
+                qs = QuickService.objects.select_related('category', 'location', 'vendor').get(id=qs_id)
+                qs.budget = float(qs.base_price)
+                context['qs'] = qs
+                
+                if request.method == 'POST' and request.user.is_authenticated:
+                    amount = request.POST.get('amount')
+                    estimated_time = request.POST.get('estimated_time')
+                    proposal = request.POST.get('proposal')
+                    attachment = request.FILES.get('attachment')
+                    if amount:
+                        Bid.objects.create(
+                            vendor=request.user,
+                            quick_service=qs,
+                            amount=float(amount),
+                            estimated_time=estimated_time,
+                            proposal=proposal,
+                            attachment=attachment,
+                            status='submitted'
+                        )
+                        messages.success(request, f"Quotation for '{qs.title}' submitted successfully!")
+                        return redirect('/vendor/quick-services/nearby.html')
+            except QuickService.DoesNotExist:
+                return redirect('/vendor/quick-services/nearby.html')
+
     if path == 'vendor/jobs/bid-details':
         bid_id = request.GET.get('bid_id')
         if bid_id:
@@ -2050,12 +2199,12 @@ def dashboard_view(request, path=''):
             except (ValueError, QuickService.DoesNotExist):
                 pass
 
-    elif 'quick-services' in path:
+    elif (('admin' in path and 'quick-services' in path) or path in ['quick-services', 'quick-services/index']):
         from django.db.models import Count, Prefetch
         admin_state, is_area_admin, available_states, co_admins = get_admin_state_context(request)
         context['admin_state'] = admin_state
         context['is_area_admin'] = is_area_admin
-        quick_services = QuickService.objects.exclude(category__service_type='job').select_related('vendor', 'category', 'location').annotate(vendor_requests_count=Count('bids')).prefetch_related(Prefetch('bids', queryset=Bid.objects.filter(status='selected').select_related('vendor', 'vendor__vendor_profile'), to_attr='selected_bids')).order_by('-created_at')
+        quick_services = QuickService.objects.exclude(category__service_type='job').select_related('vendor', 'category', 'location').annotate(vendor_requests_count=Count('legacy_bids')).prefetch_related(Prefetch('legacy_bids', queryset=Bid.objects.filter(status='selected').select_related('vendor', 'vendor__vendor_profile'), to_attr='selected_bids')).order_by('-created_at')
         if admin_state:
             quick_services = quick_services.filter(Q(location__state__iexact=admin_state) | Q(address__icontains=admin_state))
         qs_data = []
@@ -3228,7 +3377,25 @@ def vendor_dashboard(request):
         )
         jobs_base = jobs_base.filter(city_filter)
 
-    available_qs = QuickService.objects.filter(status='open').count()
+    # Quick services strictly under 10km
+    v_lat, v_lon = resolve_coordinates_for_location(vendor_city or (vendor_profile.location if vendor_profile else ''))
+    all_active_qs = QuickService.objects.filter(status__in=['active', 'open']).select_related('category', 'location', 'vendor')
+    nearby_qs = []
+    for qs in all_active_qs:
+        q_lat = float(qs.latitude) if qs.latitude else None
+        q_lon = float(qs.longitude) if qs.longitude else None
+        if q_lat is None or q_lon is None:
+            loc_name = (qs.locality or '') + ' ' + (qs.location.city if qs.location else '')
+            q_lat, q_lon = resolve_coordinates_for_location(loc_name, default_coords=(None, None))
+        if q_lat is not None and q_lon is not None:
+            d = haversine_distance_km(v_lat, v_lon, q_lat, q_lon)
+            if d is not None and d <= 10.0:
+                qs.distance_km = d
+                qs.budget = float(qs.base_price)
+                nearby_qs.append(qs)
+
+    nearby_qs.sort(key=lambda x: getattr(x, 'distance_km', 999.0))
+    available_qs = len(nearby_qs)
     available_jobs = jobs_base.count()
     
     # Active bids for this vendor
@@ -3264,7 +3431,7 @@ def vendor_dashboard(request):
     })
 
     # Fetch recent items
-    context['recent_quick_services'] = QuickService.objects.filter(status='open').order_by('-created_at')[:3]
+    context['recent_quick_services'] = nearby_qs[:3]
     context['recent_jobs'] = jobs_base.order_by('-created_at')[:2]
 
     return render(request, 'infinity-vendor-dashboard/dashboard.html', context)

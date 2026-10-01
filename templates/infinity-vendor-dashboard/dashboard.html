@@ -305,7 +305,7 @@
                         <div class="table-title">{{ qs.title }}</div>
                         <div class="table-sub">QS-{{ qs.id|stringformat:"04d" }} · {{ qs.category.name|default:"General" }}</div>
                       </td>
-                      <td>{{ qs.location.name|default:qs.address|default:"Local" }}</td>
+                      <td>{% if qs.locality %}{{ qs.locality }}{% elif qs.location %}{{ qs.location.city }}{% else %}Local{% endif %}</td>
                       <td><strong>₹{{ qs.budget|floatformat:0 }}</strong></td>
                       <td>
                         <a href="/vendor/quick-services/details.html?id={{ qs.id }}" class="btn btn-primary btn-sm">Submit Bid</a>
