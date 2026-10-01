@@ -277,6 +277,9 @@ def dashboard_view(request, path=''):
         referer = request.META.get('HTTP_REFERER')
         return redirect(referer if referer else '/user/dashboard')
 
+    if path in ['accounts/login', 'accounts/login/', 'login', 'login/']:
+        return user_login_view(request)
+
     if path in ['dashboard', 'admin-dashboard', 'admin-dashboard/dashboard', 'admin-dashboard/index']:
         return admin_dashboard(request)
 
@@ -2748,7 +2751,14 @@ def home_view(request):
     return render(request, 'index.html', context)
 
 def user_login_view(request):
+    next_url = request.POST.get('next') or request.GET.get('next')
+    # Validate next_url to ensure it is a safe local relative path
+    if next_url and (not next_url.startswith('/') or next_url.startswith('//')):
+        next_url = None
+
     if request.user.is_authenticated:
+        if next_url:
+            return redirect(next_url)
         if request.user.role == 'ADMIN' or request.user.is_superuser:
             return redirect('admin_dashboard')
         elif request.user.role == 'VENDOR':
@@ -2769,12 +2779,14 @@ def user_login_view(request):
                     kyc = VendorKYC.objects.get(vendor=user)
                     if kyc.status != 'approved':
                         error = f"Your profile is under verification by admins. Current status: {kyc.get_status_display()}. You can login once verified."
-                        return render(request, 'login.html', {'error': error})
+                        return render(request, 'login.html', {'error': error, 'next': next_url})
                 except VendorKYC.DoesNotExist:
                     error = "KYC verification pending. Please complete your registration."
-                    return render(request, 'login.html', {'error': error})
+                    return render(request, 'login.html', {'error': error, 'next': next_url})
 
             login(request, user)
+            if next_url:
+                return redirect(next_url)
             if user.role == 'ADMIN' or user.is_superuser:
                 return redirect('admin_dashboard')
             elif user.role == 'VENDOR':
@@ -2784,7 +2796,7 @@ def user_login_view(request):
             return redirect('admin_dashboard')
         else:
             error = 'Invalid username, email, phone number, or password.'
-    return render(request, 'login.html', {'error': error})
+    return render(request, 'login.html', {'error': error, 'next': next_url})
 
 def user_logout_view(request):
     logout(request)

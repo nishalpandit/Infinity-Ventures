@@ -602,6 +602,7 @@
     <!-- 2. PASSWORD LOGIN -->
     <form id="passwordSection" style="display: none;" onsubmit="handlePasswordLogin(event)">
       {% csrf_token %}
+      <input type="hidden" name="next" id="loginNextParam" value="{{ next|default:'' }}">
       <div class="form-group">
         <label class="form-label" for="loginUsername">Mobile or Email</label>
         <div class="input-box">
@@ -845,8 +846,10 @@
 
         if (resp.ok && data.status === 'success') {
           showAlert('Logged in successfully! Redirecting...', 'success');
+          const urlParams = new URLSearchParams(window.location.search);
+          const nextUrl = urlParams.get('next') || document.getElementById('loginNextParam')?.value;
           setTimeout(() => {
-            window.location.href = data.redirect_url || '/user/dashboard';
+            window.location.href = (nextUrl && nextUrl.startsWith('/')) ? nextUrl : (data.redirect_url || '/user/dashboard');
           }, 500);
         } else {
           showAlert(data.message || 'Invalid verification code. Please try again.');
@@ -888,8 +891,10 @@
 
         if (resp.ok && data.status === 'success') {
           showAlert(data.message || 'Login successful! Redirecting...', 'success');
+          const urlParams = new URLSearchParams(window.location.search);
+          const nextUrl = urlParams.get('next') || document.getElementById('loginNextParam')?.value;
           setTimeout(() => {
-            window.location.href = data.redirect_url || '/user/dashboard';
+            window.location.href = (nextUrl && nextUrl.startsWith('/')) ? nextUrl : (data.redirect_url || '/user/dashboard');
           }, 500);
         } else {
           showAlert(data.message || 'Invalid credentials.');
@@ -922,6 +927,15 @@
       fPass.name = 'password';
       fPass.value = password;
       form.appendChild(fPass);
+
+      const urlParams = new URLSearchParams(window.location.search);
+      const nextUrl = urlParams.get('next') || document.getElementById('loginNextParam')?.value;
+      if (nextUrl && nextUrl.startsWith('/')) {
+        const fNext = document.createElement('input');
+        fNext.name = 'next';
+        fNext.value = nextUrl;
+        form.appendChild(fNext);
+      }
 
       document.body.appendChild(form);
       form.submit();
