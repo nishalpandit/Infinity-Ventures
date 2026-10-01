@@ -60,6 +60,64 @@ def get_admin_state_context(request):
 
     return admin_state, is_area_admin, available_states, co_admins
 
+def is_vendor_in_state(vendor, state_name):
+    """
+    Checks if a vendor is present in the specified state/territory.
+    Evaluates assigned_state, VendorProfile (location, address), UserProfile (state, city),
+    and all registered cities for that state in Location table.
+    """
+    if not vendor or not state_name:
+        return False
+    state_lower = state_name.strip().lower()
+
+    if vendor.assigned_state and vendor.assigned_state.strip().lower() == state_lower:
+        return True
+
+    vp = getattr(vendor, 'vendor_profile', None)
+    if vp:
+        if vp.location and state_lower in vp.location.lower():
+            return True
+        if vp.address and state_lower in vp.address.lower():
+            return True
+
+    up = getattr(vendor, 'user_profile', None)
+    if up and up.state and up.state.strip().lower() == state_lower:
+        return True
+
+    cities = [c.strip().lower() for c in Location.objects.filter(state__iexact=state_name).values_list('city', flat=True) if c and c.strip()]
+    if vp:
+        if vp.location and any(c in vp.location.lower() for c in cities):
+            return True
+        if vp.address and any(c in vp.address.lower() for c in cities):
+            return True
+    if up and up.city and up.city.strip().lower() in cities:
+        return True
+
+    return False
+
+def get_in_state_kyc_filter(admin_state):
+    """
+    Constructs an ORM Q filter to retrieve all VendorKYC records
+    where the vendor is present in the specified admin_state.
+    """
+    if not admin_state:
+        return Q()
+    admin_state = admin_state.strip()
+    cities = list(Location.objects.filter(state__iexact=admin_state).values_list('city', flat=True))
+    q_filter = (
+        Q(vendor__assigned_state__iexact=admin_state) |
+        Q(vendor__vendor_profile__location__icontains=admin_state) |
+        Q(vendor__vendor_profile__address__icontains=admin_state) |
+        Q(vendor__user_profile__state__iexact=admin_state)
+    )
+    for c in cities:
+        c_str = c.strip()
+        if c_str:
+            q_filter |= Q(vendor__vendor_profile__location__icontains=c_str)
+            q_filter |= Q(vendor__vendor_profile__address__icontains=c_str)
+            q_filter |= Q(vendor__user_profile__city__icontains=c_str)
+    return q_filter
+
 def get_user_dashboard_context(user, request=None):
     name = user.get_full_name() or user.username
     initials = (user.first_name[:1].upper() + user.last_name[:1].upper()) if (user.first_name and user.last_name) else (user.first_name[:2].upper() if user.first_name else user.username[:2].upper())
@@ -2835,15 +2893,36 @@ def dashboard_view(request, path=''):
         admin_state, is_area_admin, available_states, co_admins = get_admin_state_context(request)
         context['admin_state'] = admin_state
         context['is_area_admin'] = is_area_admin
-        kycs = VendorKYC.objects.select_related('vendor', 'vendor__vendor_profile').all()
+        
+        kycs_qs = VendorKYC.objects.select_related('vendor', 'vendor__vendor_profile', 'vendor__user_profile', 'reviewed_by').all()
         if admin_state:
-            kycs = kycs.filter(Q(vendor__vendor_profile__location__icontains=admin_state) | Q(vendor__assigned_state__iexact=admin_state))
+            kycs_qs = kycs_qs.filter(get_in_state_kyc_filter(admin_state))
         
-        status_filter = request.GET.get('status', 'pending')
-        if status_filter != 'all':
-            kycs = kycs.filter(status=status_filter)
-        
-        context['kycs'] = kycs.order_by('-id')
+        # Calculate territory stats across all statuses
+        context['total_kyc_count'] = kycs_qs.count()
+        context['pending_kyc_count'] = kycs_qs.filter(status='pending').count()
+        context['approved_kyc_count'] = kycs_qs.filter(status='approved').count()
+        context['rejected_kyc_count'] = kycs_qs.filter(status='rejected').count()
+
+        status_filter = request.GET.get('status', 'all').strip()
+        q_search = request.GET.get('q', '').strip()
+
+        if q_search:
+            kycs_qs = kycs_qs.filter(
+                Q(vendor__username__icontains=q_search) |
+                Q(vendor__first_name__icontains=q_search) |
+                Q(vendor__last_name__icontains=q_search) |
+                Q(vendor__email__icontains=q_search) |
+                Q(vendor__vendor_profile__company_name__icontains=q_search) |
+                Q(id_number__icontains=q_search)
+            )
+
+        if status_filter and status_filter != 'all':
+            kycs_qs = kycs_qs.filter(status=status_filter)
+
+        context['kycs'] = kycs_qs.order_by('-submitted_at', '-id')
+        context['status_filter'] = status_filter
+        context['q_search'] = q_search
 
     if 'reports/revenue' in path:
         admin_state, is_area_admin, available_states, co_admins = get_admin_state_context(request)
@@ -3674,11 +3753,25 @@ def approve_kyc_view(request, kyc_id):
             return HttpResponseForbidden("Access Denied")
         from .models import VendorKYC
         kyc = get_object_or_404(VendorKYC, id=kyc_id)
+        
+        # Territory authorization check: Area Admin can only approve vendors present in their state
+        if request.user.role == 'ADMIN' and not request.user.is_superuser:
+            admin_state = request.user.assigned_state
+            if not is_vendor_in_state(kyc.vendor, admin_state):
+                messages.error(request, f"Permission Denied: Vendor '{kyc.vendor.username}' does not belong to your assigned territory ({admin_state}).")
+                return redirect(request.META.get('HTTP_REFERER') or '/admin-dashboard/users/kyc-approvals.html')
+
         kyc.status = 'approved'
         kyc.reviewed_by = request.user
+        kyc.reviewed_at = timezone.now()
         kyc.save()
-        messages.success(request, f"KYC for {kyc.vendor.username} approved.")
-    return redirect('/admin-dashboard/users/kyc-approvals.html')
+        vendor_name = kyc.vendor.get_full_name() or kyc.vendor.username
+        messages.success(request, f"KYC verification for {vendor_name} approved successfully.")
+        
+        if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+            return JsonResponse({'status': 'success', 'message': f"KYC for {vendor_name} approved successfully."})
+            
+    return redirect(request.META.get('HTTP_REFERER') or '/admin-dashboard/users/kyc-approvals.html')
 
 @login_required
 def reject_kyc_view(request, kyc_id):
@@ -3687,12 +3780,27 @@ def reject_kyc_view(request, kyc_id):
             return HttpResponseForbidden("Access Denied")
         from .models import VendorKYC
         kyc = get_object_or_404(VendorKYC, id=kyc_id)
+        
+        # Territory authorization check: Area Admin can only reject vendors present in their state
+        if request.user.role == 'ADMIN' and not request.user.is_superuser:
+            admin_state = request.user.assigned_state
+            if not is_vendor_in_state(kyc.vendor, admin_state):
+                messages.error(request, f"Permission Denied: Vendor '{kyc.vendor.username}' does not belong to your assigned territory ({admin_state}).")
+                return redirect(request.META.get('HTTP_REFERER') or '/admin-dashboard/users/kyc-approvals.html')
+
+        reason = request.POST.get('admin_notes', '').strip() or "Documents did not meet platform verification criteria."
         kyc.status = 'rejected'
         kyc.reviewed_by = request.user
-        kyc.admin_notes = request.POST.get('admin_notes', '')
+        kyc.admin_notes = reason
+        kyc.reviewed_at = timezone.now()
         kyc.save()
-        messages.warning(request, f"KYC for {kyc.vendor.username} rejected.")
-    return redirect('/admin-dashboard/users/kyc-approvals.html')
+        vendor_name = kyc.vendor.get_full_name() or kyc.vendor.username
+        messages.warning(request, f"KYC verification for {vendor_name} has been rejected.")
+        
+        if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+            return JsonResponse({'status': 'success', 'message': f"KYC for {vendor_name} rejected."})
+
+    return redirect(request.META.get('HTTP_REFERER') or '/admin-dashboard/users/kyc-approvals.html')
 
 def detect_location_api(request):
     from django.http import JsonResponse
