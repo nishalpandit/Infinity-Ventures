@@ -1333,7 +1333,7 @@ def dashboard_view(request, path=''):
                 pass
 
     if path == 'vendor/jobs/selected-jobs':
-        selected_bids = Bid.objects.filter(vendor=request.user, status__in=['selected', 'completed']).select_related('job', 'quick_service', 'job__user', 'quick_service__user').order_by('-created_at')
+        selected_bids = Bid.objects.filter(vendor=request.user, status__in=['selected', 'completed']).select_related('job', 'quick_service', 'job__user', 'quick_service__vendor').order_by('-created_at')
         context['selected_bids'] = selected_bids
 
     if path == 'vendor/jobs/details' or path == 'vendor/jobs/send-quotation':
@@ -1537,7 +1537,7 @@ def dashboard_view(request, path=''):
                 cust_qs = User.objects.filter(role='USER')
                 if admin_state:
                     job_uids = Job.objects.filter(Q(location__state__iexact=admin_state) | Q(address__icontains=admin_state)).values_list('user_id', flat=True)
-                    qs_uids = QuickService.objects.filter(Q(location__state__iexact=admin_state) | Q(address__icontains=admin_state)).values_list('user_id', flat=True)
+                    qs_uids = QuickService.objects.filter(Q(location__state__iexact=admin_state) | Q(locality__icontains=admin_state)).values_list('vendor_id', flat=True)
                     cust_qs = cust_qs.filter(Q(id__in=set(job_uids).union(set(qs_uids))) | Q(assigned_state__iexact=admin_state))
                 target_user = cust_qs.first()
 
@@ -1714,7 +1714,7 @@ def dashboard_view(request, path=''):
             users_qs = User.objects.filter(role='USER')
             if admin_state:
                 job_uids = Job.objects.filter(Q(location__state__iexact=admin_state) | Q(address__icontains=admin_state)).values_list('user_id', flat=True)
-                qs_uids = QuickService.objects.filter(Q(location__state__iexact=admin_state) | Q(address__icontains=admin_state)).values_list('user_id', flat=True)
+                qs_uids = QuickService.objects.filter(Q(location__state__iexact=admin_state) | Q(locality__icontains=admin_state)).values_list('vendor_id', flat=True)
                 users_qs = users_qs.filter(Q(id__in=set(job_uids).union(set(qs_uids))) | Q(assigned_state__iexact=admin_state))
 
             users_data = []
@@ -2030,7 +2030,7 @@ def dashboard_view(request, path=''):
             users_qs = User.objects.exclude(is_superuser=True)
             if admin_state:
                 job_uids = Job.objects.filter(Q(location__state__iexact=admin_state) | Q(address__icontains=admin_state)).values_list('user_id', flat=True)
-                qs_uids = QuickService.objects.filter(Q(location__state__iexact=admin_state) | Q(address__icontains=admin_state)).values_list('user_id', flat=True)
+                qs_uids = QuickService.objects.filter(Q(location__state__iexact=admin_state) | Q(locality__icontains=admin_state)).values_list('vendor_id', flat=True)
                 users_qs = users_qs.filter(Q(id__in=set(job_uids).union(set(qs_uids))) | Q(assigned_state__iexact=admin_state))
             context['actUsers'] = users_qs.count()
             
@@ -2293,13 +2293,13 @@ def dashboard_view(request, path=''):
 
     if 'vendor/jobs/selected-jobs' in path:
         if request.user.is_authenticated:
-            context['selected_bids'] = Bid.objects.filter(vendor=request.user, status__in=['selected', 'completed']).select_related('job', 'quick_service', 'job__user', 'quick_service__user').order_by('-created_at')
+            context['selected_bids'] = Bid.objects.filter(vendor=request.user, status__in=['selected', 'completed']).select_related('job', 'quick_service', 'job__user', 'quick_service__vendor').order_by('-created_at')
 
     if 'vendor/jobs/bid-details' in path:
         bid_id = request.GET.get('bid_id') or request.GET.get('id')
         if bid_id and request.user.is_authenticated:
             try:
-                context['bid'] = Bid.objects.select_related('job', 'job__user', 'quick_service', 'quick_service__user').get(id=bid_id, vendor=request.user)
+                context['bid'] = Bid.objects.select_related('job', 'job__user', 'quick_service', 'quick_service__vendor').get(id=bid_id, vendor=request.user)
             except Bid.DoesNotExist:
                 pass
 
@@ -2458,7 +2458,7 @@ def dashboard_view(request, path=''):
         customers_qs = User.objects.filter(role='USER').select_related('user_profile')
         if admin_state:
             job_uids = Job.objects.filter(Q(location__state__iexact=admin_state) | Q(address__icontains=admin_state)).values_list('user_id', flat=True)
-            qs_uids = QuickService.objects.filter(Q(location__state__iexact=admin_state) | Q(address__icontains=admin_state)).values_list('user_id', flat=True)
+            qs_uids = QuickService.objects.filter(Q(location__state__iexact=admin_state) | Q(locality__icontains=admin_state)).values_list('vendor_id', flat=True)
             customers_qs = customers_qs.filter(Q(id__in=set(job_uids).union(set(qs_uids))) | Q(assigned_state__iexact=admin_state))
         context['customers'] = customers_qs.order_by('-date_joined')
 
