@@ -424,7 +424,7 @@ def vendor_signup_api(request):
     try:
         data = _parse_api_request(request)
         name = (data.get('name') or data.get('contact_name') or '').strip()
-        company_name = (data.get('company_name') or name).strip()
+        company_name = (data.get('company_name') or '').strip()
         email = (data.get('email') or '').strip()
         mobile = (data.get('mobile') or data.get('contact') or data.get('phone_number') or '').strip()
         password = data.get('password', '')
@@ -448,9 +448,12 @@ def vendor_signup_api(request):
             
         try:
             from datetime import datetime
-            dob = datetime.strptime(dob_raw, "%d-%m-%Y").date()
+            if '-' in dob_raw and len(dob_raw.split('-')[0]) == 4:
+                dob = datetime.strptime(dob_raw, "%Y-%m-%d").date()
+            else:
+                dob = datetime.strptime(dob_raw, "%d-%m-%Y").date()
         except ValueError:
-            return JsonResponse({'status': 'error', 'message': "Invalid 'dob' format. Expected dd-mm-yyyy."}, status=400)
+            return JsonResponse({'status': 'error', 'message': "Invalid 'dob' format. Expected YYYY-MM-DD or dd-mm-yyyy."}, status=400)
         
         experience = data.get('experience', 0)
         try:
@@ -472,7 +475,9 @@ def vendor_signup_api(request):
 
         username = (data.get('username') or '').strip()
         if not username:
-            base_username = email.split('@')[0] if '@' in email else company_name.replace(" ", "").lower()
+            base_username = email.split('@')[0] if '@' in email else (company_name or name).replace(" ", "").lower()
+            if not base_username:
+                base_username = 'vendor'
             username = base_username
             counter = 1
             while User.objects.filter(username__iexact=username).exists():
