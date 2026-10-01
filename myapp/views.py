@@ -1489,8 +1489,25 @@ def dashboard_view(request, path=''):
                 context['chat_messages'] = []
 
     if path == 'vendor/jobs/available':
-        available_jobs = Job.objects.filter(status='open').order_by('-created_at')
-        context['available_jobs'] = available_jobs
+        jobs_qs = Job.objects.filter(status='open').select_related('category', 'location', 'user').order_by('-created_at')
+        
+        vendor_city = None
+        if request.user.is_authenticated:
+            v_prof = getattr(request.user, 'vendor_profile', None)
+            if not v_prof and request.user.role == 'VENDOR':
+                v_prof, _ = VendorProfile.objects.get_or_create(user=request.user)
+            if v_prof and v_prof.location and v_prof.location.strip():
+                vendor_city = v_prof.location.strip().split(',')[0].strip()
+                
+        if vendor_city:
+            city_filter = (
+                Q(location__city__iexact=vendor_city) |
+                (Q(location__isnull=True) & (Q(address__icontains=vendor_city) | Q(locality__icontains=vendor_city)))
+            )
+            jobs_qs = jobs_qs.filter(city_filter)
+            context['vendor_city'] = vendor_city
+
+        context['available_jobs'] = jobs_qs
 
     if path == 'vendor/jobs/bid-details':
         bid_id = request.GET.get('bid_id')
@@ -3199,8 +3216,20 @@ def vendor_dashboard(request):
     kyc = VendorKYC.objects.filter(vendor=user).first()
     pending_payouts_sum = PayoutRequest.objects.filter(vendor=user, status='pending').aggregate(total=Sum('amount'))['total'] or 0
 
+    vendor_city = None
+    if vendor_profile and vendor_profile.location and vendor_profile.location.strip():
+        vendor_city = vendor_profile.location.strip().split(',')[0].strip()
+
+    jobs_base = Job.objects.filter(status='open')
+    if vendor_city:
+        city_filter = (
+            Q(location__city__iexact=vendor_city) |
+            (Q(location__isnull=True) & (Q(address__icontains=vendor_city) | Q(locality__icontains=vendor_city)))
+        )
+        jobs_base = jobs_base.filter(city_filter)
+
     available_qs = QuickService.objects.filter(status='open').count()
-    available_jobs = Job.objects.filter(status='open').count()
+    available_jobs = jobs_base.count()
     
     # Active bids for this vendor
     active_bids_count = Bid.objects.filter(vendor=user).exclude(status__in=['rejected', 'completed']).count()
@@ -3236,7 +3265,7 @@ def vendor_dashboard(request):
 
     # Fetch recent items
     context['recent_quick_services'] = QuickService.objects.filter(status='open').order_by('-created_at')[:3]
-    context['recent_jobs'] = Job.objects.filter(status='open').order_by('-created_at')[:2]
+    context['recent_jobs'] = jobs_base.order_by('-created_at')[:2]
 
     return render(request, 'infinity-vendor-dashboard/dashboard.html', context)
 
