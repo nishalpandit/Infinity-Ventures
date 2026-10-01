@@ -151,8 +151,16 @@
                             <div class="small muted">★ {{ b.vendor.vendor_profile.rating|default:"4.8" }} · {{ b.vendor.vendor_profile.category|default:"Contractor" }}</div>
                           </div>
                         </div>
+                      <td>
+                        <div style="display:flex; flex-direction:column; gap:2px;">
+                          <strong style="font-size:15px; color:#0f172a;">₹{{ b.display_customer_total|floatformat:2 }}</strong>
+                          {% if b.vendor_base_amount %}
+                          <span class="small muted" style="font-size:11px; color:#047857; cursor:help;" title="Base Service: ₹{{ b.vendor_base_amount }} | Platform Fee: ₹{{ b.commission_amount }} | Taxes: ₹{{ b.cgst_amount|add:b.sgst_amount }}">
+                            <i class="fa-solid fa-circle-info"></i> Base ₹{{ b.vendor_base_amount|floatformat:0 }} + Taxes
+                          </span>
+                          {% endif %}
+                        </div>
                       </td>
-                      <td><strong>₹{{ b.amount|floatformat:0 }}</strong></td>
                       <td>{{ b.estimated_time|default:"Not specified" }}</td>
                       <td style="max-width:300px;"><div class="small muted">{{ b.proposal|default:"Standard quotation." }}</div></td>
                       <td>

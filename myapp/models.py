@@ -109,6 +109,24 @@ class QuickService(models.Model):
     def __str__(self):
         return f"{self.title} by {self.vendor.username}"
 
+    @property
+    def user(self):
+        """Backward-compatibility alias for vendor"""
+        return self.vendor
+
+    @user.setter
+    def user(self, val):
+        self.vendor = val
+
+    @property
+    def budget(self):
+        """Backward-compatibility alias for base_price"""
+        return self.base_price
+
+    @budget.setter
+    def budget(self, val):
+        self.base_price = val
+
 class ServiceBooking(models.Model):
     STATUS_CHOICES = (
         ('pending', 'Pending'),
@@ -185,12 +203,29 @@ class Bid(models.Model):
     job = models.ForeignKey(Job, on_delete=models.CASCADE, related_name='bids', null=True, blank=True)
     quick_service = models.ForeignKey('QuickService', on_delete=models.SET_NULL, null=True, blank=True, related_name='legacy_bids')
     amount = models.DecimalField(max_digits=10, decimal_places=2)
+    vendor_base_amount = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True, help_text="Net amount vendor receives upon completion")
+    commission_percent_applied = models.DecimalField(max_digits=5, decimal_places=2, default=10.00, help_text="Platform commission % at bid time")
+    commission_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0.00, help_text="Platform commission fee in INR")
+    cgst_percent_applied = models.DecimalField(max_digits=5, decimal_places=2, default=9.00, help_text="CGST % applied")
+    cgst_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0.00, help_text="CGST collected in INR")
+    sgst_percent_applied = models.DecimalField(max_digits=5, decimal_places=2, default=9.00, help_text="SGST % applied")
+    sgst_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0.00, help_text="SGST collected in INR")
+    flat_fee_amount = models.DecimalField(max_digits=8, decimal_places=2, default=0.00, help_text="Flat convenience fee in INR")
+    total_customer_amount = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True, help_text="Final payable amount charged to customer")
     estimated_time = models.CharField(max_length=100, null=True, blank=True)
     message = models.TextField(null=True, blank=True)
     proposal = models.TextField(null=True, blank=True)
     attachment = models.FileField(upload_to='bid_attachments/', null=True, blank=True)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='submitted')
     created_at = models.DateTimeField(default=timezone.now)
+
+    @property
+    def display_vendor_payout(self):
+        return self.vendor_base_amount if self.vendor_base_amount is not None else self.amount
+
+    @property
+    def display_customer_total(self):
+        return self.total_customer_amount if self.total_customer_amount is not None else self.amount
 
     def __str__(self):
         target_title = self.job.title if self.job else 'Service'
@@ -526,7 +561,16 @@ class GlobalSettings(models.Model):
     contact_email = models.EmailField(default='support@sugguservices.com')
     support_phone = models.CharField(max_length=20, default='+91 0000000000')
     maintenance_mode = models.BooleanField(default=False)
-    platform_commission_percent = models.DecimalField(max_digits=5, decimal_places=2, default=10.00)
+    platform_commission_percent = models.DecimalField(max_digits=5, decimal_places=2, default=10.00, help_text="Platform commission cut %")
+    cgst_percent = models.DecimalField(max_digits=5, decimal_places=2, default=9.00, help_text="Central GST % applied on platform commission")
+    sgst_percent = models.DecimalField(max_digits=5, decimal_places=2, default=9.00, help_text="State GST % applied on platform commission")
+    platform_flat_fee = models.DecimalField(max_digits=8, decimal_places=2, default=0.00, help_text="Fixed convenience / platform flat fee in INR")
+    tax_calculation_mode = models.CharField(
+        max_length=20,
+        choices=[('commission_only', 'Tax on Platform Fee Only'), ('total_invoice', 'Tax on Total Service Invoice')],
+        default='commission_only',
+        help_text="Choose whether GST applies to platform commission or total customer invoice"
+    )
     single_bid_cost = models.DecimalField(max_digits=8, decimal_places=2, default=20.00, help_text="Cost of a single bid credit in INR")
     free_starter_bids = models.IntegerField(default=5, help_text="Free starter bids given to newly registered vendors")
     min_bids_per_job = models.IntegerField(default=1, help_text="Bids deducted per job quotation proposal")
@@ -536,6 +580,29 @@ class GlobalSettings(models.Model):
 
     def __str__(self):
         return "Platform Settings"
+
+
+class PlatformRevenueLedger(models.Model):
+    related_bid = models.ForeignKey(Bid, on_delete=models.SET_NULL, null=True, blank=True, related_name='revenue_ledgers')
+    related_job = models.ForeignKey(Job, on_delete=models.SET_NULL, null=True, blank=True)
+    related_quick_service = models.ForeignKey('QuickService', on_delete=models.SET_NULL, null=True, blank=True)
+    vendor = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='settled_commissions')
+    vendor_payout = models.DecimalField(max_digits=10, decimal_places=2, help_text="Net amount credited to vendor wallet")
+    platform_commission = models.DecimalField(max_digits=10, decimal_places=2, help_text="Platform commission earned")
+    cgst_collected = models.DecimalField(max_digits=10, decimal_places=2, default=0.00, help_text="Central GST collected")
+    sgst_collected = models.DecimalField(max_digits=10, decimal_places=2, default=0.00, help_text="State GST collected")
+    flat_fee_collected = models.DecimalField(max_digits=8, decimal_places=2, default=0.00, help_text="Flat fee collected")
+    total_customer_paid = models.DecimalField(max_digits=10, decimal_places=2, help_text="Total amount paid by customer")
+    settled_at = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        ordering = ['-settled_at']
+        verbose_name = "Platform Revenue Ledger"
+        verbose_name_plural = "Platform Revenue Ledgers"
+
+    def __str__(self):
+        total_tax = (self.cgst_collected or 0) + (self.sgst_collected or 0)
+        return f"Ledger #{self.id} - Comm: ₹{self.platform_commission} | Tax: ₹{total_tax} | Vendor: ₹{self.vendor_payout}"
 
 
 class BidPlan(models.Model):

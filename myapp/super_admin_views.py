@@ -1051,10 +1051,37 @@ def super_admin_job_bids(request, job_id):
                     django_messages.error(request, f'Job has reached the maximum limit of {job.max_bids} bids.')
                     return redirect('super_admin_job_bids', job_id=job.id)
 
+                gs_obj = GlobalSettings.objects.first()
+                c_pct = Decimal(str(gs_obj.platform_commission_percent if gs_obj and gs_obj.platform_commission_percent is not None else '10.00'))
+                cg_pct = Decimal(str(gs_obj.cgst_percent if gs_obj and gs_obj.cgst_percent is not None else '9.00'))
+                sg_pct = Decimal(str(gs_obj.sgst_percent if gs_obj and gs_obj.sgst_percent is not None else '9.00'))
+                f_fee = Decimal(str(gs_obj.platform_flat_fee if gs_obj and gs_obj.platform_flat_fee is not None else '0.00'))
+                t_mode = gs_obj.tax_calculation_mode if gs_obj and gs_obj.tax_calculation_mode else 'commission_only'
+
+                v_base = Decimal(str(amount)).quantize(Decimal('0.01'))
+                c_amt = ((v_base * c_pct) / Decimal('100.00') + f_fee).quantize(Decimal('0.01'))
+                if t_mode == 'commission_only':
+                    cg_amt = ((c_amt * cg_pct) / Decimal('100.00')).quantize(Decimal('0.01'))
+                    sg_amt = ((c_amt * sg_pct) / Decimal('100.00')).quantize(Decimal('0.01'))
+                else:
+                    taxable_b = v_base + c_amt
+                    cg_amt = ((taxable_b * cg_pct) / Decimal('100.00')).quantize(Decimal('0.01'))
+                    sg_amt = ((taxable_b * sg_pct) / Decimal('100.00')).quantize(Decimal('0.01'))
+                tot_cust = (v_base + c_amt + cg_amt + sg_amt).quantize(Decimal('0.01'))
+
                 bid = Bid.objects.create(
                     vendor=vendor,
                     job=job,
-                    amount=amount,
+                    amount=tot_cust,
+                    vendor_base_amount=v_base,
+                    commission_percent_applied=c_pct,
+                    commission_amount=c_amt,
+                    cgst_percent_applied=cg_pct,
+                    cgst_amount=cg_amt,
+                    sgst_percent_applied=sg_pct,
+                    sgst_amount=sg_amt,
+                    flat_fee_amount=f_fee,
+                    total_customer_amount=tot_cust,
                     estimated_time=estimated_time,
                     proposal=proposal,
                     status=status_bid
@@ -1084,7 +1111,7 @@ def super_admin_job_bids(request, job_id):
 # ─────────────────────────────────────────────
 @sa_required
 def super_admin_quick_services(request):
-    qs_list = QuickService.objects.all().select_related('user', 'category', 'location').order_by('-created_at')
+    qs_list = QuickService.objects.all().select_related('vendor', 'category', 'location').order_by('-created_at')
     paginator = Paginator(qs_list, 10)
     page_num = request.GET.get('page', 1)
     try:
@@ -1096,41 +1123,39 @@ def super_admin_quick_services(request):
 
 @sa_required
 def super_admin_qs_create(request):
-    users = CustomUser.objects.filter(role='USER').order_by('username')
+    vendors = CustomUser.objects.filter(role='VENDOR').order_by('username')
     categories = Category.objects.all().order_by('name')
     locations = Location.objects.all().order_by('state', 'city')
 
     if request.method == 'POST':
-        user_id = request.POST.get('user')
+        vendor_id = request.POST.get('vendor') or request.POST.get('user')
         title = request.POST.get('title', '').strip()
         cat_id = request.POST.get('category')
         loc_id = request.POST.get('location')
-        budget = request.POST.get('budget', 0) or 0
-        status = request.POST.get('status', 'open')
+        base_price = request.POST.get('base_price') or request.POST.get('budget', 0) or 0
+        status = request.POST.get('status', 'active')
         description = request.POST.get('description', '').strip()
-        address = request.POST.get('address', '').strip()
 
-        customer = get_object_or_404(CustomUser, pk=user_id)
+        vendor = get_object_or_404(CustomUser, pk=vendor_id)
         cat_obj = Category.objects.filter(id=cat_id).first() if cat_id else None
         loc_obj = Location.objects.filter(id=loc_id).first() if loc_id else None
 
         qs = QuickService.objects.create(
-            user=customer,
+            vendor=vendor,
             title=title,
             category=cat_obj,
             location=loc_obj,
-            budget=budget,
+            base_price=base_price,
             status=status,
-            description=description,
-            address=address,
-            contact_name=customer.get_full_name() or customer.username
+            description=description
         )
         django_messages.success(request, f'Quick Service "{qs.title}" created successfully.')
         return redirect('super_admin_quick_services')
 
     return render(request, 'superadmin/qs_form.html', {
         'mode': 'create',
-        'users': users,
+        'vendors': vendors,
+        'users': vendors,
         'categories': categories,
         'locations': locations
     })
@@ -1140,27 +1165,32 @@ def super_admin_qs_edit(request, qs_id):
     qs = get_object_or_404(QuickService, pk=qs_id)
     categories = Category.objects.all()
     locations = Location.objects.all().order_by('state', 'city')
-    users = CustomUser.objects.filter(role='USER').order_by('username')
+    vendors = CustomUser.objects.filter(role='VENDOR').order_by('username')
     if request.method == 'POST':
-        old_status = qs.status
         qs.title = request.POST.get('title', qs.title)
         qs.status = request.POST.get('status', qs.status)
-        qs.budget = request.POST.get('budget', qs.budget)
+        qs.base_price = request.POST.get('base_price') or request.POST.get('budget', qs.base_price)
         cat_id = request.POST.get('category')
         if cat_id:
             qs.category = get_object_or_404(Category, pk=cat_id)
         loc_id = request.POST.get('location')
         if loc_id:
             qs.location = Location.objects.filter(id=loc_id).first()
+        vendor_id = request.POST.get('vendor') or request.POST.get('user')
+        if vendor_id:
+            qs.vendor = get_object_or_404(CustomUser, pk=vendor_id)
         qs.description = request.POST.get('description', qs.description)
         qs.save()
-        if qs.status == 'completed' and old_status != 'completed':
-            settled, msg = settle_job_completion(quick_service=qs)
-            if settled:
-                django_messages.info(request, msg)
         django_messages.success(request, f'Quick Service "{qs.title}" updated.')
         return redirect('super_admin_quick_services')
-    return render(request, 'superadmin/qs_form.html', {'mode': 'edit', 'qs': qs, 'categories': categories, 'locations': locations, 'users': users})
+    return render(request, 'superadmin/qs_form.html', {
+        'mode': 'edit',
+        'qs': qs,
+        'categories': categories,
+        'locations': locations,
+        'vendors': vendors,
+        'users': vendors
+    })
 
 @sa_required
 def super_admin_qs_delete(request, qs_id):
@@ -1188,7 +1218,7 @@ def super_admin_bids(request):
 def super_admin_bid_create(request):
     vendors = CustomUser.objects.filter(role='VENDOR').order_by('username')
     jobs = Job.objects.filter(status__in=['open', 'progress']).order_by('-created_at')
-    qservices = QuickService.objects.filter(status__in=['open', 'progress']).order_by('-created_at')
+    qservices = QuickService.objects.filter(status='active').order_by('-created_at')
 
     if request.method == 'POST':
         vendor_id = request.POST.get('vendor')
@@ -1207,11 +1237,38 @@ def super_admin_bid_create(request):
         elif target_type == 'quick_service' and target_id:
             qs_obj = get_object_or_404(QuickService, pk=target_id)
 
+        gs_obj = GlobalSettings.objects.first()
+        c_pct = Decimal(str(gs_obj.platform_commission_percent if gs_obj and gs_obj.platform_commission_percent is not None else '10.00'))
+        cg_pct = Decimal(str(gs_obj.cgst_percent if gs_obj and gs_obj.cgst_percent is not None else '9.00'))
+        sg_pct = Decimal(str(gs_obj.sgst_percent if gs_obj and gs_obj.sgst_percent is not None else '9.00'))
+        f_fee = Decimal(str(gs_obj.platform_flat_fee if gs_obj and gs_obj.platform_flat_fee is not None else '0.00'))
+        t_mode = gs_obj.tax_calculation_mode if gs_obj and gs_obj.tax_calculation_mode else 'commission_only'
+
+        v_base = Decimal(str(amount)).quantize(Decimal('0.01'))
+        c_amt = ((v_base * c_pct) / Decimal('100.00') + f_fee).quantize(Decimal('0.01'))
+        if t_mode == 'commission_only':
+            cg_amt = ((c_amt * cg_pct) / Decimal('100.00')).quantize(Decimal('0.01'))
+            sg_amt = ((c_amt * sg_pct) / Decimal('100.00')).quantize(Decimal('0.01'))
+        else:
+            taxable_b = v_base + c_amt
+            cg_amt = ((taxable_b * cg_pct) / Decimal('100.00')).quantize(Decimal('0.01'))
+            sg_amt = ((taxable_b * sg_pct) / Decimal('100.00')).quantize(Decimal('0.01'))
+        tot_cust = (v_base + c_amt + cg_amt + sg_amt).quantize(Decimal('0.01'))
+
         bid = Bid.objects.create(
             vendor=vendor,
             job=job_obj,
             quick_service=qs_obj,
-            amount=amount,
+            amount=tot_cust,
+            vendor_base_amount=v_base,
+            commission_percent_applied=c_pct,
+            commission_amount=c_amt,
+            cgst_percent_applied=cg_pct,
+            cgst_amount=cg_amt,
+            sgst_percent_applied=sg_pct,
+            sgst_amount=sg_amt,
+            flat_fee_amount=f_fee,
+            total_customer_amount=tot_cust,
             status=status,
             proposal=proposal
         )
@@ -1475,9 +1532,33 @@ def super_admin_settings(request):
         settings_obj.contact_email = request.POST.get('contact_email', settings_obj.contact_email)
         settings_obj.support_phone = request.POST.get('support_phone', settings_obj.support_phone)
         settings_obj.maintenance_mode = request.POST.get('maintenance_mode') == 'on'
-        settings_obj.platform_commission_percent = request.POST.get('platform_commission_percent', settings_obj.platform_commission_percent)
+        
+        # Financial Levers
+        if 'platform_commission_percent' in request.POST:
+            try:
+                settings_obj.platform_commission_percent = float(request.POST.get('platform_commission_percent', 10.0))
+            except (ValueError, TypeError):
+                pass
+        if 'cgst_percent' in request.POST:
+            try:
+                settings_obj.cgst_percent = float(request.POST.get('cgst_percent', 9.0))
+            except (ValueError, TypeError):
+                pass
+        if 'sgst_percent' in request.POST:
+            try:
+                settings_obj.sgst_percent = float(request.POST.get('sgst_percent', 9.0))
+            except (ValueError, TypeError):
+                pass
+        if 'platform_flat_fee' in request.POST:
+            try:
+                settings_obj.platform_flat_fee = float(request.POST.get('platform_flat_fee', 0.0))
+            except (ValueError, TypeError):
+                pass
+        if 'tax_calculation_mode' in request.POST:
+            settings_obj.tax_calculation_mode = request.POST.get('tax_calculation_mode', 'commission_only')
+            
         settings_obj.save()
-        django_messages.success(request, 'Global settings saved.')
+        django_messages.success(request, 'Global platform & financial tax settings saved successfully.')
         return redirect('super_admin_settings')
     return render(request, 'superadmin/settings.html', {'settings': settings_obj})
 

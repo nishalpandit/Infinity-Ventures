@@ -563,6 +563,9 @@ def vendor_signup_api(request):
         return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
 
 
+
+
+
 @csrf_exempt
 @require_POST
 def vendor_login_api(request):

@@ -40,9 +40,56 @@
                 <input type="hidden" name="job_id" value="{{ job.id }}">
 
                 <div class="form-group">
-                  <label class="label">Quotation Amount (₹) <span class="required">*</span></label>
-                  <input type="number" name="amount" class="input" placeholder="e.g. 15000" min="1" required>
-                  <div class="small muted" style="margin-top:4px;">Customer Budget: ₹{{ job.budget }} ({{ job.get_budget_type_display|default:'Fixed' }})</div>
+                  <label class="label">Your Desired Net Payout (₹) <span class="required">*</span></label>
+                  <div style="position:relative;">
+                    <span style="position:absolute; left:14px; top:50%; transform:translateY(-50%); font-weight:800; color:#0f8a7c; font-size:16px;">₹</span>
+                    <input type="number" id="vendor-amount-input" name="amount" class="input" placeholder="e.g. 150 or 15000" min="1" step="any" required style="padding-left:32px; font-weight:700; font-size:16px;">
+                  </div>
+                  <div class="small muted" style="margin-top:4px;">Enter the exact amount you wish to receive. Customer Budget: ₹{{ job.budget }} ({{ job.get_budget_type_display|default:'Fixed' }})</div>
+
+                  <!-- Live Dynamic Breakdown Card -->
+                  <div id="live-pricing-box" style="margin-top:14px; background:#f0fdf4; border:1.5px solid #86efac; border-radius:14px; padding:16px 20px; display:none; box-shadow:0 4px 15px rgba(16,185,129,0.06);">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                      <span style="font-size:12px; font-weight:800; text-transform:uppercase; color:#15803d; letter-spacing:0.5px;">
+                        <i class="fa-solid fa-calculator"></i> Transparent Pricing Breakdown
+                      </span>
+                      <span style="font-size:11px; background:#dcfce7; color:#166534; padding:2px 8px; border-radius:10px; font-weight:800;">
+                        Auto-Calculated
+                      </span>
+                    </div>
+
+                    <div style="font-size:13px; display:flex; flex-direction:column; gap:8px; color:#374151;">
+                      <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <span>Your Guaranteed Take-Home Payout:</span>
+                        <strong id="live-vendor-net" style="color:#0f172a; font-size:14px;">₹0.00</strong>
+                      </div>
+
+                      <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <span>Platform Commission (<span id="live-comm-pct">{{ platform_commission_percent|default:10 }}%</span>):</span>
+                        <span id="live-platform-cut" style="color:#2563eb; font-weight:700;">+ ₹0.00</span>
+                      </div>
+
+                      <div id="live-flat-fee-row" style="display:none; justify-content:space-between; align-items:center;">
+                        <span>Convenience Fee:</span>
+                        <span id="live-flat-fee" style="color:#2563eb; font-weight:700;">+ ₹0.00</span>
+                      </div>
+
+                      <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <span>Taxes (CGST {{ cgst_percent|default:9 }}% + SGST {{ sgst_percent|default:9 }}%):</span>
+                        <span id="live-taxes" style="color:#059669; font-weight:700;">+ ₹0.00</span>
+                      </div>
+
+                      <div style="border-top:1.5px dashed #bbf7d0; margin-top:4px; padding-top:10px; display:flex; justify-content:space-between; align-items:baseline;">
+                        <strong style="color:#0f172a; font-size:14px;">Final Price Displayed to Customer:</strong>
+                        <span id="live-customer-total" style="font-size:20px; font-weight:900; color:#0f8a7c;">₹0.00</span>
+                      </div>
+                    </div>
+
+                    <div style="margin-top:10px; padding-top:8px; border-top:1px solid #dcfce7; font-size:11.5px; color:#166534; display:flex; align-items:center; gap:6px;">
+                      <i class="fa-solid fa-circle-check"></i>
+                      <span>Upon job completion, your wallet will be credited your exact net amount (<strong id="live-payout-summary">₹0.00</strong>).</span>
+                    </div>
+                  </div>
                 </div>
 
                 <div class="form-group">
@@ -156,6 +203,69 @@
 
   <script>
     window.VENDOR_CREDITS = {{ remaining_credits|default:0 }};
+
+    (function() {
+      const commPct = parseFloat("{{ platform_commission_percent|default:10.0 }}") || 10.0;
+      const cgstPct = parseFloat("{{ cgst_percent|default:9.0 }}") || 9.0;
+      const sgstPct = parseFloat("{{ sgst_percent|default:9.0 }}") || 9.0;
+      const flatFee = parseFloat("{{ platform_flat_fee|default:0.0 }}") || 0.0;
+      const taxMode = "{{ tax_calculation_mode|default:'commission_only' }}";
+
+      const amountInput = document.getElementById('vendor-amount-input');
+      const box = document.getElementById('live-pricing-box');
+      const vendorNetEl = document.getElementById('live-vendor-net');
+      const platformCutEl = document.getElementById('live-platform-cut');
+      const flatFeeRow = document.getElementById('live-flat-fee-row');
+      const flatFeeEl = document.getElementById('live-flat-fee');
+      const taxesEl = document.getElementById('live-taxes');
+      const customerTotalEl = document.getElementById('live-customer-total');
+      const payoutSummaryEl = document.getElementById('live-payout-summary');
+
+      function updateCalculation() {
+        const val = parseFloat(amountInput.value);
+        if (isNaN(val) || val <= 0) {
+          box.style.display = 'none';
+          return;
+        }
+
+        box.style.display = 'block';
+
+        const commAmount = (val * commPct / 100.0) + flatFee;
+
+        let cgstAmount = 0.0;
+        let sgstAmount = 0.0;
+        if (taxMode === 'commission_only') {
+          cgstAmount = (commAmount * cgstPct / 100.0);
+          sgstAmount = (commAmount * sgstPct / 100.0);
+        } else {
+          const taxable = val + commAmount;
+          cgstAmount = (taxable * cgstPct / 100.0);
+          sgstAmount = (taxable * sgstPct / 100.0);
+        }
+
+        const totalCustomer = val + commAmount + cgstAmount + sgstAmount;
+
+        vendorNetEl.textContent = '₹' + val.toFixed(2);
+        platformCutEl.textContent = '+ ₹' + (val * commPct / 100.0).toFixed(2);
+
+        if (flatFee > 0) {
+          flatFeeRow.style.display = 'flex';
+          flatFeeEl.textContent = '+ ₹' + flatFee.toFixed(2);
+        } else {
+          flatFeeRow.style.display = 'none';
+        }
+
+        taxesEl.textContent = '+ ₹' + (cgstAmount + sgstAmount).toFixed(2) + ' (' + (cgstPct + sgstPct).toFixed(0) + '%)';
+        customerTotalEl.textContent = '₹' + totalCustomer.toFixed(2);
+        payoutSummaryEl.textContent = '₹' + val.toFixed(2);
+      }
+
+      if (amountInput) {
+        amountInput.addEventListener('input', updateCalculation);
+        amountInput.addEventListener('change', updateCalculation);
+        if (amountInput.value) updateCalculation();
+      }
+    })();
   </script>
 </body>
 </html>
