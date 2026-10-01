@@ -112,14 +112,11 @@
   const workspace = $('.workspace');
   if(workspace && !$('.dashboard-footer')){
     workspace.insertAdjacentHTML('beforeend', `
-      <footer class="dashboard-footer" style="padding:14px 28px; background:#fff; border-top:1px solid #e2e8f0; display:flex; justify-content:space-between; align-items:center; font-size:12px; color:#64748b; flex-wrap:wrap; gap:12px; margin-top:auto;">
-        <div>
-          Copyright &copy; 2026 <a href="https://crm.brightcodess.com/" target="_blank" rel="noopener noreferrer" style="color:#007bff; text-decoration:none; font-weight:600;">Brightcode Software Services Pvt.Ltd..</a> All rights reserved.
-        </div>
+      <footer class="dashboard-footer" style="padding:14px 28px; background:#fff; border-top:1px solid #e2e8f0; display:flex; justify-content:flex-end; align-items:center; font-size:12px; color:#64748b; margin-top:auto;">
         <div style="display:flex; align-items:center; gap:6px;">
-          <span>Designed By -</span>
-          <a href="https://crm.brightcodess.com/" target="_blank" rel="noopener noreferrer" style="display:inline-flex; align-items:center; text-decoration:none;">
-            <img src="/static/assets/images/brightcode.png" alt="Brightcode" style="height:18px; vertical-align:middle;">
+          <span>Designed by</span>
+          <a href="https://www.brightcodess.com/" target="_blank" rel="noopener noreferrer" style="display:inline-flex; align-items:center; text-decoration:none;">
+            <img src="/static/assets/images/brightcode.png" alt="Brightcode" style="height:18px; vertical-align:middle;" onerror="this.style.display='none'; this.nextElementSibling.style.display='inline';"><span style="display:none; color:#007bff; font-weight:600;">Brightcode</span>
           </a>
         </div>
       </footer>
