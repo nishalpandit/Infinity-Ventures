@@ -799,6 +799,9 @@ def dashboard_view(request, path=''):
             
     # Inject dynamic user data
     if 'master/categories' in path:
+        if request.user.is_authenticated and request.user.role == 'ADMIN' and not request.user.is_superuser:
+            messages.error(request, "Permission Denied: Category management is restricted to Super Admin.")
+            return redirect('/admin-dashboard')
         categories = Category.objects.all().order_by('-created_at')
         categories_data = []
         for cat in categories:
@@ -3587,26 +3590,60 @@ from .Api_views import (
     delete_category_api,
 )
 
+@login_required
 def manage_location_view(request):
+    if request.user.role != 'ADMIN' and not request.user.is_superuser:
+        return HttpResponseForbidden("Access Denied")
+
+    is_area_admin = (request.user.role == 'ADMIN' and not request.user.is_superuser)
+    admin_state = request.user.assigned_state
+
     if request.method == 'POST':
         action = request.POST.get('action')
         loc_id = request.POST.get('id')
         
         if action == 'delete':
             if loc_id:
-                Location.objects.filter(id=loc_id).delete()
+                loc = Location.objects.filter(id=loc_id).first()
+                if loc:
+                    if is_area_admin and admin_state and loc.state.lower() != admin_state.lower():
+                        messages.error(request, f"Permission Denied: You can only delete cities in your assigned state ({admin_state}).")
+                        return redirect('/master/locations')
+                    city_deleted = loc.city
+                    loc.delete()
+                    messages.success(request, f"City '{city_deleted}' deleted.")
         else:
-            state = request.POST.get('state_new', '').strip()
-            if not state:
-                state = request.POST.get('state', '').strip()
+            if is_area_admin:
+                # Force state strictly to assigned_state. Area Admin cannot create states or add cities in other states!
+                state = admin_state
+            else:
+                state = request.POST.get('state_new', '').strip() or request.POST.get('state', '').strip()
+
             city = request.POST.get('city', '').strip()
             status = request.POST.get('status', 'active')
             
-            if state and city:
-                if loc_id:
-                    Location.objects.filter(id=loc_id).update(state=state, city=city, status=status)
-                else:
-                    Location.objects.create(state=state, city=city, status=status)
+            if not state:
+                messages.error(request, "State is required.")
+                return redirect('/master/locations')
+
+            if not city:
+                messages.error(request, "City name is required.")
+                return redirect('/master/locations')
+
+            if loc_id:
+                loc = Location.objects.filter(id=loc_id).first()
+                if loc:
+                    if is_area_admin and admin_state and loc.state.lower() != admin_state.lower():
+                        messages.error(request, f"Permission Denied: You cannot modify locations outside your assigned state ({admin_state}).")
+                        return redirect('/master/locations')
+                    loc.city = city
+                    loc.state = state
+                    loc.status = status
+                    loc.save()
+                    messages.success(request, f"City '{city}' updated.")
+            else:
+                Location.objects.create(state=state, city=city, status=status)
+                messages.success(request, f"City '{city}' added to {state}.")
         
         return redirect('/master/locations')
     return redirect('/master/locations')

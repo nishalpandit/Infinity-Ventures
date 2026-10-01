@@ -752,6 +752,8 @@ def user_nav_data_api(request):
 @csrf_exempt
 @require_POST
 def add_category_api(request):
+    if not (request.user.is_authenticated and request.user.is_superuser):
+        return JsonResponse({'success': False, 'error': 'Permission Denied: Category management is restricted to Super Admin.'}, status=403)
     try:
         data = _parse_api_request(request)
         name = data.get('name', '').strip()
@@ -783,6 +785,8 @@ def add_category_api(request):
 @csrf_exempt
 @require_POST
 def update_category_api(request):
+    if not (request.user.is_authenticated and request.user.is_superuser):
+        return JsonResponse({'success': False, 'error': 'Permission Denied: Category management is restricted to Super Admin.'}, status=403)
     try:
         data = _parse_api_request(request)
         cat_id = data.get('id')
@@ -817,6 +821,8 @@ def update_category_api(request):
 @csrf_exempt
 @require_POST
 def delete_category_api(request):
+    if not (request.user.is_authenticated and request.user.is_superuser):
+        return JsonResponse({'success': False, 'error': 'Permission Denied: Category management is restricted to Super Admin.'}, status=403)
     try:
         data = _parse_api_request(request)
         cat_id = data.get('id')

@@ -129,7 +129,28 @@
     html += '  </div>';
     html += '  <nav class="sidebar-nav" id="sidebarNav">';
 
-    MENU.forEach(function (item) {
+    var isAreaAdmin = (window.IS_AREA_ADMIN || window.ADMIN_ROLE === 'Area Admin' || (window.ADMIN_ROLE && window.ADMIN_ROLE.toLowerCase().indexOf('area') !== -1) || window.IS_SUPERUSER === false);
+
+    var menuToRender = MENU.map(function(item) {
+      if (item.label === 'Master' && isAreaAdmin) {
+        var filteredChildren = (item.children || []).filter(function(child) {
+          return child.href.indexOf('categories') === -1;
+        }).map(function(child) {
+          if (child.href.indexOf('locations') !== -1) {
+            return { label: 'Cities', href: child.href };
+          }
+          return child;
+        });
+        return {
+          label: 'Master',
+          icon: item.icon,
+          children: filteredChildren
+        };
+      }
+      return item;
+    });
+
+    menuToRender.forEach(function (item) {
       if (item.children) {
         var hasActiveChild = item.children.some(function (c) { return isItemActive(c.href); });
         var itemClass = 'snav-item has-sub' + (hasActiveChild ? ' open' : '');
