@@ -41,9 +41,18 @@
       color: var(--slate);
       min-height: 100vh;
       display: flex;
+      flex-direction: column;
+      margin: 0;
+      padding: 0;
+    }
+
+    .page-wrapper {
+      flex: 1;
+      width: 100%;
+      display: flex;
       align-items: center;
       justify-content: center;
-      padding: 36px 16px;
+      padding: 40px 16px;
     }
 
     /* Main White Form Container */
@@ -278,9 +287,9 @@
   </style>
 </head>
 <body>
-
-  <!-- White Card Container -->
-  <div class="user-card">
+  <div class="page-wrapper">
+    <!-- White Card Container -->
+    <div class="user-card">
     
     <!-- Top Navigation -->
     <div class="nav-bar">
@@ -414,6 +423,7 @@
       <a href="{% url 'register_vendor' %}" style="color: #059669; font-weight: 700;">Register as Vendor / Partner</a>
     </div>
 
+  </div>
   </div>
 
   <script>

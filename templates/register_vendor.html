@@ -56,9 +56,18 @@
       color: var(--slate);
       min-height: 100vh;
       display: flex;
+      flex-direction: column;
+      margin: 0;
+      padding: 0;
+    }
+
+    .page-wrapper {
+      flex: 1;
+      width: 100%;
+      display: flex;
       align-items: center;
       justify-content: center;
-      padding: 36px 16px;
+      padding: 40px 16px;
     }
 
     /* Main Form Container */
@@ -375,8 +384,8 @@
   </style>
 </head>
 <body>
-
-  <div class="vendor-card">
+  <div class="page-wrapper">
+    <div class="vendor-card">
     <!-- Top Navigation -->
     <div class="nav-bar">
       <a href="/" class="back-btn">
@@ -638,6 +647,7 @@
       <span style="margin: 0 8px; color: #cbd5e1;">•</span>
       <a href="{% url 'register_user' %}" style="color: var(--muted); text-decoration: none;">Looking to hire services? <strong style="color: var(--indigo);">Register as Customer</strong></a>
     </div>
+  </div>
   </div>
 
   <script>

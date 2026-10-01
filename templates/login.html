@@ -48,10 +48,18 @@
       color: var(--slate);
       min-height: 100vh;
       display: flex;
+      flex-direction: column;
+      margin: 0;
+      padding: 0;
+    }
+
+    .page-wrapper {
+      flex: 1;
+      width: 100%;
+      display: flex;
       align-items: center;
       justify-content: center;
-      padding: 36px 16px;
-      position: relative;
+      padding: 40px 16px;
     }
 
     /* Main Clean White Card Container */
@@ -577,8 +585,8 @@
 </head>
 
 <body>
-
-  <div class="login-container">
+  <div class="page-wrapper">
+    <div class="login-container">
     <!-- Top Navigation -->
     <div class="nav-bar">
       <a href="/" class="back-btn">
@@ -706,6 +714,7 @@
         </a>
       </div>
     </div>
+  </div>
   </div>
 
   <!-- Create Account Choice Modal (White Theme) -->
@@ -1032,6 +1041,15 @@
       }
     });
   </script>
+
+  <footer style="width:100%; margin-top:auto; padding:16px 24px; display:flex; justify-content:flex-end; align-items:center; font-size:12px; color:#64748b; border-top:1px solid #e2e8f0; background:#fff;">
+    <div style="display:flex; align-items:center; gap:6px;">
+      <span>Designed by</span>
+      <a href="https://www.brightcodess.com/" target="_blank" rel="noopener noreferrer" style="display:inline-flex; align-items:center; text-decoration:none;">
+        <img src="/static/assets/images/brightcode.png" alt="Brightcode" style="height:18px; vertical-align:middle;" onerror="this.style.display='none'; this.nextElementSibling.style.display='inline';"><span style="display:none; color:#007bff; font-weight:600;">Brightcode</span>
+      </a>
+    </div>
+  </footer>
 </body>
 
 </html>
