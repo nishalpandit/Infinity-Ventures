@@ -108,6 +108,24 @@
   if(!$('.mobile-overlay')) body.insertAdjacentHTML('beforeend','<div class="mobile-overlay" id="mobile-overlay"></div><div class="toast-container" id="toast-container" aria-live="polite"></div>');
   if(!$('#global-modal')) body.insertAdjacentHTML('beforeend',`<div class="modal-backdrop" id="global-modal" role="dialog" aria-modal="true"><div class="modal"><div class="modal-head"><h3 id="global-modal-title">Please confirm</h3><button class="modal-close" data-modal-close>${icon('x')}</button></div><div class="modal-body" id="global-modal-body"></div><div class="modal-actions"><button class="btn btn-secondary" data-modal-close>Cancel</button><button class="btn btn-primary" id="global-modal-confirm">Confirm</button></div></div></div>`);
 
+  // Mount global footer in workspace
+  const workspace = $('.workspace');
+  if(workspace && !$('.dashboard-footer')){
+    workspace.insertAdjacentHTML('beforeend', `
+      <footer class="dashboard-footer" style="padding:14px 28px; background:#fff; border-top:1px solid #e2e8f0; display:flex; justify-content:space-between; align-items:center; font-size:12px; color:#64748b; flex-wrap:wrap; gap:12px; margin-top:auto;">
+        <div>
+          Copyright &copy; 2026 <a href="https://crm.brightcodess.com/" target="_blank" rel="noopener noreferrer" style="color:#007bff; text-decoration:none; font-weight:600;">Brightcode Software Services Pvt.Ltd..</a> All rights reserved.
+        </div>
+        <div style="display:flex; align-items:center; gap:6px;">
+          <span>Designed By -</span>
+          <a href="https://crm.brightcodess.com/" target="_blank" rel="noopener noreferrer" style="display:inline-flex; align-items:center; text-decoration:none;">
+            <img src="/static/assets/images/brightcode.png" alt="Brightcode" style="height:18px; vertical-align:middle;">
+          </a>
+        </div>
+      </footer>
+    `);
+  }
+
   // Replace declarative icons after shared layout is mounted.
   $$('[data-icon]').forEach(el => el.innerHTML = icon(el.dataset.icon));
 

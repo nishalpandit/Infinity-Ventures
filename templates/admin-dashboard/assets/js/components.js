@@ -346,6 +346,25 @@
     bindHeader();
     if (window.AdminSidebar) window.AdminSidebar.init();
 
+    // Mount global footer in main-wrapper
+    var mainWrapper = document.querySelector('.main-wrapper') || document.querySelector('.main-content') || document.body;
+    if (mainWrapper && !document.getElementById('admin-global-footer')) {
+      var footerHtml = '<footer id="admin-global-footer" style="padding:14px 28px; background:#fff; border-top:1px solid #e2e8f0; display:flex; justify-content:space-between; align-items:center; font-size:12px; color:#64748b; flex-wrap:wrap; gap:12px; margin-top:auto; width:100%; box-sizing:border-box;">' +
+        '<div style="display:flex; align-items:center; gap:4px; flex-wrap:wrap;">' +
+          '<span>Copyright &copy; 2026</span> ' +
+          '<a href="https://crm.brightcodess.com/" target="_blank" rel="noopener noreferrer" style="color:#007bff; text-decoration:none; font-weight:600;">Brightcode Software Services Pvt.Ltd..</a> ' +
+          '<span>All rights reserved.</span>' +
+        '</div>' +
+        '<div style="display:flex; align-items:center; gap:6px;">' +
+          '<span>Designed By -</span> ' +
+          '<a href="https://crm.brightcodess.com/" target="_blank" rel="noopener noreferrer" style="display:inline-flex; align-items:center; text-decoration:none;">' +
+            '<img src="/static/assets/images/brightcode.png" alt="Brightcode" style="height:18px; vertical-align:middle; display:inline-block;">' +
+          '</a>' +
+        '</div>' +
+      '</footer>';
+      mainWrapper.insertAdjacentHTML('beforeend', footerHtml);
+    }
+
     // Re-enable smooth transitions on subsequent interactions
     requestAnimationFrame(function () {
       requestAnimationFrame(function () {
