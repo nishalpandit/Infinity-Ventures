@@ -49,22 +49,49 @@
     return m ? m[1] : null;
   }
 
+  function getPathOnly(href) {
+    if (!href) return '';
+    return href.replace(/^\.\//, '').replace(/^\.\.\//, '').split('?')[0].split('#')[0];
+  }
+
+  function getHashFromHref(href) {
+    if (!href) return null;
+    var i = href.indexOf('#');
+    return i !== -1 ? href.substring(i + 1) : null;
+  }
+
   function isItemActive(href) {
     var cur = currentCanonical();
     var isDash = ['admin-dashboard', 'dashboard', 'dashboard.html', 'admin-dashboard.html'].indexOf(cur) !== -1;
-    var cHref = canonical(href);
+    var pathOnly = getPathOnly(href);
 
-    if (isDash && (cHref === 'admin-dashboard' || cHref === 'dashboard.html' || href === '/admin-dashboard')) {
+    if (isDash && (pathOnly === 'admin-dashboard' || pathOnly === 'dashboard.html' || href === '/admin-dashboard')) {
       return true;
     }
 
-    var hrefStatus = qsFromHref(href);
-    var curStatus = qs('status') || (qs('view') ? qs('view') : null);
+    if (pathOnly === cur) {
+      var hrefHash = getHashFromHref(href);
+      var curHash = (location.hash || '').replace('#', '');
+      var hrefStatus = qsFromHref(href);
+      var curStatus = qs('status') || (qs('view') ? qs('view') : null);
 
-    if (cHref === cur) {
+      if (hrefHash) {
+        if (!curHash) {
+          if (cur.indexOf('quick-services') !== -1 || cur.indexOf('jobs') !== -1) {
+            curHash = 'active';
+          }
+        }
+        return hrefHash === curHash;
+      }
+
       if (hrefStatus) {
         return hrefStatus === curStatus;
       }
+
+      if (curHash && (cur.indexOf('quick-services') !== -1 || cur.indexOf('jobs') !== -1)) {
+        return false;
+      }
+
       return !curStatus;
     }
     return false;
@@ -159,14 +186,14 @@
         item.children.forEach(function (c) {
           var isAct = isItemActive(c.href);
           var aClass = isAct ? ' class="active"' : '';
-          html += '<a href="' + resolveHref(c.href) + '" data-canon="' + canonical(c.href) + '" data-status="' + (qsFromHref(c.href) || '') + '"' + aClass + '>' + c.label + '</a>';
+          html += '<a href="' + resolveHref(c.href) + '" data-raw-href="' + c.href + '" data-canon="' + canonical(c.href) + '" data-status="' + (qsFromHref(c.href) || '') + '"' + aClass + '>' + c.label + '</a>';
         });
         html += '  </div>';
         html += '  <ul class="snav-sub">';
         item.children.forEach(function (c) {
           var isAct = isItemActive(c.href);
           var subClass = 'snav-sublink' + (isAct ? ' active' : '');
-          html += '<li><a class="' + subClass + '" href="' + resolveHref(c.href) + '" data-canon="' + canonical(c.href) + '" data-status="' + (qsFromHref(c.href) || '') + '">' + c.label + '</a></li>';
+          html += '<li><a class="' + subClass + '" href="' + resolveHref(c.href) + '" data-raw-href="' + c.href + '" data-canon="' + canonical(c.href) + '" data-status="' + (qsFromHref(c.href) || '') + '">' + c.label + '</a></li>';
         });
         html += '  </ul>';
         html += '</div>';
@@ -174,7 +201,7 @@
         var isAct = isItemActive(item.href);
         var linkClass = 'snav-link' + (isAct ? ' active' : '');
         html += '<div class="snav-item" data-menu="' + item.label + '">';
-        html += '  <a class="' + linkClass + '" href="' + resolveHref(item.href) + '" data-canon="' + canonical(item.href) + '">';
+        html += '  <a class="' + linkClass + '" href="' + resolveHref(item.href) + '" data-raw-href="' + item.href + '" data-canon="' + canonical(item.href) + '">';
         html += '    <span class="snav-icon"><i class="fa-solid ' + item.icon + '"></i></span>';
         html += '    <span class="snav-label">' + item.label + '</span>';
         html += '  </a>';
@@ -369,8 +396,37 @@
     });
   }
 
+  function syncSidebarActive() {
+    var nav = document.getElementById('sidebarNav');
+    if (!nav) return;
+    var items = nav.querySelectorAll('.snav-item.has-sub');
+    items.forEach(function (item) {
+      var links = item.querySelectorAll('.snav-sub a, .sb-flyout a');
+      var anyActive = false;
+      links.forEach(function (link) {
+        var raw = link.getAttribute('data-raw-href') || link.getAttribute('href');
+        if (raw && isItemActive(raw)) {
+          link.classList.add('active');
+          anyActive = true;
+        } else {
+          link.classList.remove('active');
+        }
+      });
+      var parentLink = item.querySelector('.snav-link');
+      if (anyActive) {
+        item.classList.add('open');
+        if (parentLink) parentLink.classList.add('parent-active');
+      } else {
+        if (parentLink) parentLink.classList.remove('parent-active');
+      }
+    });
+  }
+
+  window.addEventListener('hashchange', syncSidebarActive);
+
   window.AdminComponents = {
     init: init,
+    syncSidebarActive: syncSidebarActive,
     renderBreadcrumb: renderBreadcrumb,
     prefix: function () { return P; }
   };

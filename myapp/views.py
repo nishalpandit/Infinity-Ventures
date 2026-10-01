@@ -118,6 +118,55 @@ def get_in_state_kyc_filter(admin_state):
             q_filter |= Q(vendor__user_profile__city__icontains=c_str)
     return q_filter
 
+def is_service_in_state(service, state_name):
+    """
+    Checks if a QuickService is located within or provided by a vendor in the specified territory.
+    """
+    if not service or not state_name:
+        return False
+    state_lower = state_name.strip().lower()
+
+    if service.location and service.location.state and service.location.state.strip().lower() == state_lower:
+        return True
+
+    if service.locality and state_lower in service.locality.lower():
+        return True
+
+    cities = [c.strip().lower() for c in Location.objects.filter(state__iexact=state_name).values_list('city', flat=True) if c and c.strip()]
+    if service.locality and any(c in service.locality.lower() for c in cities):
+        return True
+
+    if getattr(service, 'vendor', None) and is_vendor_in_state(service.vendor, state_name):
+        return True
+
+    return False
+
+def get_in_state_qs_filter(admin_state):
+    """
+    Constructs an ORM Q filter to retrieve all QuickService records
+    where the service location, locality, or vendor is present in the specified admin_state.
+    """
+    if not admin_state:
+        return Q()
+    admin_state = admin_state.strip()
+    cities = list(Location.objects.filter(state__iexact=admin_state).values_list('city', flat=True))
+    q_filter = (
+        Q(location__state__iexact=admin_state) |
+        Q(locality__icontains=admin_state) |
+        Q(vendor__assigned_state__iexact=admin_state) |
+        Q(vendor__vendor_profile__location__icontains=admin_state) |
+        Q(vendor__vendor_profile__address__icontains=admin_state) |
+        Q(vendor__user_profile__state__iexact=admin_state)
+    )
+    for c in cities:
+        c_str = c.strip()
+        if c_str:
+            q_filter |= Q(locality__icontains=c_str)
+            q_filter |= Q(vendor__vendor_profile__location__icontains=c_str)
+            q_filter |= Q(vendor__vendor_profile__address__icontains=c_str)
+            q_filter |= Q(vendor__user_profile__city__icontains=c_str)
+    return q_filter
+
 def get_user_dashboard_context(user, request=None):
     name = user.get_full_name() or user.username
     initials = (user.first_name[:1].upper() + user.last_name[:1].upper()) if (user.first_name and user.last_name) else (user.first_name[:2].upper() if user.first_name else user.username[:2].upper())
@@ -2288,12 +2337,13 @@ def dashboard_view(request, path=''):
                 # Strict territory check for Area Admin
                 admin_state, is_area_admin, available_states, co_admins = get_admin_state_context(request)
                 if is_area_admin and admin_state:
-                    qs_in_state = (service.location and service.location.state and service.location.state.lower() == admin_state.lower()) or (admin_state.lower() in (service.locality or '').lower()) or (bool(service.user.assigned_state and service.user.assigned_state.lower() == admin_state.lower()))
-                    if not qs_in_state:
+                    if not is_service_in_state(service, admin_state):
                         messages.error(request, f"Access Denied: Quick Service is outside your assigned territory ({admin_state}).")
                         return redirect('/quick-services/index.html')
 
                 context['service'] = service
+                context['admin_state'] = admin_state
+                context['is_area_admin'] = is_area_admin
                 
                 try:
                     u_profile = service.user.user_profile
@@ -2325,11 +2375,12 @@ def dashboard_view(request, path=''):
         context['is_area_admin'] = is_area_admin
         quick_services = QuickService.objects.exclude(category__service_type='job').select_related('vendor', 'category', 'location').annotate(vendor_requests_count=Count('legacy_bids')).prefetch_related(Prefetch('legacy_bids', queryset=Bid.objects.filter(status='selected').select_related('vendor', 'vendor__vendor_profile'), to_attr='selected_bids')).order_by('-created_at')
         if admin_state:
-            quick_services = quick_services.filter(
-                Q(location__state__iexact=admin_state) |
-                Q(locality__icontains=admin_state) |
-                Q(vendor__assigned_state__iexact=admin_state)
-            )
+            quick_services = quick_services.filter(get_in_state_qs_filter(admin_state))
+        
+        category_ids = quick_services.values_list('category_id', flat=True).distinct()
+        from myapp.models import Category
+        context['qs_categories'] = Category.objects.filter(id__in=category_ids).order_by('name')
+
         qs_data = []
         for qs in quick_services:
             u = qs.user
@@ -2349,6 +2400,7 @@ def dashboard_view(request, path=''):
 
             qs_data.append({
                 'id': f'QS-{qs.id:04d}',
+                'raw_id': qs.id,
                 'customer': u.get_full_name() or u.username,
                 'customerMobile': mobile,
                 'customerId': f'USR-{u.id:04d}',
@@ -2356,6 +2408,7 @@ def dashboard_view(request, path=''):
                 'title': qs.title,
                 'category': qs.category.name if getattr(qs, 'category', None) else 'Uncategorized',
                 'location': f"{qs.location.city}, {qs.location.state}" if getattr(qs, 'location', None) else (admin_state or 'Unknown'),
+                'locality': qs.locality or '',
                 'budget': float(qs.budget) if qs.budget else 0,
                 'vendorRequests': getattr(qs, 'vendor_requests_count', 0),
                 'selectedVendor': selected_vendor_name,
@@ -2365,10 +2418,12 @@ def dashboard_view(request, path=''):
         context['quick_services_json'] = json.dumps(qs_data)
         context['quick_services_list'] = qs_data
         
-        active_statuses = {'open', 'active', 'progress', 'selected'}
-        closed_statuses = {'completed', 'cancelled', 'closed'}
-        context['active_qs'] = [qs for qs in qs_data if qs['status'] in active_statuses]
+        closed_statuses = {'completed', 'cancelled', 'closed', 'paused', 'inactive'}
+        context['active_qs'] = [qs for qs in qs_data if qs['status'] not in closed_statuses]
         context['closed_qs'] = [qs for qs in qs_data if qs['status'] in closed_statuses]
+        
+        req_status = request.GET.get('status', '').strip().lower()
+        context['initial_tab'] = 'closed' if req_status in closed_statuses else 'active'
         
         
     elif 'jobs' in path:
@@ -3801,6 +3856,58 @@ def reject_kyc_view(request, kyc_id):
             return JsonResponse({'status': 'success', 'message': f"KYC for {vendor_name} rejected."})
 
     return redirect(request.META.get('HTTP_REFERER') or '/admin-dashboard/users/kyc-approvals.html')
+
+@login_required
+def update_quick_service_status_view(request, service_id):
+    if request.method != 'POST':
+        return HttpResponseForbidden("Only POST method allowed.")
+
+    if request.user.role != 'ADMIN' and not request.user.is_superuser:
+        return HttpResponseForbidden("Access Denied")
+
+    service = get_object_or_404(QuickService.objects.select_related('location', 'vendor', 'vendor__vendor_profile'), id=service_id)
+
+    # Territory authorization check: Area Admin can only modify quick services within their assigned state
+    if request.user.role == 'ADMIN' and not request.user.is_superuser:
+        admin_state = request.user.assigned_state
+        if not is_service_in_state(service, admin_state):
+            msg = f"Permission Denied: Quick Service '{service.title}' is outside your assigned territory ({admin_state})."
+            messages.error(request, msg)
+            if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+                return JsonResponse({'status': 'error', 'message': msg}, status=403)
+            return redirect(request.META.get('HTTP_REFERER') or '/quick-services/index.html')
+
+    new_status = request.POST.get('status', '').strip().lower()
+    valid_statuses = {'active', 'closed', 'completed', 'cancelled', 'paused'}
+    if new_status not in valid_statuses:
+        msg = f"Invalid status: '{new_status}'. Allowed: {', '.join(sorted(valid_statuses))}"
+        if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+            return JsonResponse({'status': 'error', 'message': msg}, status=400)
+        messages.error(request, msg)
+        return redirect(request.META.get('HTTP_REFERER') or '/quick-services/index.html')
+
+    old_status = service.status
+    service.status = new_status
+    service.save(update_fields=['status'])
+
+    action_label = "reactivated" if new_status == 'active' else "closed"
+    msg = f"Quick Service 'QS-{service.id:04d}' ({service.title}) {action_label} successfully (status: {new_status.title()})."
+    messages.success(request, msg)
+
+    if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+        return JsonResponse({
+            'status': 'success',
+            'message': msg,
+            'service_id': service.id,
+            'old_status': old_status,
+            'new_status': new_status
+        })
+
+    ref = request.META.get('HTTP_REFERER')
+    if ref:
+        return redirect(ref)
+    target_hash = '#closed' if new_status in {'closed', 'completed', 'cancelled', 'paused'} else '#active'
+    return redirect(f'/quick-services/index.html{target_hash}')
 
 def detect_location_api(request):
     from django.http import JsonResponse

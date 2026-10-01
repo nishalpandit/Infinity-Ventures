@@ -209,6 +209,7 @@ urlpatterns = [
 
     path('api/admin/kyc/<int:kyc_id>/approve/', views.approve_kyc_view, name='approve_kyc_view'),
     path('api/admin/kyc/<int:kyc_id>/reject/', views.reject_kyc_view, name='reject_kyc_view'),
+    path('api/admin/quick-services/<int:service_id>/status/', views.update_quick_service_status_view, name='update_quick_service_status_view'),
 
     re_path(r'^(?P<path>.*)$', views.dashboard_view, name='dashboard'),
 ]

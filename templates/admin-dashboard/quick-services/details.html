@@ -174,6 +174,7 @@
             {% elif service.status == 'cancelled' %}<span class="qs-badge b-cancelled"><span class="dot"></span>Cancelled</span>
             {% elif service.status == 'selected' %}<span class="qs-badge b-selected"><span class="dot"></span>Vendor Selected</span>
             {% else %}<span class="qs-badge b-individual">{{ service.status|title }}</span>{% endif %}
+            {% if admin_state %}<span class="badge" style="background:#ede9fe;color:#5b21b6;font-size:12px;font-weight:700;padding:4px 10px;border-radius:12px;"><i class="fa-solid fa-map-pin"></i> {{ admin_state }}</span>{% endif %}
           </div>
           <div class="hero-meta">
             <span><i class="fa-solid fa-layer-group"></i> {{ service.category.name|default:"Uncategorized" }}</span>
@@ -182,7 +183,18 @@
           </div>
         </div>
       </div>
-      <a class="btn-back" href="index.html"><i class="fa-solid fa-arrow-left"></i> Back</a>
+      <div style="display:flex;align-items:center;gap:10px;">
+        {% if service.status in 'completed,cancelled,closed,paused' %}
+        <button type="button" class="btn btn-sm btn-success" style="border-radius:10px;font-weight:600;padding:8px 16px;" onclick="changeServiceStatus({{ service.id }}, 'active', '{{ service.title|escapejs }}')">
+          <i class="fa-solid fa-rotate-left"></i> Reactivate Service
+        </button>
+        {% else %}
+        <button type="button" class="btn btn-sm btn-outline-danger" style="border-radius:10px;font-weight:600;padding:8px 16px;" onclick="changeServiceStatus({{ service.id }}, 'closed', '{{ service.title|escapejs }}')">
+          <i class="fa-solid fa-circle-xmark"></i> Close Service
+        </button>
+        {% endif %}
+        <a class="btn-back" href="index.html{% if service.status in 'completed,cancelled,closed,paused' %}#closed{% else %}#active{% endif %}"><i class="fa-solid fa-arrow-left"></i> Back to {% if service.status in 'completed,cancelled,closed,paused' %}Closed{% else %}Active{% endif %}</a>
+      </div>
     </div>
 
     <!-- Stats -->
@@ -389,6 +401,83 @@
   <script>
     document.getElementById('pageContent').innerHTML = document.getElementById('dynamicPageContent').innerHTML;
     document.getElementById('dynamicPageContent').remove();
+
+    window.changeServiceStatus = function (serviceId, newStatus, title) {
+      var actionText = newStatus === 'active' ? 'reactivate' : 'close';
+      var confirmTitle = newStatus === 'active' ? 'Reactivate Quick Service' : 'Close Quick Service';
+      var confirmMsg = 'Are you sure you want to ' + actionText + ' "' + title + '"?';
+
+      function getCsrfToken() {
+        var cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+          var cookies = document.cookie.split(';');
+          for (var i = 0; i < cookies.length; i++) {
+            var cookie = cookies[i].trim();
+            if (cookie.substring(0, 10) === 'csrftoken=') {
+              cookieValue = decodeURIComponent(cookie.substring(10));
+              break;
+            }
+          }
+        }
+        return cookieValue || '';
+      }
+
+      function executeUpdate() {
+        var token = getCsrfToken();
+        var formData = new FormData();
+        formData.append('status', newStatus);
+
+        fetch('/api/admin/quick-services/' + serviceId + '/status/', {
+          method: 'POST',
+          headers: {
+            'X-CSRFToken': token,
+            'X-Requested-With': 'XMLHttpRequest'
+          },
+          body: formData
+        })
+        .then(function (res) { return res.json(); })
+        .then(function (data) {
+          if (data.status === 'success') {
+            if (window.AdminUI && AdminUI.toast) {
+              AdminUI.toast('success', 'Status Updated', data.message);
+            } else {
+              alert(data.message);
+            }
+            setTimeout(function () {
+              window.location.reload();
+            }, 500);
+          } else {
+            if (window.AdminUI && AdminUI.toast) {
+              AdminUI.toast('error', 'Update Failed', data.message || 'Could not update status');
+            } else {
+              alert('Error: ' + (data.message || 'Could not update status'));
+            }
+          }
+        })
+        .catch(function (err) {
+          console.error(err);
+          if (window.AdminUI && AdminUI.toast) {
+            AdminUI.toast('error', 'Error', 'A network error occurred.');
+          } else {
+            alert('Network error occurred.');
+          }
+        });
+      }
+
+      if (window.AdminUI && AdminUI.confirm) {
+        AdminUI.confirm({
+          title: confirmTitle,
+          message: confirmMsg,
+          confirmText: newStatus === 'active' ? 'Reactivate' : 'Close Service',
+          danger: newStatus !== 'active',
+          onConfirm: executeUpdate
+        });
+      } else {
+        if (confirm(confirmMsg)) {
+          executeUpdate();
+        }
+      }
+    };
   </script>
 </body>
 </html>
