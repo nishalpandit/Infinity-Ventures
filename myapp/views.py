@@ -47,7 +47,10 @@ def get_admin_state_context(request):
             co_admins = User.objects.filter(role='ADMIN', assigned_state=admin_state).exclude(id=u.id)
         elif u.is_superuser:
             selected_state = request.GET.get('state')
-            if selected_state and selected_state != 'all':
+            if selected_state == 'all':
+                admin_state = None
+                co_admins = User.objects.filter(role='ADMIN')
+            elif selected_state:
                 admin_state = selected_state
                 co_admins = User.objects.filter(role='ADMIN', assigned_state=admin_state)
             else:
@@ -3245,7 +3248,7 @@ def register_user_view(request):
             user.save()
             profile_img = request.FILES.get('profile_image')
             UserProfile.objects.create(user=user, phone_number=mobile, profile_image=profile_img)
-            login(request, user)
+            login(request, user, backend='django.contrib.auth.backends.ModelBackend')
             return redirect('user_dashboard')
     
     return render(request, 'register_user.html', {'error': error})
