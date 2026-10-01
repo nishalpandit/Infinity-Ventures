@@ -331,6 +331,15 @@ def dashboard_view(request, path=''):
     if path.startswith('user/') and not request.user.is_authenticated:
         return redirect('register_user')
 
+    # Subscriptions and Notifications modules completely removed
+    if any(path.startswith(prefix) for prefix in ['subscriptions', 'admin-dashboard/subscriptions']) or path == 'subscriptions':
+        messages.warning(request, "Access Denied: The subscriptions page has been removed.")
+        return redirect('/admin-dashboard')
+
+    if any(path.startswith(prefix) for prefix in ['notifications', 'admin-dashboard/notifications']) or path == 'notifications':
+        messages.warning(request, "Access Denied: The notifications page has been removed.")
+        return redirect('/admin-dashboard')
+
     if request.method == 'POST' and request.POST.get('action') in ['complete_and_settle', 'submit_completion_proof']:
         from .wallet_services import settle_job_completion
         job_id = request.POST.get('job_id')
@@ -719,7 +728,7 @@ def dashboard_view(request, path=''):
 
     # Map url prefixes to correct template directories
     mapped_path = path
-    admin_subfolders = ['users/', 'quick-services/', 'jobs/', 'bidding/', 'subscriptions/', 'payments/', 'reviews/', 'complaints/', 'reports/', 'master/']
+    admin_subfolders = ['users/', 'quick-services/', 'jobs/', 'bidding/', 'payments/', 'reviews/', 'complaints/', 'reports/', 'master/']
     if any(mapped_path.startswith(folder) for folder in admin_subfolders):
         mapped_path = f'admin-dashboard/{mapped_path}'
     elif mapped_path.startswith('user/'):

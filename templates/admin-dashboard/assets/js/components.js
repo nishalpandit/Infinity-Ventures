@@ -8,7 +8,7 @@
   'use strict';
 
   /* ---------- Path helpers (pages live at root or one level deep) ---------- */
-  var SUBFOLDERS = ['users', 'quick-services', 'jobs', 'bidding', 'subscriptions', 'payments', 'reviews', 'complaints', 'reports', 'master'];
+  var SUBFOLDERS = ['users', 'quick-services', 'jobs', 'bidding', 'payments', 'reviews', 'complaints', 'reports', 'master'];
 
   function inSubfolder() {
     var segs = location.pathname.split('/').filter(Boolean);
@@ -94,16 +94,8 @@
       ]
     },
     {
-      label: 'Subscriptions', icon: 'fa-layer-group', children: [
-        { label: 'Bid Packages', href: 'subscriptions/packages.html' },
-        { label: 'Purchases', href: 'subscriptions/purchases.html' },
-        { label: 'Credit Transactions', href: 'subscriptions/credit-transactions.html' }
-      ]
-    },
-    { label: 'Payments', icon: 'fa-credit-card', children: [
-        { label: 'Subscription Payments', href: 'payments/index.html' },
-        { label: 'Transactions', href: 'payments/index.html?view=transactions' },
-        { label: 'Vendor Payouts', href: '/super-admin/payouts/' }
+      label: 'Payments', icon: 'fa-credit-card', children: [
+        { label: 'Transactions', href: 'payments/index.html' }
       ]
     },
     {
@@ -231,14 +223,6 @@
     html += '  </div>';
     html += '  <div class="header-actions">';
     html += '    <div style="position:relative;">';
-    html += '      <button class="header-icon-btn" id="notifBtn" aria-label="Notifications"><i class="fa-regular fa-bell"></i><span class="dot"></span></button>';
-    html += '      <div class="header-dropdown" id="notifDropdown">';
-    html += '        <div class="hd-head"><span>Notifications</span><span class="badge badge-danger">Live</span></div>';
-    html += '        <div class="hd-item"><span class="ic icon-indigo"><i class="fa-solid fa-map-pin"></i></span><div class="txt"><div class="t">Territory Active</div><div class="d">Managing area operations' + (window.ADMIN_STATE ? ' for ' + window.ADMIN_STATE : '') + '</div><div class="time">Just now</div></div></div>';
-    html += '        <div class="hd-footer"><a href="' + P + 'notifications.html">View all notifications</a></div>';
-    html += '      </div>';
-    html += '    </div>';
-    html += '    <div style="position:relative;">';
     html += '      <div class="header-profile" id="profileBtn">';
     html += '        <span class="avatar">' + uInitials + '</span>';
     html += '        <span class="meta"><span class="name d-block">' + uName + '</span><span class="role d-block">' + uRole + uState + '</span></span>';
@@ -249,7 +233,6 @@
       html += '        <a class="pm-item" href="/super-admin/"><i class="fa-solid fa-shield-halved"></i> Super Admin Hub</a>';
     }
     html += '        <a class="pm-item" href="' + P + 'profile.html"><i class="fa-regular fa-user"></i> My Profile</a>';
-    html += '        <a class="pm-item" href="' + P + 'notifications.html"><i class="fa-regular fa-bell"></i> Notifications</a>';
     html += '        <div class="pm-divider"></div>';
     html += '        <div class="pm-item danger" id="headerLogout"><i class="fa-solid fa-right-from-bracket"></i> Logout</div>';
     html += '      </div>';
@@ -275,24 +258,11 @@
 
   /* ---------- Header dropdown behavior ---------- */
   function bindHeader() {
-    var notifBtn = document.getElementById('notifBtn');
-    var notifDd = document.getElementById('notifDropdown');
     var profileBtn = document.getElementById('profileBtn');
     var profileDd = document.getElementById('profileDropdown');
 
     function closeAll() {
-      if (notifDd) notifDd.classList.remove('open');
       if (profileDd) profileDd.classList.remove('open');
-    }
-
-    if (notifBtn && !notifBtn.dataset.bound) {
-      notifBtn.dataset.bound = 'true';
-      notifBtn.addEventListener('click', function (e) {
-        e.stopPropagation();
-        var open = notifDd.classList.contains('open');
-        closeAll();
-        if (!open) notifDd.classList.add('open');
-      });
     }
 
     if (profileBtn && !profileBtn.dataset.bound) {

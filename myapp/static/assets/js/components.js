@@ -8,7 +8,7 @@
   'use strict';
 
   /* ---------- Path helpers (pages live at root or one level deep) ---------- */
-  var SUBFOLDERS = ['users', 'quick-services', 'jobs', 'bidding', 'subscriptions', 'payments', 'reviews', 'complaints', 'reports', 'master'];
+  var SUBFOLDERS = ['users', 'quick-services', 'jobs', 'bidding', 'payments', 'reviews', 'complaints', 'reports', 'master'];
 
   function inSubfolder() {
     var segs = location.pathname.split('/').filter(Boolean);
@@ -77,7 +77,8 @@
       label: 'Users', icon: 'fa-users', children: [
         { label: 'User', href: 'users/users.html' },
         { label: 'Vendor', href: 'users/vendors.html' },
-        { label: 'Company Vendor', href: 'users/company-vendors.html' }
+        { label: 'Company Vendor', href: 'users/company-vendors.html' },
+        { label: 'KYC Approvals', href: 'users/kyc-approvals.html' }
       ]
     },
     {
@@ -93,15 +94,8 @@
       ]
     },
     {
-      label: 'Subscriptions', icon: 'fa-layer-group', children: [
-        { label: 'Bid Packages', href: 'subscriptions/packages.html' },
-        { label: 'Purchases', href: 'subscriptions/purchases.html' },
-        { label: 'Credit Transactions', href: 'subscriptions/credit-transactions.html' }
-      ]
-    },
-    { label: 'Payments', icon: 'fa-credit-card', children: [
-        { label: 'Subscription Payments', href: 'payments/index.html' },
-        { label: 'Transactions', href: 'payments/index.html?view=transactions' }
+      label: 'Payments', icon: 'fa-credit-card', children: [
+        { label: 'Transactions', href: 'payments/index.html' }
       ]
     },
     {
@@ -110,6 +104,7 @@
         { label: 'Locations', href: 'master/locations.html' }
       ]
     },
+    { label: 'Disputes & Complaints', icon: 'fa-shield-halved', href: 'complaints/index.html' },
     { label: 'Admin Profile', icon: 'fa-user-shield', href: 'profile.html' }
   ];
 
@@ -209,20 +204,24 @@
     var uRole = window.ADMIN_ROLE || 'Area Admin';
     var uState = window.ADMIN_STATE ? ' (' + window.ADMIN_STATE + ')' : '';
     var uInitials = window.ADMIN_INITIALS || 'AA';
+    var isSuper = uRole.indexOf('Super') !== -1;
 
     var html = '';
     html += '<header class="app-header">';
-    html += '  <button class="header-toggle d-lg-none" id="mobileMenuBtn" aria-label="Open menu"><i class="fa-solid fa-bars"></i></button>';
-    html += '  <button class="header-toggle d-none d-lg-inline-flex" id="sidebarToggle" aria-label="Toggle sidebar"><i class="fa-solid fa-bars-staggered"></i></button>';
+    html += '  <div style="display:flex;align-items:center;gap:12px;">';
+    html += '    <button class="header-toggle d-lg-none" id="mobileMenuBtn" aria-label="Open menu"><i class="fa-solid fa-bars"></i></button>';
+    html += '    <button class="header-toggle d-none d-lg-inline-flex" id="sidebarToggle" aria-label="Toggle sidebar"><i class="fa-solid fa-bars-staggered"></i></button>';
+    if (window.ADMIN_STATE && !isSuper) {
+      html += '    <div class="d-none d-md-flex align-items-center gap-2 px-3 py-1" style="background:rgba(79,70,229,0.08);border:1px solid rgba(79,70,229,0.2);border-radius:20px;font-size:12px;color:var(--primary);font-weight:600;">';
+      html += '      <i class="fa-solid fa-location-dot" style="font-size:11px;"></i> Territory: ' + window.ADMIN_STATE;
+      html += '    </div>';
+    } else if (isSuper) {
+      html += '    <a href="/super-admin/" class="d-none d-md-inline-flex align-items-center gap-2 px-3 py-1 btn btn-sm btn-outline-primary" style="border-radius:20px;font-size:12px;font-weight:600;text-decoration:none;">';
+      html += '      <i class="fa-solid fa-shield-halved"></i> Super Admin Hub';
+      html += '    </a>';
+    }
+    html += '  </div>';
     html += '  <div class="header-actions">';
-    html += '    <div style="position:relative;">';
-    html += '      <button class="header-icon-btn" id="notifBtn" aria-label="Notifications"><i class="fa-regular fa-bell"></i><span class="dot"></span></button>';
-    html += '      <div class="header-dropdown" id="notifDropdown">';
-    html += '        <div class="hd-head"><span>Notifications</span><span class="badge badge-danger">Live</span></div>';
-    html += '        <div class="hd-item"><span class="ic icon-indigo"><i class="fa-solid fa-map-pin"></i></span><div class="txt"><div class="t">Territory Active</div><div class="d">Managing area operations' + (window.ADMIN_STATE ? ' for ' + window.ADMIN_STATE : '') + '</div><div class="time">Just now</div></div></div>';
-    html += '        <div class="hd-footer"><a href="' + P + 'notifications.html">View all notifications</a></div>';
-    html += '      </div>';
-    html += '    </div>';
     html += '    <div style="position:relative;">';
     html += '      <div class="header-profile" id="profileBtn">';
     html += '        <span class="avatar">' + uInitials + '</span>';
@@ -230,8 +229,10 @@
     html += '        <i class="fa-solid fa-chevron-down" style="font-size:10px;color:var(--text-light);"></i>';
     html += '      </div>';
     html += '      <div class="header-dropdown profile-menu" id="profileDropdown">';
+    if (isSuper) {
+      html += '        <a class="pm-item" href="/super-admin/"><i class="fa-solid fa-shield-halved"></i> Super Admin Hub</a>';
+    }
     html += '        <a class="pm-item" href="' + P + 'profile.html"><i class="fa-regular fa-user"></i> My Profile</a>';
-    html += '        <a class="pm-item" href="' + P + 'notifications.html"><i class="fa-regular fa-bell"></i> Notifications</a>';
     html += '        <div class="pm-divider"></div>';
     html += '        <div class="pm-item danger" id="headerLogout"><i class="fa-solid fa-right-from-bracket"></i> Logout</div>';
     html += '      </div>';
@@ -257,24 +258,11 @@
 
   /* ---------- Header dropdown behavior ---------- */
   function bindHeader() {
-    var notifBtn = document.getElementById('notifBtn');
-    var notifDd = document.getElementById('notifDropdown');
     var profileBtn = document.getElementById('profileBtn');
     var profileDd = document.getElementById('profileDropdown');
 
     function closeAll() {
-      if (notifDd) notifDd.classList.remove('open');
       if (profileDd) profileDd.classList.remove('open');
-    }
-
-    if (notifBtn && !notifBtn.dataset.bound) {
-      notifBtn.dataset.bound = 'true';
-      notifBtn.addEventListener('click', function (e) {
-        e.stopPropagation();
-        var open = notifDd.classList.contains('open');
-        closeAll();
-        if (!open) notifDd.classList.add('open');
-      });
     }
 
     if (profileBtn && !profileBtn.dataset.bound) {
@@ -357,6 +345,20 @@
       b.innerHTML = '';
       b.style.display = 'none';
     });
+
+    // Mount global footer in main-wrapper
+    var mainWrapper = document.querySelector('.main-wrapper') || document.querySelector('.main-content') || document.body;
+    if (mainWrapper && !document.getElementById('admin-global-footer')) {
+      var footerHtml = '<footer id="admin-global-footer" style="padding:14px 28px; background:#fff; border-top:1px solid #e2e8f0; display:flex; justify-content:flex-end; align-items:center; font-size:12px; color:#64748b; margin-top:auto; width:100%; box-sizing:border-box;">' +
+        '<div style="display:flex; align-items:center; gap:6px;">' +
+          '<span>Designed by</span> ' +
+          '<a href="https://www.brightcodess.com/" target="_blank" rel="noopener noreferrer" style="display:inline-flex; align-items:center; text-decoration:none;">' +
+            '<img src="/static/assets/images/brightcode.png" alt="Brightcode" style="height:18px; vertical-align:middle; display:inline-block;" onerror="this.style.display=\'none\'; this.nextElementSibling.style.display=\'inline\';"><span style="display:none; color:#007bff; font-weight:600;">Brightcode</span>' +
+          '</a>' +
+        '</div>' +
+      '</footer>';
+      mainWrapper.insertAdjacentHTML('beforeend', footerHtml);
+    }
 
     // Re-enable smooth transitions on subsequent interactions
     requestAnimationFrame(function () {
