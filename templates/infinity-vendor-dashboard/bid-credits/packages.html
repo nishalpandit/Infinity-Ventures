@@ -7,6 +7,15 @@
   <title>Bid Credit Packages · Suggu Services Vendor</title>
   <link rel="stylesheet" href="/infinity-vendor-dashboard/assets/styles.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+  <script>
+    window.VENDOR_INITIALS = "{{ vendor_initials|escapejs }}";
+    window.VENDOR_NAME = "{{ vendor_name|escapejs }}";
+    window.VENDOR_TYPE = "{{ vendor_type|escapejs }}";
+    window.VENDOR_LOCATION = "{{ vendor_location|escapejs }}";
+    window.PROFILE_IMAGE_URL = "{{ profile_image_url|escapejs }}" || null;
+    window.VENDOR_CREDITS = {{ remaining_credits|default:0 }};
+    window.VENDOR_WALLET_BALANCE = "{{ wallet_balance|default:'0.00' }}";
+  </script>
   <script defer src="/infinity-vendor-dashboard/assets/app.js"></script>
   <style>
     .credit-hero-banner {
@@ -262,8 +271,5 @@
     </div>
   </div>
 
-  <script>
-    window.VENDOR_CREDITS = {{ remaining_credits|default:5 }};
-  </script>
 </body>
 </html>

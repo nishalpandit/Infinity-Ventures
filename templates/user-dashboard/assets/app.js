@@ -200,14 +200,17 @@
   $$('.page-btn').forEach(b=>b.addEventListener('click',()=>{const p=b.parentElement;$$('.page-btn',p).forEach(x=>x.classList.remove('active'));b.classList.add('active');showToast(`Page ${b.dataset.page||b.textContent}`,'Results updated.','info')}));
 
   // Form validation, saves, and success state.
-  $$('form.needs-validation').forEach(form=>form.addEventListener('submit',e=>{
-    e.preventDefault(); let valid=true; $$('[required]',form).forEach(f=>{ const bad=!f.value.trim(); f.classList.toggle('error',bad); valid=valid&&!bad; });
-    $$('[data-rating]',form).forEach(r=>{ const bad=!r.dataset.selected; r.classList.toggle('rating-error',bad); valid=valid&&!bad; });
-    if(!valid){showToast('Please complete required fields','Review the highlighted fields and try again.','error');$('[required].error',form)?.focus();return;}
-    const target=form.dataset.successTarget; if(target){ form.closest('.form-card')?.classList.add('hidden-after-submit'); const s=$('#'+target); if(s){s.hidden=false;s.scrollIntoView({behavior:'smooth',block:'start'});} }
-    else showToast(form.dataset.successTitle||'Changes saved',form.dataset.successMessage||'Your information has been updated.');
-    form.reset();
-  }));
+  $$('form.needs-validation').forEach(form=>{
+    if(form.hasAttribute('action') && form.getAttribute('action') !== '#' && form.getAttribute('action') !== '') return;
+    form.addEventListener('submit',e=>{
+      e.preventDefault(); let valid=true; $$('[required]',form).forEach(f=>{ const bad=!f.value.trim(); f.classList.toggle('error',bad); valid=valid&&!bad; });
+      $$('[data-rating]',form).forEach(r=>{ const bad=!r.dataset.selected; r.classList.toggle('rating-error',bad); valid=valid&&!bad; });
+      if(!valid){showToast('Please complete required fields','Review the highlighted fields and try again.','error');$('[required].error',form)?.focus();return;}
+      const target=form.dataset.successTarget; if(target){ form.closest('.form-card')?.classList.add('hidden-after-submit'); const s=$('#'+target); if(s){s.hidden=false;s.scrollIntoView({behavior:'smooth',block:'start'});} }
+      else showToast(form.dataset.successTitle||'Changes saved',form.dataset.successMessage||'Your information has been updated.');
+      form.reset();
+    });
+  });
   $$('[data-save-draft]').forEach(b=>b.addEventListener('click',()=>showToast('Draft saved','You can continue editing it from your dashboard.')));
   $$('[data-toast]').forEach(b=>b.addEventListener('click',()=>showToast(b.dataset.toast,b.dataset.toastMessage||'Your request has been updated.')));
   $$('input.error,select.error,textarea.error').forEach(f=>f.addEventListener('input',()=>f.classList.remove('error')));

@@ -2299,7 +2299,8 @@ def dashboard_view(request, path=''):
             }
 
         context['credit_packages'] = list(BID_CREDIT_PACKAGES.values())
-        curr_bids = getattr(request.user.vendor_profile, 'available_bids', 5)
+        vp_obj = getattr(request.user, 'vendor_profile', None)
+        curr_bids = (vp_obj.available_bids if vp_obj and vp_obj.available_bids is not None else 5)
         context['available_bids'] = curr_bids
         context['available_balance'] = curr_bids
         context['remaining_credits'] = curr_bids
@@ -2308,12 +2309,12 @@ def dashboard_view(request, path=''):
         if 'checkout' in path:
             first_pkg_key = next(iter(BID_CREDIT_PACKAGES))
             selected_pkg_id = request.GET.get('package', first_pkg_key)
-            selected_pkg = BID_CREDIT_PACKAGES.get(selected_pkg_id, BID_CREDIT_PACKAGES[first_pkg_key])
+            selected_pkg = BID_CREDIT_PACKAGES.get(str(selected_pkg_id)) or BID_CREDIT_PACKAGES.get(selected_pkg_id, BID_CREDIT_PACKAGES[first_pkg_key])
             context['selected_pkg'] = selected_pkg
 
             if request.method == 'POST':
                 pkg_key = request.POST.get('package_id', selected_pkg_id)
-                pkg_to_buy = BID_CREDIT_PACKAGES.get(pkg_key, selected_pkg)
+                pkg_to_buy = BID_CREDIT_PACKAGES.get(str(pkg_key)) or BID_CREDIT_PACKAGES.get(pkg_key) or selected_pkg
                 payment_method = request.POST.get('payment', 'UPI')
                 upi_id = request.POST.get('upi_id', '')
 
@@ -2327,9 +2328,14 @@ def dashboard_view(request, path=''):
                 )
 
                 # Add Credits to Vendor Profile
-                vp = request.user.vendor_profile
-                vp.available_bids += pkg_to_buy['credits']
-                vp.save(update_fields=['available_bids'])
+                vp = getattr(request.user, 'vendor_profile', None)
+                if vp:
+                    curr_val = vp.available_bids if vp.available_bids is not None else 0
+                    vp.available_bids = int(curr_val) + int(pkg_to_buy['credits'])
+                    vp.save(update_fields=['available_bids'])
+                    new_bal = vp.available_bids
+                else:
+                    new_bal = int(pkg_to_buy['credits'])
 
                 # Record BidCreditTransaction
                 txn = BidCreditTransaction.objects.create(
@@ -2344,8 +2350,10 @@ def dashboard_view(request, path=''):
                 context['txn'] = txn
                 context['sub'] = sub
                 context['purchased_pkg'] = pkg_to_buy
-                context['new_balance'] = vp.available_bids
-                context['remaining_credits'] = vp.available_bids
+                context['new_balance'] = new_bal
+                context['remaining_credits'] = new_bal
+                context['available_bids'] = new_bal
+                context['available_balance'] = new_bal
                 messages.success(request, f"Payment successful! {pkg_to_buy['credits']} bid credits added to your account.")
 
         # Purchase History
