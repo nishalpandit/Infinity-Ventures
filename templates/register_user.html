@@ -293,8 +293,34 @@
     <!-- Header & Logo -->
     <div class="header-area">
       <img src="{% static 'assets/images/logo.png' %}" alt="Suggu Services Logo" class="logo-img" onerror="this.style.display='none'">
-      <h1>Create User Account</h1>
+      <h1>Create Customer Account</h1>
       <p>Join Suggu Services to access all home and business services</p>
+    </div>
+
+    <!-- Account Type Switcher Tabs -->
+    <div style="display: flex; background: var(--line-soft); border: 1px solid var(--line); border-radius: var(--radius-md); padding: 4px; margin-bottom: 20px;">
+      <a href="{% url 'register_user' %}" style="flex: 1; text-align: center; padding: 10px 14px; border-radius: var(--radius-sm); text-decoration: none; font-size: 13.5px; font-weight: 700; background: #ffffff; color: var(--primary); box-shadow: 0 1px 3px rgba(0,0,0,0.06); display: flex; align-items: center; justify-content: center; gap: 8px;">
+        <i class="fa-solid fa-user"></i> Customer / User
+      </a>
+      <a href="{% url 'register_vendor' %}" style="flex: 1; text-align: center; padding: 10px 14px; border-radius: var(--radius-sm); text-decoration: none; font-size: 13.5px; font-weight: 600; color: var(--muted); display: flex; align-items: center; justify-content: center; gap: 8px;">
+        <i class="fa-solid fa-store"></i> Vendor / Partner
+      </a>
+    </div>
+
+    <!-- Vendor Prompt Callout -->
+    <div style="background: #f8fafc; border: 1px solid var(--line); border-radius: var(--radius-sm); padding: 12px 16px; margin-bottom: 22px; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;">
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <div style="width: 34px; height: 34px; border-radius: 8px; background: rgba(5, 150, 105, 0.1); color: #059669; display: flex; align-items: center; justify-content: center; font-size: 15px; flex-shrink: 0;">
+          <i class="fa-solid fa-briefcase"></i>
+        </div>
+        <div>
+          <div style="font-size: 13px; font-weight: 700; color: var(--ink);">Are you a service professional or contractor?</div>
+          <div style="font-size: 12px; color: var(--muted);">Register as a partner to bid on client jobs &amp; grow your business.</div>
+        </div>
+      </div>
+      <a href="{% url 'register_vendor' %}" style="font-size: 12.5px; font-weight: 700; color: #059669; text-decoration: none; padding: 6px 12px; border-radius: 6px; background: #ffffff; border: 1px solid #a7f3d0; white-space: nowrap;">
+        Register as Vendor &rarr;
+      </a>
     </div>
 
     <!-- Error & Success Messages -->
@@ -383,7 +409,9 @@
     
     <!-- Footer Link -->
     <div class="footer-area">
-      Already have an account? <a href="{% url 'login' %}">Sign in</a>
+      Already have an account? <a href="{% url 'login' %}">Sign in here</a>
+      <span style="margin: 0 8px; color: #cbd5e1;">•</span>
+      <a href="{% url 'register_vendor' %}" style="color: #059669; font-weight: 700;">Register as Vendor / Partner</a>
     </div>
 
   </div>

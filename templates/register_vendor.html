@@ -394,6 +394,17 @@
         <i class="fa-solid fa-shield-halved"></i> Service Partner Onboarding
       </div>
       <h1>Create Vendor Account</h1>
+      <p style="color: var(--muted); font-size: 14px; margin: 4px 0 0;">Register your business or trade profile to bid on jobs</p>
+    </div>
+
+    <!-- Account Type Switcher Tabs -->
+    <div style="display: flex; background: var(--line-soft); border: 1px solid var(--line); border-radius: var(--radius-md); padding: 4px; margin-bottom: 24px;">
+      <a href="{% url 'register_user' %}" style="flex: 1; text-align: center; padding: 10px 14px; border-radius: var(--radius-sm); text-decoration: none; font-size: 13.5px; font-weight: 600; color: var(--muted); display: flex; align-items: center; justify-content: center; gap: 8px;">
+        <i class="fa-solid fa-user"></i> Customer / User
+      </a>
+      <a href="{% url 'register_vendor' %}" style="flex: 1; text-align: center; padding: 10px 14px; border-radius: var(--radius-sm); text-decoration: none; font-size: 13.5px; font-weight: 700; background: #ffffff; color: var(--emerald-dark); box-shadow: 0 1px 3px rgba(0,0,0,0.06); display: flex; align-items: center; justify-content: center; gap: 8px;">
+        <i class="fa-solid fa-store"></i> Vendor / Partner
+      </a>
     </div>
 
     <!-- Error/Success Alerts -->
@@ -623,8 +634,9 @@
 
     <!-- Footer -->
     <div class="footer-auth">
-      Already registered as a partner?
-      <a href="{% url 'login' %}">Sign in to Partner Dashboard</a>
+      Already registered as a partner? <a href="{% url 'login' %}">Sign in to Account</a>
+      <span style="margin: 0 8px; color: #cbd5e1;">•</span>
+      <a href="{% url 'register_user' %}" style="color: var(--muted); text-decoration: none;">Looking to hire services? <strong style="color: var(--indigo);">Register as Customer</strong></a>
     </div>
   </div>
 

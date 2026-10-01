@@ -12,15 +12,28 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
   <style>
     :root {
-      --primary: #6366f1;
-      --primary-hover: #4f46e5;
-      --primary-glow: rgba(99, 102, 241, 0.4);
-      --card-bg: rgba(15, 23, 42, 0.82);
-      --card-border: rgba(255, 255, 255, 0.12);
-      --input-bg: rgba(2, 6, 23, 0.6);
-      --text-main: #f8fafc;
-      --text-muted: #94a3b8;
-      --text-dim: #64748b;
+      --primary: #4f46e5;
+      --primary-hover: #4338ca;
+      --primary-light: #eef2ff;
+      --primary-border: #c7d2fe;
+      --primary-glow: rgba(79, 70, 229, 0.25);
+
+      --emerald: #059669;
+      --emerald-light: #ecfdf5;
+      --emerald-border: #a7f3d0;
+
+      --ink: #0f172a;
+      --slate: #334155;
+      --muted: #64748b;
+      --text-dim: #94a3b8;
+      --line: #e2e8f0;
+      --line-soft: #f1f5f9;
+      --bg: #f3f4f6;
+      --card-bg: #ffffff;
+
+      --radius-sm: 8px;
+      --radius-md: 12px;
+      --radius-lg: 20px;
     }
 
     * {
@@ -30,154 +43,167 @@
     }
 
     body {
-      font-family: 'Plus Jakarta Sans', 'Inter', sans-serif;
-      background: radial-gradient(circle at top center, #1e1b4b 0%, #0f172a 50%, #030712 100%);
-      color: var(--text-main);
+      font-family: 'Plus Jakarta Sans', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--bg);
+      color: var(--slate);
       min-height: 100vh;
       display: flex;
       align-items: center;
       justify-content: center;
-      padding: 24px 16px;
+      padding: 36px 16px;
       position: relative;
-      overflow-x: hidden;
     }
 
-    /* Ambient animated lighting */
-    .blob {
-      position: absolute;
-      border-radius: 50%;
-      filter: blur(110px);
-      z-index: 0;
-      pointer-events: none;
-      animation: float 14s ease-in-out infinite alternate;
-    }
-
-    .blob-1 {
-      width: 520px;
-      height: 520px;
-      background: radial-gradient(circle, rgba(99, 102, 241, 0.35) 0%, rgba(99, 102, 241, 0) 70%);
-      top: -160px;
-      left: -120px;
-    }
-
-    .blob-2 {
-      width: 480px;
-      height: 480px;
-      background: radial-gradient(circle, rgba(236, 72, 153, 0.22) 0%, rgba(236, 72, 153, 0) 70%);
-      bottom: -140px;
-      right: -100px;
-      animation-delay: 3s;
-    }
-
-    @keyframes float {
-      0% { transform: translate(0, 0) scale(1); }
-      50% { transform: translate(30px, 20px) scale(1.05); }
-      100% { transform: translate(-20px, 35px) scale(0.95); }
-    }
-
-    /* Main Login Container */
+    /* Main Clean White Card Container */
     .login-container {
       position: relative;
       z-index: 10;
       width: 100%;
-      max-width: 440px;
+      max-width: 460px;
       background: var(--card-bg);
-      backdrop-filter: blur(28px);
-      -webkit-backdrop-filter: blur(28px);
-      border: 1px solid var(--card-border);
-      border-radius: 28px;
-      padding: 40px 32px;
-      box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(255, 255, 255, 0.05);
-      animation: fadeInScale 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+      border: 1px solid var(--line);
+      border-radius: var(--radius-lg);
+      padding: 36px 32px;
+      box-shadow: 0 10px 30px -5px rgba(15, 23, 42, 0.06), 0 4px 6px -2px rgba(15, 23, 42, 0.02);
+      animation: slideUp 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
     }
 
-    @keyframes fadeInScale {
-      from {
-        opacity: 0;
-        transform: translateY(20px) scale(0.97);
-      }
-      to {
-        opacity: 1;
-        transform: translateY(0) scale(1);
-      }
+    @keyframes slideUp {
+      from { transform: translateY(12px); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+
+    /* Top Navigation Bar */
+    .nav-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 24px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--line-soft);
+    }
+
+    .back-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--muted);
+      text-decoration: none;
+      font-size: 13px;
+      font-weight: 600;
+      padding: 6px 14px;
+      background: var(--line-soft);
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      transition: all 0.15s ease;
+    }
+
+    .back-btn:hover {
+      background: #e2e8f0;
+      color: var(--ink);
+    }
+
+    .brand-mark {
+      font-size: 12.5px;
+      font-weight: 700;
+      color: var(--primary);
+      letter-spacing: -0.2px;
+      text-transform: uppercase;
     }
 
     /* Brand Header */
     .brand-header {
       text-align: center;
-      margin-bottom: 28px;
+      margin-bottom: 24px;
     }
 
     .brand-icon {
       width: 58px;
       height: 58px;
-      margin: 0 auto 14px;
-      border-radius: 18px;
-      background: linear-gradient(135deg, rgba(99, 102, 241, 0.25), rgba(236, 72, 153, 0.25));
-      border: 1px solid rgba(255, 255, 255, 0.18);
+      margin: 0 auto 12px;
+      border-radius: 16px;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 28px;
-      color: #818cf8;
-      box-shadow: 0 10px 25px -5px rgba(99, 102, 241, 0.35);
+    }
+
+    .brand-icon img {
+      width: 58px;
+      height: 58px;
+      border-radius: 16px;
+      object-fit: contain;
     }
 
     .brand-header h1 {
       font-size: 24px;
       font-weight: 800;
       letter-spacing: -0.5px;
-      color: #ffffff;
-      margin-bottom: 6px;
+      color: var(--ink);
+      margin-bottom: 4px;
     }
 
     .brand-header p {
-      color: var(--text-muted);
+      color: var(--muted);
       font-size: 14px;
+      margin-bottom: 10px;
+    }
+
+    .unified-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--primary-light);
+      border: 1px solid var(--primary-border);
+      color: var(--primary);
+      font-size: 11.5px;
+      font-weight: 700;
+      padding: 4px 12px;
+      border-radius: 999px;
     }
 
     /* Login Mode Tabs: Mobile OTP vs Password */
     .auth-toggle-pill {
       display: flex;
-      background: rgba(0, 0, 0, 0.45);
-      border: 1px solid var(--card-border);
-      border-radius: 14px;
+      background: var(--line-soft);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-md);
       padding: 4px;
-      margin-bottom: 24px;
+      margin-bottom: 22px;
     }
 
     .auth-toggle-btn {
       flex: 1;
       border: none;
       background: transparent;
-      color: var(--text-muted);
+      color: var(--muted);
       font-family: inherit;
       font-size: 13.5px;
       font-weight: 600;
-      padding: 11px 14px;
-      border-radius: 10px;
+      padding: 10px 14px;
+      border-radius: var(--radius-sm);
       cursor: pointer;
       display: flex;
       align-items: center;
       justify-content: center;
       gap: 8px;
-      transition: all 0.25s ease;
+      transition: all 0.2s ease;
     }
 
     .auth-toggle-btn.active {
-      background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+      background: var(--primary);
       color: #ffffff;
-      box-shadow: 0 4px 14px var(--primary-glow);
+      font-weight: 700;
+      box-shadow: 0 2px 8px var(--primary-glow);
     }
 
     .auth-toggle-btn:not(.active):hover {
-      color: var(--text-main);
-      background: rgba(255, 255, 255, 0.04);
+      color: var(--ink);
+      background: #e2e8f0;
     }
 
     /* Form Fields */
     .form-group {
-      margin-bottom: 20px;
+      margin-bottom: 18px;
       position: relative;
     }
 
@@ -187,8 +213,8 @@
       align-items: center;
       font-size: 13px;
       font-weight: 600;
-      color: var(--text-muted);
-      margin-bottom: 8px;
+      color: var(--slate);
+      margin-bottom: 7px;
     }
 
     .input-box {
@@ -201,145 +227,97 @@
       position: absolute;
       left: 14px;
       color: var(--text-dim);
-      font-size: 15px;
-      transition: color 0.2s;
+      font-size: 14.5px;
+      transition: color 0.15s;
       pointer-events: none;
     }
 
     .form-control {
       width: 100%;
-      background: var(--input-bg);
-      border: 1px solid var(--card-border);
-      border-radius: 12px;
-      color: var(--text-main);
-      padding: 13.5px 14px 13.5px 44px;
+      background: #ffffff;
+      border: 1.5px solid var(--line);
+      border-radius: var(--radius-sm);
+      color: var(--ink);
+      padding: 12px 14px 12px 42px;
       font-family: inherit;
-      font-size: 14.5px;
+      font-size: 14px;
       outline: none;
-      transition: all 0.25s ease;
+      transition: all 0.2s ease;
+    }
+
+    .form-control::placeholder {
+      color: #94a3b8;
     }
 
     .form-control:focus {
-      border-color: #6366f1;
-      box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.22);
-      background: rgba(0, 0, 0, 0.55);
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.12);
     }
 
     .form-control:focus ~ i.input-icon {
-      color: #818cf8;
+      color: var(--primary);
     }
 
-    /* Phone Prefix styling */
+    /* Phone Prefix */
     .phone-prefix {
       position: absolute;
       left: 14px;
       display: flex;
       align-items: center;
       gap: 6px;
-      font-size: 14px;
+      font-size: 13.5px;
       font-weight: 700;
-      color: #818cf8;
+      color: var(--primary);
       pointer-events: none;
     }
 
     .form-control.phone-input {
       padding-left: 72px;
       letter-spacing: 0.5px;
+      font-weight: 600;
     }
 
     .toggle-pwd {
       position: absolute;
-      right: 14px;
-      background: none;
+      right: 12px;
+      background: transparent;
       border: none;
       color: var(--text-dim);
       cursor: pointer;
       font-size: 15px;
-      transition: color 0.2s;
+      padding: 6px;
+      transition: color 0.15s;
     }
 
     .toggle-pwd:hover {
-      color: var(--text-main);
-    }
-
-    /* 6 Segmented OTP Inputs */
-    .otp-digits-wrapper {
-      display: flex;
-      justify-content: space-between;
-      gap: 8px;
-      margin: 12px 0 16px;
-    }
-
-    .otp-digit {
-      width: 48px;
-      height: 52px;
-      text-align: center;
-      font-size: 22px;
-      font-weight: 700;
-      border-radius: 12px;
-      background: var(--input-bg);
-      border: 1px solid var(--card-border);
-      color: #ffffff;
-      outline: none;
-      transition: all 0.2s;
-    }
-
-    .otp-digit:focus {
-      border-color: #818cf8;
-      box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.25);
-      background: rgba(0, 0, 0, 0.5);
-    }
-
-    .otp-meta {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      font-size: 12.5px;
-      color: var(--text-muted);
-      margin-bottom: 18px;
-    }
-
-    .btn-resend {
-      background: none;
-      border: none;
-      color: #818cf8;
-      font-family: inherit;
-      font-size: 12.5px;
-      font-weight: 600;
-      cursor: pointer;
-      padding: 0;
-      transition: color 0.2s;
-    }
-
-    .btn-resend:disabled {
-      color: var(--text-dim);
-      cursor: not-allowed;
+      color: var(--ink);
     }
 
     /* Submit Button */
     .btn-submit {
       width: 100%;
-      background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+      background: var(--primary);
       color: #ffffff;
       border: none;
-      padding: 14px;
-      border-radius: 12px;
+      height: 44px;
+      border-radius: var(--radius-sm);
       font-family: inherit;
-      font-size: 15px;
+      font-size: 14.5px;
       font-weight: 700;
       cursor: pointer;
       display: flex;
       align-items: center;
       justify-content: center;
-      gap: 10px;
-      box-shadow: 0 8px 20px -4px rgba(99, 102, 241, 0.5);
-      transition: all 0.25s ease;
+      gap: 8px;
+      transition: all 0.18s ease;
+      margin-top: 10px;
+      box-shadow: 0 2px 6px rgba(79, 70, 229, 0.25);
     }
 
     .btn-submit:hover {
-      background: linear-gradient(135deg, #4f46e5 0%, #4338ca 100%);
-      transform: translateY(-1.5px);
-      box-shadow: 0 12px 25px -4px rgba(99, 102, 241, 0.6);
+      background: var(--primary-hover);
+      box-shadow: 0 4px 12px rgba(79, 70, 229, 0.35);
+      transform: translateY(-1px);
     }
 
     .btn-submit:active {
@@ -347,201 +325,281 @@
     }
 
     .btn-submit:disabled {
-      opacity: 0.6;
+      opacity: 0.65;
       cursor: not-allowed;
       transform: none;
     }
 
-    /* Alerts */
+    /* OTP Screen Elements */
+    .otp-meta {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+      font-size: 12.5px;
+      color: var(--muted);
+    }
+
+    .btn-resend {
+      background: transparent;
+      border: none;
+      color: var(--primary);
+      font-family: inherit;
+      font-size: 12.5px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .btn-resend:disabled {
+      color: var(--text-dim);
+      cursor: not-allowed;
+    }
+
+    .otp-digits-wrapper {
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 10px;
+      margin-bottom: 22px;
+    }
+
+    .otp-digit {
+      width: 100%;
+      height: 48px;
+      background: #ffffff;
+      border: 1.5px solid var(--line);
+      border-radius: var(--radius-sm);
+      text-align: center;
+      font-size: 20px;
+      font-weight: 800;
+      color: var(--ink);
+      outline: none;
+      transition: all 0.2s ease;
+    }
+
+    .otp-digit:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.12);
+    }
+
+    /* Alert Box */
     .alert-box {
-      border-radius: 12px;
-      padding: 12px 14px;
+      padding: 12px 16px;
+      border-radius: var(--radius-sm);
       font-size: 13.5px;
+      font-weight: 500;
       margin-bottom: 18px;
       display: none;
-      align-items: flex-start;
+      align-items: center;
       gap: 10px;
-      line-height: 1.4;
-      animation: fadeIn 0.3s ease;
     }
 
     .alert-box.error {
-      display: flex;
-      background: rgba(239, 68, 68, 0.12);
-      border: 1px solid rgba(239, 68, 68, 0.3);
-      color: #fca5a5;
+      background: #fef2f2;
+      border: 1px solid #fecaca;
+      color: #b91c1c;
     }
 
     .alert-box.success {
-      display: flex;
-      background: rgba(16, 185, 129, 0.12);
-      border: 1px solid rgba(16, 185, 129, 0.3);
-      color: #6ee7b7;
+      background: #ecfdf5;
+      border: 1px solid #a7f3d0;
+      color: #047857;
     }
 
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(-6px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-
-    /* Footer: Create Account */
+    /* Footer / Registration Options */
     .login-footer {
-      margin-top: 26px;
+      margin-top: 24px;
+      padding-top: 18px;
+      border-top: 1px solid var(--line-soft);
       text-align: center;
       font-size: 13.5px;
-      color: var(--text-muted);
-      border-top: 1px solid var(--card-border);
-      padding-top: 20px;
+      color: var(--muted);
     }
 
-    .login-footer a {
-      color: #818cf8;
-      text-decoration: none;
+    .register-options-wrap {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 12px;
+      margin-top: 10px;
+      flex-wrap: wrap;
+    }
+
+    .reg-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
       font-weight: 700;
-      margin-left: 4px;
-      transition: color 0.2s;
+      font-size: 13px;
+      text-decoration: none;
+      padding: 6px 12px;
+      border-radius: 6px;
+      border: 1px solid var(--line);
+      background: #ffffff;
+      transition: all 0.15s ease;
     }
 
-    .login-footer a:hover {
-      color: #a5b4fc;
-      text-decoration: underline;
+    .reg-link.user-link {
+      color: var(--primary);
+      border-color: var(--primary-border);
+      background: var(--primary-light);
     }
 
-    /* Modal Styles */
+    .reg-link.user-link:hover {
+      background: #e0e7ff;
+    }
+
+    .reg-link.vendor-link {
+      color: var(--emerald);
+      border-color: var(--emerald-border);
+      background: var(--emerald-light);
+    }
+
+    .reg-link.vendor-link:hover {
+      background: #d1fae5;
+    }
+
+    /* Modal Overlay (White Theme) */
     .modal-overlay {
       position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: rgba(3, 7, 18, 0.85);
-      backdrop-filter: blur(14px);
-      -webkit-backdrop-filter: blur(14px);
-      display: flex;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.5);
+      backdrop-filter: blur(4px);
+      z-index: 100;
+      display: none;
       align-items: center;
       justify-content: center;
-      z-index: 1000;
-      opacity: 0;
-      visibility: hidden;
-      transition: all 0.3s ease;
       padding: 16px;
     }
 
     .modal-overlay.active {
-      opacity: 1;
-      visibility: visible;
+      display: flex;
     }
 
     .modal-content {
-      background: #0f172a;
-      border: 1px solid var(--card-border);
-      border-radius: 26px;
-      padding: 36px 30px;
-      width: 100%;
+      background: #ffffff;
+      border: 1px solid var(--line);
+      border-radius: var(--radius-lg);
       max-width: 440px;
+      width: 100%;
+      padding: 28px 24px;
       position: relative;
-      transform: translateY(20px) scale(0.96);
-      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-      box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.8);
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.12);
+      animation: modalFade 0.25s ease forwards;
     }
 
-    .modal-overlay.active .modal-content {
-      transform: translateY(0) scale(1);
+    @keyframes modalFade {
+      from { transform: scale(0.96); opacity: 0; }
+      to { transform: scale(1); opacity: 1; }
     }
 
     .close-btn {
       position: absolute;
-      top: 18px;
-      right: 18px;
-      background: rgba(255, 255, 255, 0.06);
-      border: none;
-      color: var(--text-muted);
-      width: 34px;
-      height: 34px;
+      top: 16px;
+      right: 16px;
+      background: var(--line-soft);
+      border: 1px solid var(--line);
+      width: 32px;
+      height: 32px;
       border-radius: 50%;
+      color: var(--muted);
+      cursor: pointer;
       display: flex;
       align-items: center;
       justify-content: center;
-      cursor: pointer;
-      transition: all 0.2s;
+      transition: all 0.15s;
     }
 
     .close-btn:hover {
-      background: rgba(255, 255, 255, 0.15);
-      color: #ffffff;
+      background: #e2e8f0;
+      color: var(--ink);
     }
 
     .role-option-card {
       display: flex;
       align-items: center;
-      background: rgba(255, 255, 255, 0.03);
-      border: 1px solid var(--card-border);
-      border-radius: 16px;
-      padding: 18px;
+      padding: 16px;
+      background: #ffffff;
+      border: 1.5px solid var(--line);
+      border-radius: var(--radius-md);
       text-decoration: none;
-      color: #ffffff;
-      margin-bottom: 14px;
-      transition: all 0.25s ease;
+      color: var(--ink);
+      margin-bottom: 12px;
+      transition: all 0.2s ease;
     }
 
     .role-option-card:hover {
-      background: rgba(99, 102, 241, 0.12);
-      border-color: rgba(99, 102, 241, 0.45);
-      transform: translateY(-2px);
-      box-shadow: 0 10px 20px -8px rgba(99, 102, 241, 0.3);
+      border-color: var(--primary);
+      box-shadow: 0 4px 12px rgba(79, 70, 229, 0.08);
+      transform: translateY(-1px);
     }
 
     .role-option-card .icon-box {
-      width: 48px;
-      height: 48px;
-      border-radius: 14px;
+      width: 44px;
+      height: 44px;
+      border-radius: 12px;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 20px;
-      margin-right: 16px;
+      font-size: 18px;
+      margin-right: 14px;
       flex-shrink: 0;
     }
 
     .user-opt .icon-box {
-      background: rgba(96, 165, 250, 0.15);
-      color: #60a5fa;
+      background: var(--primary-light);
+      color: var(--primary);
     }
 
     .vendor-opt .icon-box {
-      background: rgba(192, 132, 252, 0.15);
-      color: #c084fc;
+      background: var(--emerald-light);
+      color: var(--emerald);
     }
 
     .role-option-card h3 {
-      font-size: 15.5px;
+      font-size: 15px;
       font-weight: 700;
       margin-bottom: 3px;
+      color: var(--ink);
     }
 
     .role-option-card p {
-      font-size: 12.5px;
-      color: var(--text-muted);
+      font-size: 12px;
+      color: var(--muted);
+      line-height: 1.4;
+    }
+
+    @media (max-width: 480px) {
+      .login-container {
+        padding: 24px 18px;
+      }
     }
   </style>
 </head>
 
 <body>
-  <!-- Ambient background glow -->
-  <div class="blob blob-1"></div>
-  <div class="blob blob-2"></div>
 
   <div class="login-container">
-    <!-- Brand Header -->
-    <div class="brand-header">
-      <div class="brand-icon" style="background:transparent;border:none;box-shadow:none;width:auto;height:auto;margin-bottom:12px;display:flex;align-items:center;justify-content:center;">
-        <img src="{% static 'assets/images/logo.png' %}" alt="Suggu Services" style="width:72px;height:72px;border-radius:18px;object-fit:contain;box-shadow:0 10px 25px -5px rgba(99, 102, 241, 0.4);" />
-      </div>
-      <h1>Welcome to Suggu Services</h1>
-      <p>Sign in to your account</p>
+    <!-- Top Navigation -->
+    <div class="nav-bar">
+      <a href="/" class="back-btn">
+        <i class="fa-solid fa-arrow-left"></i> Back to Home
+      </a>
+      <span class="brand-mark">Suggu Services</span>
     </div>
 
-    <!-- Login Options: Mobile OTP vs Password -->
+    <!-- Brand Header -->
+    <div class="brand-header">
+      <div class="brand-icon">
+        <img src="{% static 'assets/images/logo.png' %}" alt="Suggu Services Logo" onerror="this.style.display='none'">
+      </div>
+      <h1>Welcome to Suggu Services</h1>
+      <p>Sign in to access your dashboard</p>
+      <span class="unified-badge">
+        <i class="fa-solid fa-shield-halved"></i> Unified Login for Customers &amp; Vendors
+      </span>
+    </div>
+
+    <!-- Login Mode Tabs: Mobile OTP vs Password -->
     <div class="auth-toggle-pill" role="tablist">
       <button type="button" class="auth-toggle-btn active" id="btnTabOtp" onclick="switchLoginMode('otp')">
         <i class="fa-solid fa-mobile-screen"></i> Mobile OTP
@@ -556,6 +614,13 @@
       <i id="alertIcon" class="fa-solid fa-circle-exclamation"></i>
       <div id="alertMsg"></div>
     </div>
+
+    {% if error %}
+    <div class="alert-box error" style="display: flex;">
+      <i class="fa-solid fa-circle-exclamation"></i>
+      <div>{{ error }}</div>
+    </div>
+    {% endif %}
 
     <!-- 1. MOBILE & OTP LOGIN -->
     <div id="otpSection">
@@ -578,7 +643,7 @@
       <!-- Step B: Enter OTP -->
       <div id="verifyStep" style="display: none;">
         <div class="otp-meta">
-          <div>Code sent to <strong id="phoneDisplay">+91</strong> <a href="#" onclick="goBackToPhone(event)" style="color: #818cf8; margin-left: 4px; font-weight: 600;">Edit</a></div>
+          <div>Code sent to <strong id="phoneDisplay">+91</strong> <a href="#" onclick="goBackToPhone(event)" style="color: var(--primary); margin-left: 4px; font-weight: 700;">Edit</a></div>
           <button type="button" id="btnResend" class="btn-resend" disabled onclick="handleSendOtp(true)">Resend in <span id="timerSpan">60</span>s</button>
         </div>
 
@@ -593,7 +658,7 @@
         </div>
 
         <button type="button" id="btnVerifyOtp" class="btn-submit" onclick="handleVerifyOtp()">
-          <span>Verify & Sign In</span>
+          <span>Verify &amp; Sign In</span>
           <i class="fa-solid fa-check"></i>
         </button>
       </div>
@@ -603,6 +668,7 @@
     <form id="passwordSection" style="display: none;" onsubmit="handlePasswordLogin(event)">
       {% csrf_token %}
       <input type="hidden" name="next" id="loginNextParam" value="{{ next|default:'' }}">
+      
       <div class="form-group">
         <label class="form-label" for="loginUsername">Mobile or Email</label>
         <div class="input-box">
@@ -628,24 +694,32 @@
       </button>
     </form>
 
-    <!-- Create Account (Choose Continue with User or Vendor) -->
+    <!-- Create Account Options -->
     <div class="login-footer">
-      Don't have an account? <a href="#" onclick="openCreateAccountModal(event)">Create account</a>
+      <div>Don't have an account yet?</div>
+      <div class="register-options-wrap">
+        <a href="{% url 'register_user' %}" class="reg-link user-link">
+          <i class="fa-solid fa-user"></i> Register as Customer
+        </a>
+        <a href="{% url 'register_vendor' %}" class="reg-link vendor-link">
+          <i class="fa-solid fa-store"></i> Register as Vendor
+        </a>
+      </div>
     </div>
   </div>
 
-  <!-- Create Account Choice Modal -->
+  <!-- Create Account Choice Modal (White Theme) -->
   <div id="createAccountModal" class="modal-overlay">
     <div class="modal-content">
       <button class="close-btn" onclick="closeCreateAccountModal()"><i class="fa-solid fa-xmark"></i></button>
-      <h2 style="font-size: 21px; font-weight: 800; color: #fff; margin-bottom: 6px; text-align: center;">Join Suggu Services</h2>
-      <p style="color: var(--text-muted); font-size: 13.5px; text-align: center; margin-bottom: 24px;">How would you like to continue?</p>
+      <h2 style="font-size: 20px; font-weight: 800; color: var(--ink); margin-bottom: 6px; text-align: center;">Join Suggu Services</h2>
+      <p style="color: var(--muted); font-size: 13.5px; text-align: center; margin-bottom: 22px;">Choose how you want to get started:</p>
 
       <a href="{% url 'register_user' %}" class="role-option-card user-opt">
         <div class="icon-box"><i class="fa-solid fa-user"></i></div>
         <div style="flex: 1;">
-          <h3>Continue as User</h3>
-          <p>Book quick services, post jobs, and hire verified professionals</p>
+          <h3>Continue as Customer</h3>
+          <p>Book quick services, post jobs, and hire verified local professionals</p>
         </div>
         <i class="fa-solid fa-arrow-right" style="color: var(--text-dim); font-size: 14px;"></i>
       </a>
@@ -653,8 +727,8 @@
       <a href="{% url 'register_vendor' %}" class="role-option-card vendor-opt">
         <div class="icon-box"><i class="fa-solid fa-store"></i></div>
         <div style="flex: 1;">
-          <h3>Continue as Vendor</h3>
-          <p>Provide services, bid on projects, and grow your business</p>
+          <h3>Continue as Vendor / Partner</h3>
+          <p>Provide professional services, bid on client jobs, and grow your revenue</p>
         </div>
         <i class="fa-solid fa-arrow-right" style="color: var(--text-dim); font-size: 14px;"></i>
       </a>
@@ -738,7 +812,7 @@
         const checkData = await checkResp.json();
 
         if (!checkData.is_registered) {
-          showAlert(`Mobile number <strong>${mobile}</strong> is not registered.<br><a href="#" onclick="openCreateAccountModal(event)" style="color: #818cf8; text-decoration: underline; font-weight: 700; margin-top: 4px; display: inline-block;">Create account now &rarr;</a>`, 'error');
+          showAlert(`Mobile number <strong>${mobile}</strong> is not registered.<br><a href="#" onclick="openCreateAccountModal(event)" style="color: var(--primary); text-decoration: underline; font-weight: 700; margin-top: 4px; display: inline-block;">Create account now &rarr;</a>`, 'error');
           btn.disabled = false;
           btn.innerHTML = '<span>Get Verification Code</span> <i class="fa-solid fa-arrow-right"></i>';
           return;
@@ -760,7 +834,6 @@
           startTimer(60);
           showAlert(sendData.message || 'Verification code sent successfully!', 'success');
 
-          // Auto-focus first digit box
           setTimeout(() => {
             const firstDigit = document.querySelectorAll('.otp-digit')[0];
             if (firstDigit) firstDigit.focus();
@@ -854,12 +927,12 @@
         } else {
           showAlert(data.message || 'Invalid verification code. Please try again.');
           btn.disabled = false;
-          btn.innerHTML = '<span>Verify & Sign In</span> <i class="fa-solid fa-check"></i>';
+          btn.innerHTML = '<span>Verify &amp; Sign In</span> <i class="fa-solid fa-check"></i>';
         }
       } catch (err) {
         showAlert('Verification failed. Please check your connection.');
         btn.disabled = false;
-        btn.innerHTML = '<span>Verify & Sign In</span> <i class="fa-solid fa-check"></i>';
+        btn.innerHTML = '<span>Verify &amp; Sign In</span> <i class="fa-solid fa-check"></i>';
       }
     }
 
@@ -902,7 +975,6 @@
           btn.innerHTML = '<span>Sign In</span> <i class="fa-solid fa-arrow-right"></i>';
         }
       } catch (err) {
-        // Fallback to standard Django POST
         submitStandardForm(identifier, password);
       }
     }
@@ -953,19 +1025,13 @@
       document.getElementById('createAccountModal').classList.remove('active');
     }
 
-    document.getElementById('createAccountModal').addEventListener('click', function (e) {
-      if (e.target === this) closeCreateAccountModal();
+    window.addEventListener('click', function(e) {
+      const modal = document.getElementById('createAccountModal');
+      if (e.target === modal) {
+        closeCreateAccountModal();
+      }
     });
   </script>
-
-  <footer style="position:relative; z-index:10; width:100%; margin-top:auto; padding:16px 24px; display:flex; justify-content:flex-end; align-items:center; font-size:12px; color:rgba(255,255,255,0.7); border-top:1px solid rgba(255,255,255,0.1);">
-    <div style="display:flex; align-items:center; gap:8px;">
-      <span>Designed by</span>
-      <a href="https://www.brightcodess.com/" target="_blank" rel="noopener noreferrer" style="background:#ffffff; padding:3px 8px; border-radius:4px; display:inline-flex; align-items:center; text-decoration:none;">
-        <img src="/static/assets/images/brightcode.png" alt="Brightcode" style="height:16px; vertical-align:middle;" onerror="this.style.display='none'; this.nextElementSibling.style.display='inline';"><span style="display:none; color:#007bff; font-weight:600;">Brightcode</span>
-      </a>
-    </div>
-  </footer>
 </body>
 
 </html>
