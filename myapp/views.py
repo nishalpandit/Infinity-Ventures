@@ -1235,14 +1235,19 @@ def dashboard_view(request, path=''):
                 v_profile = request.user.vendor_profile
             except Exception:
                 v_profile = None
-            qs_count = QuickService.objects.filter(bids__vendor=request.user, status='completed').distinct().count()
+            qs_count = ServiceBooking.objects.filter(vendor=request.user, status='completed').count()
             jobs_count = Job.objects.filter(bids__vendor=request.user, status='completed').distinct().count()
             total_bids = Bid.objects.filter(vendor=request.user).count()
+            selected_bids = Bid.objects.filter(vendor=request.user, status='selected').count()
             context.update({
                 'completed_qs': qs_count,
                 'completed_jobs': jobs_count,
+                'completed_jobs_count': jobs_count,
                 'total_bids': total_bids,
+                'total_bids_count': total_bids,
+                'selected_bids_count': selected_bids,
                 'profile': v_profile,
+                'vendor_profile': v_profile,
             })
 
     if path in ['vendor/settings', 'vendor/settings/index', 'vendor/settings/index.html'] or path.startswith('vendor/settings'):
