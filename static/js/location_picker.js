@@ -2,22 +2,33 @@
 (function() {
   const STORAGE_KEY = "suggu_selected_location";
 
+  const DEFAULT_LOCATION = {
+    name: "Bengaluru, Karnataka",
+    primary: "Bengaluru",
+    secondary: "Karnataka, India",
+    city: "Bengaluru",
+    state: "Karnataka",
+    is_live: false,
+    lat: 12.9716,
+    lon: 77.5946
+  };
+
   // Pre-configured popular localities with precise coordinates for 10km range filtering
   const POPULAR_LOCATIONS = [
+    { name: "Indiranagar, Bengaluru", primary: "Indiranagar", secondary: "100ft Road, 12th Main", city: "Bengaluru", state: "Karnataka", lat: 12.9784, lon: 77.6408 },
+    { name: "Koramangala, Bengaluru", primary: "Koramangala", secondary: "Sony World Signal, 4th Block", city: "Bengaluru", state: "Karnataka", lat: 12.9352, lon: 77.6245 },
+    { name: "HSR Layout, Bengaluru", primary: "HSR Layout", secondary: "27th Main, Sector 1", city: "Bengaluru", state: "Karnataka", lat: 12.9121, lon: 77.6446 },
+    { name: "Whitefield, Bengaluru", primary: "Whitefield", secondary: "ITPL Main Road", city: "Bengaluru", state: "Karnataka", lat: 12.9698, lon: 77.7500 },
+    { name: "Jayanagar, Bengaluru", primary: "Jayanagar", secondary: "4th Block, 11th Main", city: "Bengaluru", state: "Karnataka", lat: 12.9308, lon: 77.5838 },
+    { name: "MG Road, Bengaluru", primary: "MG Road", secondary: "Brigade Road, Central", city: "Bengaluru", state: "Karnataka", lat: 12.9756, lon: 77.6066 },
     { name: "Lalpur, Ranchi", primary: "Lalpur", secondary: "Circular Road, Ranchi", city: "Ranchi", state: "Jharkhand", lat: 23.3697, lon: 85.3346 },
     { name: "Harmu Colony, Ranchi", primary: "Harmu Housing Colony", secondary: "Harmu, Ranchi", city: "Ranchi", state: "Jharkhand", lat: 23.3550, lon: 85.3050 },
     { name: "Doranda, Ranchi", primary: "Doranda", secondary: "High Court, AG Colony, Ranchi", city: "Ranchi", state: "Jharkhand", lat: 23.3340, lon: 85.3218 },
     { name: "Morabadi, Ranchi", primary: "Morabadi", secondary: "Tagore Hill, Ranchi University", city: "Ranchi", state: "Jharkhand", lat: 23.3850, lon: 85.3250 },
     { name: "Bariatu, Ranchi", primary: "Bariatu", secondary: "RIMS, Medical College, Ranchi", city: "Ranchi", state: "Jharkhand", lat: 23.3950, lon: 85.3500 },
     { name: "Ashok Nagar, Ranchi", primary: "Ashok Nagar", secondary: "Kadru, Argora, Ranchi", city: "Ranchi", state: "Jharkhand", lat: 23.3380, lon: 85.3120 },
-    { name: "Hinoo, Ranchi", primary: "Hinoo", secondary: "Birsa Chowk, Airport Road, Ranchi", city: "Ranchi", state: "Jharkhand", lat: 23.3220, lon: 85.3150 },
-    { name: "Ratu Road, Ranchi", primary: "Ratu Road", secondary: "Hehal, Pandra, Ranchi", city: "Ranchi", state: "Jharkhand", lat: 23.3720, lon: 85.2950 },
-    { name: "Main Road, Ranchi", primary: "Main Road", secondary: "Albert Ekka Chowk, Hindpiri", city: "Ranchi", state: "Jharkhand", lat: 23.3500, lon: 85.3250 },
-    { name: "Kokar, Ranchi", primary: "Kokar", secondary: "Kantatoli, Lalpur Extension", city: "Ranchi", state: "Jharkhand", lat: 23.3750, lon: 85.3550 },
-    { name: "Dhurwa, Ranchi", primary: "Dhurwa", secondary: "HEC Colony, JSCA Stadium", city: "Ranchi", state: "Jharkhand", lat: 23.3000, lon: 85.2800 },
     { name: "Saket, South Delhi", primary: "Saket", secondary: "Saket District Centre, PVR", city: "New Delhi", state: "Delhi", lat: 28.5245, lon: 77.2066 },
     { name: "Connaught Place", primary: "Connaught Place", secondary: "Rajiv Chowk, Central Delhi", city: "New Delhi", state: "Delhi", lat: 28.6315, lon: 77.2167 },
-    { name: "Indiranagar, Bengaluru", primary: "Indiranagar", secondary: "100ft Road, 12th Main", city: "Bengaluru", state: "Karnataka", lat: 12.9784, lon: 77.6408 },
     { name: "Bandra West, Mumbai", primary: "Bandra West", secondary: "Hill Road, Pali Hill", city: "Mumbai", state: "Maharashtra", lat: 19.0596, lon: 72.8295 }
   ];
 
@@ -34,11 +45,11 @@
 
   function setStoredLocation(locData) {
     if (typeof locData === 'string') {
-      locData = { name: locData, primary: locData, secondary: "Selected Area", is_live: false, lat: 23.3697, lon: 85.3346 };
+      locData = { name: locData, primary: locData, secondary: "Selected Area", is_live: false, lat: 12.9716, lon: 77.5946 };
     }
     if (!locData.lat || !locData.lon) {
-      locData.lat = 23.3697;
-      locData.lon = 85.3346;
+      locData.lat = 12.9716;
+      locData.lon = 77.5946;
     }
     locData.timestamp = Date.now();
     try {
@@ -113,7 +124,7 @@
               </div>
               <div style="flex:1;">
                 <div style="display:flex; align-items:center; gap:8px;">
-                  <span style="font-size:14.5px; font-weight:700; color:#6b21a8;" id="uc-gps-text">Use current live location</span>
+                  <span style="font-size:14.5px; font-weight:700; color:#6b21a8;" id="uc-gps-text">Detect my location</span>
                   <span style="background:#ecfdf5; color:#059669; font-size:10px; font-weight:700; padding:2px 6px; border-radius:4px;">DEVICE GPS</span>
                 </div>
                 <div style="font-size:12px; color:#6b7280; margin-top:2px;" id="uc-gps-sub">Detect exact street & building via device geolocation</div>
@@ -442,21 +453,16 @@
   // Initialize
   function initLocation() {
     const stored = getStoredLocation();
-    if (stored && stored.name) {
-      updateNavbarDisplay(stored.name, stored.is_live);
+    // If a live location was detected via GPS (stored.is_live is true), use it;
+    // Otherwise, default to Bengaluru on the navbar
+    if (stored && stored.is_live) {
+      updateNavbarDisplay(stored.name, true);
       try {
         window.dispatchEvent(new CustomEvent('sugguLocationUpdated', { detail: stored }));
       } catch(e) {}
     } else {
-      // Default to central Ranchi if unselected
-      setStoredLocation({
-        name: "Lalpur, Ranchi",
-        primary: "Lalpur",
-        secondary: "Circular Road, Ranchi",
-        is_live: false,
-        lat: 23.3697,
-        lon: 85.3346
-      });
+      // Default to Bengaluru on navbar
+      setStoredLocation(DEFAULT_LOCATION);
     }
 
     document.querySelectorAll('.uc-location-trigger').forEach(btn => {

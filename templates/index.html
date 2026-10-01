@@ -305,7 +305,7 @@ button{cursor:pointer}
     <!-- UC Live Location Picker -->
     <button class="uc-location-trigger" id="headerLocationBtn" style="display:flex; align-items:center; gap:8px; padding:7px 14px; background:#f4f4f6; border:1px solid #e2e2e6; border-radius:10px; cursor:pointer; max-width:240px; text-align:left; transition:all 0.2s;" title="Select delivery location">
       <i class="fa-solid fa-location-dot" style="color:#7c3aed; font-size:13px; flex-shrink:0;"></i>
-      <span class="uc-location-display" style="font-size:13px; font-weight:600; color:#1a1a1a; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">Saket, New Delhi</span>
+      <span class="uc-location-display" style="font-size:13px; font-weight:600; color:#1a1a1a; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">Bengaluru, Karnataka</span>
       <i class="fa-solid fa-chevron-down" style="color:#888; font-size:10px; flex-shrink:0; margin-left:auto;"></i>
     </button>
     
@@ -567,10 +567,13 @@ function initHomepageLocationFiltering() {
 
   function filterCards(locData) {
     if (!locData) return;
-    var userLat = locData.lat ? parseFloat(locData.lat) : 23.3697;
-    var userLon = locData.lon ? parseFloat(locData.lon) : 85.3346;
+    var userLat = locData.lat ? parseFloat(locData.lat) : 12.9716;
+    var userLon = locData.lon ? parseFloat(locData.lon) : 77.5946;
 
-    document.querySelectorAll('.svc-card').forEach(function(card) {
+    var visibleCount = 0;
+    var allCards = document.querySelectorAll('.svc-card');
+
+    allCards.forEach(function(card) {
       var sLat = parseFloat(card.getAttribute('data-lat'));
       var sLon = parseFloat(card.getAttribute('data-lon'));
       var radius = parseFloat(card.getAttribute('data-radius')) || 10.0;
@@ -585,12 +588,23 @@ function initHomepageLocationFiltering() {
         if (isWithinRange) {
           distEl.textContent = dist + ' km away';
           card.style.display = 'block';
+          visibleCount++;
         } else {
-          distEl.textContent = dist + ' km (outside 10km)';
+          distEl.textContent = dist + ' km';
           card.style.display = 'none'; // Filter out if beyond 10 km
         }
       }
     });
+
+    // If 0 cards are in range (e.g. before user clicks 'Detect my location'), keep cards visible
+    // so the page never looks empty, displaying available tag
+    if (visibleCount === 0) {
+      allCards.forEach(function(card) {
+        card.style.display = 'block';
+        var distEl = card.querySelector('.dist-val');
+        if (distEl) distEl.textContent = 'Available';
+      });
+    }
   }
 
   window.addEventListener('sugguLocationUpdated', function(e) {
@@ -601,7 +615,7 @@ function initHomepageLocationFiltering() {
   if (activeLoc) {
     filterCards(activeLoc);
   } else {
-    filterCards({ lat: 23.3697, lon: 85.3346, name: 'Lalpur, Ranchi' });
+    filterCards({ lat: 12.9716, lon: 77.5946, name: 'Bengaluru, Karnataka' });
   }
 }
 
