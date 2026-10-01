@@ -241,20 +241,18 @@
     return html;
   }
 
-  /* ---------- Breadcrumb renderer ---------- */
+  /* ---------- Breadcrumb renderer (disabled for Area Admin dashboard) ---------- */
   function renderBreadcrumb(items) {
     var el = document.getElementById('breadcrumb');
-    if (!el) return;
-    var html = '<a href="/admin-dashboard"><i class="fa-solid fa-house" style="font-size:11px;"></i> Dashboard</a>';
-    items.forEach(function (it, i) {
-      html += '<span class="sep"><i class="fa-solid fa-chevron-right" style="font-size:9px;"></i></span>';
-      if (i === items.length - 1 || !it.href) {
-        html += '<span class="current">' + it.label + '</span>';
-      } else {
-        html += '<a href="' + resolveHref(it.href) + '">' + it.label + '</a>';
-      }
+    if (el) {
+      el.innerHTML = '';
+      el.style.display = 'none';
+    }
+    var bcs = document.querySelectorAll('.breadcrumb, .breadcrumb-bar');
+    bcs.forEach(function (b) {
+      b.innerHTML = '';
+      b.style.display = 'none';
     });
-    el.innerHTML = html;
   }
 
   /* ---------- Header dropdown behavior ---------- */
@@ -348,6 +346,17 @@
 
     bindHeader();
     if (window.AdminSidebar) window.AdminSidebar.init();
+
+    // Ensure breadcrumbs are completely hidden
+    var bc = document.getElementById('breadcrumb');
+    if (bc) {
+      bc.innerHTML = '';
+      bc.style.display = 'none';
+    }
+    document.querySelectorAll('.breadcrumb, .breadcrumb-bar').forEach(function (b) {
+      b.innerHTML = '';
+      b.style.display = 'none';
+    });
 
     // Re-enable smooth transitions on subsequent interactions
     requestAnimationFrame(function () {
