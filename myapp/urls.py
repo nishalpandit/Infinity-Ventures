@@ -191,6 +191,16 @@ urlpatterns = [
     path('api/user/quick-services/create/', Api_views.user_post_quick_service_api, name='user_quick_services_create_api'),
     path('api/user/quick-services/create', Api_views.user_post_quick_service_api),
 
+    # Service Listing & Image Data APIs
+    path('api/services/nearby/', Api_views.services_nearby_api, name='services_nearby_api'),
+    path('api/services/nearby', Api_views.services_nearby_api),
+    path('api/services/<int:service_id>/', Api_views.service_detail_api, name='service_detail_api'),
+    path('api/services/<int:service_id>', Api_views.service_detail_api),
+    path('api/vendors/<int:vendor_id>/profile/', Api_views.vendor_public_profile_api, name='vendor_public_profile_api'),
+    path('api/vendors/<int:vendor_id>/profile', Api_views.vendor_public_profile_api),
+    path('api/categories/with-services/', Api_views.categories_with_services_api, name='categories_with_services_api'),
+    path('api/categories/with-services', Api_views.categories_with_services_api),
+
     path('api/admin/kyc/<int:kyc_id>/approve/', views.approve_kyc_view, name='approve_kyc_view'),
     path('api/admin/kyc/<int:kyc_id>/reject/', views.reject_kyc_view, name='reject_kyc_view'),
 

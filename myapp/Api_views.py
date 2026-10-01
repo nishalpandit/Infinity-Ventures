@@ -1922,6 +1922,362 @@ def user_post_quick_service_api(request):
         return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
 
 
+# =====================================================================
+# SERVICE LISTING & IMAGE DATA APIS (for Flutter app)
+# =====================================================================
+
+def _build_absolute_image_url(request, image_field=None, image_url_str=None):
+    """
+    Builds a full absolute URL for an image field or a raw image_url string.
+    Returns empty string if no image is available.
+    """
+    if image_field and hasattr(image_field, 'url') and image_field.name:
+        return request.build_absolute_uri(image_field.url)
+    if image_url_str:
+        if image_url_str.startswith('http'):
+            return image_url_str
+        return request.build_absolute_uri(image_url_str)
+    return ''
+
+
+def _serialize_quick_service(request, qs, vendor_profile=None, reviews_avg=None, reviews_count=None):
+    """
+    Serializes a QuickService instance into a dictionary with full image URLs.
+    """
+    from django.db.models import Avg, Count
+
+    vendor = qs.vendor
+    if vendor_profile is None:
+        vendor_profile = getattr(vendor, 'vendor_profile', None)
+
+    # Image: prefer uploaded image, then image_url field
+    service_image = _build_absolute_image_url(request, qs.image, qs.image_url)
+
+    # Vendor profile image
+    vendor_image = ''
+    if vendor_profile and vendor_profile.profile_image:
+        vendor_image = _build_absolute_image_url(request, vendor_profile.profile_image)
+
+    # Rating from VendorProfile (pre-computed aggregate)
+    rating = float(vendor_profile.rating) if vendor_profile and vendor_profile.rating else 0.0
+
+    # Reviews count (lazy fetch if not pre-computed)
+    if reviews_count is None:
+        from .models import ServiceReview
+        reviews_count = ServiceReview.objects.filter(vendor=vendor, status='published').count()
+
+    # Location text
+    location_text = ''
+    if qs.locality:
+        location_text = qs.locality
+    elif qs.location:
+        location_text = f"{qs.location.city}, {qs.location.state}"
+    elif vendor_profile:
+        location_text = vendor_profile.location or ''
+
+    # Vendor display name
+    vendor_name = (vendor_profile.company_name if vendor_profile and vendor_profile.company_name else None) or vendor.get_full_name() or vendor.username
+
+    return {
+        'id': qs.id,
+        'title': qs.title,
+        'description': qs.description or '',
+        'category': qs.category.name if qs.category else 'General',
+        'category_id': qs.category.id if qs.category else None,
+        'base_price': float(qs.base_price),
+        'service_packages': qs.service_packages or [],
+        'image': service_image,
+        'inclusions': qs.inclusions or [],
+        'exclusions': qs.exclusions or [],
+        'tags': qs.tags or '',
+        'status': qs.status,
+        'location': location_text,
+        'latitude': float(qs.latitude) if qs.latitude else None,
+        'longitude': float(qs.longitude) if qs.longitude else None,
+        'locality': qs.locality or '',
+        'service_radius_km': qs.service_radius_km,
+        'vendor': {
+            'id': vendor.id,
+            'name': vendor_name,
+            'profile_image': vendor_image,
+            'rating': rating,
+            'reviews_count': reviews_count,
+            'experience': vendor_profile.experience if vendor_profile else 0,
+            'category': vendor_profile.category if vendor_profile else '',
+            'location': vendor_profile.location if vendor_profile else '',
+            'vendor_type': vendor_profile.vendor_type if vendor_profile else 'vendor',
+            'about': vendor_profile.about if vendor_profile and vendor_profile.about else '',
+        },
+        'created_at': qs.created_at.strftime("%Y-%m-%d %H:%M:%S"),
+    }
+
+
+@csrf_exempt
+def services_nearby_api(request):
+    """
+    API to list active QuickServices with full image URLs, vendor info, and ratings.
+    Supports optional geo-based filtering, category filtering, search, and pagination.
+    URL: /api/services/nearby/
+    Method: GET
+    Params (all optional):
+        lat, lng         - User's coordinates for distance-based sorting
+        radius           - Max distance in km (default 50)
+        category         - Filter by category name (partial match)
+        category_id      - Filter by category ID
+        search / q       - Keyword search on title/description/tags
+        page             - Page number (default 1)
+        page_size        - Results per page (default 20, max 50)
+    """
+    if request.method != 'GET':
+        return JsonResponse({'status': 'error', 'message': 'Method not allowed'}, status=405)
+
+    try:
+        from django.db.models import Avg, Count
+        from .models import ServiceReview
+        import math
+
+        # Query params
+        lat = request.GET.get('lat')
+        lng = request.GET.get('lng')
+        radius = float(request.GET.get('radius', 50))
+        category = request.GET.get('category', '').strip()
+        category_id = request.GET.get('category_id')
+        search = (request.GET.get('search') or request.GET.get('q') or '').strip()
+        page = int(request.GET.get('page', 1))
+        page_size = min(int(request.GET.get('page_size', 20)), 50)
+
+        qs = QuickService.objects.filter(status='active').select_related(
+            'vendor', 'vendor__vendor_profile', 'category', 'location'
+        )
+
+        # Category filter
+        if category_id:
+            qs = qs.filter(category_id=category_id)
+        elif category:
+            qs = qs.filter(category__name__icontains=category)
+
+        # Keyword search
+        if search:
+            qs = qs.filter(
+                Q(title__icontains=search) |
+                Q(description__icontains=search) |
+                Q(tags__icontains=search) |
+                Q(category__name__icontains=search)
+            )
+
+        # Geo-distance calculation & filtering
+        results_with_distance = []
+        user_lat = float(lat) if lat else None
+        user_lng = float(lng) if lng else None
+
+        all_services = list(qs.order_by('-created_at'))
+
+        for svc in all_services:
+            dist = None
+            if user_lat is not None and user_lng is not None and svc.latitude and svc.longitude:
+                # Haversine formula (approximate)
+                R = 6371  # Earth radius in km
+                dlat = math.radians(float(svc.latitude) - user_lat)
+                dlng = math.radians(float(svc.longitude) - user_lng)
+                a = (math.sin(dlat / 2) ** 2 +
+                     math.cos(math.radians(user_lat)) *
+                     math.cos(math.radians(float(svc.latitude))) *
+                     math.sin(dlng / 2) ** 2)
+                c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+                dist = R * c
+
+                if dist > radius:
+                    continue
+
+            results_with_distance.append((svc, dist))
+
+        # Sort: by distance if available, otherwise by newest
+        if user_lat is not None and user_lng is not None:
+            results_with_distance.sort(key=lambda x: x[1] if x[1] is not None else float('inf'))
+        else:
+            results_with_distance.sort(key=lambda x: x[0].created_at, reverse=True)
+
+        total = len(results_with_distance)
+        start = (page - 1) * page_size
+        end = start + page_size
+        page_results = results_with_distance[start:end]
+
+        # Serialize
+        services_data = []
+        for svc, dist in page_results:
+            data = _serialize_quick_service(request, svc)
+            if dist is not None:
+                data['distance_km'] = round(dist, 1)
+            services_data.append(data)
+
+        return JsonResponse({
+            'status': 'success',
+            'total': total,
+            'page': page,
+            'page_size': page_size,
+            'has_more': end < total,
+            'services': services_data,
+        }, status=200)
+
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+
+@csrf_exempt
+def service_detail_api(request, service_id):
+    """
+    API to get a single QuickService detail with images, vendor info, reviews.
+    URL: /api/services/<service_id>/
+    Method: GET
+    """
+    if request.method != 'GET':
+        return JsonResponse({'status': 'error', 'message': 'Method not allowed'}, status=405)
+
+    try:
+        from .models import ServiceReview
+
+        svc = QuickService.objects.select_related(
+            'vendor', 'vendor__vendor_profile', 'category', 'location'
+        ).filter(id=service_id).first()
+
+        if not svc:
+            return JsonResponse({'status': 'error', 'message': 'Service not found.'}, status=404)
+
+        data = _serialize_quick_service(request, svc)
+
+        # Attach recent reviews with images
+        reviews = ServiceReview.objects.filter(
+            quick_service=svc, status='published'
+        ).select_related('customer').order_by('-created_at')[:10]
+
+        reviews_data = []
+        for r in reviews:
+            reviews_data.append({
+                'id': r.id,
+                'customer_name': r.customer.get_full_name() or r.customer.username,
+                'rating': r.rating,
+                'title': r.review_title or '',
+                'comment': r.comment,
+                'image': _build_absolute_image_url(request, r.review_image),
+                'created_at': r.created_at.strftime("%Y-%m-%d"),
+            })
+
+        # Also include reviews for the vendor across all services
+        vendor_reviews = ServiceReview.objects.filter(
+            vendor=svc.vendor, status='published'
+        ).select_related('customer').order_by('-created_at')[:10]
+
+        vendor_reviews_data = []
+        for r in vendor_reviews:
+            vendor_reviews_data.append({
+                'id': r.id,
+                'customer_name': r.customer.get_full_name() or r.customer.username,
+                'rating': r.rating,
+                'title': r.review_title or '',
+                'comment': r.comment,
+                'image': _build_absolute_image_url(request, r.review_image),
+                'created_at': r.created_at.strftime("%Y-%m-%d"),
+            })
+
+        data['service_reviews'] = reviews_data
+        data['vendor_reviews'] = vendor_reviews_data
+
+        return JsonResponse({'status': 'success', 'service': data}, status=200)
+
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+
+@csrf_exempt
+def vendor_public_profile_api(request, vendor_id):
+    """
+    API to get a vendor's public profile with image, rating, services.
+    URL: /api/vendors/<vendor_id>/profile/
+    Method: GET
+    """
+    if request.method != 'GET':
+        return JsonResponse({'status': 'error', 'message': 'Method not allowed'}, status=405)
+
+    try:
+        from .models import ServiceReview
+        from django.db.models import Avg, Count
+
+        vendor = User.objects.filter(id=vendor_id, role='VENDOR').first()
+        if not vendor:
+            return JsonResponse({'status': 'error', 'message': 'Vendor not found.'}, status=404)
+
+        profile = getattr(vendor, 'vendor_profile', None)
+        kyc = getattr(vendor, 'kyc_document', None)
+
+        vendor_image = _build_absolute_image_url(request, profile.profile_image if profile else None)
+
+        review_stats = ServiceReview.objects.filter(
+            vendor=vendor, status='published'
+        ).aggregate(avg_rating=Avg('rating'), total_reviews=Count('id'))
+
+        # Vendor's active services
+        services = QuickService.objects.filter(
+            vendor=vendor, status='active'
+        ).select_related('category', 'location')
+
+        services_data = [_serialize_quick_service(request, s, vendor_profile=profile) for s in services]
+
+        return JsonResponse({
+            'status': 'success',
+            'vendor': {
+                'id': vendor.id,
+                'name': (profile.company_name if profile and profile.company_name else None) or vendor.get_full_name() or vendor.username,
+                'profile_image': vendor_image,
+                'category': profile.category if profile else '',
+                'location': profile.location if profile else '',
+                'address': profile.address if profile and profile.address else '',
+                'experience': profile.experience if profile else 0,
+                'about': profile.about if profile and profile.about else '',
+                'vendor_type': profile.vendor_type if profile else 'vendor',
+                'rating': float(profile.rating) if profile else 0.0,
+                'reviews_count': review_stats['total_reviews'] or 0,
+                'avg_rating': round(review_stats['avg_rating'], 1) if review_stats['avg_rating'] else 0.0,
+                'is_kyc_verified': kyc.status == 'approved' if kyc else False,
+                'registered_date': profile.registered_date.strftime("%Y-%m-%d") if profile else '',
+                'services': services_data,
+            }
+        }, status=200)
+
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+
+@csrf_exempt
+def categories_with_services_api(request):
+    """
+    API to fetch active categories along with a count of active services in each.
+    URL: /api/categories/with-services/
+    Method: GET
+    """
+    if request.method != 'GET':
+        return JsonResponse({'status': 'error', 'message': 'Method not allowed'}, status=405)
+
+    try:
+        from django.db.models import Count
+
+        categories = Category.objects.filter(status='active').annotate(
+            services_count=Count('quickservice', filter=Q(quickservice__status='active'))
+        ).order_by('-services_count')
+
+        cat_data = []
+        for cat in categories:
+            cat_data.append({
+                'id': cat.id,
+                'name': cat.name,
+                'service_type': cat.service_type,
+                'services_count': cat.services_count,
+            })
+
+        return JsonResponse({'status': 'success', 'categories': cat_data}, status=200)
+
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
 
 @csrf_exempt
 def get_categories_api(request):
