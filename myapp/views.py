@@ -604,6 +604,20 @@ def dashboard_view(request, path=''):
         context['categories'] = Category.objects.filter(status='active').order_by('name')
         if request.user.is_authenticated:
             context['my_services'] = QuickService.objects.filter(vendor=request.user).select_related('category').order_by('-created_at')
+        # Pass financial settings for dynamic pricing in live preview
+        gs = GlobalSettings.objects.first()
+        if gs:
+            context['platform_commission_percent'] = float(gs.platform_commission_percent or 10.0)
+            context['cgst_percent'] = float(gs.cgst_percent or 9.0)
+            context['sgst_percent'] = float(gs.sgst_percent or 9.0)
+            context['platform_flat_fee'] = float(gs.platform_flat_fee or 0.0)
+            context['tax_calculation_mode'] = gs.tax_calculation_mode or 'commission_only'
+        else:
+            context['platform_commission_percent'] = 10.0
+            context['cgst_percent'] = 9.0
+            context['sgst_percent'] = 9.0
+            context['platform_flat_fee'] = 0.0
+            context['tax_calculation_mode'] = 'commission_only'
 
     if path in ['user/quick-services/index', 'user/quick-services', 'user/quick-services/create', 'user/quick-services/details']:
         return redirect('/user/services/browse.html')
