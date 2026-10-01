@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="description" content="Manage your Sugu vendor account settings, business profile, service categories, and contact information.">
-  <title>Account Settings · Sugu Vendor Portal</title>
+  <title>Settings · Sugu Vendor Portal</title>
   <link rel="stylesheet" href="/infinity-vendor-dashboard/assets/styles.css">
   <script>
     window.VENDOR_INITIALS = "{{ vendor_initials|default:'VN'|escapejs }}";
@@ -98,6 +98,62 @@
       border: 1px solid #e2e8f0;
       color: #475569;
     }
+
+    /* Tab Switcher Navigation Styles */
+    .settings-nav-group-title {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--muted);
+      padding: 10px 14px 6px;
+    }
+    .settings-tab-btn {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      width: 100%;
+      padding: 11px 14px;
+      border-radius: 8px;
+      color: #475467;
+      font-size: 13.5px;
+      font-weight: 500;
+      text-decoration: none;
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      text-align: left;
+      transition: background 0.15s ease, color 0.15s ease;
+    }
+    .settings-tab-btn:hover {
+      background: #f1f5f9;
+      color: var(--primary);
+    }
+    .settings-tab-btn.active {
+      background: #eef2ff;
+      color: var(--primary);
+      font-weight: 700;
+      border-left: 3px solid var(--primary);
+      border-radius: 0 8px 8px 0;
+    }
+    .settings-tab-btn [data-icon] {
+      width: 18px;
+      height: 18px;
+      flex-shrink: 0;
+    }
+    
+    /* Panel Visibility Animation */
+    .settings-tab-panel {
+      display: none;
+    }
+    .settings-tab-panel.active {
+      display: block;
+      animation: tabFadeIn 0.2s ease-in-out;
+    }
+    @keyframes tabFadeIn {
+      from { opacity: 0; transform: translateY(4px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
   </style>
 </head>
 <body data-page="settings" data-title="Settings" data-root="../">
@@ -110,9 +166,9 @@
       <!-- Settings Header Banner -->
       <section class="settings-hero">
         <div>
-          <div class="eyebrow"><span data-icon="settings"></span> Account &amp; Profile Settings</div>
+          <div class="eyebrow"><span data-icon="settings"></span> Vendor Settings</div>
           <h1 style="margin:4px 0 6px; font-size:24px; font-weight:800; color:var(--ink);">{{ vendor_name }}</h1>
-          <p class="muted" style="margin:0; font-size:13px;">Manage your business profile, profile avatar, service categories, and account credentials.</p>
+          <p class="muted" style="margin:0; font-size:13px;">Manage your account credentials, public vendor profile, security settings, and notifications.</p>
         </div>
         <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
           {% if is_kyc_verified %}
@@ -137,6 +193,10 @@
             <span data-icon="user"></span> ID: {{ vendor_profile.vendor_code|default:"Not Assigned" }}
           </span>
 
+          <span class="meta-pill">
+            <span data-icon="award"></span> {{ vendor_type }}
+          </span>
+
           <a href="/vendor/profile/index.html" class="btn btn-secondary btn-sm" title="View Public Profile">
             <span data-icon="eye"></span> Public Profile
           </a>
@@ -144,294 +204,446 @@
       </section>
 
       <!-- Main Layout with Subnav -->
-      <div class="layout-main" style="grid-template-columns:250px minmax(0,1fr)">
+      <div class="layout-main" style="grid-template-columns:250px minmax(0,1fr); align-items:start;">
         
-        <!-- Left Settings Navigation -->
-        <aside class="card">
-          <nav class="settings-nav">
-            <a class="settings-link active" href="/vendor/settings/index.html">
-              <span data-icon="settings"></span> Account &amp; Profile
-            </a>
-            <a class="settings-link" href="/vendor/settings/security.html">
+        <!-- Left Settings Tabs & Navigation -->
+        <aside class="card" style="padding:10px 8px; position:sticky; top:80px;">
+          <div class="settings-nav-group-title">SETTINGS SECTIONS</div>
+          <nav style="display:flex; flex-direction:column; gap:3px;">
+            <button type="button" class="settings-tab-btn active" data-tab="account" onclick="switchSettingsTab('account')">
+              <span data-icon="user"></span> Account Details
+            </button>
+            <button type="button" class="settings-tab-btn" data-tab="profile" onclick="switchSettingsTab('profile')">
+              <span data-icon="edit"></span> Profile &amp; Branding
+            </button>
+            <button type="button" class="settings-tab-btn" data-tab="security" onclick="switchSettingsTab('security')">
               <span data-icon="shield"></span> Security &amp; Password
-            </a>
-            <a class="settings-link" href="/vendor/profile/index.html">
-              <span data-icon="user"></span> View Public Profile
-            </a>
-            <a class="settings-link" href="/vendor/kyc/index.html">
+            </button>
+            <button type="button" class="settings-tab-btn" data-tab="kyc" onclick="switchSettingsTab('kyc')">
               <span data-icon="award"></span> KYC Verification
+            </button>
+            <button type="button" class="settings-tab-btn" data-tab="notifications" onclick="switchSettingsTab('notifications')">
+              <span data-icon="bell"></span> Notifications
+            </button>
+          </nav>
+
+          <div class="settings-nav-group-title" style="margin-top:16px; padding-top:12px; border-top:1px solid var(--line);">QUICK PORTALS</div>
+          <nav style="display:flex; flex-direction:column; gap:3px;">
+            <a class="settings-tab-btn" href="/vendor/profile/index.html" title="View Public Profile">
+              <span data-icon="eye"></span> View Public Profile
             </a>
-            <a class="settings-link" href="/vendor/bid-credits/packages.html">
+            <a class="settings-tab-btn" href="/vendor/bid-credits/packages.html" title="Bid Credits">
               <span data-icon="bolt"></span> Bid Credits
             </a>
-            <a class="settings-link" href="/vendor/wallet/index.html">
+            <a class="settings-tab-btn" href="/vendor/wallet/index.html" title="Wallet & Payouts">
               <span data-icon="wallet"></span> Wallet &amp; Payouts
             </a>
           </nav>
         </aside>
 
-        <!-- Right Content Stack -->
-        <div class="stack">
+        <!-- Right Content Panels (Only Active Panel is Shown) -->
+        <div class="settings-content-wrapper">
 
-          <!-- Primary Settings Form -->
-          <form method="POST" action="/vendor/settings/index.html" enctype="multipart/form-data" id="vendor-settings-form">
-            {% csrf_token %}
-            <input type="hidden" name="remove_profile_image" id="remove_profile_image" value="0">
-            <input type="hidden" name="profile_image_base64" id="profile_image_base64" value="">
+          <!-- TAB PANEL 1: ACCOUNT DETAILS -->
+          <div class="settings-tab-panel active" id="panel-account">
+            <form method="POST" action="/vendor/settings/index.html">
+              {% csrf_token %}
+              <input type="hidden" name="active_tab" value="account">
+              <section class="card">
+                <div class="card-head">
+                  <div>
+                    <h2>Personal Account &amp; Contact Details</h2>
+                    <p>Primary contact person, registered login email, phone number, and physical operating address.</p>
+                  </div>
+                  <button type="submit" class="btn btn-primary btn-sm">
+                    <span data-icon="check"></span> Save Account Details
+                  </button>
+                </div>
 
-            <!-- Card 1: Profile Picture & Identity -->
+                <div class="card-body">
+                  <div class="form-grid">
+                    <div class="field">
+                      <label for="first_name">Contact Person Full Name <span class="required">*</span></label>
+                      <input class="input" type="text" id="first_name" name="first_name" required value="{{ user.first_name|default:user.username }}" placeholder="e.g. Rajesh Kumar">
+                      <div class="field-hint">Primary person responsible for customer service and communications.</div>
+                    </div>
+
+                    <div class="field">
+                      <label for="phone_number">Primary Mobile / Contact Number <span class="required">*</span></label>
+                      <input class="input" type="tel" id="phone_number" name="phone_number" required value="{{ user_profile.phone_number|default:vendor_profile.mobile|default:'' }}" placeholder="e.g. +91 98765 43210">
+                      <div class="field-hint">Used for customer job notifications and OTP logins.</div>
+                    </div>
+
+                    <div class="field">
+                      <label for="email">Registered Email Address <span class="required">*</span></label>
+                      <input class="input" type="email" id="email" name="email" required value="{{ user.email }}" placeholder="e.g. vendor@example.com">
+                      <div class="field-hint">Receipts, payout notifications, and login credentials are sent here.</div>
+                    </div>
+
+                    <div class="field">
+                      <label>Vendor Account Type</label>
+                      <input class="input" type="text" readonly disabled value="{{ vendor_type }}" style="background:#f8fafc; color:#64748b;">
+                      <div class="field-hint">Classification assigned by Sugu Platform. Manage trade in <a href="#profile" onclick="switchSettingsTab('profile')">Profile &amp; Branding</a>.</div>
+                    </div>
+
+                    <div class="field full">
+                      <label for="address">Full Physical Business / Workshop Address <span class="required">*</span></label>
+                      <textarea class="textarea" id="address" name="address" required placeholder="Street address, landmark, locality, and pincode">{{ vendor_profile.address|default:'' }}</textarea>
+                      <div class="field-hint">Official business or operating address for verification purposes.</div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="form-actions">
+                  <a href="/vendor/settings/index.html#account" class="btn btn-secondary">Discard</a>
+                  <button type="submit" class="btn btn-primary">
+                    <span data-icon="check"></span> Save Account Details
+                  </button>
+                </div>
+              </section>
+            </form>
+          </div>
+
+          <!-- TAB PANEL 2: PROFILE & BRANDING -->
+          <div class="settings-tab-panel" id="panel-profile">
+            <form method="POST" action="/vendor/settings/index.html" enctype="multipart/form-data" id="vendor-profile-form">
+              {% csrf_token %}
+              <input type="hidden" name="active_tab" value="profile">
+              <input type="hidden" name="remove_profile_image" id="remove_profile_image" value="0">
+              <input type="hidden" name="profile_image_base64" id="profile_image_base64" value="">
+
+              <section class="card">
+                <div class="card-head">
+                  <div>
+                    <h2>Public Business Profile &amp; Branding</h2>
+                    <p>Business identity, company avatar logo, trade categories, and bio displayed to customers on bids.</p>
+                  </div>
+                  <div style="display:flex; gap:8px;">
+                    <a href="/vendor/profile/index.html" class="btn btn-secondary btn-sm" title="Preview Public Profile">
+                      <span data-icon="eye"></span> Public Profile
+                    </a>
+                    <button type="submit" class="btn btn-primary btn-sm">
+                      <span data-icon="check"></span> Save Profile Changes
+                    </button>
+                  </div>
+                </div>
+
+                <div class="card-body">
+                  <!-- Avatar Upload Box -->
+                  <div class="avatar-upload-card">
+                    <div class="avatar-preview-box" id="avatar-preview-box">
+                      {% if profile_image_url %}
+                        <img id="avatar-img" src="{{ profile_image_url }}" alt="{{ vendor_name }}" onerror="this.style.display='none'; document.getElementById('avatar-initials').style.display='flex';">
+                      {% endif %}
+                      <span id="avatar-initials" style="{% if profile_image_url %}display:none;{% else %}display:flex;{% endif %}">{{ vendor_initials }}</span>
+                    </div>
+
+                    <div style="flex:1; min-width:240px;">
+                      <div style="display:flex; align-items:center; gap:10px; margin-bottom:8px; flex-wrap:wrap;">
+                        <label class="btn btn-primary btn-sm" style="cursor:pointer;">
+                          <span data-icon="camera"></span> Upload New Photo
+                          <input type="file" id="profile_image_file" name="profile_image" accept="image/png,image/jpeg,image/webp,image/jpg" style="display:none;">
+                        </label>
+                        
+                        <button type="button" class="btn btn-secondary btn-sm" id="remove-photo-btn" style="color:var(--red); border-color:#fecdca;">
+                          <span data-icon="trash"></span> Remove Photo
+                        </button>
+                      </div>
+                      
+                      <div id="avatar-status-badge" class="muted small" style="margin-top:6px;">
+                        Supported formats: <strong>JPG, PNG, WEBP</strong>. Max size: <strong>5MB</strong>. High-resolution square image recommended.
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="form-grid">
+                    <div class="field">
+                      <label for="company_name">Business / Trade / Shop Name</label>
+                      <input class="input" type="text" id="company_name" name="company_name" value="{% if vendor_profile.company_name and vendor_profile.company_name != user.first_name %}{{ vendor_profile.company_name }}{% endif %}" placeholder="e.g. Sugu Electrical Services (optional for individuals)">
+                      <div class="field-hint">Leave blank if operating under your individual name ({{ user.first_name|default:user.username }}).</div>
+                    </div>
+
+                    <div class="field">
+                      <label for="vendor_type">Vendor Classification / Entity Type <span class="required">*</span></label>
+                      <select class="select" id="vendor_type" name="vendor_type" required>
+                        <option value="vendor" {% if vendor_profile.vendor_type == 'vendor' or not vendor_profile.vendor_type %}selected{% endif %}>Individual Professional / Sole Proprietor</option>
+                        <option value="company" {% if vendor_profile.vendor_type == 'company' %}selected{% endif %}>Registered Company / Agency / Contractor</option>
+                      </select>
+                      <div class="field-hint">Select whether you offer services as an individual or a registered company.</div>
+                    </div>
+
+                    <div class="field">
+                      <label for="category">Primary Service Category / Trade <span class="required">*</span></label>
+                      <select class="select" id="category" name="category" required>
+                        <option value="">Select primary category</option>
+                        {% for cat in all_categories %}
+                          <option value="{{ cat.name }}" {% if vendor_profile.category == cat.name %}selected{% endif %}>{{ cat.name }}</option>
+                        {% endfor %}
+                        {% if vendor_profile.category and not all_categories %}
+                          <option value="{{ vendor_profile.category }}" selected>{{ vendor_profile.category }}</option>
+                        {% endif %}
+                      </select>
+                      <div class="field-hint">Your main service trade for new lead matching.</div>
+                    </div>
+
+                    <div class="field">
+                      <label for="location">Service City / Operational Territory <span class="required">*</span></label>
+                      <input class="input" type="text" id="location" name="location" required value="{{ vendor_profile.location|default:'Ranchi' }}" placeholder="e.g. Mumbai, Maharashtra">
+                      <div class="field-hint">The primary territory where your team delivers services.</div>
+                    </div>
+
+                    <div class="field">
+                      <label for="experience">Years of Professional Experience</label>
+                      <input class="input" type="number" id="experience" name="experience" min="0" max="60" value="{{ vendor_profile.experience|default:1 }}" placeholder="e.g. 5">
+                      <div class="field-hint">Number of years in this trade.</div>
+                    </div>
+
+                    <div class="field full">
+                      <label for="about">About Your Business / Company Bio</label>
+                      <textarea class="textarea" id="about" name="about" style="min-height:90px;" placeholder="Describe your team, specialties, equipment, and why customers should choose you...">{{ vendor_profile.about|default:'' }}</textarea>
+                      <div class="field-hint">Displayed on your public profile to prospective customers.</div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="form-actions">
+                  <a href="/vendor/settings/index.html#profile" class="btn btn-secondary">Discard</a>
+                  <button type="submit" class="btn btn-primary">
+                    <span data-icon="check"></span> Save Profile &amp; Branding
+                  </button>
+                </div>
+              </section>
+            </form>
+          </div>
+
+          <!-- TAB PANEL 3: SECURITY & PASSWORD -->
+          <div class="settings-tab-panel" id="panel-security">
+            <div class="stack">
+              <!-- Password Change Card -->
+              <section class="card">
+                <div class="card-head">
+                  <div>
+                    <h2>Change Password</h2>
+                    <p>Use a strong password unique to your business account to protect your earnings and customer bids.</p>
+                  </div>
+                  <span data-icon="shield"></span>
+                </div>
+
+                <form method="POST" action="/vendor/settings/index.html">
+                  {% csrf_token %}
+                  <input type="hidden" name="active_tab" value="security">
+                  <div class="card-body">
+                    <div class="form-grid">
+                      <div class="field full">
+                        <label for="current_password">Current Password <span class="required">*</span></label>
+                        <input class="input" type="password" id="current_password" name="current_password" required autocomplete="current-password" placeholder="Enter current password">
+                      </div>
+
+                      <div class="field">
+                        <label for="new_password">New Password <span class="required">*</span></label>
+                        <input class="input" type="password" id="new_password" name="new_password" required minlength="8" autocomplete="new-password" placeholder="At least 8 characters">
+                        <div class="strength weak" id="password-strength"><span></span><span></span><span></span></div>
+                        <div class="field-hint">Strength: <strong id="strength-label">Weak</strong></div>
+                      </div>
+
+                      <div class="field">
+                        <label for="confirm_password">Confirm New Password <span class="required">*</span></label>
+                        <input class="input" type="password" id="confirm_password" name="confirm_password" required minlength="8" autocomplete="new-password" placeholder="Repeat new password">
+                      </div>
+                    </div>
+
+                    <div class="callout neutral" style="margin-top:18px">
+                      <span data-icon="shield"></span>
+                      <div>
+                        <strong>Password Security Recommendation</strong>
+                        Include at least 8 characters, with letters, numbers, and special symbols for maximum security.
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="form-actions">
+                    <button class="btn btn-primary" type="submit" id="btn-update-password">
+                      <span data-icon="lock"></span> Update Password
+                    </button>
+                  </div>
+                </form>
+              </section>
+
+              <!-- Session Overview -->
+              <section class="card">
+                <div class="card-head">
+                  <h2>Login &amp; Session Security</h2>
+                </div>
+                <div class="card-body">
+                  <div class="setting-row">
+                    <div>
+                      <h4>Current Active Session</h4>
+                      <p>Logged in as <strong>{{ user.username }}</strong> ({{ user.role }})</p>
+                    </div>
+                    <span class="badge badge-success">Active Now</span>
+                  </div>
+
+                  <div class="setting-row">
+                    <div>
+                      <h4>Two-Step OTP Authentication</h4>
+                      <p>Phone OTP verification enabled for login authentication.</p>
+                    </div>
+                    <span class="badge badge-purple">Enabled</span>
+                  </div>
+
+                  <div class="setting-row">
+                    <div>
+                      <h4>End Session</h4>
+                      <p>Safely log out of your Sugu vendor portal session on this device.</p>
+                    </div>
+                    <button type="button" class="btn btn-secondary btn-sm" data-confirm="logout">
+                      <span data-icon="logout"></span> Log Out
+                    </button>
+                  </div>
+                </div>
+              </section>
+            </div>
+          </div>
+
+          <!-- TAB PANEL 4: KYC VERIFICATION -->
+          <div class="settings-tab-panel" id="panel-kyc">
             <section class="card">
               <div class="card-head">
                 <div>
-                  <h2>Profile Avatar &amp; Branding</h2>
-                  <p>Upload a clear photo or company logo to build trust with customers.</p>
+                  <h2>Verification &amp; Compliance Status (KYC)</h2>
+                  <p>Identity proof and business registration verification with Sugu Platform.</p>
                 </div>
-                <button type="submit" class="btn btn-primary btn-sm">
-                  <span data-icon="check"></span> Save Changes
-                </button>
+                <a href="/vendor/kyc/index.html" class="btn btn-primary btn-sm">
+                  <span data-icon="award"></span> Open Full KYC Portal
+                </a>
               </div>
-
               <div class="card-body">
-                <div class="avatar-upload-card">
-                  <div class="avatar-preview-box" id="avatar-preview-box">
-                    {% if profile_image_url %}
-                      <img id="avatar-img" src="{{ profile_image_url }}" alt="{{ vendor_name }}" onerror="this.style.display='none'; document.getElementById('avatar-initials').style.display='flex';">
-                    {% endif %}
-                    <span id="avatar-initials" style="{% if profile_image_url %}display:none;{% else %}display:flex;{% endif %}">{{ vendor_initials }}</span>
-                  </div>
-
-                  <div style="flex:1; min-width:240px;">
-                    <div style="display:flex; align-items:center; gap:10px; margin-bottom:8px; flex-wrap:wrap;">
-                      <label class="btn btn-primary btn-sm" style="cursor:pointer;">
-                        <span data-icon="camera"></span> Upload New Photo
-                        <input type="file" id="profile_image_file" name="profile_image" accept="image/png,image/jpeg,image/webp,image/jpg" style="display:none;">
-                      </label>
-                      
-                      <button type="button" class="btn btn-secondary btn-sm" id="remove-photo-btn" style="color:var(--red); border-color:#fecdca;">
-                        <span data-icon="trash"></span> Remove Photo
-                      </button>
-                    </div>
-                    
-                    <div id="avatar-status-badge" class="muted small" style="margin-top:6px;">
-                      Supported formats: <strong>JPG, PNG, WEBP</strong>. Max size: <strong>5MB</strong>. High-resolution square image recommended.
-                    </div>
-                  </div>
-                </div>
-
-                <!-- Business & Account Form Fields -->
-                <div class="form-grid">
-                  <div class="field">
-                    <label for="company_name">Business / Company Name <span class="required">*</span></label>
-                    <input class="input" type="text" id="company_name" name="company_name" required value="{{ vendor_profile.company_name|default:user.first_name|default:user.username }}" placeholder="e.g. Sugu Electrical Services">
-                    <div class="field-hint">This name will be displayed to customers and on bids.</div>
-                  </div>
-
-                  <div class="field">
-                    <label for="first_name">Contact Person Full Name <span class="required">*</span></label>
-                    <input class="input" type="text" id="first_name" name="first_name" required value="{{ user.first_name }}" placeholder="e.g. Rajesh Kumar">
-                    <div class="field-hint">Primary person responsible for customer service and communications.</div>
-                  </div>
-
-                  <div class="field">
-                    <label for="phone_number">Primary Mobile / Contact Number <span class="required">*</span></label>
-                    <input class="input" type="tel" id="phone_number" name="phone_number" required value="{{ user_profile.phone_number|default:vendor_profile.mobile|default:'' }}" placeholder="e.g. +91 98765 43210">
-                    <div class="field-hint">Used for customer job notifications and OTP logins.</div>
-                  </div>
-
-                  <div class="field">
-                    <label for="email">Registered Email Address <span class="required">*</span></label>
-                    <input class="input" type="email" id="email" name="email" required value="{{ user.email }}" placeholder="e.g. vendor@example.com">
-                    <div class="field-hint">Receipts, payout notifications, and login credentials are sent here.</div>
-                  </div>
-
-                  <div class="field">
-                    <label for="category">Primary Service Category / Trade <span class="required">*</span></label>
-                    <select class="select" id="category" name="category" required>
-                      <option value="">Select primary category</option>
-                      {% for cat in all_categories %}
-                        <option value="{{ cat.name }}" {% if vendor_profile.category == cat.name %}selected{% endif %}>{{ cat.name }}</option>
-                      {% endfor %}
-                      {% if vendor_profile.category and not all_categories %}
-                        <option value="{{ vendor_profile.category }}" selected>{{ vendor_profile.category }}</option>
+                <div class="setting-row">
+                  <div>
+                    <h4>Overall KYC Status</h4>
+                    <p>
+                      {% if is_kyc_verified %}
+                        All government identity and business documentation verified &amp; approved.
+                      {% elif kyc and kyc.status == 'pending' %}
+                        Documents submitted on {{ kyc.submitted_at|date:"d M Y" }}. Verification is currently under review by Sugu Admins.
+                      {% elif kyc and kyc.status == 'rejected' %}
+                        Previous verification was rejected: {{ kyc.admin_notes|default:"Please upload clear, valid government documents." }}
+                      {% else %}
+                        No verification documents submitted yet. Get verified to unlock higher customer trust and more leads.
                       {% endif %}
-                    </select>
-                    <div class="field-hint">Your main service trade for new lead matching.</div>
+                    </p>
                   </div>
-
-                  <div class="field">
-                    <label for="location">Service City / Operational Territory <span class="required">*</span></label>
-                    <input class="input" type="text" id="location" name="location" required value="{{ vendor_profile.location|default:'Ranchi' }}" placeholder="e.g. Ranchi, Jharkhand">
-                    <div class="field-hint">The primary territory where your team delivers services.</div>
-                  </div>
-
-                  <div class="field">
-                    <label for="experience">Years of Professional Experience</label>
-                    <input class="input" type="number" id="experience" name="experience" min="0" max="60" value="{{ vendor_profile.experience|default:1 }}" placeholder="e.g. 5">
-                    <div class="field-hint">Number of years in this trade.</div>
-                  </div>
-
-                  <div class="field">
-                    <label>Vendor Account Type</label>
-                    <input class="input" type="text" readonly disabled value="{{ vendor_profile.company_name|yesno:'Company Vendor,Individual Vendor' }}" style="background:#f8fafc; color:#64748b;">
-                    <div class="field-hint">Account classification assigned by platform administrators.</div>
-                  </div>
-
-                  <div class="field full">
-                    <label for="address">Full Physical Business / Workshop Address <span class="required">*</span></label>
-                    <textarea class="textarea" id="address" name="address" required placeholder="Street address, landmark, locality, and pincode">{{ vendor_profile.address|default:'' }}</textarea>
-                    <div class="field-hint">Official business or operating address for verification purposes.</div>
-                  </div>
-
-                  <div class="field full">
-                    <label for="about">About Your Business / Company Bio</label>
-                    <textarea class="textarea" id="about" name="about" style="min-height:90px;" placeholder="Describe your team, specialties, equipment, and why customers should choose you...">{{ vendor_profile.about|default:'' }}</textarea>
-                    <div class="field-hint">Displayed on your public profile to prospective customers.</div>
-                  </div>
-                </div>
-              </div>
-
-              <div class="form-actions">
-                <a href="/vendor/settings/index.html" class="btn btn-secondary">Discard Changes</a>
-                <button type="submit" class="btn btn-primary" id="save-settings-btn-main">
-                  <span data-icon="check"></span> Save All Changes
-                </button>
-              </div>
-            </section>
-          </form>
-
-          <!-- Card 2: Verification & Compliance (KYC) -->
-          <section class="card">
-            <div class="card-head">
-              <div>
-                <h2>Verification &amp; Compliance Status</h2>
-                <p>Identity proof and business registration verification with Sugu Platform.</p>
-              </div>
-              <a href="/vendor/kyc/index.html" class="btn btn-secondary btn-sm">
-                <span data-icon="award"></span> Manage KYC
-              </a>
-            </div>
-            <div class="card-body">
-              <div class="setting-row">
-                <div>
-                  <h4>KYC Document Verification</h4>
-                  <p>
+                  <div>
                     {% if is_kyc_verified %}
-                      All government identity and business documentation verified &amp; approved.
+                      <span class="badge badge-kyc-approved" style="padding:6px 12px; font-weight:700;"><span data-icon="award"></span> Verified Pro Vendor</span>
                     {% elif kyc and kyc.status == 'pending' %}
-                      Documents submitted on {{ kyc.submitted_at|date:"d M Y" }}. Verification is currently under review by Sugu Admins.
+                      <span class="badge badge-kyc-pending" style="padding:6px 12px; font-weight:700;"><span data-icon="clock"></span> Under Review</span>
                     {% elif kyc and kyc.status == 'rejected' %}
-                      Previous verification was rejected: {{ kyc.admin_notes|default:"Please upload clear, valid government documents." }}
+                      <span class="badge badge-kyc-rejected" style="padding:6px 12px; font-weight:700;"><span data-icon="alert"></span> Action Required</span>
                     {% else %}
-                      No verification documents submitted yet. Get verified to unlock higher customer trust.
+                      <a href="/vendor/kyc/index.html" class="btn btn-secondary btn-sm">Submit Documents</a>
                     {% endif %}
-                  </p>
+                  </div>
                 </div>
-                <div>
-                  {% if is_kyc_verified %}
-                    <span class="badge badge-success"><span data-icon="award"></span> Verified Pro</span>
-                  {% elif kyc and kyc.status == 'pending' %}
-                    <span class="badge badge-pending"><span data-icon="clock"></span> Under Review</span>
-                  {% elif kyc and kyc.status == 'rejected' %}
-                    <span class="badge badge-danger"><span data-icon="alert"></span> Action Required</span>
+
+                <div class="setting-row">
+                  <div>
+                    <h4>Vendor Registration Code</h4>
+                    <p>Unique platform identifier: <strong>{{ vendor_profile.vendor_code|default:"VEN001" }}</strong></p>
+                  </div>
+                  <span class="badge badge-purple">Registered {{ vendor_profile.registered_date|date:"M Y" }}</span>
+                </div>
+
+                <div class="setting-row">
+                  <div>
+                    <h4>Government Identity Document</h4>
+                    <p>ID Type: {{ kyc.id_type|default:"Aadhaar Card"|title }} · Number: {{ kyc.id_number|default:"Not submitted" }}</p>
+                  </div>
+                  {% if kyc.id_document_front %}
+                    <span class="badge badge-success">Document Uploaded</span>
                   {% else %}
-                    <a href="/vendor/kyc/index.html" class="btn btn-secondary btn-sm">Upload Documents</a>
+                    <span class="badge badge-pending">Pending Upload</span>
+                  {% endif %}
+                </div>
+
+                <div class="setting-row">
+                  <div>
+                    <h4>Trade License / GST Registration</h4>
+                    <p>Business legitimacy proof for commercial operations.</p>
+                  </div>
+                  {% if kyc.business_license or kyc.gst_certificate %}
+                    <span class="badge badge-success">Uploaded</span>
+                  {% else %}
+                    <span class="badge badge-neutral">Optional</span>
                   {% endif %}
                 </div>
               </div>
 
-              <div class="setting-row">
-                <div>
-                  <h4>Vendor Registration Code</h4>
-                  <p>Unique platform identifier: <strong>{{ vendor_profile.vendor_code|default:"VEN001" }}</strong></p>
-                </div>
-                <span class="badge badge-purple">Registered {{ vendor_profile.registered_date|date:"M Y" }}</span>
+              <div class="form-actions" style="margin-top:20px;">
+                <a href="/vendor/kyc/index.html" class="btn btn-primary">
+                  <span data-icon="award"></span> Go To KYC Document Manager
+                </a>
               </div>
-            </div>
-          </section>
+            </section>
+          </div>
 
-          <!-- Card 3: Notifications & Preferences -->
-          <section class="card">
-            <div class="card-head">
-              <div>
-                <h2>Notification Preferences</h2>
-                <p>Choose what alerts you receive regarding new customer leads and updates.</p>
-              </div>
-            </div>
-            <div class="card-body">
-              <div class="setting-row">
-                <div>
-                  <h4>New Job Alerts in Territory</h4>
-                  <p>Receive notifications whenever customers post jobs in {{ vendor_profile.location|default:"your area" }}.</p>
+          <!-- TAB PANEL 5: NOTIFICATION PREFERENCES -->
+          <div class="settings-tab-panel" id="panel-notifications">
+            <form method="POST" action="/vendor/settings/index.html">
+              {% csrf_token %}
+              <input type="hidden" name="active_tab" value="notifications">
+              <section class="card">
+                <div class="card-head">
+                  <div>
+                    <h2>Notification Preferences</h2>
+                    <p>Choose what alerts you receive regarding new customer leads, bookings, and platform updates.</p>
+                  </div>
+                  <button type="submit" class="btn btn-primary btn-sm">
+                    <span data-icon="check"></span> Save Preferences
+                  </button>
                 </div>
-                <label class="toggle">
-                  <input type="checkbox" checked id="toggle-job-alerts">
-                  <span class="toggle-slider"></span>
-                </label>
-              </div>
+                <div class="card-body">
+                  <div class="setting-row">
+                    <div>
+                      <h4>New Job Alerts in Territory</h4>
+                      <p>Receive notifications whenever customers post jobs in {{ vendor_profile.location|default:"your area" }}.</p>
+                    </div>
+                    <label class="toggle">
+                      <input type="checkbox" name="job_alerts" checked id="toggle-job-alerts">
+                      <span class="toggle-slider"></span>
+                    </label>
+                  </div>
 
-              <div class="setting-row">
-                <div>
-                  <h4>Booking &amp; Payout SMS Updates</h4>
-                  <p>Receive SMS alerts when a customer accepts your quotation or a payout is settled.</p>
-                </div>
-                <label class="toggle">
-                  <input type="checkbox" checked id="toggle-sms-alerts">
-                  <span class="toggle-slider"></span>
-                </label>
-              </div>
+                  <div class="setting-row">
+                    <div>
+                      <h4>Booking &amp; Payout SMS Updates</h4>
+                      <p>Receive SMS alerts when a customer accepts your quotation or a payout is settled.</p>
+                    </div>
+                    <label class="toggle">
+                      <input type="checkbox" name="sms_alerts" checked id="toggle-sms-alerts">
+                      <span class="toggle-slider"></span>
+                    </label>
+                  </div>
 
-              <div class="setting-row">
-                <div>
-                  <h4>Bid Credits &amp; Promotional Alerts</h4>
-                  <p>Stay informed about special offers and platform package discounts.</p>
+                  <div class="setting-row">
+                    <div>
+                      <h4>Bid Credits &amp; Promotional Alerts</h4>
+                      <p>Stay informed about special offers and platform package discounts.</p>
+                    </div>
+                    <label class="toggle">
+                      <input type="checkbox" name="promo_alerts" id="toggle-promo-alerts">
+                      <span class="toggle-slider"></span>
+                    </label>
+                  </div>
                 </div>
-                <label class="toggle">
-                  <input type="checkbox" id="toggle-promo-alerts">
-                  <span class="toggle-slider"></span>
-                </label>
-              </div>
-            </div>
-          </section>
-
-          <!-- Card 4: Security & Session Overview -->
-          <section class="card">
-            <div class="card-head">
-              <div>
-                <h2>Security &amp; Account Access</h2>
-                <p>Manage password, device sessions, and account logout.</p>
-              </div>
-              <a href="/vendor/settings/security.html" class="btn btn-secondary btn-sm">
-                <span data-icon="shield"></span> Change Password
-              </a>
-            </div>
-            <div class="card-body">
-              <div class="setting-row">
-                <div>
-                  <h4>Account Password</h4>
-                  <p>Password is secured with cryptographic hashing. Last verified active.</p>
+                <div class="form-actions">
+                  <button type="submit" class="btn btn-primary">
+                    <span data-icon="check"></span> Save Preferences
+                  </button>
                 </div>
-                <a href="/vendor/settings/security.html" class="link small">Update Password</a>
-              </div>
-
-              <div class="setting-row">
-                <div>
-                  <h4>Current Active Session</h4>
-                  <p>Logged in as <strong>{{ user.username }}</strong> ({{ user.role }})</p>
-                </div>
-                <span class="badge badge-success">Active Now</span>
-              </div>
-
-              <div class="setting-row">
-                <div>
-                  <h4>End Session</h4>
-                  <p>Safely log out of your Sugu vendor portal session on this device.</p>
-                </div>
-                <button type="button" class="btn btn-secondary btn-sm" data-confirm="logout">
-                  <span data-icon="logout"></span> Log Out
-                </button>
-              </div>
-            </div>
-          </section>
+              </section>
+            </form>
+          </div>
 
         </div>
       </div>
@@ -439,11 +651,66 @@
   </div>
 </div>
 
-<!-- Live Preview & Toast Handling Scripts -->
+<!-- Tab Switching & Interactive Scripts -->
 <script>
+  function switchSettingsTab(tabName, updateHash = true) {
+    const validTabs = ['account', 'profile', 'security', 'kyc', 'notifications'];
+    if (!validTabs.includes(tabName)) tabName = 'account';
+
+    // Hide all tab panels
+    document.querySelectorAll('.settings-tab-panel').forEach(function(panel) {
+      panel.style.display = 'none';
+      panel.classList.remove('active');
+    });
+
+    // Deactivate all tab buttons
+    document.querySelectorAll('.settings-tab-btn[data-tab]').forEach(function(btn) {
+      btn.classList.remove('active');
+    });
+
+    // Activate the targeted panel
+    const targetPanel = document.getElementById('panel-' + tabName);
+    if (targetPanel) {
+      targetPanel.style.display = 'block';
+      targetPanel.classList.add('active');
+    }
+
+    // Activate the targeted button
+    const targetBtn = document.querySelector('.settings-tab-btn[data-tab="' + tabName + '"]');
+    if (targetBtn) {
+      targetBtn.classList.add('active');
+    }
+
+    // Sync window hash
+    if (updateHash && window.location.hash !== '#' + tabName) {
+      history.replaceState(null, null, '#' + tabName);
+    }
+  }
+
   document.addEventListener('DOMContentLoaded', function() {
+    // 1. Initial tab selection based on URL hash
+    let initialTab = 'account';
+    if (window.location.hash) {
+      const hashTab = window.location.hash.replace('#', '').toLowerCase();
+      if (['account', 'profile', 'security', 'kyc', 'notifications'].includes(hashTab)) {
+        initialTab = hashTab;
+      }
+    }
+    switchSettingsTab(initialTab, false);
+
+    // 2. React to browser back/forward buttons
+    window.addEventListener('hashchange', function() {
+      if (window.location.hash) {
+        const hashTab = window.location.hash.replace('#', '').toLowerCase();
+        if (['account', 'profile', 'security', 'kyc', 'notifications'].includes(hashTab)) {
+          switchSettingsTab(hashTab, false);
+        }
+      }
+    });
+
+    // 3. Live Instant Profile Picture Preview & Base64 compression
     const fileInput = document.getElementById('profile_image_file');
-    const removeBtn = document.getElementById('remove-avatar-btn');
+    const removeBtn = document.getElementById('remove-photo-btn');
     const removeInput = document.getElementById('remove_profile_image');
     const base64Input = document.getElementById('profile_image_base64');
     const avatarImg = document.getElementById('avatar-img');
@@ -451,7 +718,6 @@
     const avatarStatus = document.getElementById('avatar-status-badge');
     const previewBox = document.getElementById('avatar-preview-box');
 
-    // Live Instant Profile Picture Preview
     if (fileInput) {
       fileInput.addEventListener('change', function(e) {
         if (e.target.files && e.target.files[0]) {
@@ -472,8 +738,8 @@
           const reader = new FileReader();
           reader.onload = function(evt) {
             const dataUrl = evt.target.result;
-            removeInput.value = '0';
-            base64Input.value = dataUrl;
+            if (removeInput) removeInput.value = '0';
+            if (base64Input) base64Input.value = dataUrl;
 
             let img = document.getElementById('avatar-img');
             if (!img) {
@@ -487,11 +753,11 @@
             if (avatarInitials) avatarInitials.style.display = 'none';
 
             if (avatarStatus) {
-              avatarStatus.innerHTML = '<strong style="color:var(--green);">✓ New photo selected. Click "Save All Changes" to apply across your portal.</strong>';
+              avatarStatus.innerHTML = '<strong style="color:var(--green);">✓ New photo selected. Click "Save Profile &amp; Branding" below to apply across your portal.</strong>';
             }
 
             if (window.showToast) {
-              window.showToast('Photo Selected', 'Click "Save All Changes" below to update your profile.', 'success');
+              window.showToast('Photo Selected', 'Click "Save Profile & Branding" to confirm.', 'success');
             }
           };
           reader.readAsDataURL(file);
@@ -499,11 +765,11 @@
       });
     }
 
-    // Remove Profile Picture Handler
+    // 4. Remove Profile Picture Handler
     if (removeBtn) {
       removeBtn.addEventListener('click', function() {
-        removeInput.value = '1';
-        base64Input.value = '';
+        if (removeInput) removeInput.value = '1';
+        if (base64Input) base64Input.value = '';
         if (fileInput) fileInput.value = '';
 
         const img = document.getElementById('avatar-img');
@@ -511,16 +777,49 @@
         if (avatarInitials) avatarInitials.style.display = 'flex';
 
         if (avatarStatus) {
-          avatarStatus.innerHTML = '<strong style="color:var(--red);">Photo marked for removal. Click "Save All Changes" to confirm.</strong>';
+          avatarStatus.innerHTML = '<strong style="color:var(--red);">Photo marked for removal. Click "Save Profile &amp; Branding" to confirm.</strong>';
         }
 
         if (window.showToast) {
-          window.showToast('Photo Marked for Removal', 'Click "Save All Changes" to confirm.', 'info');
+          window.showToast('Photo Marked for Removal', 'Click "Save Profile & Branding" to confirm.', 'info');
         }
       });
     }
 
-    // Render server Django messages as toasts
+    // 5. Password Strength Meter
+    const newPwdInput = document.getElementById('new_password');
+    const strengthBox = document.getElementById('password-strength');
+    const strengthLabel = document.getElementById('strength-label');
+    if (newPwdInput && strengthBox && strengthLabel) {
+      newPwdInput.addEventListener('input', function() {
+        const val = newPwdInput.value;
+        let score = 0;
+        if (val.length >= 8) score++;
+        if (/[A-Z]/.test(val) && /[a-z]/.test(val)) score++;
+        if (/[0-9]/.test(val) || /[^A-Za-z0-9]/.test(val)) score++;
+
+        strengthBox.className = 'strength';
+        if (val.length === 0) {
+          strengthBox.classList.add('weak');
+          strengthLabel.textContent = 'Weak';
+          strengthLabel.style.color = 'var(--red)';
+        } else if (score <= 1) {
+          strengthBox.classList.add('weak');
+          strengthLabel.textContent = 'Weak';
+          strengthLabel.style.color = 'var(--red)';
+        } else if (score === 2) {
+          strengthBox.classList.add('medium');
+          strengthLabel.textContent = 'Medium';
+          strengthLabel.style.color = 'var(--orange)';
+        } else {
+          strengthBox.classList.add('strong');
+          strengthLabel.textContent = 'Strong';
+          strengthLabel.style.color = 'var(--green)';
+        }
+      });
+    }
+
+    // 6. Render server Django messages as toasts
     {% if messages %}
       {% for message in messages %}
         if (window.showToast) {

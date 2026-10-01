@@ -141,8 +141,12 @@ def save_vendor_profile_changes(request, user):
     u_prof, _ = UserProfile.objects.get_or_create(user=user)
     
     company_name = request.POST.get('company_name')
-    if company_name is not None and company_name.strip():
+    if company_name is not None:
         v_prof.company_name = company_name.strip()
+
+    vendor_type = request.POST.get('vendor_type')
+    if vendor_type in ['vendor', 'company']:
+        v_prof.vendor_type = vendor_type
     
     category = request.POST.get('category')
     if category is not None and category.strip():
@@ -657,11 +661,25 @@ def dashboard_view(request, path=''):
             context['is_kyc_verified'] = (kyc_doc.status == 'approved') if kyc_doc else False
             context['all_categories'] = Category.objects.filter(status='active').order_by('name')
 
-            name = (vendor_profile.company_name if (vendor_profile and vendor_profile.company_name) else None) or request.user.get_full_name() or request.user.username
-            context['vendor_name'] = name
-            context['vendor_initials'] = name[:2].upper() if name else "VN"
+            # Determine display vendor name & vendor classification
+            display_name = None
+            if vendor_profile:
+                if vendor_profile.vendor_type == 'company' and vendor_profile.company_name and vendor_profile.company_name.strip():
+                    display_name = vendor_profile.company_name.strip()
+                elif vendor_profile.company_name and vendor_profile.company_name.strip() and vendor_profile.company_name.strip().lower() != request.user.first_name.strip().lower():
+                    display_name = vendor_profile.company_name.strip()
+
+            if not display_name:
+                display_name = request.user.get_full_name() or request.user.first_name or request.user.username
+                
+            context['vendor_name'] = display_name
+            context['vendor_initials'] = display_name[:2].upper() if display_name else "VN"
             context['vendor_location'] = (vendor_profile.location if (vendor_profile and vendor_profile.location) else "Ranchi")
-            context['vendor_type'] = "Company Vendor" if (vendor_profile and vendor_profile.company_name) else "Individual Vendor"
+            
+            if vendor_profile and vendor_profile.vendor_type == 'company':
+                context['vendor_type'] = "Company Vendor"
+            else:
+                context['vendor_type'] = "Individual Vendor"
             
             prof_img = None
             if vendor_profile and vendor_profile.profile_image:
@@ -1250,6 +1268,10 @@ def dashboard_view(request, path=''):
                 'vendor_profile': v_profile,
             })
 
+    if path in ['vendor/settings/security', 'vendor/settings/security.html']:
+        if request.method == 'GET':
+            return redirect('/vendor/settings/index.html#security')
+
     if path in ['vendor/settings', 'vendor/settings/index', 'vendor/settings/index.html'] or path.startswith('vendor/settings'):
         if not request.user.is_authenticated:
             return redirect('/login/?next=/vendor/settings/index.html')
@@ -1258,7 +1280,8 @@ def dashboard_view(request, path=''):
         u_prof, _ = UserProfile.objects.get_or_create(user=request.user)
         
         if request.method == 'POST':
-            if 'security' in path:
+            active_tab = request.POST.get('active_tab', '')
+            if 'security' in path or active_tab == 'security':
                 from django.contrib.auth import update_session_auth_hash
                 current_pwd = request.POST.get('current_password', '')
                 new_pwd = request.POST.get('new_password', '')
@@ -1276,11 +1299,22 @@ def dashboard_view(request, path=''):
                     request.user.set_password(new_pwd)
                     request.user.save()
                     update_session_auth_hash(request, request.user)
-                    messages.success(request, "Password changed successfully!")
-                return redirect('/vendor/settings/security.html')
+                    messages.success(request, "Password updated successfully!")
+                return redirect('/vendor/settings/index.html#security')
+            elif active_tab == 'profile':
+                save_vendor_profile_changes(request, request.user)
+                messages.success(request, "Business profile & branding updated successfully!")
+                return redirect('/vendor/settings/index.html#profile')
+            elif active_tab == 'account':
+                save_vendor_profile_changes(request, request.user)
+                messages.success(request, "Account details and contact information updated successfully!")
+                return redirect('/vendor/settings/index.html#account')
+            elif active_tab == 'notifications':
+                messages.success(request, "Notification preferences updated successfully!")
+                return redirect('/vendor/settings/index.html#notifications')
             else:
                 save_vendor_profile_changes(request, request.user)
-                messages.success(request, "Account settings and profile picture updated successfully!")
+                messages.success(request, "Settings updated successfully!")
                 return redirect('/vendor/settings/index.html')
 
     if path in ['vendor/profile/edit', 'vendor/profile/edit.html']:

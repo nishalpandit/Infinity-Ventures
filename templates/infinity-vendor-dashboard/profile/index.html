@@ -14,9 +14,8 @@
     <span class="avatar xl vendor">{{ vendor_profile.company_name|default:user.first_name|slice:":2"|upper|default:"V" }}</span>
   {% endif %}
   <div class="profile-main" style="position:relative; width:100%;">
-    <a href="edit.html" class="btn btn-secondary btn-sm" style="position:absolute; top:0; right:0;"><span data-icon="edit"></span> Edit Profile</a>
-    <div class="eyebrow">Verified {{ vendor_profile.company_name|yesno:"Company,Individual" }} Vendor</div>
-    <h1>{{ vendor_profile.company_name|default:user.first_name }} <span class="verified"><span data-icon="check"></span></span></h1>
+    <div class="eyebrow">Verified {{ vendor_type }}</div>
+    <h1>{{ vendor_name }} <span class="verified"><span data-icon="check"></span></span></h1>
     <div class="profile-meta">
       <span><span data-icon="user"></span> {{ user.first_name }} · Contact Person</span>
       <span><span data-icon="map"></span> {{ vendor_profile.location|default:"Unknown Location" }}</span>
@@ -40,8 +39,8 @@
   <section class="card">
     <div class="card-head"><h2>Business Information</h2><a class="link small" href="edit.html">Edit</a></div>
     <div class="card-body"><div class="info-list">
-      <div class="info-item"><div class="info-label">Vendor Name</div><div class="info-value">{{ vendor_profile.company_name|default:user.first_name|default:"Not specified" }}</div></div>
-      <div class="info-item"><div class="info-label">Vendor Type</div><div class="info-value">{{ vendor_profile.company_name|yesno:"Company,Individual" }} Vendor</div></div>
+      <div class="info-item"><div class="info-label">Vendor Name</div><div class="info-value">{{ vendor_name }}</div></div>
+      <div class="info-item"><div class="info-label">Vendor Type</div><div class="info-value">{{ vendor_type }}</div></div>
       <div class="info-item"><div class="info-label">Mobile</div><div class="info-value">{{ user_profile.phone_number|default:"Not specified" }}</div></div>
       <div class="info-item"><div class="info-label">Email</div><div class="info-value">{{ user.email }}</div></div>
       <div class="info-item" style="grid-column:1/-1"><div class="info-label">Address</div><div class="info-value">{{ vendor_profile.address|default:"Not specified" }}</div></div>

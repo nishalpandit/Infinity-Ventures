@@ -34,8 +34,8 @@
     <div class="form-section">
       <div class="form-grid">
         <div class="field">
-          <label>Business Name <span class="required">*</span></label>
-          <input class="input" type="text" name="company_name" required value="{{ vendor_profile.company_name|default:user.first_name }}">
+          <label>Business / Trade Name (Optional)</label>
+          <input class="input" type="text" name="company_name" value="{% if vendor_profile.company_name and vendor_profile.company_name != user.first_name %}{{ vendor_profile.company_name }}{% endif %}" placeholder="Leave blank to use personal name ({{ user.first_name|default:user.username }})">
         </div>
         <div class="field">
           <label>Contact Person <span class="required">*</span></label>

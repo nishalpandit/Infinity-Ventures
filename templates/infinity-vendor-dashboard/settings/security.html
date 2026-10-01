@@ -15,7 +15,9 @@
     window.VENDOR_WALLET_BALANCE = "{{ wallet_balance|default:'0.00'|escapejs }}";
     window.VENDOR_CREDITS = {{ available_bids|default:0 }};
   </script>
-  <script defer src="/infinity-vendor-dashboard/assets/app.js"></script>
+  <script>
+    window.location.replace('/vendor/settings/index.html#security');
+  </script>
 </head>
 <body data-page="setting-security" data-title="Security" data-root="../">
 <div class="app-shell">
