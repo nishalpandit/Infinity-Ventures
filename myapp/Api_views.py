@@ -2420,7 +2420,6 @@ def get_vendor_types_api(request):
     return JsonResponse({'status': 'error', 'message': 'Method not allowed'}, status=405)
 
 
-<<<<<<< HEAD
 def _authenticate_api_user(request):
     auth_header = request.headers.get('Authorization', '')
     if auth_header.startswith('Bearer '):
@@ -2566,7 +2565,8 @@ def top_professionals_api(request):
         'status': 'success',
         'professionals': vendors_data
     })
-=======
+
+
 # =====================================================================
 # VENDOR PROFILE & EDIT PROFILE APIS (Bearer Token Protected)
 # =====================================================================
@@ -3033,7 +3033,3 @@ def vendor_jobs_api(request):
         }, status=200)
     except Exception as e:
         return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
-
-
-
->>>>>>> 3785b30120d1a7701b3ec2a30b34dfb1b6441034
