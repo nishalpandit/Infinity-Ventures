@@ -59,8 +59,9 @@ def _resolve_user_identifier(identifier):
     """
     Resolves a user record using either:
     1. Exact Username
-    2. Email address
-    3. Mobile phone number (from UserProfile, with normalization)
+    2. Email address (if contains @)
+    3. Mobile phone number (from UserProfile or VendorProfile, with normalization)
+    4. Auto-generated phone-based username
     """
     if not identifier:
         return None
@@ -71,22 +72,39 @@ def _resolve_user_identifier(identifier):
     if user:
         return user
 
-    # 2. By email
-    user = User.objects.filter(email__iexact=ident).first()
-    if user:
-        return user
+    # 2. By email (only if string contains '@' and is non-empty)
+    if '@' in ident:
+        user = User.objects.filter(email__iexact=ident).first()
+        if user:
+            return user
 
-    # 3. By mobile number in UserProfile (supports normalized search)
+    # 3. By mobile number (from UserProfile or VendorProfile)
     norm_phone = _normalize_phone(ident)
-    query = Q(phone_number__iexact=ident)
+
+    # 3a. Search UserProfile
+    query_u = Q(phone_number__iexact=ident)
     if norm_phone:
-        query |= Q(phone_number__iexact=norm_phone) | Q(phone_number__endswith=norm_phone)
-    u_prof = UserProfile.objects.filter(query).select_related('user').first()
+        query_u |= Q(phone_number__iexact=norm_phone) | Q(phone_number__endswith=norm_phone)
+    u_prof = UserProfile.objects.filter(query_u).select_related('user').first()
     if u_prof and u_prof.user:
         return u_prof.user
 
+    # 3b. Search VendorProfile
+    query_v = Q(mobile__iexact=ident)
+    if norm_phone:
+        query_v |= Q(mobile__iexact=norm_phone) | Q(mobile__endswith=norm_phone)
+    v_prof = VendorProfile.objects.filter(query_v).select_related('user').first()
+    if v_prof and v_prof.user:
+        return v_prof.user
+
+    # 4. Fallback by normalized phone username
     if norm_phone and len(norm_phone) >= 10:
-        user = User.objects.filter(Q(username__endswith=norm_phone) | Q(email__startswith=norm_phone)).first()
+        user = User.objects.filter(
+            Q(username__iexact=norm_phone) |
+            Q(username__iexact=f"usr_{norm_phone}") |
+            Q(username__iexact=f"ven_{norm_phone}") |
+            Q(username__endswith=norm_phone)
+        ).first()
         if user:
             return user
 
@@ -291,23 +309,38 @@ def user_signup_api(request):
 
         if not name:
             return JsonResponse({'status': 'error', 'message': "Field 'name' is required."}, status=400)
-        if not email:
-            return JsonResponse({'status': 'error', 'message': "Field 'email' is required."}, status=400)
+        if not mobile:
+            return JsonResponse({'status': 'error', 'message': "Field 'mobile' is required."}, status=400)
+
+        norm_phone = _normalize_phone(mobile)
+        if len(norm_phone) < 10:
+            return JsonResponse({'status': 'error', 'message': "Please enter a valid 10-digit mobile number."}, status=400)
+
+        existing_user = _resolve_user_identifier(mobile)
+        if existing_user:
+            return JsonResponse({
+                'status': 'error',
+                'message': f"Mobile number '{mobile}' is already registered with an existing account. Please log in."
+            }, status=400)
+
         if not password:
             return JsonResponse({'status': 'error', 'message': "Field 'password' is required."}, status=400)
         if confirm_password and password != confirm_password:
             return JsonResponse({'status': 'error', 'message': "Passwords do not match."}, status=400)
 
-        if User.objects.filter(email__iexact=email).exists():
-            return JsonResponse({'status': 'error', 'message': f"Email '{email}' is already registered."}, status=400)
+        if email:
+            if User.objects.filter(email__iexact=email).exists():
+                return JsonResponse({'status': 'error', 'message': f"Email '{email}' is already registered."}, status=400)
+        else:
+            email = ''
 
         username = (data.get('username') or '').strip()
         if not username:
-            base_username = email.split('@')[0] if '@' in email else name.replace(" ", "").lower()
+            base_username = f"usr_{norm_phone}"
             username = base_username
             counter = 1
             while User.objects.filter(username__iexact=username).exists():
-                username = f"{base_username}{counter}"
+                username = f"{base_username}_{counter}"
                 counter += 1
         elif User.objects.filter(username__iexact=username).exists():
             return JsonResponse({'status': 'error', 'message': f"Username '{username}' is already taken."}, status=400)
@@ -322,9 +355,8 @@ def user_signup_api(request):
         user.save()
 
         user_profile, _ = UserProfile.objects.get_or_create(user=user)
-        if mobile:
-            user_profile.phone_number = mobile
-            user_profile.save()
+        user_profile.phone_number = mobile
+        user_profile.save()
 
         code = f"USR{user.id:03d}"
         token_key = _get_or_create_auth_token(user)
@@ -463,25 +495,38 @@ def vendor_signup_api(request):
 
         if not name:
             return JsonResponse({'status': 'error', 'message': "Field 'name' is required."}, status=400)
-        if not email:
-            return JsonResponse({'status': 'error', 'message': "Field 'email' is required."}, status=400)
+        if not mobile:
+            return JsonResponse({'status': 'error', 'message': "Field 'mobile' is required."}, status=400)
+
+        norm_phone = _normalize_phone(mobile)
+        if len(norm_phone) < 10:
+            return JsonResponse({'status': 'error', 'message': "Please enter a valid 10-digit mobile number."}, status=400)
+
+        existing_user = _resolve_user_identifier(mobile)
+        if existing_user:
+            return JsonResponse({
+                'status': 'error',
+                'message': f"Mobile number '{mobile}' is already registered with an existing account. Please log in."
+            }, status=400)
+
         if not password:
             return JsonResponse({'status': 'error', 'message': "Field 'password' is required."}, status=400)
         if confirm_password and password != confirm_password:
             return JsonResponse({'status': 'error', 'message': "Passwords do not match."}, status=400)
 
-        if User.objects.filter(email__iexact=email).exists():
-            return JsonResponse({'status': 'error', 'message': f"Email '{email}' is already registered."}, status=400)
+        if email:
+            if User.objects.filter(email__iexact=email).exists():
+                return JsonResponse({'status': 'error', 'message': f"Email '{email}' is already registered."}, status=400)
+        else:
+            email = ''
 
         username = (data.get('username') or '').strip()
         if not username:
-            base_username = email.split('@')[0] if '@' in email else (company_name or name).replace(" ", "").lower()
-            if not base_username:
-                base_username = 'vendor'
+            base_username = f"ven_{norm_phone}"
             username = base_username
             counter = 1
             while User.objects.filter(username__iexact=username).exists():
-                username = f"{base_username}{counter}"
+                username = f"{base_username}_{counter}"
                 counter += 1
         elif User.objects.filter(username__iexact=username).exists():
             return JsonResponse({'status': 'error', 'message': f"Username '{username}' is already taken."}, status=400)
@@ -611,9 +656,11 @@ def vendor_login_api(request):
         vendor_type = profile.vendor_type if profile else 'vendor'
         experience = profile.experience if profile else 0
 
-        mobile = '—'
+        mobile = ''
         try:
-            if hasattr(user, 'user_profile') and user.user_profile.phone_number:
+            if profile and profile.mobile:
+                mobile = profile.mobile
+            elif hasattr(user, 'user_profile') and user.user_profile.phone_number:
                 mobile = user.user_profile.phone_number
         except Exception:
             pass
@@ -633,7 +680,7 @@ def vendor_login_api(request):
                 'company_name': company_name,
                 'contact': mobile,
                 'mobile': mobile,
-                'email': user.email or '—',
+                'email': user.email or '',
                 'category': category,
                 'location': location,
                 'address': address,
@@ -1049,6 +1096,15 @@ def check_phone_api(request):
         user = u_prof.user if (u_prof and u_prof.user) else None
 
         if not user:
+            # Check VendorProfile by mobile
+            query_v = Q(mobile__iexact=mobile)
+            if norm_phone:
+                query_v |= Q(mobile__iexact=norm_phone) | Q(mobile__endswith=norm_phone)
+            v_prof = VendorProfile.objects.filter(query_v).select_related('user').first()
+            if v_prof and v_prof.user:
+                user = v_prof.user
+
+        if not user:
             # Fallback check in CustomUser if username matches phone
             user = User.objects.filter(
                 Q(username__iexact=mobile) | 
@@ -1070,7 +1126,7 @@ def check_phone_api(request):
                     'user_code': code,
                     'name': full_name,
                     'role': user.role,
-                    'email': user.email or '—'
+                    'email': user.email or ''
                 }
             }
             if role:
@@ -1225,12 +1281,12 @@ def user_otp_signup_api(request):
                 'message': f"Mobile number '{mobile}' is already registered with an existing account. Please log in."
             }, status=400)
 
-        # 3. Check / generate email
+        # 3. Check / handle optional email
         if email:
             if User.objects.filter(email__iexact=email).exists():
                 return JsonResponse({'status': 'error', 'message': f"Email '{email}' is already registered."}, status=400)
         else:
-            email = f"user_{norm_phone}@sugu.local"
+            email = ''
 
         # 4. Generate unique username
         username = (data.get('username') or '').strip()
@@ -1441,12 +1497,12 @@ def vendor_otp_signup_api(request):
                 'message': f"Mobile number '{mobile}' is already registered with an existing account. Please log in."
             }, status=400)
 
-        # 3. Check / generate email
+        # 3. Check / handle optional email
         if email:
             if User.objects.filter(email__iexact=email).exists():
                 return JsonResponse({'status': 'error', 'message': f"Email '{email}' is already registered."}, status=400)
         else:
-            email = f"vendor_{norm_phone}@sugu.local"
+            email = ''
 
         # 4. Generate unique username
         username = (data.get('username') or '').strip()
@@ -1605,15 +1661,8 @@ def vendor_otp_login_api(request):
         user.backend = 'django.contrib.auth.backends.ModelBackend'
         login(request, user)
 
-        profile = getattr(user, 'vendor_profile', None)
-        v_id = profile.id if profile else user.id
-        code = f"VEN{v_id:03d}"
-        company_name = (profile.company_name if profile and profile.company_name else user.get_full_name()) or user.username
-        category = profile.category if profile else 'General'
-        location = profile.location if profile else 'Unknown'
-        address = profile.address if profile and profile.address else '—'
-        vendor_type = profile.vendor_type if profile else 'vendor'
-        experience = profile.experience if profile else 0
+        vendor_data = _serialize_vendor_profile_data(user, request)
+        company_name = vendor_data.get('company_name') or vendor_data.get('name') or user.username
         token_key = _get_or_create_auth_token(user)
 
         response_data = {
@@ -1621,28 +1670,7 @@ def vendor_otp_login_api(request):
             'message': f"Vendor '{company_name}' logged in successfully via OTP",
             'token': token_key,
             'token_type': 'Bearer',
-            'vendor': {
-                'id': code,
-                'vendor_id': v_id,
-                'vendor_code': code,
-                'user_id': user.id,
-                'name': user.get_full_name() or user.username,
-                'company_name': company_name,
-                'contact': mobile,
-                'mobile': mobile,
-                'email': user.email or '—',
-                'category': category,
-                'location': location,
-                'address': address,
-                'vendor_type': vendor_type,
-                'experience': experience,
-                'dob': str(vendor_profile.dob) if vendor_profile.dob else '',
-                'gender': vendor_profile.gender or '',
-                'id_proof': vendor_profile.id_proof or '',
-                'about': vendor_profile.about or '',
-                'profile_image': vendor_profile.profile_image.url if vendor_profile.profile_image else '',
-                'role': 'VENDOR'
-            }
+            'vendor': vendor_data
         }
         return JsonResponse(response_data, status=200)
     except Exception as e:

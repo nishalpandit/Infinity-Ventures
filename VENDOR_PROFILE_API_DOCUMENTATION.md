@@ -1,5 +1,5 @@
 API for Vendor Profile
-url : (http://192.168.1.55:8000/api/vendor/profile/)
+url : (http://192.168.1.32:8000/api/vendor/profile/)
 method : GET
 headers :-
 Authorization: Bearer <token>
@@ -28,7 +28,7 @@ response :-
 "gender": "Male",
 "id_proof": "123456789012",
 "about": "Professional electrical contracting and maintenance services.",
-"profile_image": "http://192.168.1.55:8000/media/vendor_profiles/vheadshot_ven_rajesh.jpg",
+"profile_image": "http://192.168.1.32:8000/media/vendor_profiles/vheadshot_ven_rajesh.jpg",
 "rating": 4.9,
 "available_bids": 14,
 "kyc_status": "approved",
@@ -39,7 +39,7 @@ response :-
 
 
 API for Vendor Edit Profile
-url : (http://192.168.1.55:8000/api/vendor/profile/edit/)
+url : (http://192.168.1.32:8000/api/vendor/profile/edit/)
 method : POST
 headers :-
 Authorization: Bearer <token>
@@ -86,7 +86,7 @@ response :-
 "gender": "Male",
 "id_proof": "123456789012",
 "about": "Professional electrical contracting and maintenance services.",
-"profile_image": "http://192.168.1.55:8000/media/vendor_profiles/vheadshot_ven_rajesh.jpg",
+"profile_image": "http://192.168.1.32:8000/media/vendor_profiles/vheadshot_ven_rajesh.jpg",
 "rating": 4.9,
 "available_bids": 14,
 "kyc_status": "approved",
