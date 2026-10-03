@@ -177,6 +177,11 @@ urlpatterns = [
     path('api/user/address/delete/', Api_views.delete_customer_address_api, name='delete_customer_address_api'),
     path('api/user/address/delete', Api_views.delete_customer_address_api),
 
+    # Service Booking API
+    path('api/user/services/book/', Api_views.book_service_api, name='book_service_api'),
+    path('api/user/services/book', Api_views.book_service_api),
+
+
     # Auth APIs for User (Customer) and Vendor (from Api_views.py)
     path('api/user/signup/', Api_views.user_signup_api, name='user_signup_api'),
     path('api/user/signup', Api_views.user_signup_api),

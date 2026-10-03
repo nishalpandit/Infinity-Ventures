@@ -2564,7 +2564,6 @@ def top_professionals_api(request):
         'professionals': vendors_data
     })
 
-
 # =====================================================================
 # VENDOR PROFILE & EDIT PROFILE APIS (Bearer Token Protected)
 # =====================================================================
@@ -3891,3 +3890,52 @@ def vendor_bid_detail_api(request, bid_id):
     except Exception as e:
         return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
 
+@csrf_exempt
+def book_service_api(request):
+    """
+    API for a user to book a vendor's service (QuickService).
+    URL: /api/user/services/book/
+    Method: POST
+    """
+    if request.method != 'POST':
+        return JsonResponse({'status': 'error', 'message': 'Method not allowed'}, status=405)
+
+    user = _authenticate_api_user(request)
+    if not user:
+        return JsonResponse({'status': 'error', 'message': 'Unauthorized'}, status=401)
+        
+    data = _parse_api_request(request)
+    
+    qs_id = data.get('qs_id')
+    package_name = data.get('package_name', 'Standard')
+    total_amount = data.get('total_amount', 0)
+    scheduled_date = data.get('scheduled_date')
+    scheduled_time = data.get('scheduled_time', '')
+    service_address = data.get('service_address')
+    
+    if not qs_id or not scheduled_date or not service_address:
+        return JsonResponse({
+            'status': 'error', 
+            'message': 'qs_id, scheduled_date, and service_address are required fields.'
+        }, status=400)
+        
+    try:
+        qs = QuickService.objects.get(id=qs_id)
+        booking = ServiceBooking.objects.create(
+            customer=user,
+            vendor=qs.vendor,
+            quick_service=qs,
+            package_name=package_name,
+            total_amount=total_amount,
+            scheduled_date=scheduled_date,
+            scheduled_time=scheduled_time if scheduled_time else None,
+            service_address=service_address,
+            status='pending'
+        )
+        return JsonResponse({
+            'status': 'success', 
+            'message': 'Service booked successfully! Awaiting vendor acceptance.',
+            'booking_id': booking.id
+        })
+    except QuickService.DoesNotExist:
+        return JsonResponse({'status': 'error', 'message': 'Service not found.'}, status=404)
