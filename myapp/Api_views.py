@@ -9,7 +9,7 @@ from django.contrib.auth import authenticate, login
 from django.contrib.auth import get_user_model
 from django.utils import timezone
 from django.db.models import Q
-from .models import UserProfile, VendorProfile, Category, Location, OTPVerification, AuthToken, Job, QuickService, VendorKYC, CustomerAddress, ServiceBooking
+from .models import UserProfile, VendorProfile, Category, Location, OTPVerification, AuthToken, Job, QuickService, VendorKYC, CustomerAddress, ServiceBooking, GlobalSettings
 User = get_user_model()
 
 
@@ -3156,11 +3156,15 @@ def vendor_jobs_api(request):
         return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
 
 @csrf_exempt
-def vendor_services_api(request):
+def vendor_services_api(request, service_id=None):
     """
     API for Vendor Services (Catalog)
-    URL: /api/vendor/services/
-    Method: GET (list), POST (create)
+    URL: /api/vendor/services/ and /api/vendor/services/<int:service_id>/
+    Methods:
+      - GET: list vendor services (or single service detail)
+      - POST: create service OR action (edit_service, toggle_status, delete_service)
+      - PUT / PATCH: edit service
+      - DELETE: delete service
     Header: Authorization: Bearer <token>
     """
     user, err = _get_user_from_bearer_token(request)
@@ -3176,53 +3180,206 @@ def vendor_services_api(request):
         'tax_mode': gs.get_qs_tax_mode() if gs else 'commission_only',
     }
 
-    if request.method == 'GET':
-        services = QuickService.objects.filter(vendor=user).select_related('category').order_by('-created_at')
-        services_list = []
-        for s in services:
-            cat_name = _resolve_category_name(s.category, s.title)
-            img_url = _get_category_or_service_image(cat_name, title=s.title, image_field=s.image, image_url_str=s.image_url, request=request)
-            pkgs = s.service_packages or []
-            v_payout = float(s.base_price)
-            if pkgs and isinstance(pkgs, list) and len(pkgs) > 0 and isinstance(pkgs[0], dict):
-                v_payout = float(pkgs[0].get('vendor_payout', s.base_price))
+    def serialize_service(s):
+        cat_name = _resolve_category_name(s.category, s.title)
+        img_url = _get_category_or_service_image(cat_name, title=s.title, image_field=s.image, image_url_str=s.image_url, request=request)
+        pkgs = s.service_packages or []
+        v_payout = float(s.base_price)
+        if pkgs and isinstance(pkgs, list) and len(pkgs) > 0 and isinstance(pkgs[0], dict):
+            v_payout = float(pkgs[0].get('vendor_payout', s.base_price))
 
-            services_list.append({
-                'id': s.id,
-                'title': s.title,
-                'description': s.description or '',
-                'category': cat_name,
-                'category_id': s.category.id if s.category else None,
-                'base_price': str(s.base_price),
-                'vendor_payout': str(v_payout),
-                'service_packages': pkgs,
-                'inclusions': s.inclusions or [],
-                'exclusions': s.exclusions or [],
-                'status': s.status,
-                'image_url': img_url,
-                'created_at': s.created_at.isoformat()
-            })
+        return {
+            'id': s.id,
+            'title': s.title,
+            'description': s.description or '',
+            'category': cat_name,
+            'category_id': s.category.id if s.category else None,
+            'base_price': str(s.base_price),
+            'vendor_payout': str(v_payout),
+            'service_packages': pkgs,
+            'inclusions': s.inclusions or [],
+            'exclusions': s.exclusions or [],
+            'status': s.status,
+            'locality': s.locality or '',
+            'service_radius_km': float(s.service_radius_km) if s.service_radius_km else 10.0,
+            'image_url': img_url,
+            'created_at': s.created_at.isoformat()
+        }
+
+    # 1. GET Method
+    if request.method == 'GET':
+        if service_id:
+            s = QuickService.objects.filter(id=service_id, vendor=user).select_related('category').first()
+            if not s:
+                return JsonResponse({'status': 'error', 'message': 'Service not found.'}, status=404)
+            return JsonResponse({'status': 'success', 'service': serialize_service(s), 'platform_config': platform_config}, status=200)
+
+        services = QuickService.objects.filter(vendor=user).select_related('category').order_by('-created_at')
         return JsonResponse({
             'status': 'success',
-            'services': services_list,
+            'services': [serialize_service(s) for s in services],
             'platform_config': platform_config
         }, status=200)
 
-    elif request.method == 'POST':
-        try:
+    # 2. DELETE Method
+    if request.method == 'DELETE':
+        target_id = service_id or request.GET.get('service_id')
+        if not target_id:
             data = _parse_api_request(request)
+            target_id = data.get('service_id') or data.get('id')
+        if not target_id:
+            return JsonResponse({'status': 'error', 'message': 'service_id is required.'}, status=400)
+        
+        srv = QuickService.objects.filter(id=target_id, vendor=user).first()
+        if not srv:
+            return JsonResponse({'status': 'error', 'message': 'Service not found.'}, status=404)
+        srv.delete()
+        return JsonResponse({'status': 'success', 'message': 'Service deleted successfully.'}, status=200)
+
+    # 3. POST / PUT / PATCH Methods
+    if request.method in ['POST', 'PUT', 'PATCH']:
+        data = _parse_api_request(request)
+        action = data.get('action', '').strip().lower()
+
+        # Handle Action: delete_service
+        if action in ['delete_service', 'delete']:
+            target_id = service_id or data.get('service_id') or data.get('id')
+            if not target_id:
+                return JsonResponse({'status': 'error', 'message': 'service_id is required.'}, status=400)
+            srv = QuickService.objects.filter(id=target_id, vendor=user).first()
+            if not srv:
+                return JsonResponse({'status': 'error', 'message': 'Service not found.'}, status=404)
+            srv.delete()
+            return JsonResponse({'status': 'success', 'message': 'Service deleted successfully.'}, status=200)
+
+        # Handle Action: toggle_status
+        if action in ['toggle_status', 'status', 'update_status']:
+            target_id = service_id or data.get('service_id') or data.get('id')
+            new_status = data.get('status', '').strip().lower()
+            if not target_id:
+                return JsonResponse({'status': 'error', 'message': 'service_id is required.'}, status=400)
+            if new_status not in ['active', 'paused', 'draft']:
+                return JsonResponse({'status': 'error', 'message': 'Invalid status. Choose active, paused, or draft.'}, status=400)
+            
+            srv = QuickService.objects.filter(id=target_id, vendor=user).first()
+            if not srv:
+                return JsonResponse({'status': 'error', 'message': 'Service not found.'}, status=404)
+            srv.status = new_status
+            srv.save(update_fields=['status'])
+            return JsonResponse({
+                'status': 'success',
+                'message': f"Service '{srv.title}' status updated to {new_status}.",
+                'service_id': srv.id,
+                'new_status': srv.status
+            }, status=200)
+
+        # Helper to parse JSON fields safely
+        def parse_json_field(field_name):
+            val = data.get(field_name, '')
+            if isinstance(val, str) and val.strip():
+                try:
+                    return json.loads(val)
+                except Exception:
+                    return []
+            elif isinstance(val, list):
+                return val
+            return []
+
+        # Determine if this is an Edit or Create
+        is_edit = (request.method in ['PUT', 'PATCH']) or (action in ['edit_service', 'edit', 'update']) or (service_id is not None) or (data.get('service_id') and str(data.get('service_id')).isdigit())
+        edit_id = service_id or data.get('service_id') or data.get('id')
+
+        if is_edit and edit_id:
+            qs_obj = QuickService.objects.filter(id=edit_id, vendor=user).first()
+            if not qs_obj:
+                return JsonResponse({'status': 'error', 'message': 'Service not found or unauthorized.'}, status=404)
+            
+            title = data.get('title', qs_obj.title).strip()
+            if not title:
+                title = qs_obj.title
+            
+            category_id = data.get('category_id') or data.get('category')
+            if category_id:
+                try:
+                    qs_obj.category = Category.objects.get(id=category_id)
+                except Category.DoesNotExist:
+                    try:
+                        qs_obj.category = Category.objects.filter(name__iexact=str(category_id).strip()).first()
+                    except Exception:
+                        pass
+            
+            new_status = data.get('status', qs_obj.status).strip().lower()
+            if new_status in ['active', 'paused', 'draft']:
+                qs_obj.status = new_status
+            
+            if 'description' in data:
+                qs_obj.description = data.get('description', '').strip()
+            if 'locality' in data:
+                qs_obj.locality = data.get('locality', '').strip()
+            if 'service_radius_km' in data:
+                try:
+                    qs_obj.service_radius_km = float(data.get('service_radius_km'))
+                except (ValueError, TypeError):
+                    pass
+
+            # Packages
+            service_packages = parse_json_field('packages') or parse_json_field('service_packages')
+            if service_packages and isinstance(service_packages, list):
+                updated_packages = []
+                for p in service_packages:
+                    if isinstance(p, dict) and p.get('name'):
+                        raw_p = p.get('price') or p.get('vendor_payout', 0.0)
+                        try:
+                            raw_p = float(raw_p)
+                        except (ValueError, TypeError):
+                            raw_p = 0.0
+                        calc = gs.calculate_qs_customer_price(raw_p) if gs else {'customer_price': round(raw_p), 'vendor_payout': raw_p, 'commission': 0, 'total_tax': 0}
+                        updated_packages.append({
+                            'name': str(p.get('name', 'Package')).strip(),
+                            'price': calc['customer_price'],
+                            'vendor_payout': calc['vendor_payout'],
+                            'commission': calc.get('commission', 0),
+                            'tax': calc.get('total_tax', 0),
+                            'desc': str(p.get('desc', p.get('description', ''))).strip()
+                        })
+                if updated_packages:
+                    qs_obj.service_packages = updated_packages
+                    qs_obj.base_price = min(p['price'] for p in updated_packages)
+
+            # Inclusions / Exclusions
+            if 'inclusions' in data:
+                qs_obj.inclusions = parse_json_field('inclusions')
+            if 'exclusions' in data:
+                qs_obj.exclusions = parse_json_field('exclusions')
+
+            # Image
+            if 'image' in request.FILES:
+                qs_obj.image = request.FILES['image']
+            image_preset = data.get('image_preset') or data.get('image_url')
+            if image_preset:
+                qs_obj.image_url = image_preset
+
+            qs_obj.title = title
+            qs_obj.save()
+
+            return JsonResponse({
+                'status': 'success',
+                'message': 'Service updated successfully.',
+                'service': serialize_service(qs_obj)
+            }, status=200)
+
+        # Otherwise CREATE NEW SERVICE
+        try:
             title = data.get('title', '').strip()
             if not title:
                 return JsonResponse({'status': 'error', 'message': 'Title is required.'}, status=400)
             
-            # Extract price (handling both 'price' and 'base_price')
             price_val = data.get('price') or data.get('base_price', 0.0)
             try:
                 base_price = float(price_val)
             except (ValueError, TypeError):
                 base_price = 0.0
-            
-            # Optional category
+
             category_id = data.get('category_id') or data.get('category')
             category = None
             if category_id:
@@ -3234,40 +3391,27 @@ def vendor_services_api(request):
                     except Exception:
                         pass
 
-            # Packages, Inclusions, Exclusions (parse from JSON strings if present)
-            import json
-            def parse_json_field(field_name):
-                val = data.get(field_name, '')
-                if isinstance(val, str) and val.strip():
-                    try:
-                        return json.loads(val)
-                    except json.JSONDecodeError:
-                        return []
-                elif isinstance(val, list):
-                    return val
-                return []
-
-            service_packages = parse_json_field('packages')
+            service_packages = parse_json_field('packages') or parse_json_field('service_packages')
             inclusions = parse_json_field('inclusions')
             exclusions = parse_json_field('exclusions')
 
-            # Process packages with backend markup (cut % + GST)
             updated_packages = []
             if service_packages and isinstance(service_packages, list):
                 for p in service_packages:
                     if isinstance(p, dict) and p.get('name'):
+                        raw_p = p.get('price') or p.get('vendor_payout', base_price)
                         try:
-                            raw_p = float(p.get('price', base_price))
+                            raw_p = float(raw_p)
                         except (ValueError, TypeError):
                             raw_p = base_price
                         calc = gs.calculate_qs_customer_price(raw_p) if gs else {'customer_price': round(raw_p), 'vendor_payout': raw_p, 'commission': 0, 'total_tax': 0}
                         updated_packages.append({
                             'name': str(p.get('name', 'Standard Package')).strip(),
-                            'price': calc['customer_price'],        # Customer listed price
-                            'vendor_payout': calc['vendor_payout'],  # Vendor net payout
+                            'price': calc['customer_price'],
+                            'vendor_payout': calc['vendor_payout'],
                             'commission': calc.get('commission', 0),
                             'tax': calc.get('total_tax', 0),
-                            'desc': str(p.get('desc', '')).strip()
+                            'desc': str(p.get('desc', p.get('description', ''))).strip()
                         })
 
             if not updated_packages:
@@ -3281,8 +3425,19 @@ def vendor_services_api(request):
                     'desc': data.get('description', '')
                 }]
 
-            # Set starting listed base price from lowest customer package price
             final_customer_price = min(p['price'] for p in updated_packages)
+            status_val = data.get('status', 'active').strip().lower()
+            if status_val not in ['active', 'paused', 'draft']:
+                status_val = 'active'
+            
+            radius_val = 10.0
+            try:
+                if data.get('service_radius_km'):
+                    radius_val = float(data.get('service_radius_km'))
+            except (ValueError, TypeError):
+                radius_val = 10.0
+
+            image_url_val = data.get('image_preset') or data.get('image_url') or None
 
             qs = QuickService.objects.create(
                 vendor=user,
@@ -3290,13 +3445,15 @@ def vendor_services_api(request):
                 category=category,
                 base_price=final_customer_price,
                 description=data.get('description', ''),
+                locality=data.get('locality', '').strip(),
+                service_radius_km=radius_val,
                 service_packages=updated_packages,
                 inclusions=inclusions,
                 exclusions=exclusions,
-                status='active'
+                status=status_val,
+                image_url=image_url_val
             )
             
-            # Handle Image Upload
             if 'image' in request.FILES:
                 qs.image = request.FILES['image']
                 qs.save()
@@ -3305,12 +3462,11 @@ def vendor_services_api(request):
                 'status': 'success',
                 'message': 'Service published successfully with automatic markup.',
                 'service_id': qs.id,
-                'customer_price': final_customer_price,
-                'vendor_payout': updated_packages[0]['vendor_payout']
+                'service': serialize_service(qs)
             }, status=201)
         except Exception as e:
             return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
-    
+
     return JsonResponse({'status': 'error', 'message': 'Method not allowed.'}, status=405)
 
 @csrf_exempt

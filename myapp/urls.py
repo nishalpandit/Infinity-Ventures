@@ -236,6 +236,8 @@ urlpatterns = [
     path('api/vendor/jobs', Api_views.vendor_jobs_api),
     path('api/vendor/services/', Api_views.vendor_services_api, name='vendor_services_api'),
     path('api/vendor/services', Api_views.vendor_services_api),
+    path('api/vendor/services/<int:service_id>/', Api_views.vendor_services_api, name='vendor_service_detail_api'),
+    path('api/vendor/services/<int:service_id>', Api_views.vendor_services_api),
     path('api/vendor/service-suggestions/', Api_views.vendor_service_suggestions_api, name='vendor_service_suggestions_api'),
     path('api/vendor/service-suggestions', Api_views.vendor_service_suggestions_api),
     path('api/vendor/bookings/', Api_views.vendor_bookings_api, name='vendor_bookings_api'),
