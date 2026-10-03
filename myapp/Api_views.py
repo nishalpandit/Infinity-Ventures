@@ -3656,16 +3656,46 @@ def vendor_bookings_api(request):
         bookings = ServiceBooking.objects.filter(vendor=user).select_related('customer', 'quick_service').order_by('-created_at')
         bookings_list = []
         for b in bookings:
+            # Parse GPS coordinates from service_address if present
+            lat, lng = None, None
+            clean_addr = b.service_address or ''
+            if b.service_address:
+                m = re.search(r'\[GPS:\s*([-\d.]+),\s*([-\d.]+)', b.service_address)
+                if m:
+                    lat, lng = m.group(1), m.group(2)
+                clean_addr = re.sub(r'\[GPS:[^\]]+\]', '', b.service_address).strip()
+            
+            # Map tracking URL
+            if lat and lng:
+                map_url = f"https://www.google.com/maps/search/?api=1&query={lat},{lng}"
+            elif clean_addr:
+                map_url = f"https://www.google.com/maps/search/?api=1&query={clean_addr.replace(' ', '+')}"
+            else:
+                map_url = ""
+
+            cust_phone = ''
+            if hasattr(b.customer, 'user_profile') and b.customer.user_profile:
+                cust_phone = b.customer.user_profile.phone_number or ''
+            if not cust_phone and hasattr(b.customer, 'phone_number'):
+                cust_phone = b.customer.phone_number or ''
+
             bookings_list.append({
                 'id': b.id,
                 'service_title': b.quick_service.title if b.quick_service else 'Unknown Service',
+                'customer_id': b.customer.id,
                 'customer_name': b.customer.get_full_name() or b.customer.username,
-                'customer_phone': getattr(b.customer.user_profile, 'phone_number', '') if hasattr(b.customer, 'user_profile') else '',
+                'customer_email': b.customer.email or '',
+                'customer_phone': cust_phone,
                 'package_name': b.package_name,
                 'total_amount': str(b.total_amount),
+                'total_price': str(b.total_amount),
                 'scheduled_date': str(b.scheduled_date),
                 'scheduled_time': str(b.scheduled_time) if b.scheduled_time else '',
                 'service_address': b.service_address,
+                'clean_address': clean_addr,
+                'latitude': lat,
+                'longitude': lng,
+                'map_url': map_url,
                 'status': b.status,
                 'created_at': b.created_at.isoformat()
             })

@@ -1,57 +1,372 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="description" content="Sugu User Portal - My Bookings"><title>My Bookings · Sugu</title><link rel="stylesheet" href="/user-dashboard/assets/styles.css"><script defer src="/user-dashboard/assets/app.js"></script></head><body data-page="bookings" data-title="My Bookings" data-root="../../"><div class="app-shell"><div id="sidebar-root"></div><div class="workspace"><div id="topbar-root"></div><main class="page">
-<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
-  <h2 style="margin:0;">My Booked Services</h2>
-</div>
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="Sugu User Portal - My Bookings">
+  <title>My Bookings · Sugu</title>
+  <link rel="stylesheet" href="/user-dashboard/assets/styles.css">
+  <script defer src="/user-dashboard/assets/app.js"></script>
+  <style>
+    .modal-backdrop-custom {
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.65);
+      backdrop-filter: blur(4px);
+      z-index: 1000;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .modal-backdrop-custom.open {
+      display: flex;
+    }
+    .modal-card-custom {
+      background: #fff;
+      border-radius: 16px;
+      box-shadow: 0 20px 50px rgba(0,0,0,0.25);
+      width: min(650px, 100%);
+      max-height: 90vh;
+      overflow-y: auto;
+      animation: modalSlideUp 0.22s ease-out;
+    }
+    @keyframes modalSlideUp {
+      from { opacity: 0; transform: translateY(12px) scale(0.98); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+    .modal-head-custom {
+      padding: 20px 24px;
+      border-bottom: 1px solid var(--line);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: #f8fafc;
+      border-radius: 16px 16px 0 0;
+    }
+    .modal-body-custom {
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+    .partner-contact-box {
+      background: #f8fafc;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 14px;
+    }
+    .tracking-map-box {
+      background: linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 100%);
+      border: 1.5px solid #86efac;
+      border-radius: 14px;
+      padding: 18px;
+    }
+  </style>
+</head>
+<body data-page="bookings" data-title="My Bookings" data-root="../../">
+  <div class="app-shell">
+    <div id="sidebar-root"></div>
+    <div class="workspace">
+      <div id="topbar-root"></div>
+      <main class="page">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; flex-wrap:wrap; gap:12px;">
+          <div>
+            <h2 style="margin:0 0 4px; font-size:20px;">My Booked Services</h2>
+            <p class="muted" style="margin:0; font-size:12.5px;">View appointment details, contact service partners, and track service locations</p>
+          </div>
+          <a href="/user/services/browse.html" class="btn btn-primary btn-sm">
+            + Book Another Service
+          </a>
+        </div>
 
-{% if messages %}
-  {% for message in messages %}
-  <div class="alert alert-{{ message.tags }}" style="margin-bottom: 20px;">
-    {{ message }}
-  </div>
-  {% endfor %}
-{% endif %}
+        {% if messages %}
+          {% for message in messages %}
+          <div class="alert alert-{{ message.tags }}" style="margin-bottom: 20px; padding: 12px 16px; border-radius: 10px; background: #ecfdf3; color: #027a48; border: 1px solid #d1fadf;">
+            {{ message }}
+          </div>
+          {% endfor %}
+        {% endif %}
 
-<section class="card" data-filter-scope>
-  <div class="toolbar">
-    <div class="search-box">
-      <span data-icon="search"></span>
-      <input class="input" data-search-input placeholder="Search my bookings...">
+        <section class="card" data-filter-scope>
+          <div class="toolbar">
+            <div class="search-box">
+              <span data-icon="search"></span>
+              <input class="input" data-search-input placeholder="Search bookings by service, partner, or booking ID...">
+            </div>
+          </div>
+          <div class="card-body" style="padding:0;">
+            <div class="table-responsive">
+              <table class="table" style="width:100%;">
+                <thead>
+                  <tr>
+                    <th>Booking ID</th>
+                    <th>Service Details</th>
+                    <th>Service Partner</th>
+                    <th>Schedule</th>
+                    <th>Amount</th>
+                    <th>Status</th>
+                    <th style="text-align:center;">Action</th>
+                  </tr>
+                </thead>
+                <tbody data-rows>
+                {% for booking in my_bookings %}
+                  <tr data-row data-search="{{ booking.id }} {{ booking.vendor.get_full_name }} {{ booking.vendor_company }} {{ booking.quick_service.title|default:'' }}">
+                    <td><strong>#{{ booking.id }}</strong></td>
+                    <td>
+                      <strong style="color:#0f172a; font-size:13.5px;">{{ booking.quick_service.title|default:"Quick Service" }}</strong><br>
+                      <span class="badge badge-purple" style="font-size:9.5px; margin-top:2px;">{{ booking.package_name }}</span>
+                    </td>
+                    <td>
+                      <strong>{{ booking.vendor_company }}</strong><br>
+                      <span class="tiny muted">📞 {{ booking.vendor_phone }}</span>
+                    </td>
+                    <td>
+                      {{ booking.scheduled_date|date:"d M Y" }}<br>
+                      <span class="tiny muted">{{ booking.scheduled_time|default:"Flexible time slot" }}</span>
+                    </td>
+                    <td><strong style="color:#059669; font-size:14.5px;">₹{{ booking.total_amount }}</strong></td>
+                    <td><span class="badge badge-{{ booking.status }}">{{ booking.get_status_display }}</span></td>
+                    <td style="text-align:center;">
+                      <button type="button" class="btn btn-secondary btn-sm" onclick="openBookingDetailsModal(this)"
+                        data-id="{{ booking.id }}"
+                        data-service="{{ booking.quick_service.title|default:'Quick Service' }}"
+                        data-category="{{ booking.quick_service.category.name|default:'Service' }}"
+                        data-package="{{ booking.package_name }}"
+                        data-amount="{{ booking.total_amount }}"
+                        data-date="{{ booking.scheduled_date|date:'d M Y' }}"
+                        data-time="{{ booking.scheduled_time|default:'Flexible' }}"
+                        data-status="{{ booking.status }}"
+                        data-status-display="{{ booking.get_status_display }}"
+                        data-vendor-name="{{ booking.vendor.get_full_name|default:booking.vendor.username }}"
+                        data-vendor-company="{{ booking.vendor_company }}"
+                        data-vendor-phone="{{ booking.vendor_phone }}"
+                        data-vendor-id="{{ booking.vendor.id }}"
+                        data-address="{{ booking.service_address }}"
+                        data-clean-address="{{ booking.clean_address }}"
+                        data-lat="{{ booking.latitude|default:'' }}"
+                        data-lng="{{ booking.longitude|default:'' }}"
+                        data-map-url="{{ booking.map_url }}"
+                        style="font-weight:700; gap:5px; padding:6px 12px;">
+                        <span>👁️</span> View
+                      </button>
+                    </td>
+                  </tr>
+                {% empty %}
+                  <tr>
+                    <td colspan="7" style="text-align: center; padding: 48px 20px; color: var(--text-muted);">
+                      <div style="font-size:32px; margin-bottom:8px;">📅</div>
+                      <strong style="font-size:15px; color:#1e293b; display:block;">No service bookings yet</strong>
+                      <p style="font-size:13px; margin:4px 0 16px;">Browse our verified home service partners and book your appointment.</p>
+                      <a href="/user/services/browse.html" class="btn btn-primary btn-sm">Browse Services Now</a>
+                    </td>
+                  </tr>
+                {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- BOOKING DETAILS & LIVE TRACKING MODAL -->
+        <div id="booking-modal-backdrop" class="modal-backdrop-custom" onclick="if(event.target===this) closeBookingModal()">
+          <div class="modal-card-custom">
+            <!-- Modal Header -->
+            <div class="modal-head-custom">
+              <div style="display:flex; align-items:center; gap:10px;">
+                <h3 id="modal-booking-id" style="margin:0; font-size:17px; font-weight:800; color:#0f172a;">Booking Details</h3>
+                <span id="modal-status-badge" class="badge"></span>
+              </div>
+              <button type="button" class="btn btn-ghost btn-sm" onclick="closeBookingModal()" style="font-size:18px; padding:4px 8px;">✕</button>
+            </div>
+
+            <!-- Modal Content -->
+            <div class="modal-body-custom">
+
+              <!-- Service Overview -->
+              <div style="display:flex; justify-content:space-between; align-items:flex-start; padding-bottom:14px; border-bottom:1px solid var(--line);">
+                <div>
+                  <span id="modal-service-category" class="eyebrow" style="font-size:10px; color:var(--primary); font-weight:800; margin-bottom:2px; display:block;"></span>
+                  <h4 id="modal-service-title" style="font-size:16px; font-weight:800; margin:0 0 4px; color:#0f172a;"></h4>
+                  <div style="font-size:12.5px; color:var(--muted);">
+                    Package: <strong id="modal-package-name" style="color:#0f172a;"></strong>
+                  </div>
+                </div>
+                <div style="text-align:right;">
+                  <span style="font-size:11px; text-transform:uppercase; color:var(--muted); font-weight:700; display:block;">Total Amount</span>
+                  <strong id="modal-total-amount" style="font-size:20px; font-weight:800; color:#059669;"></strong>
+                </div>
+              </div>
+
+              <!-- Schedule Box -->
+              <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px; background:#f8fafc; border-radius:10px; padding:12px 16px; border:1px solid var(--line);">
+                <div>
+                  <span style="font-size:10.5px; text-transform:uppercase; color:var(--muted); font-weight:700; display:block;">Scheduled Date</span>
+                  <strong id="modal-scheduled-date" style="font-size:13.5px; color:#0f172a;"></strong>
+                </div>
+                <div>
+                  <span style="font-size:10.5px; text-transform:uppercase; color:var(--muted); font-weight:700; display:block;">Scheduled Time</span>
+                  <strong id="modal-scheduled-time" style="font-size:13.5px; color:#0f172a;"></strong>
+                </div>
+              </div>
+
+              <!-- SERVICE PARTNER CONTACT & CHAT (Requirement 2) -->
+              <div>
+                <h4 style="font-size:13.5px; font-weight:750; margin:0 0 8px; color:#334155; display:flex; align-items:center; gap:6px;">
+                  <span>👷</span> Service Partner Details & Communication
+                </h4>
+                <div class="partner-contact-box">
+                  <div style="display:flex; align-items:center; gap:12px;">
+                    <div style="width:42px; height:42px; border-radius:10px; background:linear-gradient(135deg, #6366f1, #3b82f6); color:#fff; display:grid; place-items:center; font-weight:750; font-size:16px;">
+                      <span id="modal-vendor-avatar">S</span>
+                    </div>
+                    <div>
+                      <strong id="modal-vendor-company" style="font-size:14px; color:#0f172a; display:block;"></strong>
+                      <span id="modal-vendor-name" style="font-size:12px; color:var(--muted);"></span>
+                    </div>
+                  </div>
+
+                  <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+                    <!-- Phone Call Button -->
+                    <a id="modal-vendor-phone-btn" href="#" class="btn btn-secondary btn-sm" style="font-weight:700; color:#15803d; border-color:#86efac; background:#f0fdf4;">
+                      <span>📞</span> <span id="modal-vendor-phone-text">Call Partner</span>
+                    </a>
+                    <!-- Chat Button -->
+                    <a id="modal-vendor-chat-btn" href="/user/messages/index.html" class="btn btn-primary btn-sm" style="font-weight:700;">
+                      <span>💬</span> Chat Option
+                    </a>
+                  </div>
+                </div>
+              </div>
+
+              <!-- LOCATION & LIVE GPS TRACKING (Requirement 1) -->
+              <div class="tracking-map-box">
+                <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:10px; flex-wrap:wrap; gap:8px;">
+                  <div>
+                    <h4 style="font-size:14px; font-weight:750; margin:0 0 2px; color:#14532d; display:flex; align-items:center; gap:6px;">
+                      <span>📍</span> Service Location & Navigation
+                    </h4>
+                    <span id="modal-gps-badge" style="font-size:11px; background:#dcfce7; color:#15803d; font-weight:700; padding:2px 8px; border-radius:12px; border:1px solid #bbf7d0; display:none;">
+                      ✓ Live GPS Coordinates Attached
+                    </span>
+                  </div>
+
+                  <!-- Direct Track Button -->
+                  <a id="modal-tracking-btn" href="#" target="_blank" class="btn btn-primary btn-sm" style="background:#15803d; border-color:#15803d; font-weight:750; box-shadow:0 2px 6px rgba(21,128,61,0.25);">
+                    <span>🗺️</span> View Location & Track →
+                  </a>
+                </div>
+
+                <div style="background:#fff; border-radius:10px; padding:12px; border:1px solid #bbf7d0; margin-bottom:12px;">
+                  <span style="font-size:10.5px; text-transform:uppercase; color:var(--muted); font-weight:700; display:block; margin-bottom:3px;">Service Address</span>
+                  <div id="modal-service-address" style="font-size:13px; color:#1e293b; line-height:1.45; font-weight:600;"></div>
+                </div>
+
+                <div id="modal-coords-info" style="font-size:11.5px; color:#166534; display:flex; align-items:center; gap:6px;">
+                  <span>🎯 Coordinates:</span> <strong id="modal-coords-text">None</strong>
+                </div>
+              </div>
+
+            </div>
+
+            <!-- Modal Footer -->
+            <div style="padding:16px 24px; border-top:1px solid var(--line); display:flex; justify-content:flex-end; gap:10px; background:#f8fafc; border-radius:0 0 16px 16px;">
+              <button type="button" class="btn btn-secondary" onclick="closeBookingModal()">Close</button>
+            </div>
+          </div>
+        </div>
+
+      </main>
     </div>
   </div>
-  <div class="card-body" style="padding:0;">
-    <div class="table-responsive">
-      <table class="table" style="width:100%;">
-        <thead>
-          <tr>
-            <th>Booking ID</th>
-            <th>Service Details</th>
-            <th>Vendor</th>
-            <th>Schedule</th>
-            <th>Amount</th>
-            <th>Status</th>
-          </tr>
-        </thead>
-        <tbody data-rows>
-        {% for booking in my_bookings %}
-          <tr data-row data-search="{{ booking.id }} {{ booking.vendor.get_full_name }} {{ booking.quick_service.title|default:'' }}">
-            <td><strong>#{{ booking.id }}</strong></td>
-            <td>
-              {{ booking.quick_service.title|default:"Deleted Service" }}<br>
-              <span class="tiny muted">{{ booking.package_name }}</span>
-            </td>
-            <td>{{ booking.vendor.vendor_profile.company_name|default:booking.vendor.get_full_name }}</td>
-            <td>{{ booking.scheduled_date|date:"d M Y" }}<br><span class="tiny muted">{{ booking.scheduled_time|default:"" }}</span></td>
-            <td><strong>₹{{ booking.total_amount }}</strong></td>
-            <td><span class="badge badge-{{ booking.status }}">{{ booking.get_status_display }}</span></td>
-          </tr>
-        {% empty %}
-          <tr>
-            <td colspan="6" style="text-align: center; padding: 40px; color: var(--text-muted);">You have not booked any services yet. <a href="browse.html" style="color:var(--primary-color);">Browse now</a></td>
-          </tr>
-        {% endfor %}
-        </tbody>
-      </table>
-    </div>
-  </div>
-</section>
-</main></div></div></body></html>
+
+  <script>
+    function openBookingDetailsModal(btn) {
+      const bId = btn.getAttribute('data-id');
+      const service = btn.getAttribute('data-service');
+      const category = btn.getAttribute('data-category');
+      const pkg = btn.getAttribute('data-package');
+      const amount = btn.getAttribute('data-amount');
+      const date = btn.getAttribute('data-date');
+      const time = btn.getAttribute('data-time');
+      const status = btn.getAttribute('data-status');
+      const statusDisplay = btn.getAttribute('data-status-display');
+      const vName = btn.getAttribute('data-vendor-name');
+      const vCompany = btn.getAttribute('data-vendor-company') || vName;
+      const vPhone = btn.getAttribute('data-vendor-phone') || '—';
+      const vId = btn.getAttribute('data-vendor-id');
+      const address = btn.getAttribute('data-address');
+      const cleanAddr = btn.getAttribute('data-clean-address') || address;
+      const lat = btn.getAttribute('data-lat');
+      const lng = btn.getAttribute('data-lng');
+      let mapUrl = btn.getAttribute('data-map-url');
+
+      document.getElementById('modal-booking-id').innerText = 'Booking #' + bId;
+      document.getElementById('modal-service-category').innerText = category.toUpperCase();
+      document.getElementById('modal-service-title').innerText = service;
+      document.getElementById('modal-package-name').innerText = pkg;
+      document.getElementById('modal-total-amount').innerText = '₹' + amount;
+      document.getElementById('modal-scheduled-date').innerText = date;
+      document.getElementById('modal-scheduled-time').innerText = time;
+
+      // Status badge
+      const statusBadge = document.getElementById('modal-status-badge');
+      statusBadge.className = 'badge badge-' + status;
+      statusBadge.innerText = statusDisplay;
+
+      // Service Partner Details
+      document.getElementById('modal-vendor-company').innerText = vCompany;
+      document.getElementById('modal-vendor-name').innerText = 'Assigned Technician: ' + vName;
+      document.getElementById('modal-vendor-avatar').innerText = vCompany.charAt(0).toUpperCase();
+
+      // Phone
+      const phoneBtn = document.getElementById('modal-vendor-phone-btn');
+      const phoneText = document.getElementById('modal-vendor-phone-text');
+      if (vPhone && vPhone !== '—') {
+        phoneBtn.style.display = 'inline-flex';
+        phoneBtn.href = 'tel:' + vPhone;
+        phoneText.innerText = 'Call (' + vPhone + ')';
+      } else {
+        phoneBtn.style.display = 'none';
+      }
+
+      // Chat Button
+      const chatBtn = document.getElementById('modal-vendor-chat-btn');
+      chatBtn.href = '/user/messages/index.html?vendor_id=' + vId;
+
+      // Address & Map Tracking
+      document.getElementById('modal-service-address').innerText = cleanAddr;
+      const gpsBadge = document.getElementById('modal-gps-badge');
+      const coordsText = document.getElementById('modal-coords-text');
+
+      if (lat && lng) {
+        gpsBadge.style.display = 'inline-block';
+        coordsText.innerText = lat + ', ' + lng;
+        if (!mapUrl) mapUrl = `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
+      } else {
+        gpsBadge.style.display = 'none';
+        coordsText.innerText = 'Address based navigation';
+        if (!mapUrl && cleanAddr) {
+          mapUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(cleanAddr)}`;
+        }
+      }
+
+      const trackBtn = document.getElementById('modal-tracking-btn');
+      trackBtn.href = mapUrl || '#';
+      if (!mapUrl) trackBtn.style.display = 'none';
+      else trackBtn.style.display = 'inline-flex';
+
+      document.getElementById('booking-modal-backdrop').classList.add('open');
+    }
+
+    function closeBookingModal() {
+      document.getElementById('booking-modal-backdrop').classList.remove('open');
+    }
+  </script>
+</body>
+</html>
