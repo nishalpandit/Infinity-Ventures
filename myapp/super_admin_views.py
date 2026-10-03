@@ -1497,15 +1497,54 @@ def super_admin_job_bids(request, job_id):
 # ─────────────────────────────────────────────
 @sa_required
 def super_admin_quick_services(request):
-    qs_list = QuickService.objects.all().select_related('vendor', 'category', 'location').order_by('-created_at')
-    paginator = Paginator(qs_list, 10)
+    qs_list = QuickService.objects.all().select_related('vendor', 'vendor__vendor_profile', 'category', 'location').order_by('-created_at')
+    
+    total_count = qs_list.count()
+    active_count = qs_list.filter(status='active').count()
+    draft_count = qs_list.filter(status='draft').count()
+    paused_count = qs_list.filter(status='paused').count()
+
+    categories = Category.objects.all().order_by('name')
+
+    search_query = request.GET.get('search', '').strip()
+    category_id = request.GET.get('category', '').strip()
+    status_filter = request.GET.get('status', '').strip()
+
+    if search_query:
+        from django.db.models import Q
+        qs_list = qs_list.filter(
+            Q(title__icontains=search_query) |
+            Q(vendor__username__icontains=search_query) |
+            Q(vendor__first_name__icontains=search_query) |
+            Q(vendor__last_name__icontains=search_query) |
+            Q(locality__icontains=search_query)
+        )
+    if category_id and category_id.isdigit():
+        qs_list = qs_list.filter(category_id=int(category_id))
+    if status_filter and status_filter != 'all':
+        qs_list = qs_list.filter(status=status_filter)
+
+    paginator = Paginator(qs_list, 12)
     page_num = request.GET.get('page', 1)
     try:
         qservices = paginator.page(page_num)
     except (EmptyPage, PageNotAnInteger):
         qservices = paginator.page(1)
     page_range = paginator.get_elided_page_range(qservices.number, on_each_side=2, on_ends=1)
-    return render(request, 'superadmin/quick_services.html', {'qservices': qservices, 'page_range': page_range})
+    
+    context = {
+        'qservices': qservices,
+        'page_range': page_range,
+        'categories': categories,
+        'total_count': total_count,
+        'active_count': active_count,
+        'draft_count': draft_count,
+        'paused_count': paused_count,
+        'search_query': search_query,
+        'selected_category': category_id,
+        'selected_status': status_filter,
+    }
+    return render(request, 'superadmin/quick_services.html', context)
 
 @sa_required
 def super_admin_qs_create(request):
