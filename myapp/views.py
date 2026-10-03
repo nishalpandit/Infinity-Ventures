@@ -2373,11 +2373,7 @@ def dashboard_view(request, path=''):
         admin_state, is_area_admin, available_states, co_admins = get_admin_state_context(request)
         context['admin_state'] = admin_state
         context['is_area_admin'] = is_area_admin
-<<<<<<< HEAD
         quick_services = QuickService.objects.exclude(category__service_type='job').select_related('vendor', 'category', 'location').annotate(vendor_requests_count=Count('bids')).prefetch_related(Prefetch('bids', queryset=Bid.objects.filter(status='selected').select_related('vendor', 'vendor__vendor_profile'), to_attr='selected_bids')).order_by('-created_at')
-=======
-        quick_services = QuickService.objects.exclude(category__service_type='job').select_related('vendor', 'category', 'location').annotate(vendor_requests_count=Count('legacy_bids')).prefetch_related(Prefetch('legacy_bids', queryset=Bid.objects.filter(status='selected').select_related('vendor', 'vendor__vendor_profile'), to_attr='selected_bids')).order_by('-created_at')
->>>>>>> origin/main
         if admin_state:
             quick_services = quick_services.filter(get_in_state_qs_filter(admin_state))
         
