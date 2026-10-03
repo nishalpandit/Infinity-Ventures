@@ -13,7 +13,7 @@ from .models import (
     QuickServiceCard, FeaturedProjectCard, PackageCard, Testimonial, TrustMetric,
     VendorWallet, WalletTransaction, PayoutRequest, VendorKYC,
     DisputeTicket, DisputeMessage, JobCompletionProof, ServiceReview, ServiceBooking,
-    BidCreditTransaction, BidPlan
+    BidCreditTransaction, BidPlan, CustomerAddress
 )
 
 User = get_user_model()
@@ -2164,15 +2164,62 @@ def dashboard_view(request, path=''):
         context['services'] = QuickService.objects.filter(status='active').select_related('vendor', 'vendor__vendor_profile', 'category', 'location').order_by('-created_at')
         context['categories'] = Category.objects.filter(status='active')
 
+    if path in ['user/services/detail', 'user/services/detail.html']:
+        qs_id = request.GET.get('id') or request.GET.get('service_id')
+        if qs_id:
+            try:
+                service = QuickService.objects.select_related('vendor', 'vendor__vendor_profile', 'category', 'location').get(id=qs_id)
+                context['service'] = service
+                
+                # Fetch published reviews for this service or vendor
+                reviews = ServiceReview.objects.filter(
+                    Q(quick_service=service) | Q(vendor=service.vendor),
+                    status='published'
+                ).select_related('customer').order_by('-created_at')[:8]
+                context['reviews'] = reviews
+                
+                review_count = reviews.count()
+                avg_rating = 4.9
+                if review_count > 0:
+                    total_stars = sum([r.rating for r in reviews])
+                    avg_rating = round(total_stars / review_count, 1)
+                context['avg_rating'] = avg_rating
+                context['review_count'] = review_count
+
+                # Related services in same category
+                context['related_services'] = QuickService.objects.filter(
+                    category=service.category, status='active'
+                ).exclude(id=service.id).select_related('vendor', 'vendor__vendor_profile')[:3]
+            except QuickService.DoesNotExist:
+                return redirect('/user/services/browse.html')
+        else:
+            return redirect('/user/services/browse.html')
+
     if path in ['user/services/book', 'user/services/book.html']:
         if request.method == 'POST' and request.user.is_authenticated:
             qs_id = request.POST.get('qs_id')
-            package_name = request.POST.get('package_name', 'Standard')
+            package_name = request.POST.get('package_name', 'Base Service')
             total_amount = request.POST.get('total_amount', 0)
             scheduled_date = request.POST.get('scheduled_date')
-            scheduled_time = request.POST.get('scheduled_time', '')
-            service_address = request.POST.get('service_address')
+            scheduled_time = request.POST.get('scheduled_time', '').strip() or None
             
+            # Combine full structured address and GPS coordinates
+            service_address = request.POST.get('service_address', '').strip()
+            house_no = request.POST.get('house_no', '').strip()
+            street = request.POST.get('street', '').strip()
+            landmark = request.POST.get('landmark', '').strip()
+            city = request.POST.get('city', '').strip()
+            pincode = request.POST.get('pincode', '').strip()
+            lat = request.POST.get('latitude', '').strip()
+            lng = request.POST.get('longitude', '').strip()
+
+            if not service_address and (house_no or street):
+                addr_parts = [p for p in [house_no, street, landmark, city, pincode] if p]
+                service_address = ", ".join(addr_parts)
+
+            if lat and lng and '[GPS:' not in service_address:
+                service_address = f"{service_address} [GPS: {lat}, {lng} | https://maps.google.com/?q={lat},{lng}]".strip()
+
             if qs_id and scheduled_date and service_address:
                 try:
                     qs = QuickService.objects.get(id=qs_id)
@@ -2187,7 +2234,7 @@ def dashboard_view(request, path=''):
                         service_address=service_address,
                         status='pending'
                     )
-                    messages.success(request, "Service booked successfully! Awaiting vendor acceptance.")
+                    messages.success(request, f"Service '{qs.title}' booked successfully! Awaiting vendor acceptance.")
                     return redirect('/user/services/my-bookings.html')
                 except QuickService.DoesNotExist:
                     pass
@@ -2195,11 +2242,16 @@ def dashboard_view(request, path=''):
         qs_id = request.GET.get('id') or request.GET.get('service_id')
         if qs_id:
             try:
-                context['service'] = QuickService.objects.select_related('vendor').get(id=qs_id)
-                context['selected_pkg'] = request.GET.get('pkg', 'Standard Service')
-                context['selected_amount'] = request.GET.get('amount')
+                service = QuickService.objects.select_related('vendor', 'vendor__vendor_profile', 'category', 'location').get(id=qs_id)
+                context['service'] = service
+                context['selected_pkg'] = request.GET.get('pkg', 'Base Service')
+                context['selected_amount'] = request.GET.get('amount', str(service.base_price))
+                if request.user.is_authenticated:
+                    context['user_addresses'] = CustomerAddress.objects.filter(user=request.user)
             except QuickService.DoesNotExist:
-                return redirect('/services/browse')
+                return redirect('/user/services/browse.html')
+        else:
+            return redirect('/user/services/browse.html')
 
     if path in ['user/services/my-bookings', 'user/services/my-bookings.html']:
         if request.user.is_authenticated:
