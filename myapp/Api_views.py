@@ -10,7 +10,7 @@ from django.contrib.auth import get_user_model
 from django.utils import timezone
 from django.db.models import Q
 
-from .models import UserProfile, VendorProfile, Category, Location, OTPVerification, AuthToken, Job, QuickService, VendorKYC
+from .models import UserProfile, VendorProfile, Category, Location, OTPVerification, AuthToken, Job, QuickService, VendorKYC, CustomerAddress
 
 User = get_user_model()
 
@@ -2348,3 +2348,149 @@ def get_vendor_types_api(request):
         return JsonResponse({'status': 'success', 'vendor_types': types}, status=200)
     return JsonResponse({'status': 'error', 'message': 'Method not allowed'}, status=405)
 
+
+def _authenticate_api_user(request):
+    auth_header = request.headers.get('Authorization', '')
+    if auth_header.startswith('Bearer '):
+        token_key = auth_header.split(' ')[1]
+        token = AuthToken.objects.filter(key=token_key).first()
+        if token:
+            return token.user
+    return None
+
+@csrf_exempt
+def add_customer_address_api(request):
+    if request.method != 'POST':
+        return JsonResponse({'status': 'error', 'message': 'Method not allowed'}, status=405)
+    
+    user = _authenticate_api_user(request)
+    if not user:
+        return JsonResponse({'status': 'error', 'message': 'Unauthorized'}, status=401)
+        
+    data = _parse_api_request(request)
+    
+    required = ['title', 'address_line_1', 'city', 'state', 'pincode']
+    for req in required:
+        if not data.get(req):
+            return JsonResponse({'status': 'error', 'message': f'{req} is required'}, status=400)
+            
+    is_default = str(data.get('is_default', 'false')).lower() == 'true'
+    
+    if is_default:
+        CustomerAddress.objects.filter(user=user).update(is_default=False)
+        
+    address = CustomerAddress.objects.create(
+        user=user,
+        title=data['title'],
+        address_line_1=data['address_line_1'],
+        address_line_2=data.get('address_line_2', ''),
+        city=data['city'],
+        state=data['state'],
+        pincode=data['pincode'],
+        latitude=data.get('latitude') if data.get('latitude') else None,
+        longitude=data.get('longitude') if data.get('longitude') else None,
+        is_default=is_default
+    )
+    
+    return JsonResponse({'status': 'success', 'message': 'Address added', 'address_id': address.id})
+
+@csrf_exempt
+def get_customer_addresses_api(request):
+    if request.method != 'GET':
+        return JsonResponse({'status': 'error', 'message': 'Method not allowed'}, status=405)
+        
+    user = _authenticate_api_user(request)
+    if not user:
+        return JsonResponse({'status': 'error', 'message': 'Unauthorized'}, status=401)
+        
+    addresses = CustomerAddress.objects.filter(user=user)
+    
+    addr_list = []
+    for a in addresses:
+        addr_list.append({
+            'id': a.id,
+            'title': a.title,
+            'address_line_1': a.address_line_1,
+            'address_line_2': a.address_line_2,
+            'city': a.city,
+            'state': a.state,
+            'pincode': a.pincode,
+            'latitude': float(a.latitude) if a.latitude else None,
+            'longitude': float(a.longitude) if a.longitude else None,
+            'is_default': a.is_default
+        })
+        
+    return JsonResponse({'status': 'success', 'addresses': addr_list})
+
+@csrf_exempt
+def delete_customer_address_api(request):
+    if request.method != 'POST':
+        return JsonResponse({'status': 'error', 'message': 'Method not allowed'}, status=405)
+        
+    user = _authenticate_api_user(request)
+    if not user:
+        return JsonResponse({'status': 'error', 'message': 'Unauthorized'}, status=401)
+        
+    data = _parse_api_request(request)
+    address_id = data.get('address_id')
+    
+    if not address_id:
+        return JsonResponse({'status': 'error', 'message': 'address_id is required'}, status=400)
+        
+    addr = CustomerAddress.objects.filter(id=address_id, user=user).first()
+    if not addr:
+        return JsonResponse({'status': 'error', 'message': 'Address not found'}, status=404)
+        
+    addr.delete()
+    return JsonResponse({'status': 'success', 'message': 'Address deleted'})
+
+@csrf_exempt
+def top_professionals_api(request):
+    """
+    API to fetch top-rated professionals (vendors).
+    URL: /api/top-professionals/
+    Method: GET
+    Params:
+      - location (optional, string)
+      - limit (optional, integer, default: 10)
+    """
+    if request.method != 'GET':
+        return JsonResponse({'status': 'error', 'message': 'Method not allowed'}, status=405)
+
+    data = _parse_api_request(request)
+    location = data.get('location')
+    limit = data.get('limit', 10)
+
+    try:
+        limit = int(limit)
+    except ValueError:
+        limit = 10
+
+    queryset = VendorProfile.objects.filter(user__is_active=True).order_by('-rating', '-experience')
+
+    if location:
+        queryset = queryset.filter(location__icontains=location)
+    
+    top_vendors = queryset[:limit]
+
+    vendors_data = []
+    for vp in top_vendors:
+        profile_img_url = _build_absolute_image_url(request, vp.profile_image) if vp.profile_image else ""
+        vendors_data.append({
+            'vendor_profile_id': vp.id,
+            'user_id': vp.user.id,
+            'name': vp.user.get_full_name() or vp.company_name or vp.user.username,
+            'company_name': vp.company_name or "",
+            'category': vp.category or "",
+            'location': vp.location or "",
+            'experience_years': vp.experience,
+            'rating': float(vp.rating) if vp.rating else 0.0,
+            'profile_image': profile_img_url,
+            'vendor_type': vp.vendor_type,
+            'about': vp.about or ""
+        })
+
+    return JsonResponse({
+        'status': 'success',
+        'professionals': vendors_data
+    })

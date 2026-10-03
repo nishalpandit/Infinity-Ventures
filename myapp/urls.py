@@ -150,6 +150,16 @@ urlpatterns = [
     path('api/add-category/', Api_views.add_category_api, name='add_category_api'),
     path('api/update-category/', Api_views.update_category_api, name='update_category_api'),
     path('api/delete-category/', Api_views.delete_category_api, name='delete_category_api'),
+    path('api/top-professionals/', Api_views.top_professionals_api, name='top_professionals_api'),
+    path('api/top-professionals', Api_views.top_professionals_api),
+    
+    # Address APIs
+    path('api/user/address/add/', Api_views.add_customer_address_api, name='add_customer_address_api'),
+    path('api/user/address/add', Api_views.add_customer_address_api),
+    path('api/user/address/get/', Api_views.get_customer_addresses_api, name='get_customer_addresses_api'),
+    path('api/user/address/get', Api_views.get_customer_addresses_api),
+    path('api/user/address/delete/', Api_views.delete_customer_address_api, name='delete_customer_address_api'),
+    path('api/user/address/delete', Api_views.delete_customer_address_api),
 
     # Auth APIs for User (Customer) and Vendor (from Api_views.py)
     path('api/user/signup/', Api_views.user_signup_api, name='user_signup_api'),
