@@ -83,8 +83,8 @@ def super_admin_dashboard(request):
         category_chart_data = [jc['cnt'] for jc in job_cats]
     else:
         vendor_cats = list(VendorProfile.objects.exclude(category='').values('category').annotate(cnt=Count('id')).order_by('-cnt')[:5])
-        category_chart_labels = [vc['category'] for vc in vendor_cats] if vendor_cats else ['Plumbing', 'Electrical', 'Cleaning']
-        category_chart_data = [vc['cnt'] for vc in vendor_cats] if vendor_cats else [4, 2, 2]
+        category_chart_labels = [vc['category'] for vc in vendor_cats] if vendor_cats else []
+        category_chart_data = [vc['cnt'] for vc in vendor_cats] if vendor_cats else []
 
     # Platform Role Breakdown for growth / distribution visualization
     growth_labels = ['Total Users', 'Vendors', 'Area Admins', 'Active Jobs']

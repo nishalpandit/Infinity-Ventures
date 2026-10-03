@@ -220,6 +220,15 @@ urlpatterns = [
     path('api/vendor/dashboard', Api_views.vendor_dashboard_api),
     path('api/vendor/jobs/', Api_views.vendor_jobs_api, name='vendor_jobs_api'),
     path('api/vendor/jobs', Api_views.vendor_jobs_api),
+    path('api/vendor/services/', Api_views.vendor_services_api, name='vendor_services_api'),
+    path('api/vendor/services', Api_views.vendor_services_api),
+    path('api/vendor/service-suggestions/', Api_views.vendor_service_suggestions_api, name='vendor_service_suggestions_api'),
+    path('api/vendor/service-suggestions', Api_views.vendor_service_suggestions_api),
+    path('api/vendor/bookings/', Api_views.vendor_bookings_api, name='vendor_bookings_api'),
+    path('api/vendor/bookings', Api_views.vendor_bookings_api),
+    path('api/vendor/bookings/<int:booking_id>/status/', Api_views.vendor_booking_status_api, name='vendor_booking_status_api'),
+    path('api/vendor/send-quotation/', Api_views.vendor_send_quotation_api, name='vendor_send_quotation_api'),
+    path('api/vendor/send-quotation', Api_views.vendor_send_quotation_api),
 
     # User Job & Service APIs (Bearer Token Protected)
     path('api/user/post-job/', Api_views.user_post_job_api, name='user_post_job_api'),
