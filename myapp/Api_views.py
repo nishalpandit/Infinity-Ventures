@@ -1227,12 +1227,34 @@ def verify_otp_api(request):
         if not is_valid:
             return JsonResponse({'status': 'error', 'message': msg}, status=400)
 
-        return JsonResponse({
+        user = _resolve_user_identifier(mobile)
+        
+        response_data = {
             'status': 'success',
             'message': msg,
             'mobile': mobile,
             'is_verified': True
-        }, status=200)
+        }
+        
+        if user:
+            token_key = _get_or_create_auth_token(user)
+            full_name = user.get_full_name() or user.first_name or user.username
+            code = f"USR{user.id:03d}" if user.role in ['USER', 'CUSTOMER'] else f"VND{user.id:03d}"
+            
+            response_data['token'] = token_key
+            response_data['token_type'] = 'Bearer'
+            response_data['user'] = {
+                'id': code,
+                'user_id': user.id,
+                'user_code': code,
+                'name': full_name,
+                'username': user.username,
+                'email': user.email or '—',
+                'mobile': mobile,
+                'role': user.role
+            }
+
+        return JsonResponse(response_data, status=200)
     except Exception as e:
         return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
 
@@ -1678,9 +1700,7 @@ def vendor_otp_login_api(request):
         return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
 
 
-# =====================================================================
-# 7. MARKETPLACE POSTING APIS (Jobs & Quick Services for Users)
-# =====================================================================
+
 
 @csrf_exempt
 @require_POST
@@ -1807,6 +1827,11 @@ def user_post_job_api(request):
         pref_start_date = data.get('preferred_start_date') or None
         exp_completion = data.get('expected_completion') or data.get('expected_completion_date') or None
 
+        latitude = data.get('lat') or data.get('latitude') or None
+        longitude = data.get('long') or data.get('longitude') or None
+        city = (data.get('city') or '').strip()
+        state = (data.get('state') or '').strip()
+
         # Contact info
         user_phone = ''
         try:
@@ -1839,8 +1864,15 @@ def user_post_job_api(request):
             city=city,
             state=state,
             location=location_obj,
+<<<<<<< HEAD
+            latitude=latitude,
+            longitude=longitude,
+            city=city,
+            state=state,
+=======
             latitude=lat_val,
             longitude=lon_val,
+>>>>>>> origin/main
             address=address,
             pincode=pincode,
             contact_name=contact_name,
@@ -1871,6 +1903,10 @@ def user_post_job_api(request):
                 'required_time': job.required_time or "",
                 'shift_availability': job.shift_availability or "",
                 'working_hours': job.working_hours or "",
+                'latitude': float(job.latitude) if job.latitude else None,
+                'longitude': float(job.longitude) if job.longitude else None,
+                'city': job.city or "",
+                'state': job.state or "",
                 'location': f"{job.location.city}, {job.location.state}" if job.location else "",
                 'location_id': job.location.id if job.location else None,
                 'address': job.address or "",
@@ -3975,3 +4011,134 @@ def book_service_api(request):
         })
     except QuickService.DoesNotExist:
         return JsonResponse({'status': 'error', 'message': 'Service not found.'}, status=404)
+
+@csrf_exempt
+def get_user_jobs_api(request):
+    """
+    API for a user to fetch their posted jobs.
+    URL: /api/user/jobs/
+    Method: GET
+    """
+    if request.method != 'GET':
+        return JsonResponse({'status': 'error', 'message': 'Method not allowed'}, status=405)
+
+    user = _authenticate_api_user(request)
+    if not user:
+        return JsonResponse({'status': 'error', 'message': 'Unauthorized'}, status=401)
+        
+    jobs = Job.objects.filter(user=user).select_related('category', 'location', 'assigned_vendor').order_by('-created_at')
+    
+    jobs_data = []
+    for job in jobs:
+        jobs_data.append({
+            'id': job.id,
+            'title': job.title,
+            'category': job.category.name if job.category else None,
+            'description': job.description,
+            'budget': float(job.budget) if job.budget else 0.0,
+            'budget_type': job.budget_type,
+            'status': job.status,
+            'created_at': job.created_at.strftime("%Y-%m-%d %H:%M:%S"),
+            'location': job.location.city if job.location else job.address,
+            'bids_count': job.bids_count,
+            'assigned_vendor': job.assigned_vendor.get_full_name() or job.assigned_vendor.username if job.assigned_vendor else None
+        })
+        
+    return JsonResponse({'status': 'success', 'jobs': jobs_data})
+
+    
+
+@csrf_exempt
+def get_job_bids_api(request, job_id):
+    """
+    API to fetch bids for a specific job posted by the user.
+    URL: /api/user/jobs/<job_id>/bids/
+    Method: GET
+    """
+    if request.method != 'GET':
+        return JsonResponse({'status': 'error', 'message': 'Method not allowed'}, status=405)
+
+    user = _authenticate_api_user(request)
+    if not user:
+        return JsonResponse({'status': 'error', 'message': 'Unauthorized'}, status=401)
+        
+    try:
+        job = Job.objects.get(id=job_id, user=user)
+    except Job.DoesNotExist:
+        return JsonResponse({'status': 'error', 'message': 'Job not found or unauthorized.'}, status=404)
+        
+    bids = Bid.objects.filter(job=job).select_related('vendor', 'vendor__vendor_profile').order_by('-created_at')
+    
+    bids_data = []
+    for bid in bids:
+        vendor_profile = getattr(bid.vendor, 'vendor_profile', None)
+        
+        profile_img_url = ""
+        if vendor_profile and vendor_profile.profile_image:
+            profile_img_url = _build_absolute_image_url(request, vendor_profile.profile_image)
+            
+        bids_data.append({
+            'bid_id': bid.id,
+            'vendor_id': bid.vendor.id,
+            'vendor_name': bid.vendor.get_full_name() or bid.vendor.username,
+            'vendor_company': vendor_profile.company_name if vendor_profile else '',
+            'vendor_rating': float(vendor_profile.rating) if vendor_profile and vendor_profile.rating else 0.0,
+            'profile_image': profile_img_url,
+            'amount': float(bid.amount),
+            'estimated_time': bid.estimated_time,
+            'message': bid.message,
+            'status': bid.status,
+            'created_at': bid.created_at.strftime("%Y-%m-%d %H:%M:%S"),
+        })
+        
+    return JsonResponse({'status': 'success', 'bids': bids_data})
+
+@csrf_exempt
+def handle_bid_action_api(request):
+    """
+    API to accept or reject a bid.
+    URL: /api/user/bids/action/
+    Method: POST
+    Payload: { 'bid_id': int, 'action': 'accept' | 'reject' }
+    """
+    if request.method != 'POST':
+        return JsonResponse({'status': 'error', 'message': 'Method not allowed'}, status=405)
+
+    user = _authenticate_api_user(request)
+    if not user:
+        return JsonResponse({'status': 'error', 'message': 'Unauthorized'}, status=401)
+        
+    data = _parse_api_request(request)
+    bid_id = data.get('bid_id')
+    action = data.get('action') # 'accept' or 'reject'
+    
+    if not bid_id or action not in ['accept', 'reject']:
+        return JsonResponse({'status': 'error', 'message': 'Valid bid_id and action (accept/reject) are required.'}, status=400)
+        
+    try:
+        bid = Bid.objects.get(id=bid_id, job__user=user)
+    except Bid.DoesNotExist:
+        return JsonResponse({'status': 'error', 'message': 'Bid not found or unauthorized.'}, status=404)
+        
+    job = bid.job
+    
+    if action == 'accept':
+        if job.status == 'selected':
+            return JsonResponse({'status': 'error', 'message': 'A vendor has already been selected for this job.'}, status=400)
+            
+        bid.status = 'selected'
+        bid.save()
+        
+        job.status = 'selected'
+        job.assigned_vendor = bid.vendor
+        job.save()
+        
+        # Reject other pending bids
+        Bid.objects.filter(job=job).exclude(id=bid.id).update(status='rejected')
+        
+        return JsonResponse({'status': 'success', 'message': 'Bid accepted successfully. Vendor has been assigned.'})
+        
+    elif action == 'reject':
+        bid.status = 'rejected'
+        bid.save()
+        return JsonResponse({'status': 'success', 'message': 'Bid rejected successfully.'})

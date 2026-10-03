@@ -196,6 +196,8 @@ class Job(models.Model):
     location = models.ForeignKey('Location', on_delete=models.SET_NULL, null=True, blank=True)
     latitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True, help_text="Job location latitude")
     longitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True, help_text="Job location longitude")
+    city = models.CharField(max_length=100, null=True, blank=True, help_text="Job city")
+    state = models.CharField(max_length=100, null=True, blank=True, help_text="Job state")
     locality = models.CharField(max_length=255, null=True, blank=True, help_text="Colony/Locality name")
     address = models.TextField(blank=True, null=True)
     pincode = models.CharField(max_length=20, blank=True, null=True)
