@@ -707,6 +707,9 @@ def dashboard_view(request, path=''):
 
             cat_obj = Category.objects.filter(id=category_id).first() if category_id else Category.objects.filter(status='active').first()
 
+            # Fetch financial settings for backend Quick Service price calculation
+            gs = GlobalSettings.objects.first()
+
             # Parse Package Options
             service_packages = []
             packages_json = request.POST.get('packages_json')
@@ -716,12 +719,14 @@ def dashboard_view(request, path=''):
                     if isinstance(parsed_pkgs, list):
                         for p in parsed_pkgs:
                             if isinstance(p, dict) and p.get('name'):
-                                p_price = float(p.get('price', default_price))
-                                p_orig = float(p.get('original_price', round(p_price * 1.3)))
+                                p_raw = float(p.get('price', default_price))
+                                calc = gs.calculate_qs_customer_price(p_raw) if gs else {'customer_price': round(p_raw), 'vendor_payout': p_raw, 'commission': 0, 'total_tax': 0}
                                 service_packages.append({
                                     'name': str(p.get('name')).strip(),
-                                    'price': p_price,
-                                    'original_price': p_orig,
+                                    'price': calc['customer_price'],        # Customer listed price (Base + Cut + GST)
+                                    'vendor_payout': calc['vendor_payout'],  # Vendor payout
+                                    'commission': calc.get('commission', 0),
+                                    'tax': calc.get('total_tax', 0),
                                     'desc': str(p.get('desc', '')).strip()
                                 })
                 except Exception:
@@ -729,8 +734,7 @@ def dashboard_view(request, path=''):
 
             if not service_packages:
                 pkg_names = request.POST.getlist('package_name[]')
-                pkg_prices = request.POST.getlist('package_price[]')
-                pkg_orig_prices = request.POST.getlist('package_orig_price[]')
+                pkg_prices = request.POST.getlist('package_price[]') # Vendor base payout price
                 pkg_descs = request.POST.getlist('package_desc[]')
 
                 for i, name in enumerate(pkg_names):
@@ -739,28 +743,31 @@ def dashboard_view(request, path=''):
                     try: p_val = float(pkg_prices[i]) if i < len(pkg_prices) else default_price
                     except (ValueError, TypeError): p_val = default_price
 
-                    try: orig_val = float(pkg_orig_prices[i]) if i < len(pkg_orig_prices) and pkg_orig_prices[i] else round(p_val * 1.3)
-                    except (ValueError, TypeError): orig_val = round(p_val * 1.3)
-
+                    calc = gs.calculate_qs_customer_price(p_val) if gs else {'customer_price': round(p_val), 'vendor_payout': p_val, 'commission': 0, 'total_tax': 0}
                     d_val = pkg_descs[i].strip() if i < len(pkg_descs) else ""
                     service_packages.append({
                         'name': name.strip(),
-                        'price': p_val,
-                        'original_price': orig_val,
+                        'price': calc['customer_price'],        # Customer listed price
+                        'vendor_payout': calc['vendor_payout'],  # Vendor payout
+                        'commission': calc.get('commission', 0),
+                        'tax': calc.get('total_tax', 0),
                         'desc': d_val
                     })
 
             if not service_packages:
+                calc = gs.calculate_qs_customer_price(default_price) if gs else {'customer_price': round(default_price), 'vendor_payout': default_price, 'commission': 0, 'total_tax': 0}
                 service_packages = [
                     {
                         'name': 'Standard Service',
-                        'price': default_price,
-                        'original_price': round(default_price * 1.3),
+                        'price': calc['customer_price'],
+                        'vendor_payout': calc['vendor_payout'],
+                        'commission': calc.get('commission', 0),
+                        'tax': calc.get('total_tax', 0),
                         'desc': description or f"Full {title} service by verified professional."
                     }
                 ]
 
-            # Lowest package price sets the starting base rate
+            # Lowest customer package price sets the starting listed price
             min_price = min(p['price'] for p in service_packages)
 
             # Parse Inclusions
@@ -947,11 +954,11 @@ def dashboard_view(request, path=''):
         # Pass financial settings for dynamic pricing in live preview
         gs = GlobalSettings.objects.first()
         if gs:
-            context['platform_commission_percent'] = float(gs.platform_commission_percent or 10.0)
-            context['cgst_percent'] = float(gs.cgst_percent or 9.0)
-            context['sgst_percent'] = float(gs.sgst_percent or 9.0)
-            context['platform_flat_fee'] = float(gs.platform_flat_fee or 0.0)
-            context['tax_calculation_mode'] = gs.tax_calculation_mode or 'commission_only'
+            context['platform_commission_percent'] = gs.get_qs_commission_percent()
+            context['cgst_percent'] = gs.get_qs_cgst_percent()
+            context['sgst_percent'] = gs.get_qs_sgst_percent()
+            context['platform_flat_fee'] = gs.get_qs_flat_fee()
+            context['tax_calculation_mode'] = gs.get_qs_tax_mode()
         else:
             context['platform_commission_percent'] = 10.0
             context['cgst_percent'] = 9.0

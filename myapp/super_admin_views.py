@@ -1943,8 +1943,46 @@ def super_admin_settings(request):
         if 'tax_calculation_mode' in request.POST:
             settings_obj.tax_calculation_mode = request.POST.get('tax_calculation_mode', 'commission_only')
             
+        # Quick Services Dedicated Pricing & Tax Levers
+        if 'qs_commission_percent' in request.POST:
+            try:
+                settings_obj.qs_commission_percent = float(request.POST.get('qs_commission_percent', settings_obj.platform_commission_percent))
+            except (ValueError, TypeError):
+                pass
+        elif 'platform_commission_percent' in request.POST:
+            settings_obj.qs_commission_percent = settings_obj.platform_commission_percent
+
+        if 'qs_cgst_percent' in request.POST:
+            try:
+                settings_obj.qs_cgst_percent = float(request.POST.get('qs_cgst_percent', settings_obj.cgst_percent))
+            except (ValueError, TypeError):
+                pass
+        elif 'cgst_percent' in request.POST:
+            settings_obj.qs_cgst_percent = settings_obj.cgst_percent
+
+        if 'qs_sgst_percent' in request.POST:
+            try:
+                settings_obj.qs_sgst_percent = float(request.POST.get('qs_sgst_percent', settings_obj.sgst_percent))
+            except (ValueError, TypeError):
+                pass
+        elif 'sgst_percent' in request.POST:
+            settings_obj.qs_sgst_percent = settings_obj.sgst_percent
+
+        if 'qs_flat_fee' in request.POST:
+            try:
+                settings_obj.qs_flat_fee = float(request.POST.get('qs_flat_fee', settings_obj.platform_flat_fee))
+            except (ValueError, TypeError):
+                pass
+        elif 'platform_flat_fee' in request.POST:
+            settings_obj.qs_flat_fee = settings_obj.platform_flat_fee
+
+        if 'qs_tax_mode' in request.POST:
+            settings_obj.qs_tax_mode = request.POST.get('qs_tax_mode', 'commission_only')
+        elif 'tax_calculation_mode' in request.POST:
+            settings_obj.qs_tax_mode = settings_obj.tax_calculation_mode
+
         settings_obj.save()
-        django_messages.success(request, 'Global platform & financial tax settings saved successfully.')
+        django_messages.success(request, 'Global platform & Quick Services financial tax settings saved successfully.')
         return redirect('super_admin_settings')
     return render(request, 'superadmin/settings.html', {'settings': settings_obj})
 

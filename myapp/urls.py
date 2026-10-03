@@ -229,6 +229,10 @@ urlpatterns = [
     path('api/vendor/bookings/<int:booking_id>/status/', Api_views.vendor_booking_status_api, name='vendor_booking_status_api'),
     path('api/vendor/send-quotation/', Api_views.vendor_send_quotation_api, name='vendor_send_quotation_api'),
     path('api/vendor/send-quotation', Api_views.vendor_send_quotation_api),
+    path('api/vendor/bids/', Api_views.vendor_bids_api, name='vendor_bids_api'),
+    path('api/vendor/bids', Api_views.vendor_bids_api),
+    path('api/vendor/bids/<int:bid_id>/', Api_views.vendor_bid_detail_api, name='vendor_bid_detail_api'),
+    path('api/vendor/bids/<int:bid_id>', Api_views.vendor_bid_detail_api),
 
     # User Job & Service APIs (Bearer Token Protected)
     path('api/user/post-job/', Api_views.user_post_job_api, name='user_post_job_api'),

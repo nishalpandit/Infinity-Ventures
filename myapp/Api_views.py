@@ -3103,12 +3103,26 @@ def vendor_services_api(request):
     if err:
         return JsonResponse({'status': 'error', 'message': err}, status=401)
     
+    gs = GlobalSettings.objects.first()
+    platform_config = {
+        'commission_percent': gs.get_qs_commission_percent() if gs else 10.0,
+        'cgst_percent': gs.get_qs_cgst_percent() if gs else 9.0,
+        'sgst_percent': gs.get_qs_sgst_percent() if gs else 9.0,
+        'flat_fee': gs.get_qs_flat_fee() if gs else 0.0,
+        'tax_mode': gs.get_qs_tax_mode() if gs else 'commission_only',
+    }
+
     if request.method == 'GET':
         services = QuickService.objects.filter(vendor=user).select_related('category').order_by('-created_at')
         services_list = []
         for s in services:
             cat_name = _resolve_category_name(s.category, s.title)
             img_url = _get_category_or_service_image(cat_name, title=s.title, image_field=s.image, image_url_str=s.image_url, request=request)
+            pkgs = s.service_packages or []
+            v_payout = float(s.base_price)
+            if pkgs and isinstance(pkgs, list) and len(pkgs) > 0 and isinstance(pkgs[0], dict):
+                v_payout = float(pkgs[0].get('vendor_payout', s.base_price))
+
             services_list.append({
                 'id': s.id,
                 'title': s.title,
@@ -3116,14 +3130,19 @@ def vendor_services_api(request):
                 'category': cat_name,
                 'category_id': s.category.id if s.category else None,
                 'base_price': str(s.base_price),
-                'service_packages': s.service_packages or [],
+                'vendor_payout': str(v_payout),
+                'service_packages': pkgs,
                 'inclusions': s.inclusions or [],
                 'exclusions': s.exclusions or [],
                 'status': s.status,
                 'image_url': img_url,
                 'created_at': s.created_at.isoformat()
             })
-        return JsonResponse({'status': 'success', 'services': services_list}, status=200)
+        return JsonResponse({
+            'status': 'success',
+            'services': services_list,
+            'platform_config': platform_config
+        }, status=200)
 
     elif request.method == 'POST':
         try:
@@ -3136,7 +3155,7 @@ def vendor_services_api(request):
             price_val = data.get('price') or data.get('base_price', 0.0)
             try:
                 base_price = float(price_val)
-            except ValueError:
+            except (ValueError, TypeError):
                 base_price = 0.0
             
             # Optional category
@@ -3168,13 +3187,46 @@ def vendor_services_api(request):
             inclusions = parse_json_field('inclusions')
             exclusions = parse_json_field('exclusions')
 
+            # Process packages with backend markup (cut % + GST)
+            updated_packages = []
+            if service_packages and isinstance(service_packages, list):
+                for p in service_packages:
+                    if isinstance(p, dict) and p.get('name'):
+                        try:
+                            raw_p = float(p.get('price', base_price))
+                        except (ValueError, TypeError):
+                            raw_p = base_price
+                        calc = gs.calculate_qs_customer_price(raw_p) if gs else {'customer_price': round(raw_p), 'vendor_payout': raw_p, 'commission': 0, 'total_tax': 0}
+                        updated_packages.append({
+                            'name': str(p.get('name', 'Standard Package')).strip(),
+                            'price': calc['customer_price'],        # Customer listed price
+                            'vendor_payout': calc['vendor_payout'],  # Vendor net payout
+                            'commission': calc.get('commission', 0),
+                            'tax': calc.get('total_tax', 0),
+                            'desc': str(p.get('desc', '')).strip()
+                        })
+
+            if not updated_packages:
+                calc = gs.calculate_qs_customer_price(base_price) if gs else {'customer_price': round(base_price), 'vendor_payout': base_price, 'commission': 0, 'total_tax': 0}
+                updated_packages = [{
+                    'name': 'Standard Service',
+                    'price': calc['customer_price'],
+                    'vendor_payout': calc['vendor_payout'],
+                    'commission': calc.get('commission', 0),
+                    'tax': calc.get('total_tax', 0),
+                    'desc': data.get('description', '')
+                }]
+
+            # Set starting listed base price from lowest customer package price
+            final_customer_price = min(p['price'] for p in updated_packages)
+
             qs = QuickService.objects.create(
                 vendor=user,
                 title=title,
                 category=category,
-                base_price=base_price,
+                base_price=final_customer_price,
                 description=data.get('description', ''),
-                service_packages=service_packages,
+                service_packages=updated_packages,
                 inclusions=inclusions,
                 exclusions=exclusions,
                 status='active'
@@ -3185,7 +3237,13 @@ def vendor_services_api(request):
                 qs.image = request.FILES['image']
                 qs.save()
 
-            return JsonResponse({'status': 'success', 'message': 'Service created successfully.', 'service_id': qs.id}, status=201)
+            return JsonResponse({
+                'status': 'success',
+                'message': 'Service published successfully with automatic markup.',
+                'service_id': qs.id,
+                'customer_price': final_customer_price,
+                'vendor_payout': updated_packages[0]['vendor_payout']
+            }, status=201)
         except Exception as e:
             return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
     
@@ -3341,12 +3399,22 @@ def vendor_service_suggestions_api(request):
     inclusions = CATEGORY_INCLUSIONS.get(key, CATEGORY_INCLUSIONS['_default'])
     exclusions = CATEGORY_EXCLUSIONS.get(key, CATEGORY_EXCLUSIONS['_default'])
 
+    gs = GlobalSettings.objects.first()
+    platform_config = {
+        'commission_percent': gs.get_qs_commission_percent() if gs else 10.0,
+        'cgst_percent': gs.get_qs_cgst_percent() if gs else 9.0,
+        'sgst_percent': gs.get_qs_sgst_percent() if gs else 9.0,
+        'flat_fee': gs.get_qs_flat_fee() if gs else 0.0,
+        'tax_mode': gs.get_qs_tax_mode() if gs else 'commission_only',
+    }
+
     return JsonResponse({
         'status': 'success',
         'category': cat_name or 'General',
         'suggestions': suggestions,
         'inclusions': inclusions,
         'exclusions': exclusions,
+        'platform_config': platform_config
     }, status=200)
 
 @csrf_exempt
@@ -3585,6 +3653,241 @@ def vendor_send_quotation_api(request):
             'customer_total': float(total_customer)
         }, status=201)
 
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+
+def _serialize_bid_detail(bid, request=None):
+    """
+    Serializes a vendor Bid with all job details, customer contact, mini-map coordinates,
+    and submitted quotation breakdown.
+    """
+    now = timezone.now()
+    diff = now - bid.created_at
+    if diff.days == 0:
+        relative_date = f"Today, {bid.created_at.strftime('%I:%M %p')}"
+    elif diff.days == 1:
+        relative_date = "Yesterday"
+    else:
+        relative_date = f"{diff.days} days ago"
+
+    # Status mapping for Flutter tabs: pending, accepted, rejected
+    if bid.status == 'selected':
+        status_key = 'accepted'
+        status_label = 'Accepted'
+    elif bid.status == 'submitted':
+        status_key = 'pending'
+        status_label = 'Pending'
+    elif bid.status in ['rejected', 'withdrawn']:
+        status_key = 'rejected'
+        status_label = 'Rejected'
+    else:
+        status_key = bid.status
+        status_label = bid.status.title()
+
+    job = bid.job
+    qs = bid.quick_service
+
+    if job:
+        title = job.title
+        description = job.description or 'Professional service required. Inspection and execution by verified specialist.'
+        cat_name = _resolve_category_name(job.category, job.title)
+        image_url = _get_category_or_service_image(cat_name, title=job.title, request=request)
+        address = job.address or '56 Elm St, Kondapur'
+        locality = job.locality or 'Kondapur, Hyderabad'
+        pincode = job.pincode or '500084'
+        lat = float(job.latitude) if job.latitude is not None else 17.4699
+        lng = float(job.longitude) if job.longitude is not None else 78.3578
+        customer_user = job.user
+        customer_name = job.contact_name or (customer_user.get_full_name() if customer_user else '') or (customer_user.username if customer_user else 'Priya Sharma')
+        customer_phone = job.contact_mobile or (getattr(customer_user.user_profile, 'phone_number', '') if hasattr(customer_user, 'user_profile') else '') or '+91 98765 43210'
+        budget_val = float(job.budget) if job.budget else float(bid.amount)
+        preferred_start = job.preferred_start_date.strftime('%b %d, %Y') if job.preferred_start_date else 'Flexible / Immediate'
+        expected_comp = job.expected_completion.strftime('%b %d, %Y') if job.expected_completion else 'Same day'
+        scope_of_work = job.scope_of_work or ''
+        required_work = job.required_work or []
+        materials_details = job.materials_details or 'Standard materials and tools provided by technician.'
+        additional_reqs = job.additional_requirements or 'Customer requested verified professional with safety gear.'
+        job_status = job.status
+    elif qs:
+        title = qs.title
+        description = qs.description or 'Fast and reliable on-demand service.'
+        cat_name = _resolve_category_name(qs.category, qs.title)
+        image_url = _get_category_or_service_image(cat_name, title=qs.title, image_field=qs.image, image_url_str=getattr(qs, 'image_url', None), request=request)
+        address = '56 Elm St, Kondapur'
+        locality = 'Kondapur, Hyderabad'
+        pincode = '500084'
+        lat = 17.4699
+        lng = 78.3578
+        customer_user = None
+        customer_name = 'Priya Sharma'
+        customer_phone = '+91 98765 43210'
+        budget_val = float(qs.base_price) if qs.base_price else float(bid.amount)
+        preferred_start = 'Today'
+        expected_comp = 'Same day'
+        scope_of_work = ''
+        required_work = qs.inclusions or []
+        materials_details = 'Standard service kit included.'
+        additional_reqs = 'Please bring tools.'
+        job_status = qs.status
+    else:
+        title = 'Home Service'
+        description = 'Service requested by customer.'
+        cat_name = 'General'
+        image_url = 'https://images.unsplash.com/photo-1581578731548-c64695cc6952?w=800&fit=crop'
+        address = '56 Elm St, Kondapur'
+        locality = 'Kondapur, Hyderabad'
+        pincode = '500084'
+        lat = 17.4699
+        lng = 78.3578
+        customer_name = 'Priya Sharma'
+        customer_phone = '+91 98765 43210'
+        budget_val = float(bid.amount)
+        preferred_start = 'Today'
+        expected_comp = 'Within 2 hours'
+        scope_of_work = ''
+        required_work = []
+        materials_details = 'Standard materials.'
+        additional_reqs = ''
+        job_status = 'open'
+
+    base_payout = float(bid.vendor_base_amount) if bid.vendor_base_amount is not None else float(bid.amount)
+    total_cust = float(bid.total_customer_amount) if bid.total_customer_amount is not None else float(bid.amount)
+
+    return {
+        'id': bid.id,
+        'bid_id': bid.id,
+        'job_id': job.id if job else None,
+        'quick_service_id': qs.id if qs else None,
+        'title': title,
+        'category': cat_name,
+        'description': description,
+        'image_url': image_url,
+        'status': status_key,
+        'raw_status': bid.status,
+        'status_label': status_label,
+        'budget': f"₹{int(base_payout):,}",
+        'distance': '1.0 km',
+        'date': relative_date,
+        'created_at': bid.created_at.strftime('%b %d, %Y, %I:%M %p'),
+        'location': address,
+        # Mini-map and location coordinates
+        'map_data': {
+            'latitude': lat,
+            'longitude': lng,
+            'locality': locality,
+            'address': address,
+            'pincode': pincode,
+            'distance': '1.0 km',
+            'static_map_url': f"https://staticmap.openstreetmap.de/staticmap.php?center={lat},{lng}&zoom=15&size=600x300&markers={lat},{lng},ol-marker",
+            'google_maps_url': f"https://www.google.com/maps/search/?api=1&query={lat},{lng}"
+        },
+        # Customer Information & Chat Contact
+        'customer': {
+            'name': customer_name,
+            'phone': customer_phone,
+            'avatar': 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=120&h=120&fit=crop&crop=face',
+            'verified': True,
+            'rating': 4.9,
+            'total_bookings': 14
+        },
+        # Submitted Quotation Details
+        'submitted_quotation': {
+            'vendor_base_amount': base_payout,
+            'formatted_vendor_payout': f"₹{int(base_payout):,}",
+            'commission_percent': float(bid.commission_percent_applied or 10.0),
+            'commission_amount': float(bid.commission_amount or 0.0),
+            'cgst_percent': float(bid.cgst_percent_applied or 9.0),
+            'cgst_amount': float(bid.cgst_amount or 0.0),
+            'sgst_percent': float(bid.sgst_percent_applied or 9.0),
+            'sgst_amount': float(bid.sgst_amount or 0.0),
+            'flat_fee_amount': float(bid.flat_fee_amount or 0.0),
+            'total_customer_amount': total_cust,
+            'formatted_customer_total': f"₹{int(total_cust):,}",
+            'estimated_time': bid.estimated_time or 'Within 2 hours',
+            'proposal': bid.proposal or bid.message or 'I have verified experience and all necessary tools for this job.',
+            'message': bid.message or bid.proposal or '',
+            'attachment_url': bid.attachment.url if bid.attachment else None,
+            'submitted_at': bid.created_at.strftime('%b %d, %Y, %I:%M %p')
+        },
+        # Additional Job Specifications
+        'job_details': {
+            'customer_budget': f"₹{int(budget_val):,}",
+            'preferred_start_date': preferred_start,
+            'expected_completion': expected_comp,
+            'scope_of_work': scope_of_work,
+            'required_work': required_work,
+            'materials_details': materials_details,
+            'additional_requirements': additional_reqs,
+            'job_status': job_status
+        }
+    }
+
+
+@csrf_exempt
+def vendor_bids_api(request):
+    """
+    API for Vendor's Submitted Quotations / Bids
+    URL: /api/vendor/bids/
+    Method: GET
+    Query Params: ?status=pending|accepted|rejected (optional)
+    Header: Authorization: Bearer <token>
+    """
+    if request.method != 'GET':
+        return JsonResponse({'status': 'error', 'message': 'Method not allowed. Use GET.'}, status=405)
+
+    user, err = _get_user_from_bearer_token(request)
+    if err:
+        return JsonResponse({'status': 'error', 'message': err}, status=401)
+
+    try:
+        from .models import Bid
+        bids_qs = Bid.objects.filter(vendor=user).select_related('job', 'job__category', 'job__user', 'quick_service', 'quick_service__category').order_by('-created_at')
+
+        status_filter = request.GET.get('status', '').strip().lower()
+        if status_filter:
+            if status_filter == 'accepted':
+                bids_qs = bids_qs.filter(status='selected')
+            elif status_filter == 'pending':
+                bids_qs = bids_qs.filter(status='submitted')
+            elif status_filter == 'rejected':
+                bids_qs = bids_qs.filter(status__in=['rejected', 'withdrawn'])
+
+        serialized_bids = [_serialize_bid_detail(b, request=request) for b in bids_qs]
+
+        return JsonResponse({
+            'status': 'success',
+            'count': len(serialized_bids),
+            'bids': serialized_bids
+        }, status=200)
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+
+@csrf_exempt
+def vendor_bid_detail_api(request, bid_id):
+    """
+    API for Fetching Single Bid Details
+    URL: /api/vendor/bids/<bid_id>/
+    Method: GET
+    Header: Authorization: Bearer <token>
+    """
+    if request.method != 'GET':
+        return JsonResponse({'status': 'error', 'message': 'Method not allowed. Use GET.'}, status=405)
+
+    user, err = _get_user_from_bearer_token(request)
+    if err:
+        return JsonResponse({'status': 'error', 'message': err}, status=401)
+
+    try:
+        from .models import Bid
+        bid = Bid.objects.select_related('job', 'job__category', 'job__user', 'quick_service', 'quick_service__category').get(id=bid_id, vendor=user)
+        return JsonResponse({
+            'status': 'success',
+            'bid': _serialize_bid_detail(bid, request=request)
+        }, status=200)
+    except Bid.DoesNotExist:
+        return JsonResponse({'status': 'error', 'message': 'Quotation/Bid not found.'}, status=404)
     except Exception as e:
         return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
 

@@ -11,31 +11,45 @@
     <form method="POST" id="settingsForm">
       {% csrf_token %}
 
-      <!-- SECTION 1: FINANCIAL & COMMISSION LEVERS -->
+      <!-- SECTION 1: QUICK SERVICES PRICING & COMMISSION ENGINE -->
       <div class="card form-card" style="border-radius:16px; margin-bottom:24px; box-shadow:0 4px 20px rgba(0,0,0,0.04); border:1px solid #e2e8f0;">
         <div class="card-header" style="border-bottom:1px solid #f1f5f9; padding:18px 24px;">
-          <div style="display:flex; align-items:center; gap:12px;">
-            <div style="width:38px; height:38px; border-radius:10px; background:#eff6ff; color:#2563eb; display:flex; align-items:center; justify-content:center; font-size:18px;">
-              <i class="fa-solid fa-percent"></i>
+          <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px;">
+            <div style="display:flex; align-items:center; gap:12px;">
+              <div style="width:38px; height:38px; border-radius:10px; background:#ecfdf5; color:#059669; display:flex; align-items:center; justify-content:center; font-size:18px;">
+                <i class="fa-solid fa-calculator"></i>
+              </div>
+              <div>
+                <h3 style="font-size:16px; font-weight:700; margin:0; color:#0f172a;">Quick Services Pricing &amp; Commission Engine</h3>
+                <p style="font-size:12.5px; color:#64748b; margin:2px 0 0;">Automatic markups (platform cut % + GST) for all catalog services.</p>
+              </div>
             </div>
-            <div>
-              <h3 style="font-size:16px; font-weight:700; margin:0; color:#0f172a;">Commission &amp; Tax Engine</h3>
-              <p style="font-size:12.5px; color:#64748b; margin:2px 0 0;">Control platform profit cuts, GST tax slabs, and pricing rules.</p>
-            </div>
+            <span style="font-size:11.5px; font-weight:700; background:#f0fdf4; color:#166534; border:1px solid #bbf7d0; padding:4px 10px; border-radius:20px;">
+              <i class="fa-solid fa-bolt" style="margin-right:4px;"></i> Quick Services Only
+            </span>
           </div>
         </div>
 
         <div class="card-body" style="padding:24px;">
+          <!-- Informational Notice -->
+          <div style="background:#f0fdfa; border:1px solid #99f6e4; border-radius:10px; padding:12px 16px; margin-bottom:20px; display:flex; gap:10px; align-items:flex-start;">
+            <i class="fa-solid fa-circle-info" style="color:#0f766e; font-size:16px; margin-top:2px;"></i>
+            <div style="font-size:12.5px; color:#134e4a; line-height:1.5;">
+              <strong>1-Price Rule for Quick Services:</strong> Vendors specify only <strong>1 price</strong> (their base payout). The customer never sees this raw entered amount. The backend automatically adds the Platform Cut % and GST % configured below, and publishes the <strong>final customer listed price</strong>. Custom job quotations are not affected.
+            </div>
+          </div>
+
           <div class="form-row" style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:18px;">
             <div class="form-group">
               <label style="font-weight:600; font-size:13px; color:#334155; margin-bottom:6px; display:block;">
-                Platform Commission Cut (%) <span style="color:#ef4444;">*</span>
+                Quick Services Platform Cut (%) <span style="color:#ef4444;">*</span>
               </label>
               <div style="position:relative;">
-                <input type="number" step="0.01" min="0" max="100" id="input_comm" name="platform_commission_percent" class="form-control" value="{{ settings.platform_commission_percent }}" required style="padding-right:32px; font-weight:700; font-size:15px; color:#0f172a;">
+                <input type="number" step="0.01" min="0" max="100" id="input_comm" name="qs_commission_percent" class="form-control" value="{{ settings.get_qs_commission_percent|default:'10.00' }}" required style="padding-right:32px; font-weight:700; font-size:15px; color:#0f172a;">
+                <input type="hidden" name="platform_commission_percent" id="hidden_platform_comm" value="{{ settings.platform_commission_percent|default:'10.00' }}">
                 <span style="position:absolute; right:12px; top:50%; transform:translateY(-50%); color:#94a3b8; font-weight:700;">%</span>
               </div>
-              <span style="font-size:11.5px; color:#64748b; display:block; margin-top:4px;">Standard platform profit on services</span>
+              <span style="font-size:11.5px; color:#64748b; display:block; margin-top:4px;">Platform profit percentage added on top of vendor base rate</span>
             </div>
 
             <div class="form-group">
@@ -44,9 +58,10 @@
               </label>
               <div style="position:relative;">
                 <span style="position:absolute; left:12px; top:50%; transform:translateY(-50%); color:#94a3b8; font-weight:700;">₹</span>
-                <input type="number" step="0.01" min="0" id="input_flat" name="platform_flat_fee" class="form-control" value="{{ settings.platform_flat_fee|default:'0.00' }}" style="padding-left:28px; font-weight:700; font-size:15px; color:#0f172a;">
+                <input type="number" step="0.01" min="0" id="input_flat" name="qs_flat_fee" class="form-control" value="{{ settings.get_qs_flat_fee|default:'0.00' }}" style="padding-left:28px; font-weight:700; font-size:15px; color:#0f172a;">
+                <input type="hidden" name="platform_flat_fee" id="hidden_platform_flat" value="{{ settings.platform_flat_fee|default:'0.00' }}">
               </div>
-              <span style="font-size:11.5px; color:#64748b; display:block; margin-top:4px;">Optional fixed service fee per booking</span>
+              <span style="font-size:11.5px; color:#64748b; display:block; margin-top:4px;">Optional fixed fee added per quick service</span>
             </div>
           </div>
 
@@ -65,7 +80,8 @@
               <div class="form-group" style="margin:0;">
                 <label style="font-weight:600; font-size:12px; color:#475569; margin-bottom:4px; display:block;">Central GST (CGST %)</label>
                 <div style="position:relative;">
-                  <input type="number" step="0.01" min="0" max="50" id="input_cgst" name="cgst_percent" class="form-control" value="{{ settings.cgst_percent|default:'9.00' }}" required style="padding-right:28px; font-weight:600;">
+                  <input type="number" step="0.01" min="0" max="50" id="input_cgst" name="qs_cgst_percent" class="form-control" value="{{ settings.get_qs_cgst_percent|default:'9.00' }}" required style="padding-right:28px; font-weight:600;">
+                  <input type="hidden" name="cgst_percent" id="hidden_cgst" value="{{ settings.cgst_percent|default:'9.00' }}">
                   <span style="position:absolute; right:10px; top:50%; transform:translateY(-50%); color:#94a3b8; font-size:13px;">%</span>
                 </div>
               </div>
@@ -73,7 +89,8 @@
               <div class="form-group" style="margin:0;">
                 <label style="font-weight:600; font-size:12px; color:#475569; margin-bottom:4px; display:block;">State GST (SGST %)</label>
                 <div style="position:relative;">
-                  <input type="number" step="0.01" min="0" max="50" id="input_sgst" name="sgst_percent" class="form-control" value="{{ settings.sgst_percent|default:'9.00' }}" required style="padding-right:28px; font-weight:600;">
+                  <input type="number" step="0.01" min="0" max="50" id="input_sgst" name="qs_sgst_percent" class="form-control" value="{{ settings.get_qs_sgst_percent|default:'9.00' }}" required style="padding-right:28px; font-weight:600;">
+                  <input type="hidden" name="sgst_percent" id="hidden_sgst" value="{{ settings.sgst_percent|default:'9.00' }}">
                   <span style="position:absolute; right:10px; top:50%; transform:translateY(-50%); color:#94a3b8; font-size:13px;">%</span>
                 </div>
               </div>
@@ -82,15 +99,16 @@
 
           <div class="form-group" style="margin-bottom:0;">
             <label style="font-weight:600; font-size:13px; color:#334155; margin-bottom:6px; display:block;">Tax Calculation Method</label>
-            <select name="tax_calculation_mode" id="input_tax_mode" class="form-control" style="font-weight:600;">
-              <option value="commission_only" {% if settings.tax_calculation_mode == 'commission_only' %}selected{% endif %}>
+            <select name="qs_tax_mode" id="input_tax_mode" class="form-control" style="font-weight:600;">
+              <option value="commission_only" {% if settings.get_qs_tax_mode == 'commission_only' %}selected{% endif %}>
                 Tax on Platform Commission Only (Recommended for Marketplaces)
               </option>
-              <option value="total_invoice" {% if settings.tax_calculation_mode == 'total_invoice' %}selected{% endif %}>
-                Tax on Full Service Invoice
+              <option value="total_invoice" {% if settings.get_qs_tax_mode == 'total_invoice' %}selected{% endif %}>
+                Tax on Full Service Price
               </option>
             </select>
-            <span style="font-size:11.5px; color:#64748b; display:block; margin-top:4px;">GST is collected by platform on its facilitation earnings.</span>
+            <input type="hidden" name="tax_calculation_mode" id="hidden_tax_mode" value="{{ settings.tax_calculation_mode|default:'commission_only' }}">
+            <span style="font-size:11.5px; color:#64748b; display:block; margin-top:4px;">GST is automatically added by the backend before displaying the final price to customers.</span>
           </div>
 
         </div>
@@ -158,33 +176,33 @@
           </span>
           <span style="font-size:11px; background:rgba(255,255,255,0.15); padding:2px 8px; border-radius:12px;">Real-Time</span>
         </div>
-        <h4 style="font-size:17px; font-weight:800; margin:8px 0 2px;">Commission &amp; Price Breakdown</h4>
-        <p style="font-size:12px; color:#94a3b8; margin:0;">Test how any vendor quotation will be computed and billed.</p>
+        <h4 style="font-size:17px; font-weight:800; margin:8px 0 2px;">Quick Services Price Markup Simulator</h4>
+        <p style="font-size:12px; color:#94a3b8; margin:0;">Test how a vendor's single base payout is marked up with cut % and GST to compute the final listed customer price.</p>
       </div>
 
       <div style="padding:20px;">
         <!-- Test Amount Input -->
         <div style="margin-bottom:18px;">
           <label style="font-size:12px; font-weight:700; color:#475569; display:block; margin-bottom:6px;">
-            Test Vendor Net Asking Price (₹):
+            Vendor Base Payout Price (₹):
           </label>
           <div style="position:relative;">
             <span style="position:absolute; left:12px; top:50%; transform:translateY(-50%); font-weight:800; color:#0f8a7c; font-size:16px;">₹</span>
-            <input type="number" id="sim_vendor_amount" value="150" min="1" step="1" style="width:100%; border:2px solid #0f8a7c; border-radius:10px; padding:10px 12px 10px 32px; font-size:18px; font-weight:800; color:#0f172a; outline:none; background:#f0fdfa;">
+            <input type="number" id="sim_vendor_amount" value="154" min="1" step="1" style="width:100%; border:2px solid #0f8a7c; border-radius:10px; padding:10px 12px 10px 32px; font-size:18px; font-weight:800; color:#0f172a; outline:none; background:#f0fdfa;">
           </div>
-          <span style="font-size:11px; color:#64748b; margin-top:4px; display:block;">Try typing 150, 600, or 3500 to test instant calculations</span>
+          <span style="font-size:11px; color:#64748b; margin-top:4px; display:block;">Try typing 154, 349, or 800 to see instant customer listed price</span>
         </div>
 
         <!-- Breakdown List -->
         <div style="background:#f8fafc; border-radius:12px; border:1px solid #e2e8f0; padding:16px; display:flex; flex-direction:column; gap:10px; font-size:13px;">
           <div style="display:flex; justify-content:space-between; align-items:center;">
-            <span style="color:#475569;">Vendor Net Payout:</span>
-            <strong id="sim_res_vendor" style="color:#0f172a; font-weight:700;">₹150.00</strong>
+            <span style="color:#475569;">Vendor Payout:</span>
+            <strong id="sim_res_vendor" style="color:#0f172a; font-weight:700;">₹154.00</strong>
           </div>
 
           <div style="display:flex; justify-content:space-between; align-items:center;">
-            <span style="color:#475569;">Platform Commission (<span id="sim_lbl_comm">10%</span>):</span>
-            <span id="sim_res_comm" style="color:#2563eb; font-weight:700;">+ ₹15.00</span>
+            <span style="color:#475569;">Platform Commission Cut (<span id="sim_lbl_comm">10%</span>):</span>
+            <span id="sim_res_comm" style="color:#2563eb; font-weight:700;">+ ₹15.40</span>
           </div>
 
           <div id="sim_row_flat" style="display:none; justify-content:space-between; align-items:center;">
@@ -194,28 +212,29 @@
 
           <div style="display:flex; justify-content:space-between; align-items:center;">
             <span style="color:#475569;">CGST (<span id="sim_lbl_cgst">9%</span>):</span>
-            <span id="sim_res_cgst" style="color:#059669; font-weight:700;">+ ₹1.35</span>
+            <span id="sim_res_cgst" style="color:#059669; font-weight:700;">+ ₹1.39</span>
           </div>
 
           <div style="display:flex; justify-content:space-between; align-items:center;">
             <span style="color:#475569;">SGST (<span id="sim_lbl_sgst">9%</span>):</span>
-            <span id="sim_res_sgst" style="color:#059669; font-weight:700;">+ ₹1.35</span>
+            <span id="sim_res_sgst" style="color:#059669; font-weight:700;">+ ₹1.39</span>
           </div>
 
           <div style="border-top:1.5px dashed #cbd5e1; margin-top:4px; padding-top:10px; display:flex; justify-content:space-between; align-items:baseline;">
-            <strong style="font-size:14px; color:#0f172a;">Customer Total Payable:</strong>
-            <span id="sim_res_total" style="font-size:22px; font-weight:900; color:#0f8a7c;">₹167.70</span>
+            <strong style="font-size:14px; color:#0f172a;">Customer Listed Price:</strong>
+            <span id="sim_res_total" style="font-size:22px; font-weight:900; color:#0f8a7c;">₹172</span>
           </div>
         </div>
 
         <!-- Settlement Summary Card -->
         <div style="margin-top:16px; background:#eff6ff; border:1px solid #bfdbfe; border-radius:12px; padding:14px; font-size:12.5px;">
           <div style="font-weight:700; color:#1e40af; margin-bottom:4px;">
-            <i class="fa-solid fa-handshake"></i> Settlement On Job Completion:
+            <i class="fa-solid fa-handshake"></i> Quick Services Settlement Breakdown:
           </div>
           <div style="color:#1e3a8a; line-height:1.5;">
-            • Vendor Wallet receives: <strong id="sim_sum_vendor">₹150.00</strong><br>
-            • Platform Treasury keeps: <strong id="sim_sum_platform">₹17.70</strong> (₹15.00 Comm + ₹2.70 GST)
+            • Customer pays listed price: <strong id="sim_res_total_badge">₹172</strong><br>
+            • Vendor Wallet receives net payout: <strong id="sim_sum_vendor">₹154.00</strong><br>
+            • Platform Treasury keeps: <strong id="sim_sum_platform">₹18.18</strong> (Cut + GST)
           </div>
         </div>
 
@@ -272,7 +291,10 @@
 
     document.getElementById('sim_res_cgst').textContent = '+ ₹' + cgstAmount.toFixed(2);
     document.getElementById('sim_res_sgst').textContent = '+ ₹' + sgstAmount.toFixed(2);
-    document.getElementById('sim_res_total').textContent = '₹' + totalCustomer.toFixed(2);
+    const roundedCustomerTotal = Math.round(totalCustomer);
+    document.getElementById('sim_res_total').textContent = '₹' + roundedCustomerTotal;
+    const badgeEl = document.getElementById('sim_res_total_badge');
+    if (badgeEl) badgeEl.textContent = '₹' + roundedCustomerTotal;
 
     document.getElementById('sim_sum_vendor').textContent = '₹' + vendorNet.toFixed(2);
     document.getElementById('sim_sum_platform').textContent = '₹' + platformRetains.toFixed(2) + ' (₹' + commAmount.toFixed(2) + ' Comm + ₹' + (cgstAmount + sgstAmount).toFixed(2) + ' GST)';
