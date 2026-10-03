@@ -197,6 +197,14 @@ urlpatterns = [
     path('api/vendor/otp-login/', Api_views.vendor_otp_login_api, name='vendor_otp_login_api'),
     path('api/vendor/otp-login', Api_views.vendor_otp_login_api),
 
+    # Vendor Profile APIs (Bearer Token Protected)
+    path('api/vendor/profile/', Api_views.vendor_profile_api, name='vendor_profile_api'),
+    path('api/vendor/profile', Api_views.vendor_profile_api),
+    path('api/vendor/profile/edit/', Api_views.vendor_edit_profile_api, name='vendor_edit_profile_api'),
+    path('api/vendor/profile/edit', Api_views.vendor_edit_profile_api),
+    path('api/vendor/profile/update/', Api_views.vendor_edit_profile_api, name='vendor_update_profile_api'),
+    path('api/vendor/profile/update', Api_views.vendor_edit_profile_api),
+
     # User Job & Service APIs (Bearer Token Protected)
     path('api/user/post-job/', Api_views.user_post_job_api, name='user_post_job_api'),
     path('api/user/post-job', Api_views.user_post_job_api),

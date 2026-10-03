@@ -639,11 +639,11 @@ def vendor_login_api(request):
                 'address': address,
                 'vendor_type': vendor_type,
                 'experience': experience,
-                'dob': str(vendor_profile.dob) if vendor_profile.dob else '',
-                'gender': vendor_profile.gender or '',
-                'id_proof': vendor_profile.id_proof or '',
-                'about': vendor_profile.about or '',
-                'profile_image': vendor_profile.profile_image.url if vendor_profile.profile_image else '',
+                'dob': str(profile.dob) if profile and profile.dob else '',
+                'gender': profile.gender if profile and profile.gender else '',
+                'id_proof': profile.id_proof if profile and profile.id_proof else '',
+                'about': profile.about if profile and profile.about else '',
+                'profile_image': profile.profile_image.url if profile and profile.profile_image else '',
                 'role': 'VENDOR'
             }
         }
@@ -2031,4 +2031,260 @@ def get_vendor_types_api(request):
         ]
         return JsonResponse({'status': 'success', 'vendor_types': types}, status=200)
     return JsonResponse({'status': 'error', 'message': 'Method not allowed'}, status=405)
+
+
+# =====================================================================
+# VENDOR PROFILE & EDIT PROFILE APIS (Bearer Token Protected)
+# =====================================================================
+
+def _serialize_vendor_profile_data(user, request=None):
+    """
+    Serializes comprehensive vendor profile data for profile and auth APIs.
+    """
+    vp = getattr(user, 'vendor_profile', None)
+    if not vp:
+        vp, _ = VendorProfile.objects.get_or_create(user=user)
+
+    if not vp.vendor_code:
+        vp.vendor_code = f"VEN{vp.id:03d}"
+        vp.save(update_fields=['vendor_code'])
+
+    code = vp.vendor_code or f"VEN{vp.id:03d}"
+    company_name = vp.company_name or user.get_full_name() or user.username
+    name = user.get_full_name() or user.first_name or user.username
+
+    mobile = vp.mobile or ''
+    if not mobile:
+        try:
+            if hasattr(user, 'user_profile') and user.user_profile.phone_number:
+                mobile = user.user_profile.phone_number
+        except Exception:
+            pass
+
+    city = ''
+    state = ''
+    loc = vp.location or ''
+    if ',' in loc:
+        parts = [p.strip() for p in loc.split(',', 1)]
+        city = parts[0]
+        state = parts[1]
+    elif loc:
+        city = loc
+
+    profile_image_url = ''
+    if vp.profile_image:
+        try:
+            profile_image_url = request.build_absolute_uri(vp.profile_image.url) if request else vp.profile_image.url
+        except Exception:
+            profile_image_url = vp.profile_image.url
+
+    kyc_status = 'not_submitted'
+    try:
+        if hasattr(user, 'kyc_document'):
+            kyc_status = user.kyc_document.status
+        else:
+            kyc = VendorKYC.objects.filter(vendor=user).first()
+            if kyc:
+                kyc_status = kyc.status
+    except Exception:
+        pass
+
+    return {
+        'id': code,
+        'vendor_id': vp.id,
+        'vendor_code': code,
+        'user_id': user.id,
+        'name': name,
+        'company_name': company_name,
+        'contact': mobile,
+        'mobile': mobile,
+        'email': user.email or '',
+        'category': vp.category or '',
+        'location': vp.location or '',
+        'city': city,
+        'state': state,
+        'address': vp.address or '',
+        'vendor_type': vp.vendor_type or 'vendor',
+        'experience': vp.experience or 0,
+        'dob': str(vp.dob) if vp.dob else '',
+        'gender': vp.gender or '',
+        'id_proof': vp.id_proof or '',
+        'about': vp.about or '',
+        'profile_image': profile_image_url,
+        'rating': float(vp.rating) if vp.rating else 0.0,
+        'available_bids': vp.available_bids if vp.available_bids is not None else 5,
+        'kyc_status': kyc_status,
+        'registered_date': vp.registered_date.strftime("%Y-%m-%d %H:%M:%S") if vp.registered_date else '',
+        'role': 'VENDOR'
+    }
+
+
+def _handle_vendor_profile_update(request, user, vp):
+    """
+    Internal helper to process profile update data from either JSON or multipart form.
+    """
+    data = _parse_api_request(request)
+
+    # 1. Update Name (User first_name & last_name / full name)
+    name = (data.get('name') or data.get('full_name') or data.get('first_name') or '').strip()
+    if name:
+        parts = name.split(' ', 1)
+        user.first_name = parts[0]
+        user.last_name = parts[1] if len(parts) > 1 else ''
+
+    # 2. Update Email
+    email = (data.get('email') or '').strip()
+    if email:
+        if User.objects.filter(email__iexact=email).exclude(id=user.id).exists():
+            return JsonResponse({'status': 'error', 'message': f"Email '{email}' is already in use by another account."}, status=400)
+        user.email = email
+
+    # 3. Update Mobile / Contact
+    mobile = (data.get('mobile') or data.get('contact') or data.get('phone') or '').strip()
+    if mobile:
+        norm_phone = _normalize_phone(mobile)
+        if len(norm_phone) >= 10:
+            existing_user = _resolve_user_identifier(norm_phone)
+            if existing_user and existing_user.id != user.id:
+                return JsonResponse({'status': 'error', 'message': f"Mobile number '{mobile}' is already in use by another account."}, status=400)
+            vp.mobile = norm_phone
+            u_prof, _ = UserProfile.objects.get_or_create(user=user)
+            u_prof.phone_number = norm_phone
+            u_prof.save()
+
+    # 4. Update Company Name
+    company_name = (data.get('company_name') or '').strip()
+    if company_name:
+        vp.company_name = company_name
+
+    # 5. Update Category
+    category = (data.get('category') or '').strip()
+    if category:
+        vp.category = category
+
+    # 6. Update Location, City & State
+    city = (data.get('city') or '').strip()
+    state = (data.get('state') or '').strip()
+    location = (data.get('location') or '').strip()
+
+    if city and state:
+        vp.location = f"{city}, {state}"
+    elif location:
+        vp.location = location
+    elif city:
+        vp.location = city
+    elif state:
+        vp.location = state
+
+    # 7. Update Address
+    if 'address' in data:
+        vp.address = (data.get('address') or '').strip()
+
+    # 8. Update Vendor Type
+    vendor_type = (data.get('vendor_type') or '').strip().lower()
+    if vendor_type in ['vendor', 'company']:
+        vp.vendor_type = vendor_type
+
+    # 9. Update Experience
+    if 'experience' in data:
+        try:
+            vp.experience = int(data.get('experience') or 0)
+        except (ValueError, TypeError):
+            pass
+
+    # 10. Update DOB (Date of Birth)
+    dob_raw = (data.get('dob') or '').strip()
+    if dob_raw:
+        from datetime import datetime
+        parsed_dob = None
+        for fmt in ("%d-%m-%Y", "%Y-%m-%d", "%d/%m/%Y"):
+            try:
+                parsed_dob = datetime.strptime(dob_raw, fmt).date()
+                break
+            except ValueError:
+                pass
+        if parsed_dob:
+            vp.dob = parsed_dob
+        else:
+            return JsonResponse({'status': 'error', 'message': "Invalid 'dob' format. Expected dd-mm-yyyy or yyyy-mm-dd."}, status=400)
+
+    # 11. Update Gender
+    if 'gender' in data:
+        vp.gender = (data.get('gender') or '').strip()
+
+    # 12. Update ID Proof / ID Number
+    if 'id_proof' in data:
+        vp.id_proof = (data.get('id_proof') or '').strip()
+
+    # 13. Update About / Bio
+    if 'about' in data:
+        vp.about = (data.get('about') or '').strip()
+
+    # 14. Update Profile Image
+    profile_image = request.FILES.get('profile_image') or request.FILES.get('image')
+    if profile_image:
+        vp.profile_image = profile_image
+
+    # Save changes
+    user.save()
+    vp.save()
+
+    return JsonResponse({
+        'status': 'success',
+        'message': 'Vendor profile updated successfully',
+        'vendor': _serialize_vendor_profile_data(user, request)
+    }, status=200)
+
+
+@csrf_exempt
+def vendor_profile_api(request):
+    """
+    API for Vendor Profile Details (GET) and Update (POST/PUT/PATCH)
+    URL: /api/vendor/profile/
+    Method: GET, POST, PUT, PATCH
+    Header: Authorization: Bearer <token>
+    """
+    user, err = _get_user_from_bearer_token(request)
+    if err:
+        return JsonResponse({'status': 'error', 'message': err}, status=401)
+
+    if user.role != 'VENDOR' and not user.is_superuser:
+        return JsonResponse({'status': 'error', 'message': "Access denied. Only vendors can access this profile."}, status=403)
+
+    vp, _ = VendorProfile.objects.get_or_create(user=user)
+
+    if request.method == 'GET':
+        return JsonResponse({
+            'status': 'success',
+            'message': 'Vendor profile fetched successfully',
+            'vendor': _serialize_vendor_profile_data(user, request)
+        }, status=200)
+
+    elif request.method in ['POST', 'PUT', 'PATCH']:
+        return _handle_vendor_profile_update(request, user, vp)
+
+    return JsonResponse({'status': 'error', 'message': 'Method not allowed. Use GET to view or POST/PUT to edit.'}, status=405)
+
+
+@csrf_exempt
+def vendor_edit_profile_api(request):
+    """
+    Dedicated API for Vendor Edit Profile
+    URL: /api/vendor/profile/edit/ or /api/vendor/profile/update/
+    Method: POST, PUT, PATCH
+    Header: Authorization: Bearer <token>
+    """
+    if request.method not in ['POST', 'PUT', 'PATCH']:
+        return JsonResponse({'status': 'error', 'message': 'Method not allowed. Use POST or PUT to edit profile.'}, status=405)
+
+    user, err = _get_user_from_bearer_token(request)
+    if err:
+        return JsonResponse({'status': 'error', 'message': err}, status=401)
+
+    if user.role != 'VENDOR' and not user.is_superuser:
+        return JsonResponse({'status': 'error', 'message': "Access denied. Only vendors can edit vendor profile."}, status=403)
+
+    vp, _ = VendorProfile.objects.get_or_create(user=user)
+    return _handle_vendor_profile_update(request, user, vp)
+
 
