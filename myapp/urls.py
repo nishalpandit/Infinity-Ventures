@@ -205,6 +205,12 @@ urlpatterns = [
     path('api/vendor/profile/update/', Api_views.vendor_edit_profile_api, name='vendor_update_profile_api'),
     path('api/vendor/profile/update', Api_views.vendor_edit_profile_api),
 
+    # Vendor Dashboard & Jobs APIs (Bearer Token Protected)
+    path('api/vendor/dashboard/', Api_views.vendor_dashboard_api, name='vendor_dashboard_api'),
+    path('api/vendor/dashboard', Api_views.vendor_dashboard_api),
+    path('api/vendor/jobs/', Api_views.vendor_jobs_api, name='vendor_jobs_api'),
+    path('api/vendor/jobs', Api_views.vendor_jobs_api),
+
     # User Job & Service APIs (Bearer Token Protected)
     path('api/user/post-job/', Api_views.user_post_job_api, name='user_post_job_api'),
     path('api/user/post-job', Api_views.user_post_job_api),

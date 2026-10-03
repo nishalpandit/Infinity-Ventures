@@ -2296,3 +2296,237 @@ def vendor_edit_profile_api(request):
     return _handle_vendor_profile_update(request, user, vp)
 
 
+# =====================================================================
+# 10. VENDOR DASHBOARD & JOBS APIS (Dynamic Mobile App Integration)
+# =====================================================================
+
+from .models import Job, QuickService, Bid, PayoutRequest, VendorKYC, VendorProfile
+
+
+def _format_time_ago(dt):
+    if not dt:
+        return ""
+    try:
+        from django.utils.timesince import timesince
+        ts = timesince(dt).split(',')[0].strip()
+        return f"{ts} ago"
+    except Exception:
+        return ""
+
+
+def _serialize_job_summary(job, vendor_user=None, request=None):
+    category_name = job.category.name if job.category else "General Services"
+    budget_val = float(job.budget) if job.budget else 0.0
+    locality = job.locality or ""
+    city = job.location.city if job.location else ""
+    loc_display = locality or city or job.address or "Local Area"
+    if locality and city and locality.lower() != city.lower():
+        loc_display = f"{locality}, {city}"
+
+    has_bid = False
+    if vendor_user:
+        has_bid = Bid.objects.filter(job=job, vendor=vendor_user).exists()
+
+    return {
+        'id': job.id,
+        'job_code': f"JOB{job.id:04d}",
+        'title': job.title,
+        'category': category_name,
+        'description': job.description or "",
+        'budget': budget_val,
+        'budget_formatted': f"₹{int(budget_val):,}" if budget_val >= 1000 else f"₹{budget_val:.0f}",
+        'budget_type': job.budget_type or "Fixed Budget",
+        'location': loc_display,
+        'address': job.address or "",
+        'pincode': job.pincode or "",
+        'distance': "Nearby",
+        'time_posted': _format_time_ago(job.created_at),
+        'created_at': job.created_at.strftime("%Y-%m-%d %H:%M:%S"),
+        'urgent': bool(budget_val >= 10000 or (job.title and 'urgent' in job.title.lower())),
+        'bids_count': job.bids_count or job.bids.count(),
+        'max_bids': job.max_bids or 10,
+        'status': job.status,
+        'customer_name': job.contact_name or (job.user.get_full_name() if job.user else "Customer"),
+        'has_bid': has_bid
+    }
+
+
+def _serialize_quick_service_summary(qs, vendor_user=None, request=None):
+    category_name = qs.category.name if qs.category else "Quick Service"
+    base_price = float(qs.base_price) if qs.base_price else 0.0
+    locality = qs.locality or ""
+    city = qs.location.city if qs.location else ""
+    loc_display = locality or city or "Nearby"
+    if locality and city and locality.lower() != city.lower():
+        loc_display = f"{locality}, {city}"
+
+    image_url = ""
+    if qs.image:
+        try:
+            image_url = request.build_absolute_uri(qs.image.url) if request else qs.image.url
+        except Exception:
+            image_url = qs.image.url
+    elif qs.image_url:
+        image_url = qs.image_url
+
+    return {
+        'id': qs.id,
+        'service_code': f"QS{qs.id:04d}",
+        'title': qs.title,
+        'category': category_name,
+        'description': qs.description or "",
+        'budget': base_price,
+        'budget_formatted': f"₹{int(base_price):,}" if base_price >= 1000 else f"₹{base_price:.0f}",
+        'location': loc_display,
+        'distance': f"{qs.service_radius_km:.1f} km",
+        'time_posted': _format_time_ago(qs.created_at),
+        'created_at': qs.created_at.strftime("%Y-%m-%d %H:%M:%S"),
+        'urgent': True,
+        'image_url': image_url,
+        'status': qs.status
+    }
+
+
+@csrf_exempt
+def vendor_dashboard_api(request):
+    """
+    API for Full Vendor Dashboard (Dynamic Data Matching Web Dashboard)
+    URL: /api/vendor/dashboard/
+    Method: GET
+    Header: Authorization: Bearer <token>
+    """
+    if request.method != 'GET':
+        return JsonResponse({'status': 'error', 'message': 'Method not allowed. Use GET.'}, status=405)
+
+    user, err = _get_user_from_bearer_token(request)
+    if err:
+        return JsonResponse({'status': 'error', 'message': err}, status=401)
+
+    if user.role != 'VENDOR' and not user.is_superuser:
+        return JsonResponse({'status': 'error', 'message': "Access denied. Only vendors can access vendor dashboard."}, status=403)
+
+    try:
+        from .wallet_services import get_or_create_wallet
+        from .models import PayoutRequest, Job, QuickService, Bid, VendorKYC, VendorProfile
+        from django.db.models import Sum
+
+        vp = getattr(user, 'vendor_profile', None)
+        if not vp:
+            vp, _ = VendorProfile.objects.get_or_create(user=user)
+
+        wallet = get_or_create_wallet(user)
+        kyc = VendorKYC.objects.filter(vendor=user).first()
+        pending_payouts_sum = PayoutRequest.objects.filter(vendor=user, status='pending').aggregate(total=Sum('amount'))['total'] or 0
+
+        # Dynamic query for open jobs and quick services
+        open_jobs_qs = Job.objects.filter(status='open').select_related('category', 'location', 'user').order_by('-created_at')
+        active_qs_qs = QuickService.objects.filter(status__in=['active', 'open']).select_related('category', 'location').order_by('-created_at')
+
+        # Bids counts
+        active_bids_count = Bid.objects.filter(vendor=user).exclude(status__in=['rejected', 'completed', 'withdrawn']).count()
+        selected_bids_count = Bid.objects.filter(vendor=user, status='selected').count()
+        completed_bids_count = Bid.objects.filter(vendor=user, status='completed').count()
+
+        # Serialized lists
+        jobs_list = [_serialize_job_summary(j, vendor_user=user, request=request) for j in open_jobs_qs]
+        qs_list = [_serialize_quick_service_summary(q, vendor_user=user, request=request) for q in active_qs_qs[:12]]
+
+        # Next Appointment / In-Progress Task
+        next_appointment = None
+        selected_bid = Bid.objects.filter(vendor=user, status='selected').select_related('job', 'quick_service').first()
+        if selected_bid:
+            target = selected_bid.job or selected_bid.quick_service
+            if target:
+                next_appointment = {
+                    'bid_id': selected_bid.id,
+                    'title': target.title,
+                    'amount_formatted': f"₹{int(selected_bid.amount):,}",
+                    'client_name': getattr(target, 'contact_name', None) or (target.user.get_full_name() if hasattr(target, 'user') and target.user else "Client"),
+                    'location': getattr(target, 'locality', None) or getattr(target, 'address', 'Scheduled Location'),
+                    'status': 'Selected / In Progress'
+                }
+
+        vendor_data = _serialize_vendor_profile_data(user, request)
+
+        response_data = {
+            'status': 'success',
+            'vendor': vendor_data,
+            'kyc': {
+                'status': kyc.status if kyc else 'not_submitted',
+                'is_verified': bool(kyc and kyc.status == 'approved'),
+                'admin_notes': kyc.admin_notes if (kyc and kyc.admin_notes) else '',
+                'id_type': kyc.get_id_type_display() if kyc else '',
+                'id_number': kyc.id_number if kyc else ''
+            },
+            'wallet': {
+                'available_balance': float(wallet.available_balance),
+                'available_balance_formatted': f"₹{wallet.available_balance:,.2f}",
+                'total_earned': float(wallet.total_earned),
+                'total_earned_formatted': f"₹{wallet.total_earned:,.2f}",
+                'total_withdrawn': float(wallet.total_withdrawn),
+                'total_withdrawn_formatted': f"₹{wallet.total_withdrawn:,.2f}",
+                'pending_payouts': float(pending_payouts_sum),
+                'pending_payouts_formatted': f"₹{pending_payouts_sum:,.2f}"
+            },
+            'stats': {
+                'today_jobs_count': selected_bids_count if selected_bids_count > 0 else (1 if active_bids_count > 0 else 0),
+                'available_jobs_count': open_jobs_qs.count(),
+                'available_qs_count': active_qs_qs.count(),
+                'remaining_credits': vp.available_bids if vp.available_bids is not None else 5,
+                'active_bids_count': active_bids_count,
+                'selected_jobs_count': selected_bids_count,
+                'completed_work_count': completed_bids_count,
+                'rating': float(vp.rating) if vp.rating else 4.9
+            },
+            'next_appointment': next_appointment,
+            'jobs': jobs_list,
+            'quick_services': qs_list
+        }
+        return JsonResponse(response_data, status=200)
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+
+@csrf_exempt
+def vendor_jobs_api(request):
+    """
+    API for Browsing All Available Jobs
+    URL: /api/vendor/jobs/
+    Method: GET
+    Header: Authorization: Bearer <token>
+    """
+    if request.method != 'GET':
+        return JsonResponse({'status': 'error', 'message': 'Method not allowed. Use GET.'}, status=405)
+
+    user, err = _get_user_from_bearer_token(request)
+    if err:
+        return JsonResponse({'status': 'error', 'message': err}, status=401)
+
+    try:
+        jobs_qs = Job.objects.filter(status='open').select_related('category', 'location', 'user').order_by('-created_at')
+
+        search_query = request.GET.get('search', '').strip()
+        if search_query:
+            jobs_qs = jobs_qs.filter(
+                Q(title__icontains=search_query) |
+                Q(description__icontains=search_query) |
+                Q(category__name__icontains=search_query) |
+                Q(locality__icontains=search_query) |
+                Q(address__icontains=search_query)
+            )
+
+        category_filter = request.GET.get('category', '').strip()
+        if category_filter:
+            jobs_qs = jobs_qs.filter(category__name__iexact=category_filter)
+
+        jobs_list = [_serialize_job_summary(j, vendor_user=user, request=request) for j in jobs_qs]
+        return JsonResponse({
+            'status': 'success',
+            'count': len(jobs_list),
+            'jobs': jobs_list
+        }, status=200)
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+
+
