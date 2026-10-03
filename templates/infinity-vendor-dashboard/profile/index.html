@@ -1,4 +1,12 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="description" content="Suggu Services Vendor Portal - Vendor Profile"><title>Vendor Profile · Suggu Services Vendor</title><link rel="stylesheet" href="/infinity-vendor-dashboard/assets/styles.css"><script defer src="/infinity-vendor-dashboard/assets/app.js"></script></head><body data-page="profile" data-title="Vendor Profile" data-root="../"><div class="app-shell"><div id="sidebar-root"></div><div class="workspace"><div id="topbar-root"></div><main class="page">
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="description" content="Sugu Vendor Portal - Vendor Profile"><title>Vendor Profile · Sugu Vendor</title><link rel="stylesheet" href="/infinity-vendor-dashboard/assets/styles.css"><script>
+  window.VENDOR_INITIALS = "{{ vendor_initials|default:'VN'|escapejs }}";
+  window.VENDOR_NAME = "{{ vendor_name|default:user.username|escapejs }}";
+  window.VENDOR_TYPE = "{{ vendor_type|default:'Vendor'|escapejs }}";
+  window.VENDOR_LOCATION = "{{ vendor_location|default:'Ranchi'|escapejs }}";
+  window.PROFILE_IMAGE_URL = "{{ profile_image_url|default:''|escapejs }}" || null;
+  window.VENDOR_WALLET_BALANCE = "{{ wallet_balance|default:'0.00'|escapejs }}";
+  window.VENDOR_CREDITS = {{ available_bids|default:0 }};
+</script><script defer src="/infinity-vendor-dashboard/assets/app.js"></script></head><body data-page="profile" data-title="Vendor Profile" data-root="../"><div class="app-shell"><div id="sidebar-root"></div><div class="workspace"><div id="topbar-root"></div><main class="page">
 <section class="card profile-hero">
   {% if vendor_profile and vendor_profile.profile_image %}
     <img src="{{ vendor_profile.profile_image.url }}" alt="Profile" class="avatar xl vendor" style="object-fit:cover;">
@@ -6,9 +14,8 @@
     <span class="avatar xl vendor">{{ vendor_profile.company_name|default:user.first_name|slice:":2"|upper|default:"V" }}</span>
   {% endif %}
   <div class="profile-main" style="position:relative; width:100%;">
-    <a href="edit.html" class="btn btn-secondary btn-sm" style="position:absolute; top:0; right:0;"><span data-icon="edit"></span> Edit Profile</a>
-    <div class="eyebrow">Verified {{ vendor_profile.company_name|yesno:"Company,Individual" }} Vendor</div>
-    <h1>{{ vendor_profile.company_name|default:user.first_name }} <span class="verified"><span data-icon="check"></span></span></h1>
+    <div class="eyebrow">Verified {{ vendor_type }}</div>
+    <h1>{{ vendor_name }} <span class="verified"><span data-icon="check"></span></span></h1>
     <div class="profile-meta">
       <span><span data-icon="user"></span> {{ user.first_name }} · Contact Person</span>
       <span><span data-icon="map"></span> {{ vendor_profile.location|default:"Unknown Location" }}</span>
@@ -32,8 +39,8 @@
   <section class="card">
     <div class="card-head"><h2>Business Information</h2><a class="link small" href="edit.html">Edit</a></div>
     <div class="card-body"><div class="info-list">
-      <div class="info-item"><div class="info-label">Vendor Name</div><div class="info-value">{{ vendor_profile.company_name|default:user.first_name|default:"Not specified" }}</div></div>
-      <div class="info-item"><div class="info-label">Vendor Type</div><div class="info-value">{{ vendor_profile.company_name|yesno:"Company,Individual" }} Vendor</div></div>
+      <div class="info-item"><div class="info-label">Vendor Name</div><div class="info-value">{{ vendor_name }}</div></div>
+      <div class="info-item"><div class="info-label">Vendor Type</div><div class="info-value">{{ vendor_type }}</div></div>
       <div class="info-item"><div class="info-label">Mobile</div><div class="info-value">{{ user_profile.phone_number|default:"Not specified" }}</div></div>
       <div class="info-item"><div class="info-label">Email</div><div class="info-value">{{ user.email }}</div></div>
       <div class="info-item" style="grid-column:1/-1"><div class="info-label">Address</div><div class="info-value">{{ vendor_profile.address|default:"Not specified" }}</div></div>

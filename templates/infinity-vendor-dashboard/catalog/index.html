@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta name="description" content="Suggu Services Vendor Portal - My Services Catalog">
-  <title>My Services Catalog · Suggu Services Vendor</title>
+  <meta name="description" content="Sugu Vendor Portal - My Services Catalog">
+  <title>My Services Catalog · Sugu Vendor</title>
   <link rel="stylesheet" href="/infinity-vendor-dashboard/assets/styles.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
   <script defer src="/infinity-vendor-dashboard/assets/app.js"></script>
@@ -880,13 +880,33 @@
                       </div>
                     </div>
 
-                    <!-- Starting Price Computed Banner -->
-                    <div style="margin-top:14px; background:#e8f7f4; border:1px solid #a7f3d0; border-radius:8px; padding:10px 14px; display:flex; align-items:center; justify-content:space-between;">
-                      <div style="font-size:12px; color:#065f46; font-weight:600;">
-                        <i class="fa-solid fa-tag"></i> Starting Rate / Base Price:
+                    <!-- Starting Price Computed Banner (Dynamic Financial Breakdown) -->
+                    <div style="margin-top:14px; background:#f0fdf4; border:1px solid #86efac; border-radius:10px; padding:12px 16px;">
+                      <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; flex-wrap:wrap; gap:6px;">
+                        <div style="font-size:12px; color:#166534; font-weight:700;">
+                          <i class="fa-solid fa-calculator" style="margin-right:4px;"></i> Live Dynamic Pricing (Lowest Package Tier)
+                        </div>
+                        <div style="font-size:11px; color:#15803d; font-weight:600; background:#dcfce7; padding:2px 8px; border-radius:12px;">
+                          Platform Cut {{ platform_commission_percent|default:"10.0" }}% · GST {{ cgst_percent|default:"9.0" }}% + {{ sgst_percent|default:"9.0" }}%
+                        </div>
                       </div>
-                      <div style="font-size:14px; font-weight:800; color:#047857;" id="displayBaseRate">
-                        ₹149
+                      <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap:8px; background:#ffffff; padding:10px; border-radius:8px; border:1px solid #dcfce7; text-align:center;">
+                        <div>
+                          <div style="font-size:10.5px; color:#64748b; font-weight:600;">Your Base Rate</div>
+                          <div style="font-size:15px; font-weight:800; color:#0f172a;" id="displayBaseRate">₹149</div>
+                        </div>
+                        <div>
+                          <div style="font-size:10.5px; color:#64748b; font-weight:600;">Commission Cut</div>
+                          <div style="font-size:15px; font-weight:800; color:#d97706;" id="displayCommCut">+₹15</div>
+                        </div>
+                        <div>
+                          <div style="font-size:10.5px; color:#64748b; font-weight:600;">GST (CGST+SGST)</div>
+                          <div style="font-size:15px; font-weight:800; color:#0284c7;" id="displayGstCut">+₹3</div>
+                        </div>
+                        <div style="background:#ecfdf5; border-radius:6px; padding:4px 6px;">
+                          <div style="font-size:10.5px; color:#065f46; font-weight:700;">Customer Final</div>
+                          <div style="font-size:16px; font-weight:900; color:#059669;" id="displayCustomerTotal">₹167</div>
+                        </div>
                       </div>
                       <input type="hidden" name="base_price" id="formBasePrice" value="149">
                     </div>
@@ -917,8 +937,8 @@
                         <span><i class="fa-solid fa-circle-check" style="color:#10b981; margin-right:4px;"></i> Post-service sanitization and thorough debris cleanup</span>
                       </label>
                       <label class="inc-item-checkbox active">
-                        <input type="checkbox" name="inclusions[]" value="30 days Suggu protection warranty on all workmanship" checked onchange="toggleIncCheckbox(this)">
-                        <span><i class="fa-solid fa-circle-check" style="color:#10b981; margin-right:4px;"></i> 30 days Suggu protection warranty on all workmanship</span>
+                        <input type="checkbox" name="inclusions[]" value="30 days Sugu protection warranty on all workmanship" checked onchange="toggleIncCheckbox(this)">
+                        <span><i class="fa-solid fa-circle-check" style="color:#10b981; margin-right:4px;"></i> 30 days Sugu protection warranty on all workmanship</span>
                       </label>
                     </div>
 
@@ -1062,7 +1082,8 @@
                       <!-- Modal Sticky Footer -->
                       <div class="modal-rep-footer">
                         <div style="font-size:12px; font-weight:700; color:#475569;">
-                          Selected: <span style="color:#0f172a;">0 items</span> • <span style="color:#7c3aed; font-size:13px;" id="prevFooterBasePrice">₹149</span>
+                          Selected: <span style="color:#0f172a;">0 items</span> • <span style="color:#7c3aed; font-size:14px; font-weight:800;" id="prevFooterBasePrice">₹167</span>
+                          <div id="prevPriceBreakdown" style="font-size:9.5px; color:#64748b; font-weight:500; margin-top:2px;">Base ₹149 + Commission ₹15 + GST ₹3</div>
                         </div>
                         <button type="button" class="rep-footer-btn">
                           Done & Review Cart
@@ -1206,42 +1227,226 @@
       }
     }
 
+    // ====== CATEGORY-BASED DATA MAPS ======
+    const CATEGORY_SUGGESTIONS = {
+      'Electrical': [
+        {title: 'Switchboard Repair', basePrice: 149, desc: 'Professional switchboard repair and wiring fix by certified electricians.'},
+        {title: 'Ceiling Fan Installation', basePrice: 199, desc: 'Complete fan mounting, wiring and speed regulator setup.'},
+        {title: 'LED Light & Tube Fix', basePrice: 99, desc: 'LED panel, tube light and CFL replacement with proper wiring.'},
+        {title: 'MCB & Safety Check', basePrice: 299, desc: 'Full house MCB trip analysis, earthing test and safety audit.'},
+        {title: 'Inverter & UPS Setup', basePrice: 399, desc: 'Inverter installation, battery check and backup wiring setup.'},
+      ],
+      'Plumbing': [
+        {title: 'Tap & Mixer Repair', basePrice: 149, desc: 'Leaking tap fix, mixer cartridge replacement and joint sealing.'},
+        {title: 'Pipe Leakage Repair', basePrice: 249, desc: 'Hidden and visible pipe leak detection, cutting and re-joining.'},
+        {title: 'Toilet & Flush Repair', basePrice: 299, desc: 'Flush mechanism fix, seat replacement and drain cleaning.'},
+        {title: 'Water Tank Cleaning', basePrice: 799, desc: 'Complete tank drain, scrub, disinfection and refill service.'},
+        {title: 'Bathroom Fitting Install', basePrice: 349, desc: 'Shower, geyser, basin and accessory installation by experts.'},
+      ],
+      'Cleaning': [
+        {title: 'Deep Home Cleaning', basePrice: 1499, desc: 'Room by room deep clean including kitchen, bathrooms and balconies.'},
+        {title: 'Bathroom & Kitchen Cleaning', basePrice: 699, desc: 'Intensive scrub, tile stain removal and sanitization of wet areas.'},
+        {title: 'Sofa & Carpet Shampoo', basePrice: 599, desc: 'Professional fabric shampooing, vacuuming and stain treatment.'},
+        {title: 'Water Tank Cleaning', basePrice: 799, desc: 'Full drain, scrub, anti-bacterial wash and safe refill.'},
+        {title: 'Office & Commercial Cleaning', basePrice: 1999, desc: 'Desk area, floor, glass and washroom deep cleaning for offices.'},
+      ],
+      'AC': [
+        {title: 'AC Comprehensive Service', basePrice: 499, desc: 'Filter wash, gas pressure check and cooling coil cleaning.'},
+        {title: 'AC Gas Refill & Top-Up', basePrice: 1499, desc: 'Refrigerant gas leak check, top-up and performance test.'},
+        {title: 'AC Installation & Uninstall', basePrice: 999, desc: 'Wall mount, copper piping and drain pipe setup for split AC.'},
+        {title: 'AC PCB & Compressor Repair', basePrice: 899, desc: 'Circuit board diagnosis, compressor check and parts replacement.'},
+      ],
+      'Painting': [
+        {title: 'Room Wall Painting', basePrice: 1999, desc: 'Single or multi-room emulsion or distemper painting service.'},
+        {title: 'Exterior Wall Painting', basePrice: 4999, desc: 'Weatherproof exterior paint with primer and putty finish.'},
+        {title: 'Waterproofing & Sealing', basePrice: 2499, desc: 'Terrace, bathroom and wall waterproof coating application.'},
+      ],
+      'Carpentry': [
+        {title: 'Furniture Assembly', basePrice: 399, desc: 'Bed, wardrobe, table and shelf assembly or disassembly.'},
+        {title: 'Door & Lock Repair', basePrice: 249, desc: 'Door hinge fix, lock replacement and alignment adjustment.'},
+        {title: 'Custom Woodwork', basePrice: 799, desc: 'Custom shelving, cabinet and wooden partition fabrication.'},
+      ],
+      '_default': [
+        {title: 'Professional Home Service', basePrice: 199, desc: 'Verified and trained professionals for all home needs.'},
+        {title: 'Premium Maintenance Visit', basePrice: 349, desc: 'Comprehensive inspection and maintenance by certified experts.'},
+        {title: 'Emergency Repair Service', basePrice: 299, desc: 'Quick response repair and fix service at your doorstep.'},
+      ],
+    };
+
+    const CATEGORY_INCLUSIONS = {
+      'Electrical': [
+        'Complete wiring inspection and safety diagnostic',
+        'Certified electrician with verified background',
+        'Post-service cleanup and debris removal',
+        '30 days Sugu protection warranty on workmanship',
+        'All basic components and consumables included',
+      ],
+      'Plumbing': [
+        'Full pipe and joint inspection before work',
+        'Licensed plumber with verified credentials',
+        'Leak-proof guarantee on all joints and fittings',
+        '30 days Sugu protection warranty on workmanship',
+        'Basic sealants, tape and washers included',
+      ],
+      'Cleaning': [
+        'Professional grade cleaning chemicals and tools',
+        'Trained and background-verified cleaning staff',
+        'Post-service sanitization and disinfection',
+        'Satisfaction guarantee or free re-clean within 48hrs',
+        'Eco-friendly and child-safe products used',
+      ],
+      'AC': [
+        'Complete AC diagnostic and performance check',
+        'Certified AC technician with brand training',
+        'Gas pressure test and cooling efficiency report',
+        '30 days Sugu protection warranty on service',
+        'Filter cleaning and drain pipe flush included',
+      ],
+      'Painting': [
+        'Surface preparation, putty and primer included',
+        'Trained painters with 3+ years experience',
+        'Furniture and floor protection during work',
+        '30 days Sugu protection warranty on finish',
+        'Final touch-up and cleanup after completion',
+      ],
+      'Carpentry': [
+        'Precision measurement and material assessment',
+        'Experienced carpenter with verified portfolio',
+        'Hardware, screws and basic fittings included',
+        '30 days Sugu protection warranty on work',
+        'Post-work cleanup and debris removal',
+      ],
+      '_default': [
+        'Complete diagnostic inspection of existing fittings and components',
+        'Execution by certified, background-checked professional',
+        'Post-service sanitization and thorough debris cleanup',
+        '30 days Sugu protection warranty on all workmanship',
+      ],
+    };
+
+    // Platform financial config from GlobalSettings
+    const PLATFORM_CONFIG = {
+      commissionPct: {{ platform_commission_percent|default:"10.0" }},
+      cgstPct: {{ cgst_percent|default:"9.0" }},
+      sgstPct: {{ sgst_percent|default:"9.0" }},
+      flatFee: {{ platform_flat_fee|default:"0.0" }},
+      taxMode: '{{ tax_calculation_mode|default:"commission_only" }}',
+    };
+
+    function calcCustomerPrice(vendorPrice) {
+      const vp = parseFloat(vendorPrice) || 0;
+      const commission = vp * (PLATFORM_CONFIG.commissionPct / 100);
+      let taxableBase = PLATFORM_CONFIG.taxMode === 'commission_only' ? commission : (vp + commission);
+      const cgst = taxableBase * (PLATFORM_CONFIG.cgstPct / 100);
+      const sgst = taxableBase * (PLATFORM_CONFIG.sgstPct / 100);
+      const flat = PLATFORM_CONFIG.flatFee;
+      const customerPrice = vp + commission + cgst + sgst + flat;
+      return {
+        customerPrice: Math.round(customerPrice),
+        commission: Math.round(commission),
+        cgst: Math.round(cgst),
+        sgst: Math.round(sgst),
+        flat: Math.round(flat),
+        vendorGets: vp
+      };
+    }
+
+    // Resolve category key from name
+    function getCatKey(catName) {
+      if (!catName) return '_default';
+      const n = catName.toLowerCase();
+      if (n.includes('electr')) return 'Electrical';
+      if (n.includes('plumb')) return 'Plumbing';
+      if (n.includes('clean')) return 'Cleaning';
+      if (n.includes('ac') || n.includes('appliance') || n.includes('air')) return 'AC';
+      if (n.includes('paint')) return 'Painting';
+      if (n.includes('carpen') || n.includes('wood')) return 'Carpentry';
+      return '_default';
+    }
+
+    function populateTitleSuggestions(catName) {
+      const key = getCatKey(catName);
+      const suggestions = CATEGORY_SUGGESTIONS[key] || CATEGORY_SUGGESTIONS['_default'];
+      const container = document.getElementById('quickTitleChips');
+      if (!container) return;
+      container.innerHTML = suggestions.map(s => {
+        const cp = calcCustomerPrice(s.basePrice || 149);
+        return `
+          <button type="button" class="quick-chip" onclick="applyTitleSuggestion('${s.title.replace(/'/g, "\\'")}', ${s.basePrice || 149})"
+            title="${s.desc}">
+            <span>${s.title}</span>
+            <span style="font-size:10px; margin-left:4px; font-weight:700; color:#0d9488;">(Cust: ₹${cp.customerPrice})</span>
+          </button>
+        `;
+      }).join('');
+    }
+
+    function populateInclusions(catName) {
+      const key = getCatKey(catName);
+      const inclusions = CATEGORY_INCLUSIONS[key] || CATEGORY_INCLUSIONS['_default'];
+      const container = document.getElementById('inclusionsListContainer');
+      if (!container) return;
+      container.innerHTML = inclusions.map(inc => `
+        <label class="inc-item-checkbox active">
+          <input type="checkbox" name="inclusions[]" value="${inc}" checked onchange="toggleIncCheckbox(this)">
+          <span><i class="fa-solid fa-circle-check" style="color:#10b981; margin-right:4px;"></i> ${inc}</span>
+        </label>
+      `).join('');
+    }
+
     // Category Change Handler
     function handleCategoryChange(select) {
       const catName = select.options[select.selectedIndex]?.getAttribute('data-name') || '';
       const titleInput = document.getElementById('formTitle');
       const descInput = document.getElementById('formDescription');
 
-      if (!titleInput.value || titleInput.value === 'Switchboard Repair') {
-        if (catName.includes('Plumb')) {
-          titleInput.value = 'Tap & Pipe Leakage Repair';
-          descInput.value = 'Complete plumbing inspection, pipe fitting & faucet repair.';
-        } else if (catName.includes('Clean')) {
-          titleInput.value = 'Deep Bathroom & Kitchen Cleaning';
-          descInput.value = 'Intensive scrub, stain removal and post-service sanitization.';
-        } else if (catName.includes('AC')) {
-          titleInput.value = 'AC Comprehensive Service';
-          descInput.value = 'Filter wash, gas pressure check and cooling coil cleaning.';
-        } else {
-          titleInput.value = 'Switchboard Repair';
-          descInput.value = 'Professional switchboard repair service by verified experts.';
+      // Populate dynamic suggestions and inclusions
+      populateTitleSuggestions(catName);
+      populateInclusions(catName);
+
+      // Auto-fill title if empty or default
+      const key = getCatKey(catName);
+      const suggestions = CATEGORY_SUGGESTIONS[key] || CATEGORY_SUGGESTIONS['_default'];
+      if (!titleInput.value || titleInput.value === 'Switchboard Repair' || titleInput.value === 'Professional Home Service') {
+        titleInput.value = suggestions[0].title;
+        descInput.value = suggestions[0].desc;
+        if (suggestions[0].basePrice) {
+          const firstCard = document.querySelector('#packageCardsList .pkg-card');
+          if (firstCard) {
+            const priceInput = firstCard.querySelector('.pkg-input-price');
+            if (priceInput) {
+              priceInput.value = suggestions[0].basePrice;
+              handlePkgPriceChange(priceInput);
+            }
+          }
         }
       }
       updateLivePreview();
     }
 
     // Quick Title Suggestions
-    function applyTitleSuggestion(title, categoryName) {
+    function applyTitleSuggestion(title, basePrice) {
       document.getElementById('formTitle').value = title;
-      const descInput = document.getElementById('formDescription');
-      descInput.value = `Professional ${title.toLowerCase()} service by verified experts.`;
-
       const catSelect = document.getElementById('formCategory');
-      for (let i = 0; i < catSelect.options.length; i++) {
-        if (catSelect.options[i].text.includes(categoryName)) {
-          catSelect.selectedIndex = i;
-          break;
+      const catName = catSelect.options[catSelect.selectedIndex]?.getAttribute('data-name') || '';
+      const key = getCatKey(catName);
+      const suggestions = CATEGORY_SUGGESTIONS[key] || CATEGORY_SUGGESTIONS['_default'];
+      const match = suggestions.find(s => s.title === title);
+      if (match) {
+        document.getElementById('formDescription').value = match.desc;
+        const priceToSet = basePrice || match.basePrice;
+        if (priceToSet) {
+          const firstCard = document.querySelector('#packageCardsList .pkg-card');
+          if (firstCard) {
+            const priceInput = firstCard.querySelector('.pkg-input-price');
+            if (priceInput) {
+              priceInput.value = priceToSet;
+              handlePkgPriceChange(priceInput);
+            }
+          }
         }
+      } else {
+        document.getElementById('formDescription').value = `Professional ${title.toLowerCase()} service by verified experts.`;
       }
       updateLivePreview();
     }
@@ -1268,7 +1473,27 @@
       }
     }
 
-    // Package Price Change (Auto Calculate Original Price +30%)
+    // Live Breakdown Inside Each Package Card
+    function updateCardBreakdown(card) {
+      const priceInput = card.querySelector('.pkg-input-price');
+      if (!priceInput) return;
+      const val = parseFloat(priceInput.value) || 0;
+      const cp = calcCustomerPrice(val);
+      let note = card.querySelector('.pkg-price-calc-note');
+      if (!note) {
+        note = document.createElement('div');
+        note.className = 'pkg-price-calc-note';
+        note.style.cssText = 'margin-top:8px; font-size:11px; color:#047857; background:#f0fdf4; border:1px solid #bbf7d0; border-radius:6px; padding:5px 10px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:4px;';
+        const inputsGrid = card.querySelector('.pkg-grid-inputs');
+        inputsGrid.insertAdjacentElement('afterend', note);
+      }
+      note.innerHTML = `
+        <span><i class="fa-solid fa-calculator" style="margin-right:4px;"></i> Customer Price: <strong style="font-size:12px; color:#065f46;">₹${cp.customerPrice}</strong> <span style="color:#64748b; font-size:10px;">(Base ₹${Math.round(cp.vendorGets)} + Comm ₹${cp.commission} + GST ₹${cp.cgst + cp.sgst})</span></span>
+        <span style="font-size:10.5px; color:#065f46; font-weight:700;">Payout to you: ₹${Math.round(cp.vendorGets)}</span>
+      `;
+    }
+
+    // Package Price Change (Auto Calculate Original Price +35% and Card Breakdown)
     function handlePkgPriceChange(input) {
       const card = input.closest('.pkg-card');
       const origInput = card.querySelector('.pkg-input-orig');
@@ -1276,6 +1501,7 @@
       if (val > 0) {
         origInput.value = Math.round(val * 1.35);
       }
+      updateCardBreakdown(card);
       updateLivePreview();
     }
 
@@ -1321,6 +1547,7 @@
         </div>
       `;
       container.appendChild(div);
+      updateCardBreakdown(div);
       updateLivePreview();
     }
 
@@ -1364,7 +1591,7 @@
       updateLivePreview();
     }
 
-    // REAL-TIME LIVE PREVIEW UPDATER
+    // REAL-TIME LIVE PREVIEW UPDATER (with dynamic pricing)
     function updateLivePreview() {
       const title = document.getElementById('formTitle').value.trim() || 'Switchboard Repair';
       const desc = document.getElementById('formDescription').value.trim() || 'Professional switchboard repair service by verified experts.';
@@ -1373,19 +1600,25 @@
       document.getElementById('prevHeroTitle').textContent = title;
       document.getElementById('prevHeroSub').textContent = desc;
 
-      // Update Packages
+      // Update Packages with DYNAMIC PRICING
       const pkgCards = document.querySelectorAll('#packageCardsList .pkg-card');
       const pkgsGrid = document.getElementById('prevPkgsGrid');
-      let minPrice = Infinity;
+      let minVendorPrice = Infinity;
+      let minCustomerPrice = Infinity;
 
       let pkgsHtml = '';
       pkgCards.forEach(card => {
         const name = card.querySelector('.pkg-input-name').value.trim() || 'Service';
-        const price = parseFloat(card.querySelector('.pkg-input-price').value) || 149;
-        const orig = parseFloat(card.querySelector('.pkg-input-orig').value) || Math.round(price * 1.35);
+        const vendorPrice = parseFloat(card.querySelector('.pkg-input-price').value) || 149;
+        const vendorOrig = parseFloat(card.querySelector('.pkg-input-orig').value) || Math.round(vendorPrice * 1.35);
         const pDesc = card.querySelector('.pkg-input-desc').value.trim() || 'Standard procedure';
 
-        if (price < minPrice) minPrice = price;
+        // Calculate final customer prices
+        const cp = calcCustomerPrice(vendorPrice);
+        const origCp = calcCustomerPrice(vendorOrig);
+
+        if (vendorPrice < minVendorPrice) minVendorPrice = vendorPrice;
+        if (cp.customerPrice < minCustomerPrice) minCustomerPrice = cp.customerPrice;
 
         pkgsHtml += `
           <div class="rep-pkg-card">
@@ -1395,9 +1628,10 @@
             </div>
             <div>
               <div class="rep-pkg-price-row">
-                <span class="rep-pkg-price">₹${Math.round(price)}</span>
-                <span class="rep-pkg-old">₹${Math.round(orig)}</span>
+                <span class="rep-pkg-price">₹${cp.customerPrice}</span>
+                <span class="rep-pkg-old">₹${origCp.customerPrice}</span>
               </div>
+              <div style="font-size:9px; color:#94a3b8; text-align:right; margin-top:1px;">incl. taxes & fees</div>
               <div class="rep-pkg-add-btn">Add</div>
             </div>
           </div>
@@ -1406,11 +1640,30 @@
 
       pkgsGrid.innerHTML = pkgsHtml;
 
-      // Update Lowest Base Price
-      if (minPrice === Infinity) minPrice = 149;
-      document.getElementById('displayBaseRate').textContent = `₹${Math.round(minPrice)}`;
-      document.getElementById('formBasePrice').value = minPrice;
-      document.getElementById('prevFooterBasePrice').textContent = `₹${Math.round(minPrice)}`;
+      // Update Lowest Base Price Banner & Breakdown
+      if (minVendorPrice === Infinity) minVendorPrice = 149;
+      const bp = calcCustomerPrice(minVendorPrice);
+
+      const baseRateEl = document.getElementById('displayBaseRate');
+      if (baseRateEl) baseRateEl.textContent = `₹${Math.round(minVendorPrice)}`;
+
+      const commCutEl = document.getElementById('displayCommCut');
+      if (commCutEl) commCutEl.textContent = `+₹${bp.commission}`;
+
+      const gstCutEl = document.getElementById('displayGstCut');
+      if (gstCutEl) gstCutEl.textContent = `+₹${bp.cgst + bp.sgst}`;
+
+      const custTotalEl = document.getElementById('displayCustomerTotal');
+      if (custTotalEl) custTotalEl.textContent = `₹${bp.customerPrice}`;
+
+      document.getElementById('formBasePrice').value = minVendorPrice;
+      document.getElementById('prevFooterBasePrice').textContent = `₹${bp.customerPrice}`;
+
+      // Price breakdown tooltip in live preview footer
+      const breakdownEl = document.getElementById('prevPriceBreakdown');
+      if (breakdownEl) {
+        breakdownEl.textContent = `Base ₹${Math.round(bp.vendorGets)} + Comm (${PLATFORM_CONFIG.commissionPct}%) ₹${bp.commission} + GST (${PLATFORM_CONFIG.cgstPct + PLATFORM_CONFIG.sgstPct}%) ₹${bp.cgst + bp.sgst}${bp.flat > 0 ? ' + Fee ₹' + bp.flat : ''}`;
+      }
 
       // Update Inclusions List
       const checkedIncs = document.querySelectorAll('#inclusionsListContainer input[type="checkbox"]:checked');
@@ -1425,14 +1678,29 @@
         `;
       });
       // Standard exclusions
+      const catSelect = document.getElementById('formCategory');
+      const currentCat = catSelect.options[catSelect.selectedIndex]?.getAttribute('data-name') || '';
+      const catKey = getCatKey(currentCat);
+      let exclusion1 = 'Major civil masonry, pipe embedding or wall tearing excluded';
+      let exclusion2 = 'Spare parts / extra hardware to be purchased or charged separately';
+      if (catKey === 'Cleaning') {
+        exclusion1 = 'Heavy stain removal on natural stone or marble surfaces excluded';
+        exclusion2 = 'Pest control or fumigation services not included';
+      } else if (catKey === 'AC') {
+        exclusion1 = 'Compressor or PCB replacement parts charged separately';
+        exclusion2 = 'Gas refill beyond standard top-up charged at actuals';
+      } else if (catKey === 'Painting') {
+        exclusion1 = 'Wall putty and primer for damaged surfaces charged extra';
+        exclusion2 = 'Scaffolding for heights above 12ft arranged separately';
+      }
       incsHtml += `
         <div class="rep-inc-item">
           <i class="fa-solid fa-circle-xmark"></i>
-          <span>Major civil masonry, pipe embedding or wall tearing excluded</span>
+          <span>${exclusion1}</span>
         </div>
         <div class="rep-inc-item">
           <i class="fa-solid fa-circle-xmark"></i>
-          <span>Spare parts / extra hardware to be purchased or charged separately</span>
+          <span>${exclusion2}</span>
         </div>
       `;
       incsContainer.innerHTML = incsHtml;
@@ -1552,6 +1820,12 @@
 
     // Initial Live Preview Render on Page Load
     document.addEventListener('DOMContentLoaded', () => {
+      // Populate initial suggestions and inclusions based on current category
+      const catSelect = document.getElementById('formCategory');
+      const initialCat = catSelect.options[catSelect.selectedIndex]?.getAttribute('data-name') || '';
+      populateTitleSuggestions(initialCat);
+      populateInclusions(initialCat);
+      document.querySelectorAll('#packageCardsList .pkg-card').forEach(updateCardBreakdown);
       updateLivePreview();
     });
   </script>

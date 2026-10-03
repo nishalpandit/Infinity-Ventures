@@ -76,6 +76,8 @@ class VendorKYC(models.Model):
 class UserProfile(models.Model):
     user = models.OneToOneField(CustomUser, on_delete=models.CASCADE, related_name='user_profile')
     phone_number = models.CharField(max_length=20, blank=True, null=True)
+    city = models.CharField(max_length=100, blank=True, null=True)
+    state = models.CharField(max_length=100, blank=True, null=True)
     profile_image = models.ImageField(upload_to='user_profiles/', null=True, blank=True)
 
     def __str__(self):
@@ -514,6 +516,18 @@ class Category(models.Model):
     def __str__(self):
         return self.name
 
+class State(models.Model):
+    STATUS_CHOICES = (
+        ('active', 'Active'),
+        ('inactive', 'Inactive'),
+    )
+    name = models.CharField(max_length=100, unique=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='active')
+    created_at = models.DateTimeField(default=timezone.now)
+
+    def __str__(self):
+        return self.name
+
 class Location(models.Model):
     STATUS_CHOICES = (
         ('active', 'Active'),
@@ -576,8 +590,8 @@ class AuthToken(models.Model):
 
 
 class GlobalSettings(models.Model):
-    site_title = models.CharField(max_length=255, default='Suggu Services')
-    contact_email = models.EmailField(default='support@sugguservices.com')
+    site_title = models.CharField(max_length=255, default='Sugu')
+    contact_email = models.EmailField(default='support@sugu.com')
     support_phone = models.CharField(max_length=20, default='+91 0000000000')
     maintenance_mode = models.BooleanField(default=False)
     platform_commission_percent = models.DecimalField(max_digits=5, decimal_places=2, default=10.00, help_text="Platform commission cut %")
@@ -656,11 +670,11 @@ class BidPlan(models.Model):
 # ==============================================================================
 
 class SiteBranding(models.Model):
-    site_title = models.CharField(max_length=255, default='Suggu Services')
+    site_title = models.CharField(max_length=255, default='Sugu')
     tagline = models.CharField(max_length=255, default='Instant Home Services & Custom Project Bidding Marketplace')
     logo = models.ImageField(upload_to='cms/branding/', null=True, blank=True)
     favicon = models.ImageField(upload_to='cms/branding/', null=True, blank=True)
-    contact_email = models.EmailField(default='support@sugguservices.com')
+    contact_email = models.EmailField(default='support@sugu.com')
     support_phone = models.CharField(max_length=50, default='+91 98765 43210')
     address = models.CharField(max_length=255, default='Main Road, Ranchi, Jharkhand, India')
     facebook_url = models.URLField(blank=True, null=True, default='https://facebook.com')
@@ -668,7 +682,7 @@ class SiteBranding(models.Model):
     linkedin_url = models.URLField(blank=True, null=True, default='https://linkedin.com')
     twitter_url = models.URLField(blank=True, null=True, default='https://twitter.com')
     youtube_url = models.URLField(blank=True, null=True, default='https://youtube.com')
-    copyright_text = models.CharField(max_length=255, default='© 2026 Suggu Services. All rights reserved.')
+    copyright_text = models.CharField(max_length=255, default='© 2026 Sugu. All rights reserved.')
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:

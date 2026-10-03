@@ -1,9 +1,9 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Quick Services - Suggu Admin</title>
+  <title>Quick Services - Sugu Admin</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
@@ -14,70 +14,242 @@
   <style>
     body { background: #f4f5f7; font-family: 'Inter', sans-serif; }
 
-    /* ── Section header ── */
-    .qs-section { margin-bottom: 28px; }
-    .qs-section-header {
-      display: flex; align-items: center; justify-content: space-between;
-      margin-bottom: 14px;
+    /* ── Top Header & Territory ── */
+    .qs-page-header {
+      background: #fff;
+      border-radius: 14px;
+      padding: 20px 24px;
+      margin-bottom: 22px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
     }
-    .qs-section-title {
-      display: flex; align-items: center; gap: 12px;
+    .qs-header-left {
+      display: flex;
+      align-items: center;
+      gap: 14px;
     }
-    .qs-section-title h5 {
-      margin: 0; font-size: 16px; font-weight: 700; color: #111827;
+    .qs-header-icon {
+      width: 48px;
+      height: 48px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      flex-shrink: 0;
+      transition: all 0.3s;
     }
-    .count-badge {
-      background: #f3f4f6; color: #374151;
-      font-size: 12px; font-weight: 700;
-      padding: 2px 10px; border-radius: 20px;
-    }
-    .count-badge.active { background: #dcfce7; color: #15803d; }
-    .count-badge.closed { background: #f3f4f6; color: #6b7280; }
+    .qs-header-icon.active { background: #dcfce7; color: #16a34a; }
+    .qs-header-icon.closed { background: #f3f4f6; color: #4b5563; }
 
-    .section-dot {
-      width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0;
+    .qs-header-title h4 {
+      margin: 0;
+      font-size: 20px;
+      font-weight: 700;
+      color: #111827;
+      display: flex;
+      align-items: center;
+      gap: 10px;
     }
-    .dot-active { background: #22c55e; box-shadow: 0 0 0 3px rgba(34,197,94,0.2); }
-    .dot-closed { background: #9ca3af; }
+    .qs-header-title p {
+      margin: 4px 0 0;
+      font-size: 13px;
+      color: #6b7280;
+    }
 
-    /* ── Table card ── */
+    .territory-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 14px;
+      background: #ede9fe;
+      color: #5b21b6;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.3px;
+      box-shadow: 0 1px 2px rgba(124,58,237,0.1);
+    }
+
+    /* ── Nav Tabs / Toggle ── */
+    .qs-nav-tabs {
+      display: flex;
+      align-items: center;
+      background: #f3f4f6;
+      padding: 4px;
+      border-radius: 12px;
+      gap: 4px;
+    }
+    .qs-tab-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 18px;
+      border-radius: 9px;
+      font-size: 13px;
+      font-weight: 600;
+      color: #4b5563;
+      text-decoration: none;
+      transition: all 0.2s;
+    }
+    .qs-tab-link:hover {
+      color: #111827;
+      background: rgba(255,255,255,0.6);
+    }
+    .qs-tab-link.active {
+      background: #fff;
+      color: #111827;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+    }
+    .tab-badge {
+      font-size: 11px;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 12px;
+    }
+    .tab-badge-active { background: #dcfce7; color: #15803d; }
+    .tab-badge-closed { background: #e5e7eb; color: #4b5563; }
+
+    /* ── Filter / Search Bar ── */
+    .qs-filter-bar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      margin-bottom: 18px;
+    }
+    .qs-search-box {
+      position: relative;
+      flex: 1;
+      min-width: 260px;
+      max-width: 440px;
+    }
+    .qs-search-box i {
+      position: absolute;
+      left: 14px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: #9ca3af;
+      font-size: 14px;
+    }
+    .qs-search-box input {
+      width: 100%;
+      padding: 9px 14px 9px 38px;
+      border-radius: 10px;
+      border: 1px solid #e5e7eb;
+      background: #fff;
+      font-size: 13px;
+      color: #111827;
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    .qs-search-box input:focus {
+      border-color: #6366f1;
+      box-shadow: 0 0 0 3px rgba(99,102,241,0.12);
+    }
+    .qs-filter-controls {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .qs-select {
+      padding: 9px 14px;
+      border-radius: 10px;
+      border: 1px solid #e5e7eb;
+      background: #fff;
+      font-size: 13px;
+      font-weight: 500;
+      color: #374151;
+      outline: none;
+      cursor: pointer;
+    }
+    .qs-select:focus {
+      border-color: #6366f1;
+    }
+    .btn-reset-filter {
+      padding: 9px 14px;
+      border-radius: 10px;
+      border: 1px solid #e5e7eb;
+      background: #fff;
+      color: #6b7280;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn-reset-filter:hover {
+      background: #f3f4f6;
+      color: #111827;
+    }
+
+    /* ── Table Card ── */
     .qs-card {
-      background: #fff; border-radius: 14px;
+      background: #fff;
+      border-radius: 14px;
       box-shadow: 0 1px 4px rgba(0,0,0,0.05);
       overflow: hidden;
+      margin-bottom: 30px;
     }
     .table-wrap { overflow-x: auto; }
     .qs-table { width: 100%; border-collapse: collapse; }
     .qs-table thead tr { background: #f9fafb; }
     .qs-table th {
-      padding: 12px 16px; font-size: 11px; font-weight: 700;
-      color: #6b7280; text-transform: uppercase; letter-spacing: 0.5px;
-      border-bottom: 1px solid #e5e7eb; white-space: nowrap;
+      padding: 13px 16px;
+      font-size: 11px;
+      font-weight: 700;
+      color: #6b7280;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      border-bottom: 1px solid #e5e7eb;
+      white-space: nowrap;
     }
     .qs-table td {
-      padding: 14px 16px; font-size: 14px; color: #374151;
-      border-bottom: 1px solid #f3f4f6; vertical-align: middle;
+      padding: 14px 16px;
+      font-size: 13px;
+      color: #374151;
+      border-bottom: 1px solid #f3f4f6;
+      vertical-align: middle;
     }
     .qs-table tbody tr:last-child td { border-bottom: none; }
     .qs-table tbody tr:hover td { background: #fafafa; }
 
-    /* ── User cell ── */
+    /* ── User & Avatar cell ── */
     .cell-user { display: flex; align-items: center; gap: 12px; }
     .avatar {
-      width: 36px; height: 36px; border-radius: 10px;
-      display: inline-flex; align-items: center; justify-content: center;
-      font-weight: 700; font-size: 13px; flex-shrink: 0;
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 13px;
+      flex-shrink: 0;
     }
     .av-1 { background: #e0f2fe; color: #0284c7; }
     .av-2 { background: #dcfce7; color: #16a34a; }
     .av-3 { background: #f3e8ff; color: #9333ea; }
     .av-4 { background: #ffe4e6; color: #e11d48; }
     .av-5 { background: #fef9c3; color: #ca8a04; }
-    .u-name { font-weight: 600; color: #111827; font-size: 14px; }
+    .u-name { font-weight: 600; color: #111827; font-size: 13px; }
     .u-sub { font-size: 12px; color: #6b7280; margin-top: 1px; }
 
-    /* ── Badges ── */
-    .qs-badge { display: inline-flex; align-items: center; gap: 5px; padding: 3px 10px; border-radius: 20px; font-size: 12px; font-weight: 600; }
+    /* ── Status Badges ── */
+    .qs-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 3px 10px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+      white-space: nowrap;
+    }
     .qs-badge .dot { width: 6px; height: 6px; border-radius: 50%; }
     .b-open      { background: #dbeafe; color: #1d4ed8; } .b-open .dot { background: #3b82f6; }
     .b-active    { background: #ede9fe; color: #5b21b6; } .b-active .dot { background: #7c3aed; }
@@ -85,69 +257,179 @@
     .b-selected  { background: #d1fae5; color: #047857; } .b-selected .dot { background: #10b981; }
     .b-completed { background: #dcfce7; color: #15803d; } .b-completed .dot { background: #22c55e; }
     .b-cancelled { background: #fee2e2; color: #b91c1c; } .b-cancelled .dot { background: #ef4444; }
-    .b-closed    { background: #f3f4f6; color: #6b7280; } .b-closed .dot { background: #9ca3af; }
+    .b-closed    { background: #f3f4f6; color: #4b5563; } .b-closed .dot { background: #9ca3af; }
+    .b-paused    { background: #fffbeb; color: #b45309; } .b-paused .dot { background: #f59e0b; }
 
     .vendor-count {
-      display: inline-flex; align-items: center; gap: 5px;
-      background: #f3f4f6; color: #374151;
-      font-size: 12px; font-weight: 600; padding: 3px 10px; border-radius: 20px;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      background: #f3f4f6;
+      color: #374151;
+      font-size: 12px;
+      font-weight: 600;
+      padding: 3px 10px;
+      border-radius: 20px;
     }
 
+    /* ── Action buttons ── */
+    .action-group {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
     .action-btn {
-      width: 32px; height: 32px; border-radius: 8px; border: 1px solid #e5e7eb;
-      display: inline-flex; align-items: center; justify-content: center;
-      color: #6b7280; background: #fff; text-decoration: none; font-size: 14px;
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      border: 1px solid #e5e7eb;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      color: #6b7280;
+      background: #fff;
+      text-decoration: none;
+      font-size: 13px;
+      cursor: pointer;
       transition: all 0.2s;
     }
-    .action-btn:hover { background: #f3f4f6; color: #111827; border-color: #d1d5db; }
+    .action-btn:hover {
+      background: #f3f4f6;
+      color: #111827;
+      border-color: #d1d5db;
+    }
+    .btn-action-close:hover {
+      background: #fee2e2;
+      color: #dc2626;
+      border-color: #fca5a5;
+    }
+    .btn-action-reopen:hover {
+      background: #dcfce7;
+      color: #16a34a;
+      border-color: #86efac;
+    }
 
-    /* ── Empty state ── */
-    .empty-state { padding: 50px 20px; text-align: center; color: #9ca3af; }
-    .empty-state i { font-size: 32px; margin-bottom: 10px; display: block; }
-    .empty-state p { font-size: 14px; margin: 0; }
+    /* ── Empty State ── */
+    .empty-state {
+      padding: 60px 20px;
+      text-align: center;
+      color: #9ca3af;
+    }
+    .empty-state i {
+      font-size: 38px;
+      margin-bottom: 12px;
+      display: block;
+      color: #d1d5db;
+    }
+    .empty-state h6 {
+      font-size: 15px;
+      font-weight: 600;
+      color: #374151;
+      margin: 0 0 4px;
+    }
+    .empty-state p {
+      font-size: 13px;
+      margin: 0;
+      color: #6b7280;
+    }
 
-    .mono { font-family: monospace; font-size: 13px; color: #6b7280; background: #f3f4f6; padding: 2px 8px; border-radius: 5px; }
+    .mono {
+      font-family: monospace;
+      font-size: 12px;
+      color: #4b5563;
+      background: #f3f4f6;
+      padding: 2px 7px;
+      border-radius: 5px;
+      font-weight: 600;
+    }
   </style>
 </head>
 <body>
+  {% csrf_token %}
   <div id="sidebar-mount"></div>
   <div class="main-wrapper">
     <div id="header-mount"></div>
     <main class="main-content">
 
-      <div class="qs-section-header" style="flex-direction: column; align-items: flex-start; margin-bottom: 20px;">
-        <div class="qs-section-title">
-          <span class="section-dot dot-active" id="qs-page-dot"></span>
-          <h5 id="qs-page-title">Active Quick Services</h5>
-          <span class="count-badge active" id="qs-page-count">{{ active_qs|length }}</span>
+      <!-- ── Dynamic Page Header ── -->
+      <div class="qs-page-header">
+        <div class="qs-header-left">
+          <div class="qs-header-icon active" id="qs-header-icon">
+            <i class="fa-solid fa-bolt" id="qs-header-icon-i"></i>
+          </div>
+          <div class="qs-header-title">
+            <h4 id="qs-page-title">
+              Active Quick Services
+              <span class="tab-badge tab-badge-active" id="qs-count-badge">{{ active_qs|length }}</span>
+            </h4>
+            <p id="qs-page-subtitle">Manage all active and open quick service offerings in your jurisdiction</p>
+          </div>
         </div>
-        <p id="qs-page-subtitle" style="margin: 5px 0 0 22px; font-size: 13px; color: #6b7280;">Manage all open and ongoing service requests</p>
+
+        <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
+          {% if admin_state %}
+          <div class="territory-badge">
+            <i class="fa-solid fa-map-pin"></i> Territory: {{ admin_state }}
+          </div>
+          {% endif %}
+
+          <!-- Tab Switcher -->
+          <div class="qs-nav-tabs">
+            <a href="#active" class="qs-tab-link active" id="tab-link-active">
+              <i class="fa-solid fa-bolt"></i> Active
+              <span class="tab-badge tab-badge-active" id="nav-count-active">{{ active_qs|length }}</span>
+            </a>
+            <a href="#closed" class="qs-tab-link" id="tab-link-closed">
+              <i class="fa-solid fa-circle-check"></i> Closed
+              <span class="tab-badge tab-badge-closed" id="nav-count-closed">{{ closed_qs|length }}</span>
+            </a>
+          </div>
+        </div>
       </div>
 
-      <!-- ── Active Quick Services ── -->
+      <!-- ── Search & Filter Bar ── -->
+      <div class="qs-filter-bar">
+        <div class="qs-search-box">
+          <i class="fa-solid fa-magnifying-glass"></i>
+          <input type="text" id="qsSearchInput" placeholder="Search by ID, title, provider, location..." autocomplete="off">
+        </div>
+        <div class="qs-filter-controls">
+          <select id="qsCategoryFilter" class="qs-select">
+            <option value="">All Categories</option>
+            {% for cat in qs_categories %}
+            <option value="{{ cat.name }}">{{ cat.name }}</option>
+            {% endfor %}
+          </select>
+          <button type="button" class="btn-reset-filter" id="qsResetFilterBtn" title="Reset Filters">
+            <i class="fa-solid fa-arrow-rotate-left"></i> Reset
+          </button>
+        </div>
+      </div>
+
+      <!-- ── Active Quick Services Section ── -->
       <div class="qs-section" id="active-section">
         <div class="qs-card">
           {% if active_qs %}
           <div class="table-wrap">
-            <table class="qs-table">
+            <table class="qs-table" id="activeQsTable">
               <thead>
                 <tr>
                   <th>ID</th>
-                  <th>Customer</th>
-                  <th>Service</th>
+                  <th>Provider / Vendor</th>
+                  <th>Service Title</th>
                   <th>Category</th>
                   <th>Location</th>
                   <th>Budget</th>
-                  <th>Vendor Requests</th>
+                  <th>Requests</th>
                   <th>Selected Vendor</th>
                   <th>Status</th>
                   <th>Created</th>
-                  <th>Action</th>
+                  <th style="text-align:center;">Action</th>
                 </tr>
               </thead>
               <tbody>
                 {% for qs in active_qs %}
-                <tr>
+                <tr id="row-qs-{{ qs.raw_id }}" data-category="{{ qs.category }}" data-status="{{ qs.status }}" data-text="{{ qs.id }} {{ qs.title }} {{ qs.customer }} {{ qs.location }} {{ qs.locality }} {{ qs.category }}">
                   <td><span class="mono">{{ qs.id }}</span></td>
                   <td>
                     <div class="cell-user">
@@ -159,20 +441,30 @@
                     </div>
                   </td>
                   <td><strong>{{ qs.title }}</strong></td>
-                  <td>{{ qs.category }}</td>
-                  <td>{{ qs.location }}</td>
-                  <td><strong>₹{{ qs.budget|floatformat:0 }}</strong></td>
+                  <td><span style="font-size:12px;font-weight:600;color:#4b5563;">{{ qs.category }}</span></td>
+                  <td>
+                    <div>{{ qs.location }}</div>
+                    {% if qs.locality %}<div style="font-size:11px;color:#9ca3af;">{{ qs.locality }}</div>{% endif %}
+                  </td>
+                  <td><strong style="color:#0f766e;">₹{{ qs.budget|floatformat:0 }}</strong></td>
                   <td><span class="vendor-count"><i class="fa-solid fa-handshake"></i> {{ qs.vendorRequests }}</span></td>
-                  <td>{% if qs.selectedVendor != '-' %}<strong>{{ qs.selectedVendor }}</strong>{% else %}<span style="color:#9ca3af">-</span>{% endif %}</td>
+                  <td>{% if qs.selectedVendor != '—' and qs.selectedVendor != '-' %}<strong>{{ qs.selectedVendor }}</strong>{% else %}<span style="color:#9ca3af">—</span>{% endif %}</td>
                   <td>
                     {% if qs.status == 'open' %}<span class="qs-badge b-open"><span class="dot"></span>Open</span>
                     {% elif qs.status == 'active' %}<span class="qs-badge b-active"><span class="dot"></span>Active</span>
                     {% elif qs.status == 'progress' %}<span class="qs-badge b-progress"><span class="dot"></span>In Progress</span>
                     {% elif qs.status == 'selected' %}<span class="qs-badge b-selected"><span class="dot"></span>Vendor Selected</span>
-                    {% else %}<span class="qs-badge b-closed"><span class="dot"></span>{{ qs.status|title }}</span>{% endif %}
+                    {% else %}<span class="qs-badge b-active"><span class="dot"></span>{{ qs.status|title }}</span>{% endif %}
                   </td>
-                  <td>{{ qs.created }}</td>
-                  <td><a href="details.html?id={{ qs.id }}" class="action-btn" title="View"><i class="fa-solid fa-eye"></i></a></td>
+                  <td style="white-space:nowrap;font-size:12px;color:#6b7280;">{{ qs.created }}</td>
+                  <td style="text-align:center;">
+                    <div class="action-group">
+                      <a href="details.html?id={{ qs.id }}" class="action-btn" title="View Details"><i class="fa-solid fa-eye"></i></a>
+                      <button type="button" class="action-btn btn-action-close" onclick="changeServiceStatus({{ qs.raw_id }}, 'closed', '{{ qs.title|escapejs }}')" title="Close Quick Service">
+                        <i class="fa-solid fa-circle-xmark"></i>
+                      </button>
+                    </div>
+                  </td>
                 </tr>
                 {% endfor %}
               </tbody>
@@ -180,73 +472,86 @@
           </div>
           {% else %}
           <div class="empty-state">
-            <i class="fa-regular fa-folder-open"></i>
-            <p>No active quick services at the moment.</p>
+            <i class="fa-solid fa-bolt"></i>
+            <h6>No Active Quick Services</h6>
+            <p>{% if admin_state %}No active quick services currently listed in {{ admin_state }}.{% else %}No active quick services at the moment.{% endif %}</p>
           </div>
           {% endif %}
+        </div>
       </div>
 
-      <!-- ── Closed Quick Services ── -->
+      <!-- ── Closed Quick Services Section ── -->
       <div class="qs-section" id="closed-section" style="display:none;">
         <div class="qs-card">
-        {% if closed_qs %}
-        <div class="table-wrap">
-          <table class="qs-table">
-            <thead>
-              <tr>
-                <th>ID</th>
-                <th>Customer</th>
-                <th>Service</th>
-                <th>Category</th>
-                <th>Location</th>
-                <th>Budget</th>
-                <th>Vendor Requests</th>
-                <th>Selected Vendor</th>
-                <th>Status</th>
-                <th>Created</th>
-                <th>Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              {% for qs in closed_qs %}
-              <tr>
-                <td><span class="mono">{{ qs.id }}</span></td>
-                <td>
-                  <div class="cell-user">
-                    <span class="avatar {{ qs.avatar_class }}">{{ qs.customer|slice:":2"|upper }}</span>
-                    <div>
-                      <div class="u-name">{{ qs.customer }}</div>
-                      <div class="u-sub">{{ qs.customerMobile }}</div>
+          {% if closed_qs %}
+          <div class="table-wrap">
+            <table class="qs-table" id="closedQsTable">
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Provider / Vendor</th>
+                  <th>Service Title</th>
+                  <th>Category</th>
+                  <th>Location</th>
+                  <th>Budget</th>
+                  <th>Requests</th>
+                  <th>Selected Vendor</th>
+                  <th>Status</th>
+                  <th>Created</th>
+                  <th style="text-align:center;">Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for qs in closed_qs %}
+                <tr id="row-qs-{{ qs.raw_id }}" data-category="{{ qs.category }}" data-status="{{ qs.status }}" data-text="{{ qs.id }} {{ qs.title }} {{ qs.customer }} {{ qs.location }} {{ qs.locality }} {{ qs.category }}">
+                  <td><span class="mono">{{ qs.id }}</span></td>
+                  <td>
+                    <div class="cell-user">
+                      <span class="avatar {{ qs.avatar_class }}">{{ qs.customer|slice:":2"|upper }}</span>
+                      <div>
+                        <div class="u-name">{{ qs.customer }}</div>
+                        <div class="u-sub">{{ qs.customerMobile }}</div>
+                      </div>
                     </div>
-                  </div>
-                </td>
-                <td><strong>{{ qs.title }}</strong></td>
-                <td>{{ qs.category }}</td>
-                <td>{{ qs.location }}</td>
-                <td><strong>&#8377;{{ qs.budget|floatformat:0 }}</strong></td>
-                <td><span class="vendor-count"><i class="fa-solid fa-handshake"></i> {{ qs.vendorRequests }}</span></td>
-                <td>{% if qs.selectedVendor != '-' %}<strong>{{ qs.selectedVendor }}</strong>{% else %}<span style="color:#9ca3af">&#8212;</span>{% endif %}</td>
-                <td>
-                  {% if qs.status == 'completed' %}<span class="qs-badge b-completed"><span class="dot"></span>Completed</span>
-                  {% elif qs.status == 'cancelled' %}<span class="qs-badge b-cancelled"><span class="dot"></span>Cancelled</span>
-                  {% elif qs.status == 'closed' %}<span class="qs-badge b-closed"><span class="dot"></span>Closed</span>
-                  {% else %}<span class="qs-badge b-closed"><span class="dot"></span>{{ qs.status|title }}</span>{% endif %}
-                </td>
-                <td>{{ qs.created }}</td>
-                <td><a href="details.html?id={{ qs.id }}" class="action-btn" title="View"><i class="fa-solid fa-eye"></i></a></td>
-              </tr>
-              {% endfor %}
-            </tbody>
-          </table>
+                  </td>
+                  <td><strong>{{ qs.title }}</strong></td>
+                  <td><span style="font-size:12px;font-weight:600;color:#4b5563;">{{ qs.category }}</span></td>
+                  <td>
+                    <div>{{ qs.location }}</div>
+                    {% if qs.locality %}<div style="font-size:11px;color:#9ca3af;">{{ qs.locality }}</div>{% endif %}
+                  </td>
+                  <td><strong style="color:#4b5563;">₹{{ qs.budget|floatformat:0 }}</strong></td>
+                  <td><span class="vendor-count"><i class="fa-solid fa-handshake"></i> {{ qs.vendorRequests }}</span></td>
+                  <td>{% if qs.selectedVendor != '—' and qs.selectedVendor != '-' %}<strong>{{ qs.selectedVendor }}</strong>{% else %}<span style="color:#9ca3af">—</span>{% endif %}</td>
+                  <td>
+                    {% if qs.status == 'completed' %}<span class="qs-badge b-completed"><span class="dot"></span>Completed</span>
+                    {% elif qs.status == 'cancelled' %}<span class="qs-badge b-cancelled"><span class="dot"></span>Cancelled</span>
+                    {% elif qs.status == 'closed' %}<span class="qs-badge b-closed"><span class="dot"></span>Closed</span>
+                    {% elif qs.status == 'paused' %}<span class="qs-badge b-paused"><span class="dot"></span>Paused</span>
+                    {% else %}<span class="qs-badge b-closed"><span class="dot"></span>{{ qs.status|title }}</span>{% endif %}
+                  </td>
+                  <td style="white-space:nowrap;font-size:12px;color:#6b7280;">{{ qs.created }}</td>
+                  <td style="text-align:center;">
+                    <div class="action-group">
+                      <a href="details.html?id={{ qs.id }}" class="action-btn" title="View Details"><i class="fa-solid fa-eye"></i></a>
+                      <button type="button" class="action-btn btn-action-reopen" onclick="changeServiceStatus({{ qs.raw_id }}, 'active', '{{ qs.title|escapejs }}')" title="Reactivate Quick Service">
+                        <i class="fa-solid fa-rotate-left"></i>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+          {% else %}
+          <div class="empty-state">
+            <i class="fa-solid fa-circle-check"></i>
+            <h6>No Closed Quick Services Yet</h6>
+            <p>{% if admin_state %}Completed, cancelled, and closed services in {{ admin_state }} will appear here.{% else %}Completed, cancelled, and closed quick services will appear here.{% endif %}</p>
+          </div>
+          {% endif %}
         </div>
-        {% else %}
-        <div style="padding:70px 20px;text-align:center;color:#9ca3af;">
-          <i class="fa-solid fa-circle-check" style="font-size:40px;margin-bottom:14px;display:block;color:#d1d5db;"></i>
-          <div style="font-size:16px;font-weight:600;color:#374151;margin-bottom:6px;">No closed services yet</div>
-          <p style="font-size:14px;margin:0;">Completed, cancelled and closed quick services will appear here.</p>
-        </div>
-        {% endif %}
-      </div>
       </div>
 
     </main>
@@ -264,45 +569,181 @@
   <script>
     (function () {
       'use strict';
-      function updateView() {
-         var hash = window.location.hash || '#active';
-         var isActive = hash !== '#closed';
-         
-         var actSec = document.getElementById('active-section');
-         var clsSec = document.getElementById('closed-section');
-         var title = document.getElementById('qs-page-title');
-         var sub = document.getElementById('qs-page-subtitle');
-         var dot = document.getElementById('qs-page-dot');
-         var countBadge = document.getElementById('qs-page-count');
-         
-         if(actSec) actSec.style.display = isActive ? 'block' : 'none';
-         if(clsSec) clsSec.style.display = !isActive ? 'block' : 'none';
-         
-         if(title) title.textContent = isActive ? 'Active Quick Services' : 'Closed Quick Services';
-         if(sub) sub.textContent = isActive ? 'Manage all open and ongoing service requests' : 'Completed, cancelled and closed service requests';
-         
-         if(dot) {
-             dot.className = isActive ? 'section-dot dot-active' : 'section-dot dot-closed';
-         }
-         if(countBadge) {
-             countBadge.className = isActive ? 'count-badge active' : 'count-badge closed';
-             countBadge.textContent = isActive ? '{{ active_qs|length }}' : '{{ closed_qs|length }}';
-         }
-         
-         // Update Breadcrumb
-         if (window.AdminComponents) {
-             AdminComponents.renderBreadcrumb([
-               { label: 'Quick Services', href: 'index.html' },
-               { label: isActive ? 'Active' : 'Closed' }
-             ]);
-         }
+
+      function getCsrfToken() {
+        var csrfEl = document.querySelector('input[name="csrfmiddlewaretoken"]');
+        if (csrfEl) return csrfEl.value;
+        var cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+          var cookies = document.cookie.split(';');
+          for (var i = 0; i < cookies.length; i++) {
+            var cookie = cookies[i].trim();
+            if (cookie.substring(0, 10) === 'csrftoken=') {
+              cookieValue = decodeURIComponent(cookie.substring(10));
+              break;
+            }
+          }
+        }
+        return cookieValue || '';
       }
-      
+
+      function updateView() {
+        var hash = window.location.hash || (window.location.search.indexOf('status=closed') !== -1 ? '#closed' : '#active');
+        var isActive = hash !== '#closed';
+
+        var actSec = document.getElementById('active-section');
+        var clsSec = document.getElementById('closed-section');
+        var title = document.getElementById('qs-page-title');
+        var sub = document.getElementById('qs-page-subtitle');
+        var iconWrap = document.getElementById('qs-header-icon');
+        var iconI = document.getElementById('qs-header-icon-i');
+        var countBadge = document.getElementById('qs-count-badge');
+        var tabActive = document.getElementById('tab-link-active');
+        var tabClosed = document.getElementById('tab-link-closed');
+
+        if (actSec) actSec.style.display = isActive ? 'block' : 'none';
+        if (clsSec) clsSec.style.display = !isActive ? 'block' : 'none';
+
+        if (tabActive) tabActive.classList.toggle('active', isActive);
+        if (tabClosed) tabClosed.classList.toggle('active', !isActive);
+
+        if (title) {
+          title.innerHTML = (isActive ? 'Active Quick Services ' : 'Closed Quick Services ') +
+            '<span class="tab-badge ' + (isActive ? 'tab-badge-active' : 'tab-badge-closed') + '" id="qs-count-badge">' +
+            (isActive ? '{{ active_qs|length }}' : '{{ closed_qs|length }}') + '</span>';
+        }
+        if (sub) {
+          sub.textContent = isActive
+            ? 'Manage all active and open quick service offerings in your jurisdiction'
+            : 'Completed, cancelled and closed quick service requests';
+        }
+
+        if (iconWrap) {
+          iconWrap.className = 'qs-header-icon ' + (isActive ? 'active' : 'closed');
+        }
+        if (iconI) {
+          iconI.className = 'fa-solid ' + (isActive ? 'fa-bolt' : 'fa-circle-check');
+        }
+
+        // Keep sidebar synchronized
+        if (window.AdminComponents && window.AdminComponents.syncSidebarActive) {
+          window.AdminComponents.syncSidebarActive();
+        }
+
+        // Apply any active search/filter to the currently visible table
+        applyFilter();
+      }
+
+      function applyFilter() {
+        var q = (document.getElementById('qsSearchInput').value || '').trim().toLowerCase();
+        var cat = (document.getElementById('qsCategoryFilter').value || '').trim();
+        var hash = window.location.hash || '#active';
+        var tableId = hash === '#closed' ? 'closedQsTable' : 'activeQsTable';
+        var table = document.getElementById(tableId);
+        if (!table) return;
+
+        var rows = table.querySelectorAll('tbody tr');
+        rows.forEach(function (row) {
+          var rowText = (row.getAttribute('data-text') || '').toLowerCase();
+          var rowCat = row.getAttribute('data-category') || '';
+
+          var matchesQuery = !q || rowText.indexOf(q) !== -1;
+          var matchesCategory = !cat || rowCat === cat;
+
+          row.style.display = (matchesQuery && matchesCategory) ? '' : 'none';
+        });
+      }
+
+      // Filter events
+      var searchInput = document.getElementById('qsSearchInput');
+      if (searchInput) searchInput.addEventListener('input', applyFilter);
+
+      var categoryFilter = document.getElementById('qsCategoryFilter');
+      if (categoryFilter) categoryFilter.addEventListener('change', applyFilter);
+
+      var resetBtn = document.getElementById('qsResetFilterBtn');
+      if (resetBtn) {
+        resetBtn.addEventListener('click', function () {
+          if (searchInput) searchInput.value = '';
+          if (categoryFilter) categoryFilter.value = '';
+          applyFilter();
+        });
+      }
+
       window.addEventListener('hashchange', updateView);
-      // Let components.js render first, then update view
-      setTimeout(updateView, 50);
+      setTimeout(updateView, 40);
+
+      // Global status update handler
+      window.changeServiceStatus = function (serviceId, newStatus, title) {
+        var actionText = newStatus === 'active' ? 'reactivate' : 'close';
+        var confirmTitle = newStatus === 'active' ? 'Reactivate Quick Service' : 'Close Quick Service';
+        var confirmMsg = 'Are you sure you want to ' + actionText + ' "' + title + '"? It will be moved to ' + (newStatus === 'active' ? 'Active' : 'Closed') + ' Quick Services.';
+
+        function executeUpdate() {
+          var token = getCsrfToken();
+          var formData = new FormData();
+          formData.append('status', newStatus);
+
+          fetch('/api/admin/quick-services/' + serviceId + '/status/', {
+            method: 'POST',
+            headers: {
+              'X-CSRFToken': token,
+              'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: formData
+          })
+          .then(function (res) { return res.json(); })
+          .then(function (data) {
+            if (data.status === 'success') {
+              if (window.AdminUI && AdminUI.toast) {
+                AdminUI.toast('success', 'Status Updated', data.message);
+              } else {
+                alert(data.message);
+              }
+              // Animate removal and reload dynamically to refresh table & counters
+              var row = document.getElementById('row-qs-' + serviceId);
+              if (row) {
+                row.style.transition = 'all 0.3s ease';
+                row.style.opacity = '0';
+                row.style.transform = 'scale(0.95)';
+              }
+              setTimeout(function () {
+                window.location.hash = newStatus === 'active' ? '#active' : '#closed';
+                window.location.reload();
+              }, 400);
+            } else {
+              if (window.AdminUI && AdminUI.toast) {
+                AdminUI.toast('error', 'Update Failed', data.message || 'Could not update status');
+              } else {
+                alert('Error: ' + (data.message || 'Could not update status'));
+              }
+            }
+          })
+          .catch(function (err) {
+            console.error(err);
+            if (window.AdminUI && AdminUI.toast) {
+              AdminUI.toast('error', 'Error', 'A network error occurred while updating status.');
+            } else {
+              alert('Network error occurred.');
+            }
+          });
+        }
+
+        if (window.AdminUI && AdminUI.confirm) {
+          AdminUI.confirm({
+            title: confirmTitle,
+            message: confirmMsg,
+            confirmText: newStatus === 'active' ? 'Reactivate' : 'Close Service',
+            danger: newStatus !== 'active',
+            onConfirm: executeUpdate
+          });
+        } else {
+          if (confirm(confirmMsg)) {
+            executeUpdate();
+          }
+        }
+      };
     })();
   </script>
 </body>
 </html>
-

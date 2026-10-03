@@ -424,7 +424,7 @@ def vendor_signup_api(request):
     try:
         data = _parse_api_request(request)
         name = (data.get('name') or data.get('contact_name') or '').strip()
-        company_name = (data.get('company_name') or name).strip()
+        company_name = (data.get('company_name') or '').strip()
         email = (data.get('email') or '').strip()
         mobile = (data.get('mobile') or data.get('contact') or data.get('phone_number') or '').strip()
         password = data.get('password', '')
@@ -448,9 +448,12 @@ def vendor_signup_api(request):
             
         try:
             from datetime import datetime
-            dob = datetime.strptime(dob_raw, "%d-%m-%Y").date()
+            if '-' in dob_raw and len(dob_raw.split('-')[0]) == 4:
+                dob = datetime.strptime(dob_raw, "%Y-%m-%d").date()
+            else:
+                dob = datetime.strptime(dob_raw, "%d-%m-%Y").date()
         except ValueError:
-            return JsonResponse({'status': 'error', 'message': "Invalid 'dob' format. Expected dd-mm-yyyy."}, status=400)
+            return JsonResponse({'status': 'error', 'message': "Invalid 'dob' format. Expected YYYY-MM-DD or dd-mm-yyyy."}, status=400)
         
         experience = data.get('experience', 0)
         try:
@@ -472,7 +475,9 @@ def vendor_signup_api(request):
 
         username = (data.get('username') or '').strip()
         if not username:
-            base_username = email.split('@')[0] if '@' in email else company_name.replace(" ", "").lower()
+            base_username = email.split('@')[0] if '@' in email else (company_name or name).replace(" ", "").lower()
+            if not base_username:
+                base_username = 'vendor'
             username = base_username
             counter = 1
             while User.objects.filter(username__iexact=username).exists():
@@ -711,13 +716,47 @@ def user_nav_data_api(request):
         u = request.user
         name = u.get_full_name() or u.username
         initials = (u.first_name[:1].upper() + u.last_name[:1].upper()) if u.first_name else u.username[:2].upper()
-        return JsonResponse({'name': name, 'initials': initials})
-    return JsonResponse({'name': 'Guest', 'initials': 'GU'})
+        
+        user_city = None
+        user_state = None
+        u_prof = getattr(u, 'user_profile', None)
+        if u_prof and u_prof.city:
+            user_city = u_prof.city.strip()
+            user_state = u_prof.state.strip() if u_prof.state else None
+        if not user_city:
+            user_city = request.session.get('user_city') or request.COOKIES.get('sugu_user_city')
+            user_state = request.session.get('user_state') or request.COOKIES.get('sugu_user_state')
+        if not user_city and getattr(u, 'assigned_city', None):
+            user_city = u.assigned_city.strip()
+            user_state = u.assigned_state.strip() if u.assigned_state else None
+        if not user_city and hasattr(u, 'vendor_profile') and u.vendor_profile and u.vendor_profile.location:
+            parts = u.vendor_profile.location.split(',')
+            user_city = parts[0].strip()
+            if len(parts) > 1:
+                user_state = parts[1].strip()
+
+        if not user_city:
+            user_city = "Ranchi"
+            user_state = "Jharkhand"
+
+        active_cities = {c.lower().strip() for c in Location.objects.filter(status='active').values_list('city', flat=True) if c}
+        is_service_available = user_city.lower().strip() in active_cities
+
+        return JsonResponse({
+            'name': name,
+            'initials': initials,
+            'city': user_city,
+            'state': user_state,
+            'is_service_available': is_service_available,
+        })
+    return JsonResponse({'name': 'Guest', 'initials': 'GU', 'is_service_available': True})
 
 
 @csrf_exempt
 @require_POST
 def add_category_api(request):
+    if not (request.user.is_authenticated and request.user.is_superuser):
+        return JsonResponse({'success': False, 'error': 'Permission Denied: Category management is restricted to Super Admin.'}, status=403)
     try:
         data = _parse_api_request(request)
         name = data.get('name', '').strip()
@@ -749,6 +788,8 @@ def add_category_api(request):
 @csrf_exempt
 @require_POST
 def update_category_api(request):
+    if not (request.user.is_authenticated and request.user.is_superuser):
+        return JsonResponse({'success': False, 'error': 'Permission Denied: Category management is restricted to Super Admin.'}, status=403)
     try:
         data = _parse_api_request(request)
         cat_id = data.get('id')
@@ -783,6 +824,8 @@ def update_category_api(request):
 @csrf_exempt
 @require_POST
 def delete_category_api(request):
+    if not (request.user.is_authenticated and request.user.is_superuser):
+        return JsonResponse({'success': False, 'error': 'Permission Denied: Category management is restricted to Super Admin.'}, status=403)
     try:
         data = _parse_api_request(request)
         cat_id = data.get('id')
@@ -896,7 +939,7 @@ def unified_otp_login_api(request):
                 while User.objects.filter(username=uname).exists():
                     uname = f"{base_username}_{c}"
                     c += 1
-                email = f"{uname}@sugguservices.local"
+                email = f"{uname}@sugu.local"
                 user = User.objects.create_user(
                     username=uname,
                     email=email,
@@ -919,7 +962,7 @@ def unified_otp_login_api(request):
                 while User.objects.filter(username=uname).exists():
                     uname = f"{base_username}_{c}"
                     c += 1
-                email = f"{uname}@sugguservices.local"
+                email = f"{uname}@sugu.local"
                 user = User.objects.create_user(
                     username=uname,
                     email=email,
@@ -1190,7 +1233,7 @@ def user_otp_signup_api(request):
             if User.objects.filter(email__iexact=email).exists():
                 return JsonResponse({'status': 'error', 'message': f"Email '{email}' is already registered."}, status=400)
         else:
-            email = f"user_{norm_phone}@sugguservices.local"
+            email = f"user_{norm_phone}@sugu.local"
 
         # 4. Generate unique username
         username = (data.get('username') or '').strip()
@@ -1406,7 +1449,7 @@ def vendor_otp_signup_api(request):
             if User.objects.filter(email__iexact=email).exists():
                 return JsonResponse({'status': 'error', 'message': f"Email '{email}' is already registered."}, status=400)
         else:
-            email = f"vendor_{norm_phone}@sugguservices.local"
+            email = f"vendor_{norm_phone}@sugu.local"
 
         # 4. Generate unique username
         username = (data.get('username') or '').strip()

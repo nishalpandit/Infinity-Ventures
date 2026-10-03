@@ -1,10 +1,10 @@
-﻿<!doctype html>
+<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta name="description" content="Suggu Services User Portal - Profile">
-  <title>Profile · Suggu Services User</title>
+  <meta name="description" content="Sugu User Portal - Profile">
+  <title>Profile · Sugu User</title>
   <link rel="stylesheet" href="../assets/styles.css">
   <script defer src="../assets/app.js"></script>
 </head>
@@ -29,7 +29,7 @@
             <div class="profile-meta">
               <span><span data-icon="mail"></span> {{ user.email|default:"Not provided" }}</span>
               <span><span data-icon="phone"></span> {{ user.user_profile.phone_number|default:"Not provided" }}</span>
-              <span><span data-icon="map"></span> Ranchi, Jharkhand</span>
+              <span><span data-icon="map"></span> {% if user.user_profile.city %}{{ user.user_profile.city }}{% if user.user_profile.state %}, {{ user.user_profile.state }}{% endif %}{% else %}Ranchi, Jharkhand{% endif %}</span>
             </div>
             <div style="margin-top:10px">
               <span class="badge badge-success">Active Account</span>

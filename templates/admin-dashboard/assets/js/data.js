@@ -1,5 +1,5 @@
 /* ==========================================================================
-   Suggu Admin DASHBOARD — data.js
+   Sugu Admin DASHBOARD — data.js
    Centralized data store (static mock data removed; all data is
    served dynamically by the Django backend via template context).
    ========================================================================== */

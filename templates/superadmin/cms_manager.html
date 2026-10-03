@@ -81,13 +81,112 @@
   {% endif %}
 </div>
 
-<!-- LOCATIONS SECTION -->
+<!-- STATES SECTION -->
 <div style="margin-bottom: 16px; margin-top: 36px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 14px;">
-  <h3 style="font-size: 18px; font-weight: 700; color: var(--text-main); margin: 0;">
-    <i class="fa-solid fa-city" style="color: var(--accent); margin-right: 8px;"></i>Service Locations &amp; Cities
-  </h3>
+  <div>
+    <h3 style="font-size: 18px; font-weight: 700; color: var(--text-main); margin: 0 0 4px;">
+      <i class="fa-solid fa-map" style="color: var(--accent); margin-right: 8px;"></i>Service States
+    </h3>
+    <p style="margin: 0; font-size: 13px; color: var(--text-muted);">
+      Create states first. Operational cities are then mapped under each state.
+    </p>
+  </div>
+  <a href="{% url 'super_admin_state_create' %}" class="btn btn-primary">
+    <i class="fa-solid fa-plus"></i> Add State
+  </a>
+</div>
+
+<div class="card" style="padding: 0; overflow: hidden; margin-bottom: 30px;">
+  <div class="table-container" style="border: none; border-radius: 0; box-shadow: none;">
+    <table>
+      <thead>
+        <tr>
+          <th>State Name</th>
+          <th>Mapped Cities</th>
+          <th>Status</th>
+          <th>Created</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for st in states %}
+        <tr>
+          <td><strong>{{ st.name }}</strong></td>
+          <td>
+            <span class="badge" style="background: rgba(99, 102, 241, 0.1); color: var(--accent); font-weight: 700;">
+              {{ st.cities_count }} {{ st.cities_count|pluralize:"city,cities" }}
+            </span>
+          </td>
+          <td><span class="badge {% if st.status == 'active' %}active{% else %}inactive{% endif %}">{{ st.get_status_display }}</span></td>
+          <td style="color: var(--text-muted);">{{ st.created_at|date:"M d, Y" }}</td>
+          <td>
+            <div style="display: flex; gap: 8px;">
+              <a href="{% url 'super_admin_location_create' %}?state={{ st.name|urlencode }}" class="btn btn-outline btn-sm" title="Add city under this state" style="color: #059669; border-color: rgba(16,185,129,0.3);">
+                <i class="fa-solid fa-plus"></i> Add City
+              </a>
+              <a href="{% url 'super_admin_state_edit' st.id %}" class="btn btn-outline btn-sm">
+                <i class="fa-solid fa-pen-to-square"></i> Edit
+              </a>
+              <a href="{% url 'super_admin_state_delete' st.id %}" class="btn btn-outline btn-sm" style="border-color: rgba(239,68,68,0.3); color: var(--danger);" onclick="return confirm('Delete state {{ st.name }}?');">
+                <i class="fa-solid fa-trash"></i>
+              </a>
+            </div>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="5" style="text-align: center; padding: 36px; color: var(--text-muted);">
+            No states created yet. Click "+ Add State" above to create your first state.
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- STATES PAGINATION BAR -->
+  {% if states.has_other_pages %}
+  <div class="pagination-wrap">
+    <div>
+      Showing Page <strong>{{ states.number }}</strong> of <strong>{{ states.paginator.num_pages }}</strong> ({{ total_states }} total states)
+    </div>
+    <div class="pagination-nav">
+      {% if states.has_previous %}
+        <a href="?state_page={{ states.previous_page_number }}&loc_page={{ loc_page }}&cat_page={{ cat_page }}" class="page-link" title="Previous"><i class="fa-solid fa-chevron-left"></i></a>
+      {% else %}
+        <span class="page-link disabled"><i class="fa-solid fa-chevron-left"></i></span>
+      {% endif %}
+
+      {% for p in states.paginator.page_range %}
+        {% if p == states.number %}
+          <span class="page-link active">{{ p }}</span>
+        {% elif p > states.number|add:"-3" and p < states.number|add:"3" %}
+          <a href="?state_page={{ p }}&loc_page={{ loc_page }}&cat_page={{ cat_page }}" class="page-link">{{ p }}</a>
+        {% endif %}
+      {% endfor %}
+
+      {% if states.has_next %}
+        <a href="?state_page={{ states.next_page_number }}&loc_page={{ loc_page }}&cat_page={{ cat_page }}" class="page-link" title="Next"><i class="fa-solid fa-chevron-right"></i></a>
+      {% else %}
+        <span class="page-link disabled"><i class="fa-solid fa-chevron-right"></i></span>
+      {% endif %}
+    </div>
+  </div>
+  {% endif %}
+</div>
+
+<!-- CITIES / LOCATIONS SECTION -->
+<div style="margin-bottom: 16px; margin-top: 36px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 14px;">
+  <div>
+    <h3 style="font-size: 18px; font-weight: 700; color: var(--text-main); margin: 0 0 4px;">
+      <i class="fa-solid fa-city" style="color: var(--accent); margin-right: 8px;"></i>Service Cities
+    </h3>
+    <p style="margin: 0; font-size: 13px; color: var(--text-muted);">
+      Cities mapped under created states where customers can book services.
+    </p>
+  </div>
   <a href="{% url 'super_admin_location_create' %}" class="btn btn-primary">
-    <i class="fa-solid fa-plus"></i> Add Location
+    <i class="fa-solid fa-plus"></i> Add City
   </a>
 </div>
 
@@ -115,14 +214,14 @@
               <a href="{% url 'super_admin_location_edit' loc.id %}" class="btn btn-outline btn-sm">
                 <i class="fa-solid fa-pen-to-square"></i> Edit
               </a>
-              <a href="{% url 'super_admin_location_delete' loc.id %}" class="btn btn-outline btn-sm" style="border-color: rgba(239,68,68,0.3); color: var(--danger);" onclick="return confirm('Delete location {{ loc }}?');">
+              <a href="{% url 'super_admin_location_delete' loc.id %}" class="btn btn-outline btn-sm" style="border-color: rgba(239,68,68,0.3); color: var(--danger);" onclick="return confirm('Delete city {{ loc }}?');">
                 <i class="fa-solid fa-trash"></i>
               </a>
             </div>
           </td>
         </tr>
         {% empty %}
-        <tr><td colspan="5" style="text-align: center; padding: 40px; color: var(--text-muted);">No locations found.</td></tr>
+        <tr><td colspan="5" style="text-align: center; padding: 40px; color: var(--text-muted);">No cities found. Click "+ Add City" to map a city to an existing state.</td></tr>
         {% endfor %}
       </tbody>
     </table>
@@ -136,7 +235,7 @@
     </div>
     <div class="pagination-nav">
       {% if locations.has_previous %}
-        <a href="?loc_page={{ locations.previous_page_number }}&cat_page={{ cat_page }}" class="page-link" title="Previous"><i class="fa-solid fa-chevron-left"></i></a>
+        <a href="?loc_page={{ locations.previous_page_number }}&state_page={{ state_page }}&cat_page={{ cat_page }}" class="page-link" title="Previous"><i class="fa-solid fa-chevron-left"></i></a>
       {% else %}
         <span class="page-link disabled"><i class="fa-solid fa-chevron-left"></i></span>
       {% endif %}
@@ -145,12 +244,12 @@
         {% if p == locations.number %}
           <span class="page-link active">{{ p }}</span>
         {% elif p > locations.number|add:"-3" and p < locations.number|add:"3" %}
-          <a href="?loc_page={{ p }}&cat_page={{ cat_page }}" class="page-link">{{ p }}</a>
+          <a href="?loc_page={{ p }}&state_page={{ state_page }}&cat_page={{ cat_page }}" class="page-link">{{ p }}</a>
         {% endif %}
       {% endfor %}
 
       {% if locations.has_next %}
-        <a href="?loc_page={{ locations.next_page_number }}&cat_page={{ cat_page }}" class="page-link" title="Next"><i class="fa-solid fa-chevron-right"></i></a>
+        <a href="?loc_page={{ locations.next_page_number }}&state_page={{ state_page }}&cat_page={{ cat_page }}" class="page-link" title="Next"><i class="fa-solid fa-chevron-right"></i></a>
       {% else %}
         <span class="page-link disabled"><i class="fa-solid fa-chevron-right"></i></span>
       {% endif %}

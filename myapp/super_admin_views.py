@@ -10,7 +10,7 @@ from django.core.paginator import Paginator, PageNotAnInteger, EmptyPage
 from django.db.models import Q, Sum, Count
 from .models import (
     CustomUser, VendorProfile, UserProfile, Job, QuickService, 
-    Category, GlobalSettings, Location, Bid, Subscription, Message,
+    Category, GlobalSettings, Location, State, Bid, Subscription, Message,
     SiteBranding, HeroSection, QuickServiceCard, FeaturedProjectCard,
     PackageCard, Testimonial, TrustMetric, VendorKYC,
     VendorWallet, WalletTransaction, PayoutRequest,
@@ -430,6 +430,290 @@ def super_admin_user_toggle(request, user_id):
     return redirect('super_admin_users')
 
 # ─────────────────────────────────────────────
+# AREA ADMINS (List + Create + Edit + Delete + Toggle)
+# ─────────────────────────────────────────────
+
+def _get_area_admin_states():
+    db_states = list(State.objects.filter(status='active').values_list('name', flat=True).order_by('name'))
+    if not db_states:
+        db_states = list(Location.objects.values_list('state', flat=True).distinct().order_by('state'))
+    default_states = ['Jharkhand', 'Maharashtra', 'Delhi', 'Karnataka', 'Tamil Nadu', 'Uttar Pradesh', 'West Bengal', 'Gujarat', 'Bihar', 'Rajasthan', 'Madhya Pradesh', 'Telangana', 'Andhra Pradesh', 'Kerala', 'Punjab', 'Haryana', 'Odisha']
+    return sorted(list(set([s for s in (db_states + default_states) if s])))
+
+@sa_required
+def super_admin_area_admins(request):
+    q = request.GET.get('q', '').strip()
+    state_filter = request.GET.get('state', '').strip()
+    status_filter = request.GET.get('status', '').strip()
+    sort = request.GET.get('sort', 'newest').strip()
+    page = request.GET.get('page', 1)
+
+    admins_qs = CustomUser.objects.filter(role='ADMIN', is_superuser=False).select_related('user_profile')
+
+    if q:
+        admins_qs = admins_qs.filter(
+            Q(username__icontains=q) |
+            Q(email__icontains=q) |
+            Q(first_name__icontains=q) |
+            Q(last_name__icontains=q) |
+            Q(assigned_state__icontains=q) |
+            Q(assigned_city__icontains=q) |
+            Q(user_profile__phone_number__icontains=q)
+        ).distinct()
+
+    if state_filter and state_filter != 'all':
+        admins_qs = admins_qs.filter(assigned_state__iexact=state_filter)
+
+    if status_filter and status_filter != 'all':
+        if status_filter == 'active':
+            admins_qs = admins_qs.filter(is_active=True)
+        elif status_filter == 'inactive':
+            admins_qs = admins_qs.filter(is_active=False)
+
+    if sort == 'oldest':
+        admins_qs = admins_qs.order_by('date_joined')
+    elif sort == 'name_asc':
+        admins_qs = admins_qs.order_by('username')
+    elif sort == 'name_desc':
+        admins_qs = admins_qs.order_by('-username')
+    elif sort == 'state_asc':
+        admins_qs = admins_qs.order_by('assigned_state', 'username')
+    else:
+        admins_qs = admins_qs.order_by('-date_joined')
+
+    # Overall counter metrics
+    base_admins = CustomUser.objects.filter(role='ADMIN', is_superuser=False)
+    total_admins = base_admins.count()
+    active_admins = base_admins.filter(is_active=True).count()
+    inactive_admins = base_admins.filter(is_active=False).count()
+    states_covered = base_admins.exclude(assigned_state__isnull=True).exclude(assigned_state='').values('assigned_state').distinct().count()
+
+    states = _get_area_admin_states()
+
+    paginator = Paginator(admins_qs, 10)
+    try:
+        admins = paginator.page(page)
+    except (EmptyPage, PageNotAnInteger):
+        admins = paginator.page(1)
+
+    get_copy = request.GET.copy()
+    if 'page' in get_copy:
+        del get_copy['page']
+    extra_query_params = get_copy.urlencode()
+
+    has_active_filters = bool(q or (state_filter and state_filter != 'all') or (status_filter and status_filter != 'all') or (sort and sort != 'newest'))
+    page_range = paginator.get_elided_page_range(admins.number, on_each_side=2, on_ends=1)
+
+    context = {
+        'admins': admins,
+        'page_range': page_range,
+        'q': q,
+        'state_filter': state_filter,
+        'status_filter': status_filter,
+        'sort': sort,
+        'states': states,
+        'total_admins': total_admins,
+        'active_admins': active_admins,
+        'inactive_admins': inactive_admins,
+        'states_covered': states_covered,
+        'extra_query_params': extra_query_params,
+        'has_active_filters': has_active_filters,
+    }
+    return render(request, 'superadmin/area_admins.html', context)
+
+
+@sa_required
+def super_admin_area_admin_create(request):
+    states = _get_area_admin_states()
+    locations = Location.objects.filter(status='active').values('city', 'state').order_by('city')
+    cities_by_state = {}
+    for loc in locations:
+        st = loc['state']
+        ct = loc['city']
+        if st and ct:
+            cities_by_state.setdefault(st, []).append(ct)
+
+    if request.method == 'POST':
+        username = request.POST.get('username', '').strip()
+        email = request.POST.get('email', '').strip()
+        password = request.POST.get('password', '').strip()
+        confirm_password = request.POST.get('confirm_password', '').strip()
+        first_name = request.POST.get('first_name', '').strip()
+        last_name = request.POST.get('last_name', '').strip()
+        assigned_state = request.POST.get('assigned_state', '').strip()
+        assigned_city = request.POST.get('assigned_city', '').strip()
+        phone_number = request.POST.get('phone_number', '').strip()
+        is_active = request.POST.get('is_active') == 'on'
+
+        errors = []
+        if not username:
+            errors.append('Username is required.')
+        elif CustomUser.objects.filter(username=username).exists():
+            errors.append(f'Username "{username}" is already in use.')
+
+        if not email:
+            errors.append('Email address is required.')
+        elif CustomUser.objects.filter(email=email).exists():
+            errors.append(f'Email "{email}" is already registered.')
+
+        if not assigned_state:
+            errors.append('Assigned State / Operational Territory is mandatory for Area Admins.')
+
+        if not password:
+            errors.append('Password is required.')
+        elif len(password) < 6:
+            errors.append('Password must be at least 6 characters long.')
+        elif password != confirm_password:
+            errors.append('Passwords do not match.')
+
+        if errors:
+            for err in errors:
+                django_messages.error(request, err)
+            return render(request, 'superadmin/area_admin_form.html', {
+                'mode': 'create',
+                'states': states,
+                'cities_by_state': json.dumps(cities_by_state),
+                'form_data': request.POST,
+            })
+
+        user = CustomUser.objects.create_user(
+            username=username,
+            email=email,
+            password=password,
+            role='ADMIN',
+            first_name=first_name,
+            last_name=last_name,
+            is_staff=True,
+            is_superuser=False,
+        )
+        user.assigned_state = assigned_state
+        user.assigned_city = assigned_city
+        user.is_active = is_active
+        user.save()
+
+        up, _ = UserProfile.objects.get_or_create(user=user)
+        if phone_number:
+            up.phone_number = phone_number
+        up.state = assigned_state
+        up.city = assigned_city
+        if 'profile_image' in request.FILES:
+            up.profile_image = request.FILES['profile_image']
+        up.save()
+
+        django_messages.success(request, f'Area Admin "{username}" successfully provisioned for {assigned_state}.')
+        return redirect('super_admin_area_admins')
+
+    return render(request, 'superadmin/area_admin_form.html', {
+        'mode': 'create',
+        'states': states,
+        'cities_by_state': json.dumps(cities_by_state),
+        'form_data': {'is_active': 'on'},
+    })
+
+
+@sa_required
+def super_admin_area_admin_edit(request, admin_id):
+    admin_obj = get_object_or_404(CustomUser.objects.select_related('user_profile'), pk=admin_id, role='ADMIN', is_superuser=False)
+    states = _get_area_admin_states()
+    locations = Location.objects.filter(status='active').values('city', 'state').order_by('city')
+    cities_by_state = {}
+    for loc in locations:
+        st = loc['state']
+        ct = loc['city']
+        if st and ct:
+            cities_by_state.setdefault(st, []).append(ct)
+
+    if request.method == 'POST':
+        email = request.POST.get('email', '').strip()
+        first_name = request.POST.get('first_name', '').strip()
+        last_name = request.POST.get('last_name', '').strip()
+        assigned_state = request.POST.get('assigned_state', '').strip()
+        assigned_city = request.POST.get('assigned_city', '').strip()
+        phone_number = request.POST.get('phone_number', '').strip()
+        is_active = request.POST.get('is_active') == 'on'
+        new_password = request.POST.get('password', '').strip()
+        confirm_password = request.POST.get('confirm_password', '').strip()
+
+        errors = []
+        if not email:
+            errors.append('Email address is required.')
+        elif CustomUser.objects.filter(email=email).exclude(pk=admin_obj.pk).exists():
+            errors.append(f'Email "{email}" is already registered to another user.')
+
+        if not assigned_state:
+            errors.append('Assigned State / Operational Territory cannot be empty.')
+
+        if new_password:
+            if len(new_password) < 6:
+                errors.append('New password must be at least 6 characters.')
+            elif new_password != confirm_password:
+                errors.append('New passwords do not match.')
+
+        if errors:
+            for err in errors:
+                django_messages.error(request, err)
+            return render(request, 'superadmin/area_admin_form.html', {
+                'mode': 'edit',
+                'admin_obj': admin_obj,
+                'states': states,
+                'cities_by_state': json.dumps(cities_by_state),
+            })
+
+        admin_obj.first_name = first_name
+        admin_obj.last_name = last_name
+        admin_obj.email = email
+        admin_obj.assigned_state = assigned_state
+        admin_obj.assigned_city = assigned_city
+        admin_obj.is_active = is_active
+        admin_obj.is_staff = True
+        if new_password:
+            admin_obj.set_password(new_password)
+        admin_obj.save()
+
+        up, _ = UserProfile.objects.get_or_create(user=admin_obj)
+        if phone_number:
+            up.phone_number = phone_number
+        up.state = assigned_state
+        up.city = assigned_city
+        if 'profile_image' in request.FILES:
+            up.profile_image = request.FILES['profile_image']
+        up.save()
+
+        django_messages.success(request, f'Area Admin "{admin_obj.username}" successfully updated.')
+        return redirect('super_admin_area_admins')
+
+    return render(request, 'superadmin/area_admin_form.html', {
+        'mode': 'edit',
+        'admin_obj': admin_obj,
+        'states': states,
+        'cities_by_state': json.dumps(cities_by_state),
+    })
+
+
+@sa_required
+def super_admin_area_admin_toggle(request, admin_id):
+    admin_obj = get_object_or_404(CustomUser, pk=admin_id, role='ADMIN', is_superuser=False)
+    admin_obj.is_active = not admin_obj.is_active
+    admin_obj.save()
+    status_label = "activated" if admin_obj.is_active else "deactivated"
+    if request.headers.get('x-requested-with') == 'XMLHttpRequest' or request.GET.get('ajax') == '1':
+        return JsonResponse({'success': True, 'is_active': admin_obj.is_active, 'status': status_label})
+    django_messages.success(request, f'Area Admin "{admin_obj.username}" {status_label}.')
+    return redirect('super_admin_area_admins')
+
+
+@sa_required
+def super_admin_area_admin_delete(request, admin_id):
+    admin_obj = get_object_or_404(CustomUser, pk=admin_id, role='ADMIN', is_superuser=False)
+    if admin_obj == request.user:
+        django_messages.error(request, "You cannot delete your own account.")
+        return redirect('super_admin_area_admins')
+    username = admin_obj.username
+    admin_obj.delete()
+    django_messages.success(request, f'Area Admin "{username}" has been permanently removed.')
+    return redirect('super_admin_area_admins')
+
+# ─────────────────────────────────────────────
 # VENDORS (List + Create + Edit + Delete + Toggle)
 @sa_required
 def super_admin_vendors(request):
@@ -698,10 +982,13 @@ from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 # ─────────────────────────────────────────────
 # CMS: CATEGORIES (List + Create + Edit + Delete)
 # ─────────────────────────────────────────────
+# CMS: CATEGORIES, STATES & LOCATIONS
+# ─────────────────────────────────────────────
 @sa_required
 def super_admin_cms(request):
     cat_queryset = Category.objects.all().order_by('-created_at')
     loc_queryset = Location.objects.all().order_by('-created_at')
+    state_queryset = State.objects.all().order_by('-created_at')
     
     # 8 per page for categories
     cat_paginator = Paginator(cat_queryset, 8)
@@ -711,7 +998,7 @@ def super_admin_cms(request):
     except (EmptyPage, PageNotAnInteger):
         categories = cat_paginator.page(1)
         
-    # 8 per page for locations
+    # 8 per page for locations / cities
     loc_paginator = Paginator(loc_queryset, 8)
     loc_page = request.GET.get('loc_page', 1)
     try:
@@ -719,13 +1006,28 @@ def super_admin_cms(request):
     except (EmptyPage, PageNotAnInteger):
         locations = loc_paginator.page(1)
 
+    # 8 per page for states
+    state_paginator = Paginator(state_queryset, 8)
+    state_page = request.GET.get('state_page', 1)
+    try:
+        states = state_paginator.page(state_page)
+    except (EmptyPage, PageNotAnInteger):
+        states = state_paginator.page(1)
+
+    # Attach city count for each state
+    for s in states:
+        s.cities_count = Location.objects.filter(state__iexact=s.name).count()
+
     return render(request, 'superadmin/cms_manager.html', {
         'categories': categories,
         'locations': locations,
+        'states': states,
         'cat_page': categories.number,
         'loc_page': locations.number,
+        'state_page': states.number,
         'total_categories': cat_queryset.count(),
         'total_locations': loc_queryset.count(),
+        'total_states': state_queryset.count(),
     })
 
 @sa_required
@@ -760,37 +1062,121 @@ def super_admin_category_delete(request, cat_id):
     return redirect('super_admin_cms')
 
 # ─────────────────────────────────────────────
-# CMS: LOCATIONS (Create + Edit + Delete)
+# CMS: STATES (Create + Edit + Delete)
+# ─────────────────────────────────────────────
+@sa_required
+def super_admin_state_create(request):
+    if request.method == 'POST':
+        name = request.POST.get('name', '').strip()
+        status = request.POST.get('status', 'active')
+        if not name:
+            django_messages.error(request, 'State name is required.')
+        elif State.objects.filter(name__iexact=name).exists():
+            django_messages.error(request, f'State "{name}" already exists.')
+        else:
+            State.objects.create(name=name, status=status)
+            django_messages.success(request, f'State "{name}" created successfully. You can now create cities under this state.')
+            return redirect('super_admin_cms')
+    return render(request, 'superadmin/state_form.html', {'mode': 'create'})
+
+@sa_required
+def super_admin_state_edit(request, state_id):
+    st = get_object_or_404(State, pk=state_id)
+    old_name = st.name
+    if request.method == 'POST':
+        name = request.POST.get('name', '').strip()
+        status = request.POST.get('status', 'active')
+        if not name:
+            django_messages.error(request, 'State name is required.')
+        else:
+            st.name = name
+            st.status = status
+            st.save()
+            if old_name != name:
+                Location.objects.filter(state__iexact=old_name).update(state=name)
+            django_messages.success(request, f'State "{st.name}" updated.')
+            return redirect('super_admin_cms')
+    return render(request, 'superadmin/state_form.html', {'mode': 'edit', 'state': st})
+
+@sa_required
+def super_admin_state_delete(request, state_id):
+    st = get_object_or_404(State, pk=state_id)
+    st_name = st.name
+    st.delete()
+    django_messages.success(request, f'State "{st_name}" deleted.')
+    return redirect('super_admin_cms')
+
+# ─────────────────────────────────────────────
+# CMS: CITIES / LOCATIONS (Create + Edit + Delete)
 # ─────────────────────────────────────────────
 @sa_required
 def super_admin_location_create(request):
+    states = State.objects.filter(status='active').order_by('name')
+    if not states.exists():
+        for s_name in Location.objects.values_list('state', flat=True).distinct():
+            if s_name and s_name.strip():
+                State.objects.get_or_create(name=s_name.strip(), defaults={'status': 'active'})
+        states = State.objects.filter(status='active').order_by('name')
+
+    preselected_state = request.GET.get('state', '')
+
     if request.method == 'POST':
-        Location.objects.create(
-            state=request.POST.get('state'),
-            city=request.POST.get('city'),
-            status=request.POST.get('status', 'active'),
-        )
-        django_messages.success(request, 'Location created.')
-        return redirect('super_admin_cms')
-    return render(request, 'superadmin/location_form.html', {'mode': 'create'})
+        state = request.POST.get('state', '').strip()
+        city = request.POST.get('city', '').strip()
+        status = request.POST.get('status', 'active')
+
+        if not state:
+            django_messages.error(request, 'Please select a state. Create a state first if none is listed.')
+        elif not city:
+            django_messages.error(request, 'Please enter a city name.')
+        elif Location.objects.filter(state__iexact=state, city__iexact=city).exists():
+            django_messages.error(request, f'City "{city}" in state "{state}" already exists.')
+        else:
+            Location.objects.create(
+                state=state,
+                city=city,
+                status=status,
+            )
+            django_messages.success(request, f'City "{city}, {state}" created successfully.')
+            return redirect('super_admin_cms')
+
+    return render(request, 'superadmin/location_form.html', {
+        'mode': 'create',
+        'states': states,
+        'preselected_state': preselected_state,
+    })
 
 @sa_required
 def super_admin_location_edit(request, loc_id):
     loc = get_object_or_404(Location, pk=loc_id)
+    states = State.objects.order_by('name')
     if request.method == 'POST':
-        loc.state = request.POST.get('state', loc.state)
-        loc.city = request.POST.get('city', loc.city)
-        loc.status = request.POST.get('status', loc.status)
-        loc.save()
-        django_messages.success(request, f'Location "{loc}" updated.')
-        return redirect('super_admin_cms')
-    return render(request, 'superadmin/location_form.html', {'mode': 'edit', 'loc': loc})
+        state = request.POST.get('state', loc.state).strip()
+        city = request.POST.get('city', loc.city).strip()
+        status = request.POST.get('status', loc.status)
+        if not state:
+            django_messages.error(request, 'Please select a state.')
+        elif not city:
+            django_messages.error(request, 'City name is required.')
+        else:
+            loc.state = state
+            loc.city = city
+            loc.status = status
+            loc.save()
+            django_messages.success(request, f'City "{loc.city}, {loc.state}" updated.')
+            return redirect('super_admin_cms')
+    return render(request, 'superadmin/location_form.html', {
+        'mode': 'edit',
+        'loc': loc,
+        'states': states,
+    })
 
 @sa_required
 def super_admin_location_delete(request, loc_id):
     loc = get_object_or_404(Location, pk=loc_id)
+    loc_str = str(loc)
     loc.delete()
-    django_messages.success(request, 'Location deleted.')
+    django_messages.success(request, f'City "{loc_str}" deleted.')
     return redirect('super_admin_cms')
 
 # ─────────────────────────────────────────────

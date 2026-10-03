@@ -1,9 +1,9 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Payments - Suggu Admin</title>
+  <title>Transactions - Sugu Admin</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
@@ -17,19 +17,13 @@
   <div class="main-wrapper">
     <div id="header-mount"></div>
     <main class="main-content">
-      <div class="breadcrumb" id="breadcrumb"></div>
 
       
-
-      <div class="alert alert-warning">
-        <i class="fa-solid fa-circle-info"></i> The platform does <strong>NOT</strong> process customer-to-vendor service payments.
-        Customers pay vendors directly. The platform only processes <strong>vendor subscription / bid-credit purchases</strong>.
-      </div>
 
       <div class="stat-grid" id="statGrid"></div>
 
       <div class="card" style="margin-top:20px;">
-        <div class="card-header"><h6><i class="fa-solid fa-credit-card"></i> Subscription Transactions</h6></div>
+        <div class="card-header"><h6><i class="fa-solid fa-receipt me-2"></i> Payment Transactions</h6></div>
         <div class="card-body p-0" id="tableMount"></div>
       </div>
     </main>
@@ -46,7 +40,7 @@
 
       AdminComponents.renderBreadcrumb([
         { label: 'Payments', href: '#' },
-        { label: 'All Payments' }
+        { label: 'Transactions' }
       ]);
 
       var purchasesData = {{ purchases_json|safe|default:"null" }} || D.purchases;

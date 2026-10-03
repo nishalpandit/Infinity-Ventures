@@ -1,4 +1,4 @@
-/* Suggu Services user — shared Vanilla JS interactions */
+/* Sugu User — shared Vanilla JS interactions */
 (() => {
   'use strict';
   const $ = (s, c=document) => c.querySelector(s);
@@ -59,7 +59,7 @@
       return `<div class="nav-parent ${navActive(k)?'open':''}">${link}<button class="submenu-toggle" type="button" aria-label="Toggle quotation links">${icon('down')}</button></div><div class="nav-submenu"><a href="${route('quick-services/quotations.html')}">Quotations</a><a href="${route('jobs/compare.html')}">Compare Quotations</a></div>`;
     }).join('');
     sidebarRoot.outerHTML = `<aside class="sidebar" id="sidebar" aria-label="user navigation">
-      <a class="brand" href="${route('dashboard.html')}"><span class="brand-mark" style="background:transparent;box-shadow:none;padding:0;display:flex;align-items:center;justify-content:center;"><img src="/static/assets/images/logo.png" alt="Suggu Services" style="width:30px;height:30px;border-radius:8px;object-fit:contain;"></span><span class="brand-copy"><strong>Suggu Services</strong><span>User Portal</span></span></a>
+      <a class="brand" href="${route('dashboard.html')}"><span class="brand-mark" style="background:transparent;box-shadow:none;padding:0;display:flex;align-items:center;justify-content:center;"><img src="/static/assets/images/logo.png" alt="Sugu" style="width:30px;height:30px;border-radius:8px;object-fit:contain;"></span><span class="brand-copy"><strong>Sugu</strong><span>User Portal</span></span></a>
       <nav class="nav-scroll"><div class="nav-label">Workspace</div>${links}<div class="nav-label">Session</div><a class="nav-link" href="${route('dashboard.html')}" data-confirm="logout" data-tooltip="Logout">${icon('logout')}<span class="nav-text">Logout</span></a></nav>
       <div class="sidebar-bottom"><div class="side-user"><span class="avatar sm dyn-avatar"></span><span class="side-user-copy"><strong class="dyn-name"></strong><span>user account</span></span></div></div>
     </aside>`;
@@ -95,6 +95,33 @@
     .then(d => {
       $$('.avatar:not(.xl)').forEach(el => el.textContent = d.initials);
       $$('.side-user-copy strong, .top-user-copy strong').forEach(el => el.textContent = d.name);
+      if (d.is_service_available === false && !$('.service-alert-banner')) {
+        const page = $('main.page');
+        if (page) {
+          const bannerHtml = `
+            <div class="service-alert-banner" style="background: linear-gradient(135deg, #fff1f2, #ffe4e6); border: 1.5px solid #fda4af; border-radius: 14px; padding: 16px 20px; margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between; gap: 16px; box-shadow: 0 4px 14px rgba(225, 29, 72, 0.08);">
+              <div style="display: flex; align-items: center; gap: 14px;">
+                <div style="width: 44px; height: 44px; border-radius: 12px; background: #f43f5e; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0; box-shadow: 0 4px 10px rgba(244,63,94,0.3);">
+                  ⚠️
+                </div>
+                <div>
+                  <div style="font-weight: 800; color: #9f1239; font-size: 15px; margin-bottom: 3px;">
+                    Service not available at your location
+                  </div>
+                  <div style="color: #be123c; font-size: 13.5px; line-height: 1.4;">
+                    Our home services are currently not available in <strong>${d.city || 'your location'}</strong>. We are expanding rapidly to new cities! You can update your location in your profile settings.
+                  </div>
+                </div>
+              </div>
+              <div style="display: flex; gap: 8px; flex-shrink: 0;">
+                <a href="/user/profile/edit.html" class="btn btn-secondary btn-sm" style="background:#fff; border-color:#fda4af; color:#9f1239; font-weight:700;">
+                  Change Location
+                </a>
+              </div>
+            </div>`;
+          page.insertAdjacentHTML('afterbegin', bannerHtml);
+        }
+      }
     }).catch(e => console.error(e));
   if(!$('.mobile-overlay')) body.insertAdjacentHTML('beforeend','<div class="mobile-overlay" id="mobile-overlay"></div><div class="toast-container" id="toast-container" aria-live="polite"></div>');
   if(!$('#global-modal')) body.insertAdjacentHTML('beforeend',`<div class="modal-backdrop" id="global-modal" role="dialog" aria-modal="true"><div class="modal"><div class="modal-head"><h3 id="global-modal-title">Please confirm</h3><button class="modal-close" data-modal-close>${icon('x')}</button></div><div class="modal-body" id="global-modal-body"></div><div class="modal-actions"><button class="btn btn-secondary" data-modal-close>Cancel</button><button class="btn btn-primary" id="global-modal-confirm">Confirm</button></div></div></div>`);
@@ -118,8 +145,8 @@
   $$('[data-icon]').forEach(el => el.innerHTML = icon(el.dataset.icon));
 
   // Sidebar state and mobile drawer.
-  if(localStorage.getItem('suggu-sidebar') === 'collapsed' && innerWidth > 767) body.classList.add('sidebar-collapsed');
-  $('#collapse-menu')?.addEventListener('click', () => { body.classList.toggle('sidebar-collapsed'); localStorage.setItem('suggu-sidebar', body.classList.contains('sidebar-collapsed')?'collapsed':'expanded'); });
+  if(localStorage.getItem('sugu-sidebar') === 'collapsed' && innerWidth > 767) body.classList.add('sidebar-collapsed');
+  $('#collapse-menu')?.addEventListener('click', () => { body.classList.toggle('sidebar-collapsed'); localStorage.setItem('sugu-sidebar', body.classList.contains('sidebar-collapsed')?'collapsed':'expanded'); });
   const closeMobile = () => body.classList.remove('mobile-menu-open');
   $('#mobile-menu')?.addEventListener('click', () => body.classList.add('mobile-menu-open'));
   $('#mobile-overlay')?.addEventListener('click', closeMobile);
@@ -151,7 +178,7 @@
   $$('[data-modal-open]').forEach(b=>b.addEventListener('click',()=>$('#'+b.dataset.modalOpen)?.classList.add('open')));
   $$('[data-confirm]').forEach(el=>el.addEventListener('click',e=>{
     e.preventDefault(); const type=el.dataset.confirm; const map={
-      logout:['Log out of Suggu Services?','You will need to sign in again to manage your services and jobs.','Log out','You have been logged out.'],
+      logout:['Log out of Sugu?','You will need to sign in again to manage your services and jobs.','Log out','You have been logged out.'],
       cancel:['Cancel this item?','This action will stop new vendor responses. A Quick Service may still be cancelled after a vendor is accepted.','Cancel item','Request cancelled'],
       close:['Close this item?','Closed requests no longer accept quotations. You can review the history at any time.','Close item','Request closed'],
       delete:['Delete this item?','This action cannot be undone.','Delete','Item deleted'],
@@ -167,12 +194,12 @@
   // Accept / select vendors. Quick Service permits one vendor; Long Job permits many.
   $$('[data-accept-quick]').forEach(btn=>btn.addEventListener('click',()=>{
     const name=btn.dataset.acceptQuick;
-    openGlobalModal('Accept vendor for this Quick Service?',`<div class="callout neutral">${icon('info')}<div><strong>${name}</strong>Are you sure you want to accept this vendor for this Quick Service? Other vendor responses will remain available.</div></div><p class="small muted">You can still cancel the Quick Service after accepting a vendor. Service payment is made directly to the vendor, not through Suggu Services.</p>`,'Accept vendor',()=>{ localStorage.setItem('suggu-quick-vendor',name); $$('[data-accept-quick]').forEach(b=>{b.textContent=b.dataset.acceptQuick===name?'Vendor accepted':'Accept vendor';b.disabled=b.dataset.acceptQuick!==name;}); showToast(`${name} selected`,'The vendor has been notified. Other quotations were not rejected.'); });
+    openGlobalModal('Accept vendor for this Quick Service?',`<div class="callout neutral">${icon('info')}<div><strong>${name}</strong>Are you sure you want to accept this vendor for this Quick Service? Other vendor responses will remain available.</div></div><p class="small muted">You can still cancel the Quick Service after accepting a vendor. Service payment is made directly to the vendor, not through Sugu.</p>`,'Accept vendor',()=>{ localStorage.setItem('sugu-quick-vendor',name); $$('[data-accept-quick]').forEach(b=>{b.textContent=b.dataset.acceptQuick===name?'Vendor accepted':'Accept vendor';b.disabled=b.dataset.acceptQuick!==name;}); showToast(`${name} selected`,'The vendor has been notified. Other quotations were not rejected.'); });
   }));
   $$('[data-select-job]').forEach(btn=>btn.addEventListener('click',()=>{
-    const name=btn.dataset.selectJob; let selected=JSON.parse(localStorage.getItem('suggu-job-vendors')||'[]'); const has=selected.includes(name);
-    if(has){ selected=selected.filter(n=>n!==name); localStorage.setItem('suggu-job-vendors',JSON.stringify(selected)); btn.classList.remove('btn-soft'); btn.classList.add('btn-primary'); btn.innerHTML=`${icon('plus')} Select vendor`; showToast(`${name} removed`,'You can add the vendor again at any time.'); }
-    else openGlobalModal('Select vendor for this job?',`<p>Select <strong>${name}</strong> for the Full House Renovation job?</p><div class="callout success">${icon('users')}<div><strong>Multiple vendors supported</strong>You can select other vendors and assign a different part of the work to each.</div></div>`,'Select vendor',()=>{selected.push(name);localStorage.setItem('suggu-job-vendors',JSON.stringify(selected));btn.classList.remove('btn-primary');btn.classList.add('btn-soft');btn.innerHTML=`${icon('check')} Selected`;showToast(`${name} selected`,'Next, assign this vendor a scope of work.');});
+    const name=btn.dataset.selectJob; let selected=JSON.parse(localStorage.getItem('sugu-job-vendors')||'[]'); const has=selected.includes(name);
+    if(has){ selected=selected.filter(n=>n!==name); localStorage.setItem('sugu-job-vendors',JSON.stringify(selected)); btn.classList.remove('btn-soft'); btn.classList.add('btn-primary'); btn.innerHTML=`${icon('plus')} Select vendor`; showToast(`${name} removed`,'You can add the vendor again at any time.'); }
+    else openGlobalModal('Select vendor for this job?',`<p>Select <strong>${name}</strong> for the Full House Renovation job?</p><div class="callout success">${icon('users')}<div><strong>Multiple vendors supported</strong>You can select other vendors and assign a different part of the work to each.</div></div>`,'Select vendor',()=>{selected.push(name);localStorage.setItem('sugu-job-vendors',JSON.stringify(selected));btn.classList.remove('btn-primary');btn.classList.add('btn-soft');btn.innerHTML=`${icon('check')} Selected`;showToast(`${name} selected`,'Next, assign this vendor a scope of work.');});
   }));
 
   // Tabs filter table/card rows.
@@ -241,11 +268,11 @@
   $('#global-search')?.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();showToast(`Searching for “${e.target.value}”`,'Use the page filters to narrow results.','info');}});
 
   // Initial state for selected vendors.
-  const selectedJobs=JSON.parse(localStorage.getItem('suggu-job-vendors')||'[]');
+  const selectedJobs=JSON.parse(localStorage.getItem('sugu-job-vendors')||'[]');
   $$('[data-select-job]').forEach(btn=>{if(selectedJobs.includes(btn.dataset.selectJob)){btn.classList.remove('btn-primary');btn.classList.add('btn-soft');btn.innerHTML=`${icon('check')} Selected`;}});
-  const selectedQuick=localStorage.getItem('suggu-quick-vendor');
+  const selectedQuick=localStorage.getItem('sugu-quick-vendor');
   if(selectedQuick) $$('[data-accept-quick]').forEach(b=>{if(b.dataset.acceptQuick===selectedQuick)b.innerHTML=`${icon('check')} Vendor accepted`;});
 
   // Expose helpers for small page scripts.
-  window.SugguServices={icon,openModal:openGlobalModal,closeModal,showToast};
+  window.SugguServices=window.SuguServices={icon,openModal:openGlobalModal,closeModal,showToast};
 })();

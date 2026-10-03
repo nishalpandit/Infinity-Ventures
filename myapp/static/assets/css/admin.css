@@ -1,5 +1,5 @@
 /* ==========================================================================
-   Suggu Admin DASHBOARD — admin.css
+   Sugu Admin DASHBOARD — admin.css
    Core design system: layout, typography, cards, tables, badges, buttons,
    forms, modals, tabs, toasts, breadcrumbs, states.
    ========================================================================== */
@@ -310,25 +310,10 @@ body.sidebar-collapsed .app-header { left: var(--sidebar-collapsed); }
 .page-head .ph-actions { display: flex; gap: 10px; flex-wrap: wrap; }
 
 .breadcrumb-bar,
-.breadcrumb {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 13px;
-  color: var(--text-muted);
-  margin-bottom: 6px;
-  background: transparent;
-  padding: 0;
-  border-radius: 0;
+.breadcrumb,
+#breadcrumb {
+  display: none !important;
 }
-.breadcrumb-bar a,
-.breadcrumb a { color: var(--text-muted); text-decoration: none; }
-.breadcrumb-bar a:hover,
-.breadcrumb a:hover { color: var(--primary); }
-.breadcrumb-bar .sep,
-.breadcrumb .sep { color: var(--text-light); }
-.breadcrumb-bar .current,
-.breadcrumb .current { color: var(--primary); font-weight: 600; }
 
 /* ==========================================================================
    CARDS

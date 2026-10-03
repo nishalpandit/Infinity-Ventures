@@ -1,6 +1,6 @@
-# Suggu Services (Infinity Ventures)
+# Sugu (Infinity Ventures)
 
-Suggu Services is an on-demand multi-vendor home and commercial services marketplace.
+Sugu is an on-demand multi-vendor home and commercial services marketplace.
 
 ## Key Features
 - **Live Geolocation & Proximity Engine**: 10 km radius matching for instant nearby services using high-accuracy HTML5 geolocation and distance calculations.

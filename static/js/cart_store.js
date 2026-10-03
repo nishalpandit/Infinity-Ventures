@@ -1,12 +1,12 @@
-// Suggu Services - Urban Company Reactive Cart Store
+// Sugu - Urban Company Reactive Cart Store
 (function() {
-  const STORAGE_KEY = "suggu_cart_items";
+  const STORAGE_KEY = "sugu_cart_items";
   let cart = {};
   const listeners = [];
 
   function loadCart() {
     try {
-      const data = localStorage.getItem(STORAGE_KEY);
+      const data = localStorage.getItem(STORAGE_KEY) || localStorage.getItem("suggu_cart_items");
       if (data) {
         cart = JSON.parse(data) || {};
       }
@@ -124,7 +124,7 @@
 
   loadCart();
 
-  window.SugguCart = {
+  window.SugguCart = window.SuguCart = {
     addItem,
     updateQuantity,
     setQuantity,

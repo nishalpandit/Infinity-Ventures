@@ -2,7 +2,7 @@ from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
 from .models import (
     CustomUser, UserProfile, VendorProfile, QuickService, Job,
-    Bid, Subscription, Category, Location, Message, GlobalSettings,
+    Bid, Subscription, Category, Location, State, Message, GlobalSettings,
     SiteBranding, HeroSection, QuickServiceCard, FeaturedProjectCard,
     PackageCard, Testimonial, TrustMetric, VendorWallet, WalletTransaction, PayoutRequest,
     DisputeTicket, DisputeMessage, JobCompletionProof, ServiceReview, ServiceBooking
@@ -65,6 +65,13 @@ class CategoryAdmin(admin.ModelAdmin):
     search_fields = ('name',)
 
 admin.site.register(Category, CategoryAdmin)
+
+class StateAdmin(admin.ModelAdmin):
+    list_display = ('name', 'status', 'created_at')
+    list_filter = ('status',)
+    search_fields = ('name',)
+
+admin.site.register(State, StateAdmin)
 
 class LocationAdmin(admin.ModelAdmin):
     list_display = ('city', 'state', 'status')

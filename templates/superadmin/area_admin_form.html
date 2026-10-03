@@ -1,0 +1,290 @@
+{% extends 'superadmin/base.html' %}
+{% load static %}
+{% block title %}{% if mode == 'create' %}Add Area Admin{% else %}Edit Area Admin: {{ admin_obj.username }}{% endif %} - Super Admin{% endblock %}
+{% block header_title %}{% if mode == 'create' %}Add Area Admin{% else %}Edit Area Admin{% endif %}{% endblock %}
+
+{% block header_actions %}
+<a href="{% url 'super_admin_area_admins' %}" class="btn btn-outline btn-sm">
+  <i class="fa-solid fa-arrow-left"></i>
+  <span>Back to Area Admins</span>
+</a>
+{% endblock %}
+
+{% block content %}
+<div class="card form-card" style="max-width: 860px; margin: 0 auto; padding: 28px 32px; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.04);">
+
+  <!-- Header -->
+  <div style="border-bottom: 1px solid #e2e8f0; padding-bottom: 18px; margin-bottom: 24px;">
+    <h3 style="font-size: 18px; font-weight: 700; color: #0f172a; margin: 0 0 4px 0;">
+      {% if mode == 'create' %}Create Area Admin{% else %}Edit Area Admin: {{ admin_obj.username }}{% endif %}
+    </h3>
+    <p style="font-size: 13px; color: #64748b; margin: 0;">
+      {% if mode == 'create' %}
+        Enter account credentials and assign a state territory.
+      {% else %}
+        User ID: #{{ admin_obj.id }} &middot; Created on {{ admin_obj.date_joined|date:"M d, Y" }}
+      {% endif %}
+    </p>
+  </div>
+
+  <form method="POST" enctype="multipart/form-data" id="areaAdminForm">
+    {% csrf_token %}
+
+    <!-- SECTION 1: ACCOUNT DETAILS -->
+    <div style="margin-bottom: 24px;">
+      <h4 style="font-size: 13px; font-weight: 700; color: #334155; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 14px;">
+        Account Details
+      </h4>
+
+      <!-- Name Row -->
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px;">
+        <div class="form-group" style="margin-bottom: 0;">
+          <label class="form-label" style="display: block; font-size: 12px; font-weight: 600; color: #475569; margin-bottom: 6px;">First Name</label>
+          <input 
+            type="text" 
+            name="first_name" 
+            class="form-control" 
+            value="{% if mode == 'create' %}{{ form_data.first_name|default:'' }}{% else %}{{ admin_obj.first_name|default:'' }}{% endif %}" 
+            placeholder="Enter first name"
+            style="width: 100%; padding: 8px 12px; font-size: 13.5px; border: 1px solid #cbd5e1; border-radius: 6px;"
+          >
+        </div>
+        <div class="form-group" style="margin-bottom: 0;">
+          <label class="form-label" style="display: block; font-size: 12px; font-weight: 600; color: #475569; margin-bottom: 6px;">Last Name</label>
+          <input 
+            type="text" 
+            name="last_name" 
+            class="form-control" 
+            value="{% if mode == 'create' %}{{ form_data.last_name|default:'' }}{% else %}{{ admin_obj.last_name|default:'' }}{% endif %}" 
+            placeholder="Enter last name"
+            style="width: 100%; padding: 8px 12px; font-size: 13.5px; border: 1px solid #cbd5e1; border-radius: 6px;"
+          >
+        </div>
+      </div>
+
+      <!-- Username & Email Row -->
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px;">
+        <div class="form-group" style="margin-bottom: 0;">
+          <label class="form-label" style="display: block; font-size: 12px; font-weight: 600; color: #475569; margin-bottom: 6px;">
+            Username <span style="color: #dc2626;">*</span>
+          </label>
+          <input 
+            type="text" 
+            name="username" 
+            class="form-control" 
+            value="{% if mode == 'create' %}{{ form_data.username|default:'' }}{% else %}{{ admin_obj.username }}{% endif %}" 
+            {% if mode == 'edit' %}readonly style="opacity: 0.75; background: #f8fafc; cursor: not-allowed; width: 100%; padding: 8px 12px; font-size: 13.5px; border: 1px solid #cbd5e1; border-radius: 6px;"{% else %}required placeholder="Enter username" style="width: 100%; padding: 8px 12px; font-size: 13.5px; border: 1px solid #cbd5e1; border-radius: 6px;"{% endif %}
+          >
+        </div>
+
+        <div class="form-group" style="margin-bottom: 0;">
+          <label class="form-label" style="display: block; font-size: 12px; font-weight: 600; color: #475569; margin-bottom: 6px;">
+            Email Address <span style="color: #dc2626;">*</span>
+          </label>
+          <input 
+            type="email" 
+            name="email" 
+            class="form-control" 
+            value="{% if mode == 'create' %}{{ form_data.email|default:'' }}{% else %}{{ admin_obj.email }}{% endif %}" 
+            required 
+            placeholder="Enter email address"
+            style="width: 100%; padding: 8px 12px; font-size: 13.5px; border: 1px solid #cbd5e1; border-radius: 6px;"
+          >
+        </div>
+      </div>
+
+      <!-- Phone Number & Avatar -->
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px;">
+        <div class="form-group" style="margin-bottom: 0;">
+          <label class="form-label" style="display: block; font-size: 12px; font-weight: 600; color: #475569; margin-bottom: 6px;">
+            Phone Number
+          </label>
+          <input 
+            type="text" 
+            name="phone_number" 
+            class="form-control" 
+            value="{% if mode == 'create' %}{{ form_data.phone_number|default:'' }}{% else %}{{ admin_obj.user_profile.phone_number|default:'' }}{% endif %}" 
+            placeholder="Enter phone number"
+            style="width: 100%; padding: 8px 12px; font-size: 13.5px; border: 1px solid #cbd5e1; border-radius: 6px;"
+          >
+        </div>
+
+        <div class="form-group" style="margin-bottom: 0;">
+          <label class="form-label" style="display: block; font-size: 12px; font-weight: 600; color: #475569; margin-bottom: 6px;">
+            Profile Photo
+          </label>
+          <input 
+            type="file" 
+            name="profile_image" 
+            accept="image/*" 
+            class="form-control"
+            style="width: 100%; padding: 6px 10px; font-size: 13px; border: 1px solid #cbd5e1; border-radius: 6px; background: white;"
+          >
+        </div>
+      </div>
+
+      <!-- Password Row -->
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
+        <div class="form-group" style="margin-bottom: 0;">
+          <label class="form-label" style="display: block; font-size: 12px; font-weight: 600; color: #475569; margin-bottom: 6px;">
+            Password {% if mode == 'create' %}<span style="color: #dc2626;">*</span>{% endif %}
+          </label>
+          <input 
+            type="password" 
+            name="password" 
+            id="adminPassword"
+            class="form-control" 
+            {% if mode == 'create' %}required{% endif %} 
+            placeholder="{% if mode == 'create' %}Enter password{% else %}Leave blank to keep current{% endif %}"
+            style="width: 100%; padding: 8px 12px; font-size: 13.5px; border: 1px solid #cbd5e1; border-radius: 6px;"
+          >
+        </div>
+
+        <div class="form-group" style="margin-bottom: 0;">
+          <label class="form-label" style="display: block; font-size: 12px; font-weight: 600; color: #475569; margin-bottom: 6px;">
+            Confirm Password {% if mode == 'create' %}<span style="color: #dc2626;">*</span>{% endif %}
+          </label>
+          <input 
+            type="password" 
+            name="confirm_password" 
+            id="adminConfirmPassword"
+            class="form-control" 
+            {% if mode == 'create' %}required{% endif %} 
+            placeholder="Confirm password"
+            style="width: 100%; padding: 8px 12px; font-size: 13.5px; border: 1px solid #cbd5e1; border-radius: 6px;"
+          >
+        </div>
+      </div>
+    </div>
+
+    <!-- SECTION 2: TERRITORY -->
+    <div style="margin-bottom: 24px; padding-top: 18px; border-top: 1px solid #e2e8f0;">
+      <h4 style="font-size: 13px; font-weight: 700; color: #334155; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 14px;">
+        Territory
+      </h4>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
+        
+        <!-- Assigned State -->
+        <div class="form-group" style="margin-bottom: 0;">
+          <label class="form-label" style="display: block; font-size: 12px; font-weight: 600; color: #475569; margin-bottom: 6px;">
+            State <span style="color: #dc2626;">*</span>
+          </label>
+          <select 
+            name="assigned_state" 
+            id="assignedStateSelect"
+            class="form-control" 
+            required 
+            style="width: 100%; padding: 8px 12px; font-size: 13.5px; border: 1px solid #cbd5e1; border-radius: 6px; background: white;"
+            onchange="updateCitySuggestions()"
+          >
+            <option value="">-- Select State --</option>
+            {% for st in states %}
+              <option value="{{ st }}" 
+                {% if mode == 'create' %}
+                  {% if form_data.assigned_state == st %}selected{% endif %}
+                {% else %}
+                  {% if admin_obj.assigned_state == st %}selected{% endif %}
+                {% endif %}
+              >
+                {{ st }}
+              </option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <!-- Assigned City -->
+        <div class="form-group" style="margin-bottom: 0;">
+          <label class="form-label" style="display: block; font-size: 12px; font-weight: 600; color: #475569; margin-bottom: 6px;">
+            City (Optional)
+          </label>
+          <input 
+            type="text" 
+            name="assigned_city" 
+            id="assignedCityInput"
+            list="citiesDataList"
+            class="form-control" 
+            value="{% if mode == 'create' %}{{ form_data.assigned_city|default:'' }}{% else %}{{ admin_obj.assigned_city|default:'' }}{% endif %}" 
+            placeholder="Enter city (optional)"
+            style="width: 100%; padding: 8px 12px; font-size: 13.5px; border: 1px solid #cbd5e1; border-radius: 6px;"
+          >
+          <datalist id="citiesDataList"></datalist>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- SECTION 3: STATUS -->
+    <div style="margin-bottom: 24px; padding-top: 18px; border-top: 1px solid #e2e8f0;">
+      <h4 style="font-size: 13px; font-weight: 700; color: #334155; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 14px;">
+        Account Status
+      </h4>
+
+      <div style="display: flex; align-items: center; gap: 12px;">
+        <label class="toggle-switch" style="margin: 0;">
+          <input 
+            type="checkbox" 
+            name="is_active" 
+            {% if mode == 'create' %}
+              {% if form_data.is_active == 'on' or not form_data %}checked{% endif %}
+            {% else %}
+              {% if admin_obj.is_active %}checked{% endif %}
+            {% endif %}
+          >
+          <span class="toggle-slider"></span>
+        </label>
+        <div>
+          <span style="font-size: 13.5px; font-weight: 600; color: #0f172a;">Active</span>
+          <span style="font-size: 12.5px; color: #64748b; margin-left: 6px;">(Admin can sign in to the dashboard)</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- SUBMIT ACTIONS -->
+    <div style="display: flex; justify-content: flex-end; gap: 10px; padding-top: 18px; border-top: 1px solid #e2e8f0;">
+      <a href="{% url 'super_admin_area_admins' %}" class="btn btn-outline" style="padding: 8px 18px; font-size: 13px;">
+        Cancel
+      </a>
+      <button type="submit" class="btn btn-primary" style="padding: 8px 22px; font-size: 13px; font-weight: 600; background: #0f172a; border-color: #0f172a;">
+        <span>{% if mode == 'create' %}Create Area Admin{% else %}Save Changes{% endif %}</span>
+      </button>
+    </div>
+
+  </form>
+
+</div>
+
+<script>
+  const citiesByState = {{ cities_by_state|safe }};
+
+  function updateCitySuggestions() {
+    const stateSelect = document.getElementById('assignedStateSelect');
+    const selectedState = stateSelect.value;
+    const datalist = document.getElementById('citiesDataList');
+    datalist.innerHTML = '';
+
+    if (selectedState && citiesByState[selectedState]) {
+      citiesByState[selectedState].forEach(function(cityName) {
+        const opt = document.createElement('option');
+        opt.value = cityName;
+        datalist.appendChild(opt);
+      });
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded', function() {
+    updateCitySuggestions();
+  });
+
+  document.getElementById('areaAdminForm').addEventListener('submit', function(e) {
+    const pass = document.getElementById('adminPassword').value;
+    const conf = document.getElementById('adminConfirmPassword').value;
+    if (pass || conf) {
+      if (pass !== conf) {
+        e.preventDefault();
+        alert('Password and Confirm Password do not match.');
+      }
+    }
+  });
+</script>
+{% endblock %}

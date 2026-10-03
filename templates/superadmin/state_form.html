@@ -1,0 +1,53 @@
+{% extends 'superadmin/base.html' %}
+{% block title %}{{ mode|title }} State{% endblock %}
+{% block header_title %}{{ mode|title }} State{% endblock %}
+
+{% block header_actions %}
+<a href="{% url 'super_admin_cms' %}" class="btn btn-outline btn-sm">
+  <i class="fa-solid fa-arrow-left"></i>
+  <span>Back to CMS</span>
+</a>
+{% endblock %}
+
+{% block content %}
+<div class="card form-card" style="max-width: 680px; margin: 0 auto;">
+  <div style="margin-bottom: 24px;">
+    <span class="badge" style="background: rgba(99, 102, 241, 0.1); color: var(--accent); font-weight: 700; margin-bottom: 8px; display: inline-block;">
+      Step 1: Territorial State
+    </span>
+    <h3 style="font-size: 20px; font-weight: 700; margin: 0 0 6px;">
+      {% if mode == 'create' %}Create New State{% else %}Edit State: {{ state.name }}{% endif %}
+    </h3>
+    <p style="color: var(--text-muted); font-size: 13.5px; margin: 0;">
+      Add the state first. Once created, you can add and manage multiple operational cities under this state.
+    </p>
+  </div>
+  
+  <form method="POST">
+    {% csrf_token %}
+    
+    <div class="form-group" style="margin-bottom: 20px;">
+      <label style="font-weight: 600; margin-bottom: 8px; display: block;">State Name <span style="color: var(--danger);">*</span></label>
+      <input type="text" name="name" class="form-control" placeholder="e.g. Maharashtra, Jharkhand, Karnataka" value="{{ state.name|default:'' }}" required autofocus>
+      <small style="color: var(--text-muted); font-size: 12px; margin-top: 4px; display: block;">
+        Enter the official state or union territory name.
+      </small>
+    </div>
+    
+    <div class="form-group" style="margin-bottom: 24px;">
+      <label style="font-weight: 600; margin-bottom: 8px; display: block;">Operational Status</label>
+      <select name="status" class="form-control">
+        <option value="active" {% if state.status == 'active' or not state %}selected{% endif %}>Active (Service Enabled)</option>
+        <option value="inactive" {% if state.status == 'inactive' %}selected{% endif %}>Inactive (Paused / Coming Soon)</option>
+      </select>
+    </div>
+    
+    <div class="form-actions" style="display: flex; gap: 12px; align-items: center; border-top: 1px solid var(--border); padding-top: 20px;">
+      <button type="submit" class="btn btn-primary">
+        <i class="fa-solid fa-check"></i> {% if mode == 'create' %}Create State{% else %}Save Changes{% endif %}
+      </button>
+      <a href="{% url 'super_admin_cms' %}" class="btn btn-outline">Cancel</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

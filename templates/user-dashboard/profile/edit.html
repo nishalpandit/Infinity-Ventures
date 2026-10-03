@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta name="description" content="Suggu Services User Portal - Edit Profile">
-  <title>Edit Profile · Suggu Services User</title>
+  <meta name="description" content="Sugu User Portal - Edit Profile">
+  <title>Edit Profile · Sugu User</title>
   <link rel="stylesheet" href="../assets/styles.css">
   <script defer src="../assets/app.js"></script>
 </head>
@@ -36,6 +36,14 @@
                 <div class="field">
                   <label>Email <span class="required">*</span></label>
                   <input class="input" type="email" name="email" required value="{{ request.user.email|default:'' }}">
+                </div>
+                <div class="field">
+                  <label>City</label>
+                  <input class="input" name="city" value="{{ request.user.user_profile.city|default:'' }}" placeholder="e.g. Ranchi, Mumbai, Pune">
+                </div>
+                <div class="field">
+                  <label>State</label>
+                  <input class="input" name="state" value="{{ request.user.user_profile.state|default:'' }}" placeholder="e.g. Jharkhand, Maharashtra">
                 </div>
               </div>
             </div>

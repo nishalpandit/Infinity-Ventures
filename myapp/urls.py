@@ -21,6 +21,8 @@ urlpatterns = [
     path('admin-dashboard', views.admin_dashboard, name='admin_dashboard'),
     path('admin-dashboard/dashboard.html', views.admin_dashboard, name='admin_dashboard_sub_html'),
     path('admin-dashboard/dashboard', views.admin_dashboard, name='admin_dashboard_sub'),
+    path('vendor/', views.vendor_dashboard, name='vendor_home_slash'),
+    path('vendor', views.vendor_dashboard, name='vendor_home'),
     path('vendor/dashboard', views.vendor_dashboard, name='vendor_dashboard'),
     path('user/dashboard', views.user_dashboard, name='user_dashboard'),
     path('admin-dashboard/create-company-vendor/', views.create_company_vendor_view, name='create_company_vendor'),
@@ -46,6 +48,13 @@ urlpatterns = [
     path('super-admin/users/<int:user_id>/delete/', super_admin_views.super_admin_user_delete, name='super_admin_user_delete'),
     path('super-admin/users/<int:user_id>/toggle/', super_admin_views.super_admin_user_toggle, name='super_admin_user_toggle'),
     
+    # Area Admins Management
+    path('super-admin/area-admins/', super_admin_views.super_admin_area_admins, name='super_admin_area_admins'),
+    path('super-admin/area-admins/create/', super_admin_views.super_admin_area_admin_create, name='super_admin_area_admin_create'),
+    path('super-admin/area-admins/<int:admin_id>/edit/', super_admin_views.super_admin_area_admin_edit, name='super_admin_area_admin_edit'),
+    path('super-admin/area-admins/<int:admin_id>/delete/', super_admin_views.super_admin_area_admin_delete, name='super_admin_area_admin_delete'),
+    path('super-admin/area-admins/<int:admin_id>/toggle/', super_admin_views.super_admin_area_admin_toggle, name='super_admin_area_admin_toggle'),
+
     # Vendors CRUD
     path('super-admin/vendors/', super_admin_views.super_admin_vendors, name='super_admin_vendors'),
     path('super-admin/vendors/create/', super_admin_views.super_admin_vendor_create, name='super_admin_vendor_create'),
@@ -67,6 +76,13 @@ urlpatterns = [
     path('super-admin/cms/category/create/', super_admin_views.super_admin_category_create, name='super_admin_category_create'),
     path('super-admin/cms/category/<int:cat_id>/edit/', super_admin_views.super_admin_category_edit, name='super_admin_category_edit'),
     path('super-admin/cms/category/<int:cat_id>/delete/', super_admin_views.super_admin_category_delete, name='super_admin_category_delete'),
+    # States CRUD
+    path('super-admin/cms/state/create/', super_admin_views.super_admin_state_create, name='super_admin_state_create'),
+    path('super-admin/cms/state/<int:state_id>/edit/', super_admin_views.super_admin_state_edit, name='super_admin_state_edit'),
+    path('super-admin/cms/state/<int:state_id>/delete/', super_admin_views.super_admin_state_delete, name='super_admin_state_delete'),
+    
+    # Cities / Locations CRUD
+    path('super-admin/cms/city/create/', super_admin_views.super_admin_location_create, name='super_admin_city_create'),
     path('super-admin/cms/location/create/', super_admin_views.super_admin_location_create, name='super_admin_location_create'),
     path('super-admin/cms/location/<int:loc_id>/edit/', super_admin_views.super_admin_location_edit, name='super_admin_location_edit'),
     path('super-admin/cms/location/<int:loc_id>/delete/', super_admin_views.super_admin_location_delete, name='super_admin_location_delete'),
@@ -213,6 +229,7 @@ urlpatterns = [
 
     path('api/admin/kyc/<int:kyc_id>/approve/', views.approve_kyc_view, name='approve_kyc_view'),
     path('api/admin/kyc/<int:kyc_id>/reject/', views.reject_kyc_view, name='reject_kyc_view'),
+    path('api/admin/quick-services/<int:service_id>/status/', views.update_quick_service_status_view, name='update_quick_service_status_view'),
 
     re_path(r'^(?P<path>.*)$', views.dashboard_view, name='dashboard'),
 ]

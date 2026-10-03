@@ -1,5 +1,5 @@
 /* ==========================================================================
-   Suggu Admin DASHBOARD — sidebar.js
+   Sugu Admin DASHBOARD — sidebar.js
    Collapse/expand with localStorage persistence, submenu accordion,
    mobile off-canvas drawer.
    ========================================================================== */
@@ -7,7 +7,7 @@
 (function () {
   'use strict';
 
-  var STORAGE_KEY = 'suggu_admin_sidebar';
+  var STORAGE_KEY = 'sugu_admin_sidebar';
   var MOBILE_BP = 992;
 
   function isMobile() {

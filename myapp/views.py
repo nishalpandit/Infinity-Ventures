@@ -19,8 +19,12 @@ from .models import (
 User = get_user_model()
 
 import json
-from django.utils import timezone
+import base64
+import uuid
 from datetime import datetime
+from decimal import Decimal
+from django.utils import timezone
+from django.core.files.base import ContentFile
 
 def get_admin_state_context(request):
     """
@@ -43,7 +47,10 @@ def get_admin_state_context(request):
             co_admins = User.objects.filter(role='ADMIN', assigned_state=admin_state).exclude(id=u.id)
         elif u.is_superuser:
             selected_state = request.GET.get('state')
-            if selected_state and selected_state != 'all':
+            if selected_state == 'all':
+                admin_state = None
+                co_admins = User.objects.filter(role='ADMIN')
+            elif selected_state:
                 admin_state = selected_state
                 co_admins = User.objects.filter(role='ADMIN', assigned_state=admin_state)
             else:
@@ -53,11 +60,151 @@ def get_admin_state_context(request):
 
     return admin_state, is_area_admin, available_states, co_admins
 
-def get_user_dashboard_context(user):
+def is_vendor_in_state(vendor, state_name):
+    """
+    Checks if a vendor is present in the specified state/territory.
+    Evaluates assigned_state, VendorProfile (location, address), UserProfile (state, city),
+    and all registered cities for that state in Location table.
+    """
+    if not vendor or not state_name:
+        return False
+    state_lower = state_name.strip().lower()
+
+    if vendor.assigned_state and vendor.assigned_state.strip().lower() == state_lower:
+        return True
+
+    vp = getattr(vendor, 'vendor_profile', None)
+    if vp:
+        if vp.location and state_lower in vp.location.lower():
+            return True
+        if vp.address and state_lower in vp.address.lower():
+            return True
+
+    up = getattr(vendor, 'user_profile', None)
+    if up and up.state and up.state.strip().lower() == state_lower:
+        return True
+
+    cities = [c.strip().lower() for c in Location.objects.filter(state__iexact=state_name).values_list('city', flat=True) if c and c.strip()]
+    if vp:
+        if vp.location and any(c in vp.location.lower() for c in cities):
+            return True
+        if vp.address and any(c in vp.address.lower() for c in cities):
+            return True
+    if up and up.city and up.city.strip().lower() in cities:
+        return True
+
+    return False
+
+def get_in_state_kyc_filter(admin_state):
+    """
+    Constructs an ORM Q filter to retrieve all VendorKYC records
+    where the vendor is present in the specified admin_state.
+    """
+    if not admin_state:
+        return Q()
+    admin_state = admin_state.strip()
+    cities = list(Location.objects.filter(state__iexact=admin_state).values_list('city', flat=True))
+    q_filter = (
+        Q(vendor__assigned_state__iexact=admin_state) |
+        Q(vendor__vendor_profile__location__icontains=admin_state) |
+        Q(vendor__vendor_profile__address__icontains=admin_state) |
+        Q(vendor__user_profile__state__iexact=admin_state)
+    )
+    for c in cities:
+        c_str = c.strip()
+        if c_str:
+            q_filter |= Q(vendor__vendor_profile__location__icontains=c_str)
+            q_filter |= Q(vendor__vendor_profile__address__icontains=c_str)
+            q_filter |= Q(vendor__user_profile__city__icontains=c_str)
+    return q_filter
+
+def is_service_in_state(service, state_name):
+    """
+    Checks if a QuickService is located within or provided by a vendor in the specified territory.
+    """
+    if not service or not state_name:
+        return False
+    state_lower = state_name.strip().lower()
+
+    if service.location and service.location.state and service.location.state.strip().lower() == state_lower:
+        return True
+
+    if service.locality and state_lower in service.locality.lower():
+        return True
+
+    cities = [c.strip().lower() for c in Location.objects.filter(state__iexact=state_name).values_list('city', flat=True) if c and c.strip()]
+    if service.locality and any(c in service.locality.lower() for c in cities):
+        return True
+
+    if getattr(service, 'vendor', None) and is_vendor_in_state(service.vendor, state_name):
+        return True
+
+    return False
+
+def get_in_state_qs_filter(admin_state):
+    """
+    Constructs an ORM Q filter to retrieve all QuickService records
+    where the service location, locality, or vendor is present in the specified admin_state.
+    """
+    if not admin_state:
+        return Q()
+    admin_state = admin_state.strip()
+    cities = list(Location.objects.filter(state__iexact=admin_state).values_list('city', flat=True))
+    q_filter = (
+        Q(location__state__iexact=admin_state) |
+        Q(locality__icontains=admin_state) |
+        Q(vendor__assigned_state__iexact=admin_state) |
+        Q(vendor__vendor_profile__location__icontains=admin_state) |
+        Q(vendor__vendor_profile__address__icontains=admin_state) |
+        Q(vendor__user_profile__state__iexact=admin_state)
+    )
+    for c in cities:
+        c_str = c.strip()
+        if c_str:
+            q_filter |= Q(locality__icontains=c_str)
+            q_filter |= Q(vendor__vendor_profile__location__icontains=c_str)
+            q_filter |= Q(vendor__vendor_profile__address__icontains=c_str)
+            q_filter |= Q(vendor__user_profile__city__icontains=c_str)
+    return q_filter
+
+def get_user_dashboard_context(user, request=None):
     name = user.get_full_name() or user.username
     initials = (user.first_name[:1].upper() + user.last_name[:1].upper()) if (user.first_name and user.last_name) else (user.first_name[:2].upper() if user.first_name else user.username[:2].upper())
     date_str = datetime.now().strftime("%A, %d %B %Y")
     
+    # Resolve user's location
+    u_prof = getattr(user, 'user_profile', None)
+    user_city = None
+    user_state = None
+    if u_prof and u_prof.city:
+        user_city = u_prof.city.strip()
+        user_state = u_prof.state.strip() if u_prof.state else None
+    
+    if not user_city and request:
+        user_city = request.session.get('user_city') or request.COOKIES.get('sugu_user_city')
+        user_state = request.session.get('user_state') or request.COOKIES.get('sugu_user_state')
+
+    if not user_city and getattr(user, 'assigned_city', None):
+        user_city = user.assigned_city.strip()
+        user_state = user.assigned_state.strip() if user.assigned_state else None
+
+    if not user_city and hasattr(user, 'vendor_profile') and user.vendor_profile and user.vendor_profile.location:
+        parts = user.vendor_profile.location.split(',')
+        user_city = parts[0].strip()
+        if len(parts) > 1:
+            user_state = parts[1].strip()
+
+    if not user_city:
+        user_city = "Ranchi"
+        user_state = "Jharkhand"
+
+    user_location_str = f"{user_city}, {user_state}" if user_state else user_city
+
+    # Check whether user_city is listed in Super Admin dashboard active locations
+    active_cities = list(Location.objects.filter(status='active').values_list('city', flat=True))
+    active_cities_lower = {c.lower().strip() for c in active_cities if c}
+    is_service_available = user_city.lower().strip() in active_cities_lower
+
     from .models import ServiceBooking
     qs_bookings = ServiceBooking.objects.filter(customer=user)
     active_qs = qs_bookings.exclude(status__in=['completed', 'cancelled']).count()
@@ -117,7 +264,12 @@ def get_user_dashboard_context(user):
         'user_name': name,
         'user_initials': initials,
         'current_date': date_str,
-        'user_location': 'Ranchi, Jharkhand',
+        'user_location': user_location_str,
+        'user_city': user_city,
+        'user_state': user_state,
+        'is_service_available': is_service_available,
+        'service_not_available': not is_service_available,
+        'service_unavailable_city': user_city,
         'active_qs': active_qs,
         'active_jobs': active_jobs,
         'pending_quotations': pending_quotations,
@@ -129,7 +281,153 @@ def get_user_dashboard_context(user):
         'recent_activity': activity_items,
     }
 
+CITY_COORDINATES_MAP = {
+    'mumbai': (19.0760, 72.8777),
+    'bombay': (19.0760, 72.8777),
+    'ranchi': (23.3697, 85.3346),
+    'bengaluru': (12.9716, 77.5946),
+    'bangalore': (12.9716, 77.5946),
+    'delhi': (28.6139, 77.2090),
+    'new delhi': (28.6139, 77.2090),
+    'noida': (28.5355, 77.3910),
+    'pune': (18.5204, 73.8567),
+    'kolkata': (22.5726, 88.3639),
+    'chennai': (13.0827, 80.2707),
+    'hyderabad': (17.3850, 78.4867),
+    'ahmedabad': (23.0225, 72.5714),
+    'jaipur': (26.9124, 75.7873),
+    'lucknow': (26.8467, 80.9462),
+    'nagpur': (21.1458, 79.0882),
+    'nashik': (19.9975, 73.7898),
+    'indore': (22.7196, 75.8577),
+    'chandigarh': (30.7333, 76.7794),
+    'coimbatore': (11.0168, 76.9558),
+    'mysuru': (12.2958, 76.6394),
+    'jamshedpur': (22.8046, 86.2029),
+    'dhanbad': (23.7957, 86.4304),
+    'harmu': (23.3550, 85.3050),
+    'morabadi': (23.3850, 85.3250),
+    'doranda': (23.3340, 85.3218),
+    'lalpur': (23.3697, 85.3346),
+    'bariatu': (23.3950, 85.3500),
+    'bandra': (19.0596, 72.8295),
+    'andheri': (19.1136, 72.8697),
+    'dadar': (19.0178, 72.8478),
+}
+
+def haversine_distance_km(lat1, lon1, lat2, lon2):
+    """Calculates great-circle distance between two GPS coordinates in kilometers."""
+    try:
+        import math
+        R = 6371.0 # Earth radius in km
+        dlat = math.radians(float(lat2) - float(lat1))
+        dlon = math.radians(float(lon2) - float(lon1))
+        a = math.sin(dlat / 2)**2 + math.cos(math.radians(float(lat1))) * math.cos(math.radians(float(lat2))) * math.sin(dlon / 2)**2
+        c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+        return round(R * c, 1)
+    except Exception:
+        return None
+
+def resolve_coordinates_for_location(loc_string, default_coords=(23.3697, 85.3346)):
+    """Resolves coordinates from location string using CITY_COORDINATES_MAP."""
+    if not loc_string:
+        return default_coords
+    s = loc_string.lower().strip()
+    for key, coords in CITY_COORDINATES_MAP.items():
+        if key in s:
+            return coords
+    return default_coords
+
+def save_vendor_profile_changes(request, user):
+    """
+    Saves vendor profile details, contact information, and handles profile image upload/removal.
+    Works seamlessly for both settings/index and profile/edit views.
+    """
+    v_prof, _ = VendorProfile.objects.get_or_create(user=user)
+    u_prof, _ = UserProfile.objects.get_or_create(user=user)
+    
+    company_name = request.POST.get('company_name')
+    if company_name is not None:
+        v_prof.company_name = company_name.strip()
+
+    vendor_type = request.POST.get('vendor_type')
+    if vendor_type in ['vendor', 'company']:
+        v_prof.vendor_type = vendor_type
+    
+    category = request.POST.get('category')
+    if category is not None and category.strip():
+        v_prof.category = category.strip()
+        
+    location = request.POST.get('location')
+    if location is not None and location.strip():
+        v_prof.location = location.strip()
+        
+    address = request.POST.get('address')
+    if address is not None:
+        v_prof.address = address.strip()
+        
+    about = request.POST.get('about')
+    if about is not None:
+        v_prof.about = about.strip()
+        
+    experience = request.POST.get('experience')
+    if experience is not None and str(experience).strip():
+        try:
+            v_prof.experience = int(experience)
+        except (ValueError, TypeError):
+            pass
+            
+    phone_number = request.POST.get('phone_number') or request.POST.get('mobile')
+    if phone_number is not None and phone_number.strip():
+        v_prof.mobile = phone_number.strip()
+        u_prof.phone_number = phone_number.strip()
+        u_prof.save()
+        
+    first_name = request.POST.get('first_name')
+    if first_name is not None and first_name.strip():
+        user.first_name = first_name.strip()
+        
+    email = request.POST.get('email')
+    if email is not None and email.strip():
+        user.email = email.strip()
+        
+    user.save()
+    
+    # Profile picture handling: Remove / Base64 / File upload
+    remove_img = request.POST.get('remove_profile_image') in ['1', 'true', 'yes', True]
+    if remove_img:
+        if v_prof.profile_image:
+            try:
+                v_prof.profile_image.delete(save=False)
+            except Exception:
+                pass
+            v_prof.profile_image = None
+        if u_prof.profile_image:
+            try:
+                u_prof.profile_image.delete(save=False)
+            except Exception:
+                pass
+            u_prof.profile_image = None
+            u_prof.save()
+    else:
+        profile_image_base64 = request.POST.get('profile_image_base64', '').strip()
+        if profile_image_base64 and ';base64,' in profile_image_base64:
+            format_part, imgstr = profile_image_base64.split(';base64,', 1)
+            ext = 'png' if 'png' in format_part else ('webp' if 'webp' in format_part else 'jpg')
+            try:
+                decoded = base64.b64decode(imgstr)
+                fname = f"vendor_{user.id}_{uuid.uuid4().hex[:6]}.{ext}"
+                v_prof.profile_image.save(fname, ContentFile(decoded), save=False)
+            except Exception as err:
+                print("Error saving cropped base64 image:", err)
+        elif 'profile_image' in request.FILES and request.FILES['profile_image']:
+            v_prof.profile_image = request.FILES['profile_image']
+            
+    v_prof.save()
+    return v_prof, u_prof
+
 def dashboard_view(request, path=''):
+    from .models import VendorKYC, Category, VendorProfile, UserProfile
     if not path:
         path = 'index'
         
@@ -139,6 +437,15 @@ def dashboard_view(request, path=''):
     # Enforce authentication for user/ pages before proceeding
     if path.startswith('user/') and not request.user.is_authenticated:
         return redirect('register_user')
+
+    # Subscriptions and Notifications modules completely removed
+    if any(path.startswith(prefix) for prefix in ['subscriptions', 'admin-dashboard/subscriptions']) or path == 'subscriptions':
+        messages.warning(request, "Access Denied: The subscriptions page has been removed.")
+        return redirect('/admin-dashboard')
+
+    if any(path.startswith(prefix) for prefix in ['notifications', 'admin-dashboard/notifications']) or path == 'notifications':
+        messages.warning(request, "Access Denied: The notifications page has been removed.")
+        return redirect('/admin-dashboard')
 
     if request.method == 'POST' and request.POST.get('action') in ['complete_and_settle', 'submit_completion_proof']:
         from .wallet_services import settle_job_completion
@@ -475,7 +782,7 @@ def dashboard_view(request, path=''):
                     "Complete diagnostic inspection of existing fittings & components",
                     "Execution by certified, background-checked professional",
                     "Post-service sanitization and thorough debris cleanup",
-                    "30 days Suggu protection warranty on all workmanship"
+                    "30 days Sugu protection warranty on all workmanship"
                 ]
 
             # Parse Exclusions
@@ -528,7 +835,7 @@ def dashboard_view(request, path=''):
 
     # Map url prefixes to correct template directories
     mapped_path = path
-    admin_subfolders = ['users/', 'quick-services/', 'jobs/', 'bidding/', 'subscriptions/', 'payments/', 'reviews/', 'complaints/', 'reports/', 'master/']
+    admin_subfolders = ['users/', 'quick-services/', 'jobs/', 'bidding/', 'payments/', 'reviews/', 'complaints/', 'reports/', 'master/']
     if any(mapped_path.startswith(folder) for folder in admin_subfolders):
         mapped_path = f'admin-dashboard/{mapped_path}'
     elif mapped_path.startswith('user/'):
@@ -555,29 +862,62 @@ def dashboard_view(request, path=''):
             wallet = get_or_create_wallet(request.user)
             context['wallet_balance'] = f"{wallet.available_balance:.2f}"
             context['vendor_wallet'] = wallet
+            
             vendor_profile = getattr(request.user, 'vendor_profile', None)
+            if not vendor_profile and request.user.role == 'VENDOR':
+                vendor_profile, _ = VendorProfile.objects.get_or_create(user=request.user)
+            user_profile, _ = UserProfile.objects.get_or_create(user=request.user)
+            
+            context['vendor_profile'] = vendor_profile
+            context['user_profile'] = user_profile
+            
+            kyc_doc = VendorKYC.objects.filter(vendor=request.user).first()
+            context['kyc'] = kyc_doc
+            context['is_kyc_verified'] = (kyc_doc.status == 'approved') if kyc_doc else False
+            context['all_categories'] = Category.objects.filter(status='active').order_by('name')
+
+            # Determine display vendor name & vendor classification
+            display_name = None
             if vendor_profile:
-                name = vendor_profile.company_name or request.user.get_full_name() or request.user.username
-                context['vendor_name'] = name
-                context['vendor_initials'] = name[:2].upper() if name else "VN"
-                context['vendor_location'] = vendor_profile.location or "Unknown Location"
-                context['vendor_type'] = "Company Vendor" if vendor_profile.company_name else "Individual Vendor"
-                context['profile_image_url'] = vendor_profile.profile_image.url if vendor_profile.profile_image else None
-                context['remaining_credits'] = getattr(vendor_profile, 'available_bids', 5)
-                context['available_bids'] = getattr(vendor_profile, 'available_bids', 5)
+                if vendor_profile.vendor_type == 'company' and vendor_profile.company_name and vendor_profile.company_name.strip():
+                    display_name = vendor_profile.company_name.strip()
+                elif vendor_profile.company_name and vendor_profile.company_name.strip() and vendor_profile.company_name.strip().lower() != request.user.first_name.strip().lower():
+                    display_name = vendor_profile.company_name.strip()
+
+            if not display_name:
+                display_name = request.user.get_full_name() or request.user.first_name or request.user.username
+                
+            context['vendor_name'] = display_name
+            context['vendor_initials'] = display_name[:2].upper() if display_name else "VN"
+            context['vendor_location'] = (vendor_profile.location if (vendor_profile and vendor_profile.location) else "Ranchi")
+            
+            if vendor_profile and vendor_profile.vendor_type == 'company':
+                context['vendor_type'] = "Company Vendor"
             else:
-                name = request.user.get_full_name() or request.user.username
-                context['vendor_name'] = name
-                context['vendor_initials'] = name[:2].upper() if name else "VN"
-                context['vendor_location'] = "Unknown Location"
-                context['vendor_type'] = "Vendor"
-                context['profile_image_url'] = None
-                context['remaining_credits'] = 5
-        except Exception:
-            pass
+                context['vendor_type'] = "Individual Vendor"
+            
+            prof_img = None
+            if vendor_profile and vendor_profile.profile_image:
+                try:
+                    prof_img = vendor_profile.profile_image.url
+                except Exception:
+                    prof_img = None
+            if not prof_img and user_profile and user_profile.profile_image:
+                try:
+                    prof_img = user_profile.profile_image.url
+                except Exception:
+                    prof_img = None
+            context['profile_image_url'] = prof_img
+            context['remaining_credits'] = getattr(vendor_profile, 'available_bids', 5) if vendor_profile else 5
+            context['available_bids'] = getattr(vendor_profile, 'available_bids', 5) if vendor_profile else 5
+        except Exception as e:
+            print("Error initializing vendor context:", e)
             
     # Inject dynamic user data
     if 'master/categories' in path:
+        if request.user.is_authenticated and request.user.role == 'ADMIN' and not request.user.is_superuser:
+            messages.error(request, "Permission Denied: Category management is restricted to Super Admin.")
+            return redirect('/admin-dashboard')
         categories = Category.objects.all().order_by('-created_at')
         categories_data = []
         for cat in categories:
@@ -604,6 +944,20 @@ def dashboard_view(request, path=''):
         context['categories'] = Category.objects.filter(status='active').order_by('name')
         if request.user.is_authenticated:
             context['my_services'] = QuickService.objects.filter(vendor=request.user).select_related('category').order_by('-created_at')
+        # Pass financial settings for dynamic pricing in live preview
+        gs = GlobalSettings.objects.first()
+        if gs:
+            context['platform_commission_percent'] = float(gs.platform_commission_percent or 10.0)
+            context['cgst_percent'] = float(gs.cgst_percent or 9.0)
+            context['sgst_percent'] = float(gs.sgst_percent or 9.0)
+            context['platform_flat_fee'] = float(gs.platform_flat_fee or 0.0)
+            context['tax_calculation_mode'] = gs.tax_calculation_mode or 'commission_only'
+        else:
+            context['platform_commission_percent'] = 10.0
+            context['cgst_percent'] = 9.0
+            context['sgst_percent'] = 9.0
+            context['platform_flat_fee'] = 0.0
+            context['tax_calculation_mode'] = 'commission_only'
 
     if path in ['user/quick-services/index', 'user/quick-services', 'user/quick-services/create', 'user/quick-services/details']:
         return redirect('/user/services/browse.html')
@@ -1097,6 +1451,8 @@ def dashboard_view(request, path=''):
             first_name = request.POST.get('first_name')
             phone_number = request.POST.get('phone_number')
             email = request.POST.get('email')
+            city = request.POST.get('city')
+            state = request.POST.get('state')
             
             if first_name:
                 request.user.first_name = first_name
@@ -1104,10 +1460,16 @@ def dashboard_view(request, path=''):
                 request.user.email = email
             request.user.save()
             
-            if phone_number:
-                profile, _ = UserProfile.objects.get_or_create(user=request.user)
+            profile, _ = UserProfile.objects.get_or_create(user=request.user)
+            if phone_number is not None:
                 profile.phone_number = phone_number
-                profile.save()
+            if city is not None:
+                profile.city = city.strip()
+                request.session['user_city'] = city.strip()
+            if state is not None:
+                profile.state = state.strip()
+                request.session['user_state'] = state.strip()
+            profile.save()
                 
             return redirect('/user/profile/index.html')
 
@@ -1117,46 +1479,79 @@ def dashboard_view(request, path=''):
                 v_profile = request.user.vendor_profile
             except Exception:
                 v_profile = None
-            qs_count = QuickService.objects.filter(bids__vendor=request.user, status='completed').distinct().count()
+            qs_count = ServiceBooking.objects.filter(vendor=request.user, status='completed').count()
             jobs_count = Job.objects.filter(bids__vendor=request.user, status='completed').distinct().count()
             total_bids = Bid.objects.filter(vendor=request.user).count()
+            selected_bids = Bid.objects.filter(vendor=request.user, status='selected').count()
             context.update({
                 'completed_qs': qs_count,
                 'completed_jobs': jobs_count,
+                'completed_jobs_count': jobs_count,
                 'total_bids': total_bids,
+                'total_bids_count': total_bids,
+                'selected_bids_count': selected_bids,
                 'profile': v_profile,
+                'vendor_profile': v_profile,
             })
 
-    if path == 'vendor/profile/edit':
-        if request.method == 'POST' and request.user.is_authenticated:
-            company_name = request.POST.get('company_name')
-            category = request.POST.get('category')
-            location = request.POST.get('location')
-            experience = request.POST.get('experience')
-            about = request.POST.get('about')
+    if path in ['vendor/settings/security', 'vendor/settings/security.html']:
+        if request.method == 'GET':
+            return redirect('/vendor/settings/index.html#security')
+
+    if path in ['vendor/settings', 'vendor/settings/index', 'vendor/settings/index.html'] or path.startswith('vendor/settings'):
+        if not request.user.is_authenticated:
+            return redirect('/login/?next=/vendor/settings/index.html')
             
-            try:
-                profile = request.user.vendor_profile
-                if company_name is not None:
-                    profile.company_name = company_name
-                if category is not None:
-                    profile.category = category
-                if location is not None:
-                    profile.location = location
-                if experience is not None:
-                    try:
-                        profile.experience = int(experience)
-                    except:
-                        pass
-                if about is not None:
-                    profile.about = about
-                profile.save()
-            except Exception:
-                pass
+        v_prof, _ = VendorProfile.objects.get_or_create(user=request.user)
+        u_prof, _ = UserProfile.objects.get_or_create(user=request.user)
+        
+        if request.method == 'POST':
+            active_tab = request.POST.get('active_tab', '')
+            if 'security' in path or active_tab == 'security':
+                from django.contrib.auth import update_session_auth_hash
+                current_pwd = request.POST.get('current_password', '')
+                new_pwd = request.POST.get('new_password', '')
+                confirm_pwd = request.POST.get('confirm_password', '')
+                
+                if not current_pwd or not new_pwd or not confirm_pwd:
+                    messages.error(request, "All password fields are required.")
+                elif not request.user.check_password(current_pwd):
+                    messages.error(request, "Current password is incorrect.")
+                elif new_pwd != confirm_pwd:
+                    messages.error(request, "New passwords do not match.")
+                elif len(new_pwd) < 8:
+                    messages.error(request, "New password must be at least 8 characters long.")
+                else:
+                    request.user.set_password(new_pwd)
+                    request.user.save()
+                    update_session_auth_hash(request, request.user)
+                    messages.success(request, "Password updated successfully!")
+                return redirect('/vendor/settings/index.html#security')
+            elif active_tab == 'profile':
+                save_vendor_profile_changes(request, request.user)
+                messages.success(request, "Business profile & branding updated successfully!")
+                return redirect('/vendor/settings/index.html#profile')
+            elif active_tab == 'account':
+                save_vendor_profile_changes(request, request.user)
+                messages.success(request, "Account details and contact information updated successfully!")
+                return redirect('/vendor/settings/index.html#account')
+            elif active_tab == 'notifications':
+                messages.success(request, "Notification preferences updated successfully!")
+                return redirect('/vendor/settings/index.html#notifications')
+            else:
+                save_vendor_profile_changes(request, request.user)
+                messages.success(request, "Settings updated successfully!")
+                return redirect('/vendor/settings/index.html')
+
+    if path in ['vendor/profile/edit', 'vendor/profile/edit.html']:
+        if not request.user.is_authenticated:
+            return redirect('/login/?next=/vendor/profile/edit.html')
+        if request.method == 'POST':
+            save_vendor_profile_changes(request, request.user)
+            messages.success(request, "Profile updated successfully!")
             return redirect('/vendor/profile/index.html')
 
     if path == 'vendor/kyc/index' or path == 'vendor/kyc':
-        from .models import VendorKYC
         if request.user.is_authenticated:
             kyc = VendorKYC.objects.filter(vendor=request.user).first()
             if not kyc:
@@ -1320,8 +1715,116 @@ def dashboard_view(request, path=''):
                 context['chat_messages'] = []
 
     if path == 'vendor/jobs/available':
-        available_jobs = Job.objects.filter(status='open').order_by('-created_at')
-        context['available_jobs'] = available_jobs
+        jobs_qs = Job.objects.filter(status='open').select_related('category', 'location', 'user').order_by('-created_at')
+        
+        vendor_city = None
+        if request.user.is_authenticated:
+            v_prof = getattr(request.user, 'vendor_profile', None)
+            if not v_prof and request.user.role == 'VENDOR':
+                v_prof, _ = VendorProfile.objects.get_or_create(user=request.user)
+            if v_prof and v_prof.location and v_prof.location.strip():
+                vendor_city = v_prof.location.strip().split(',')[0].strip()
+                
+        if vendor_city:
+            city_filter = (
+                Q(location__city__iexact=vendor_city) |
+                (Q(location__isnull=True) & (Q(address__icontains=vendor_city) | Q(locality__icontains=vendor_city)))
+            )
+            jobs_qs = jobs_qs.filter(city_filter)
+            context['vendor_city'] = vendor_city
+
+        context['available_jobs'] = jobs_qs
+
+    if path == 'vendor/quick-services/nearby':
+        v_lat = None
+        v_lon = None
+        vendor_city = None
+        if request.user.is_authenticated:
+            v_prof = getattr(request.user, 'vendor_profile', None)
+            if not v_prof and request.user.role == 'VENDOR':
+                v_prof, _ = VendorProfile.objects.get_or_create(user=request.user)
+            if v_prof and v_prof.location and v_prof.location.strip():
+                vendor_city = v_prof.location.strip().split(',')[0].strip()
+
+        req_lat = request.GET.get('lat')
+        req_lon = request.GET.get('lon')
+        if req_lat and req_lon:
+            try:
+                v_lat = float(req_lat)
+                v_lon = float(req_lon)
+            except (ValueError, TypeError):
+                v_lat = None
+                v_lon = None
+
+        if v_lat is None or v_lon is None:
+            v_lat, v_lon = resolve_coordinates_for_location(vendor_city or (v_prof.location if v_prof else ''))
+
+        max_distance_km = 10.0
+        try:
+            custom_radius = float(request.GET.get('distance') or request.GET.get('radius') or 10.0)
+            max_distance_km = min(custom_radius, 10.0)
+        except (ValueError, TypeError):
+            max_distance_km = 10.0
+
+        all_qs = QuickService.objects.filter(status__in=['active', 'open']).select_related('category', 'location', 'vendor').order_by('-created_at')
+        nearby_services = []
+        for qs in all_qs:
+            q_lat = float(qs.latitude) if qs.latitude else None
+            q_lon = float(qs.longitude) if qs.longitude else None
+            if q_lat is None or q_lon is None:
+                loc_name = (qs.locality or '') + ' ' + (qs.location.city if qs.location else '')
+                q_lat, q_lon = resolve_coordinates_for_location(loc_name, default_coords=(None, None))
+            if q_lat is not None and q_lon is not None:
+                d = haversine_distance_km(v_lat, v_lon, q_lat, q_lon)
+                if d is not None and d <= max_distance_km:
+                    qs.distance_km = d
+                    qs.budget = float(qs.base_price)
+                    nearby_services.append(qs)
+
+        nearby_services.sort(key=lambda x: getattr(x, 'distance_km', 999.0))
+        context['available_qs'] = nearby_services
+        context['vendor_city'] = vendor_city
+        context['vendor_lat'] = v_lat
+        context['vendor_lon'] = v_lon
+        context['max_distance_km'] = max_distance_km
+
+    if path == 'vendor/quick-services/details':
+        qs_id = request.GET.get('id')
+        if qs_id:
+            try:
+                qs = QuickService.objects.select_related('category', 'location', 'vendor').get(id=qs_id)
+                qs.budget = float(qs.base_price)
+                context['qs'] = qs
+            except QuickService.DoesNotExist:
+                return redirect('/vendor/quick-services/nearby.html')
+
+    if path == 'vendor/quick-services/send-quotation':
+        qs_id = request.GET.get('qs_id') or request.GET.get('id') or request.POST.get('qs_id') or request.POST.get('id')
+        if qs_id:
+            try:
+                qs = QuickService.objects.select_related('category', 'location', 'vendor').get(id=qs_id)
+                qs.budget = float(qs.base_price)
+                context['qs'] = qs
+                
+                if request.method == 'POST' and request.user.is_authenticated:
+                    amount = request.POST.get('amount')
+                    estimated_time = request.POST.get('estimated_time')
+                    proposal = request.POST.get('proposal')
+                    attachment = request.FILES.get('attachment')
+                    if amount:
+                        Bid.objects.create(
+                            vendor=request.user,
+                            quick_service=qs,
+                            amount=float(amount),
+                            estimated_time=estimated_time,
+                            proposal=proposal,
+                            attachment=attachment,
+                            status='submitted'
+                        )
+                        messages.success(request, f"Quotation for '{qs.title}' submitted successfully!")
+                        return redirect('/vendor/quick-services/nearby.html')
+            except QuickService.DoesNotExist:
+                return redirect('/vendor/quick-services/nearby.html')
 
     if path == 'vendor/jobs/bid-details':
         bid_id = request.GET.get('bid_id')
@@ -1546,7 +2049,7 @@ def dashboard_view(request, path=''):
                 if is_area_admin and admin_state:
                     user_matches_state = bool(target_user.assigned_state and target_user.assigned_state.lower() == admin_state.lower())
                     has_job_in_state = Job.objects.filter(user=target_user).filter(Q(location__state__iexact=admin_state) | Q(address__icontains=admin_state)).exists()
-                    has_qs_in_state = ServiceBooking.objects.filter(customer=target_user).filter(Q(location__state__iexact=admin_state) | Q(address__icontains=admin_state)).exists()
+                    has_qs_in_state = ServiceBooking.objects.filter(customer=target_user).filter(Q(quick_service__location__state__iexact=admin_state) | Q(service_address__icontains=admin_state)).exists()
 
                     if not (user_matches_state or has_job_in_state or has_qs_in_state):
                         messages.error(request, f"Access Denied: Customer '{target_user.get_full_name() or target_user.username}' is outside your assigned territory ({admin_state}).")
@@ -1559,10 +2062,10 @@ def dashboard_view(request, path=''):
                 except Exception:
                     pass
 
-                cust_qs_list = ServiceBooking.objects.filter(customer=target_user).select_related('category', 'location').order_by('-created_at')
+                cust_qs_list = ServiceBooking.objects.filter(customer=target_user).select_related('quick_service', 'vendor').order_by('-created_at')
                 cust_jobs_list = Job.objects.filter(user=target_user).select_related('category', 'location').order_by('-created_at')
                 if admin_state:
-                    cust_qs_list = cust_qs_list.filter(Q(location__state__iexact=admin_state) | Q(address__icontains=admin_state))
+                    cust_qs_list = cust_qs_list.filter(Q(quick_service__location__state__iexact=admin_state) | Q(service_address__icontains=admin_state))
                     cust_jobs_list = cust_jobs_list.filter(Q(location__state__iexact=admin_state) | Q(address__icontains=admin_state))
 
                 completed_jobs = cust_jobs_list.filter(status='completed').count()
@@ -1641,7 +2144,7 @@ def dashboard_view(request, path=''):
                 u = target_vendor.user
                 total_bids = Bid.objects.filter(vendor=u)
                 if admin_state:
-                    total_bids = total_bids.filter(Q(job__location__state__iexact=admin_state) | Q(quick_service__location__state__iexact=admin_state) | Q(job__address__icontains=admin_state) | Q(quick_service__address__icontains=admin_state))
+                    total_bids = total_bids.filter(Q(job__location__state__iexact=admin_state) | Q(quick_service__location__state__iexact=admin_state) | Q(job__address__icontains=admin_state) | Q(quick_service__locality__icontains=admin_state))
 
                 successful_bids = total_bids.filter(status='selected').count()
                 completed_jobs = Job.objects.filter(bids__vendor=u, status='completed').distinct()
@@ -1834,12 +2337,13 @@ def dashboard_view(request, path=''):
                 # Strict territory check for Area Admin
                 admin_state, is_area_admin, available_states, co_admins = get_admin_state_context(request)
                 if is_area_admin and admin_state:
-                    qs_in_state = (service.location and service.location.state and service.location.state.lower() == admin_state.lower()) or (admin_state.lower() in (service.address or '').lower()) or (bool(service.user.assigned_state and service.user.assigned_state.lower() == admin_state.lower()))
-                    if not qs_in_state:
+                    if not is_service_in_state(service, admin_state):
                         messages.error(request, f"Access Denied: Quick Service is outside your assigned territory ({admin_state}).")
                         return redirect('/quick-services/index.html')
 
                 context['service'] = service
+                context['admin_state'] = admin_state
+                context['is_area_admin'] = is_area_admin
                 
                 try:
                     u_profile = service.user.user_profile
@@ -1864,14 +2368,23 @@ def dashboard_view(request, path=''):
             except (ValueError, QuickService.DoesNotExist):
                 pass
 
-    elif 'quick-services' in path:
+    elif (('admin' in path and 'quick-services' in path) or path in ['quick-services', 'quick-services/index']):
         from django.db.models import Count, Prefetch
         admin_state, is_area_admin, available_states, co_admins = get_admin_state_context(request)
         context['admin_state'] = admin_state
         context['is_area_admin'] = is_area_admin
+<<<<<<< HEAD
         quick_services = QuickService.objects.exclude(category__service_type='job').select_related('vendor', 'category', 'location').annotate(vendor_requests_count=Count('bids')).prefetch_related(Prefetch('bids', queryset=Bid.objects.filter(status='selected').select_related('vendor', 'vendor__vendor_profile'), to_attr='selected_bids')).order_by('-created_at')
+=======
+        quick_services = QuickService.objects.exclude(category__service_type='job').select_related('vendor', 'category', 'location').annotate(vendor_requests_count=Count('legacy_bids')).prefetch_related(Prefetch('legacy_bids', queryset=Bid.objects.filter(status='selected').select_related('vendor', 'vendor__vendor_profile'), to_attr='selected_bids')).order_by('-created_at')
+>>>>>>> origin/main
         if admin_state:
-            quick_services = quick_services.filter(Q(location__state__iexact=admin_state) | Q(address__icontains=admin_state))
+            quick_services = quick_services.filter(get_in_state_qs_filter(admin_state))
+        
+        category_ids = quick_services.values_list('category_id', flat=True).distinct()
+        from myapp.models import Category
+        context['qs_categories'] = Category.objects.filter(id__in=category_ids).order_by('name')
+
         qs_data = []
         for qs in quick_services:
             u = qs.user
@@ -1891,6 +2404,7 @@ def dashboard_view(request, path=''):
 
             qs_data.append({
                 'id': f'QS-{qs.id:04d}',
+                'raw_id': qs.id,
                 'customer': u.get_full_name() or u.username,
                 'customerMobile': mobile,
                 'customerId': f'USR-{u.id:04d}',
@@ -1898,6 +2412,7 @@ def dashboard_view(request, path=''):
                 'title': qs.title,
                 'category': qs.category.name if getattr(qs, 'category', None) else 'Uncategorized',
                 'location': f"{qs.location.city}, {qs.location.state}" if getattr(qs, 'location', None) else (admin_state or 'Unknown'),
+                'locality': qs.locality or '',
                 'budget': float(qs.budget) if qs.budget else 0,
                 'vendorRequests': getattr(qs, 'vendor_requests_count', 0),
                 'selectedVendor': selected_vendor_name,
@@ -1907,10 +2422,12 @@ def dashboard_view(request, path=''):
         context['quick_services_json'] = json.dumps(qs_data)
         context['quick_services_list'] = qs_data
         
-        active_statuses = {'open', 'active', 'progress', 'selected'}
-        closed_statuses = {'completed', 'cancelled', 'closed'}
-        context['active_qs'] = [qs for qs in qs_data if qs['status'] in active_statuses]
+        closed_statuses = {'completed', 'cancelled', 'closed', 'paused', 'inactive'}
+        context['active_qs'] = [qs for qs in qs_data if qs['status'] not in closed_statuses]
         context['closed_qs'] = [qs for qs in qs_data if qs['status'] in closed_statuses]
+        
+        req_status = request.GET.get('status', '').strip().lower()
+        context['initial_tab'] = 'closed' if req_status in closed_statuses else 'active'
         
         
     elif 'jobs' in path:
@@ -1967,39 +2484,8 @@ def dashboard_view(request, path=''):
             vendor_profile = None
             
         if request.method == 'POST' and 'edit' in path:
-            if vendor_profile:
-                vendor_profile.company_name = request.POST.get('company_name', vendor_profile.company_name)
-                vendor_profile.address = request.POST.get('address', vendor_profile.address)
-                vendor_profile.about = request.POST.get('about', vendor_profile.about)
-                
-                profile_image_base64 = request.POST.get('profile_image_base64')
-                if profile_image_base64:
-                    import base64
-                    from django.core.files.base import ContentFile
-                    # Format: data:image/png;base64,iVBORw0KGgo...
-                    format, imgstr = profile_image_base64.split(';base64,') 
-                    ext = format.split('/')[-1] 
-                    vendor_profile.profile_image = ContentFile(base64.b64decode(imgstr), name=f'profile_{u.id}.{ext}')
-                elif 'profile_image' in request.FILES:
-                    vendor_profile.profile_image = request.FILES['profile_image']
-                    
-                vendor_profile.save()
-            
-            # Update user details
-            u.first_name = request.POST.get('first_name', u.first_name)
-            u.email = request.POST.get('email', u.email)
-            u.save()
-            
-            # Update UserProfile mobile
-            try:
-                user_profile, _ = UserProfile.objects.get_or_create(user=u)
-                new_mobile = request.POST.get('phone_number') or request.POST.get('mobile')
-                if new_mobile:
-                    user_profile.phone_number = new_mobile.strip()
-                    user_profile.save()
-            except Exception:
-                pass
-                
+            save_vendor_profile_changes(request, u)
+            messages.success(request, "Vendor profile updated successfully!")
             return redirect('/vendor/profile/index.html')
             
         # Context for rendering profile
@@ -2269,7 +2755,7 @@ def dashboard_view(request, path=''):
                     context['chat_vendor'] = context['chat_user'] # alias for templates
             
     if (path in ['user/dashboard', 'user/index', 'user', 'dashboard', 'index'] or mapped_path in ['user-dashboard/dashboard', 'user-dashboard/index']) and request.user.is_authenticated and getattr(request.user, 'role', '') in ['USER', 'CUSTOMER']:
-        context.update(get_user_dashboard_context(request.user))
+        context.update(get_user_dashboard_context(request.user, request=request))
 
     if 'user/jobs/selected-vendors' in path or 'jobs/selected-vendors' in mapped_path:
         job_id = request.GET.get('job_id') or request.GET.get('id')
@@ -2463,19 +2949,39 @@ def dashboard_view(request, path=''):
         context['customers'] = customers_qs.order_by('-date_joined')
 
     if 'users/kyc-approvals' in path:
-        from .models import VendorKYC
         admin_state, is_area_admin, available_states, co_admins = get_admin_state_context(request)
         context['admin_state'] = admin_state
         context['is_area_admin'] = is_area_admin
-        kycs = VendorKYC.objects.select_related('vendor', 'vendor__vendor_profile').all()
+        
+        kycs_qs = VendorKYC.objects.select_related('vendor', 'vendor__vendor_profile', 'vendor__user_profile', 'reviewed_by').all()
         if admin_state:
-            kycs = kycs.filter(Q(vendor__vendor_profile__location__icontains=admin_state) | Q(vendor__assigned_state__iexact=admin_state))
+            kycs_qs = kycs_qs.filter(get_in_state_kyc_filter(admin_state))
         
-        status_filter = request.GET.get('status', 'pending')
-        if status_filter != 'all':
-            kycs = kycs.filter(status=status_filter)
-        
-        context['kycs'] = kycs.order_by('-id')
+        # Calculate territory stats across all statuses
+        context['total_kyc_count'] = kycs_qs.count()
+        context['pending_kyc_count'] = kycs_qs.filter(status='pending').count()
+        context['approved_kyc_count'] = kycs_qs.filter(status='approved').count()
+        context['rejected_kyc_count'] = kycs_qs.filter(status='rejected').count()
+
+        status_filter = request.GET.get('status', 'all').strip()
+        q_search = request.GET.get('q', '').strip()
+
+        if q_search:
+            kycs_qs = kycs_qs.filter(
+                Q(vendor__username__icontains=q_search) |
+                Q(vendor__first_name__icontains=q_search) |
+                Q(vendor__last_name__icontains=q_search) |
+                Q(vendor__email__icontains=q_search) |
+                Q(vendor__vendor_profile__company_name__icontains=q_search) |
+                Q(id_number__icontains=q_search)
+            )
+
+        if status_filter and status_filter != 'all':
+            kycs_qs = kycs_qs.filter(status=status_filter)
+
+        context['kycs'] = kycs_qs.order_by('-submitted_at', '-id')
+        context['status_filter'] = status_filter
+        context['q_search'] = q_search
 
     if 'reports/revenue' in path:
         admin_state, is_area_admin, available_states, co_admins = get_admin_state_context(request)
@@ -2654,7 +3160,7 @@ def public_browse_services(request):
             "Complete diagnostic inspection of existing fittings & components",
             "Execution by certified, background-checked professional",
             "Post-service sanitization and thorough debris cleanup",
-            "30 days Suggu protection warranty on all workmanship"
+            "30 days Sugu protection warranty on all workmanship"
         ]
         exclusions = s.exclusions if (s.exclusions and len(s.exclusions) > 0) else [
             "Major civil masonry, pipe embedding or wall tearing excluded",
@@ -2773,6 +3279,30 @@ def home_view(request):
     cms_testimonials = Testimonial.objects.filter(is_active=True).order_by('order', '-created_at')
     cms_trust_metrics = TrustMetric.objects.filter(is_active=True).order_by('order')
 
+    user_city = None
+    user_state = None
+    is_service_available = True
+    if request.user.is_authenticated:
+        u_prof = getattr(request.user, 'user_profile', None)
+        if u_prof and u_prof.city:
+            user_city = u_prof.city.strip()
+            user_state = u_prof.state.strip() if u_prof.state else None
+        if not user_city:
+            user_city = request.session.get('user_city') or request.COOKIES.get('sugu_user_city')
+            user_state = request.session.get('user_state') or request.COOKIES.get('sugu_user_state')
+        if not user_city and getattr(request.user, 'assigned_city', None):
+            user_city = request.user.assigned_city.strip()
+            user_state = request.user.assigned_state.strip() if request.user.assigned_state else None
+        if not user_city and hasattr(request.user, 'vendor_profile') and request.user.vendor_profile and request.user.vendor_profile.location:
+            parts = request.user.vendor_profile.location.split(',')
+            user_city = parts[0].strip()
+            if len(parts) > 1:
+                user_state = parts[1].strip()
+
+        if user_city:
+            active_cities_set = {c.lower().strip() for c in locations.values_list('city', flat=True) if c}
+            is_service_available = user_city.lower().strip() in active_cities_set
+
     context = {
         'error': error,
         'branding': branding,
@@ -2792,6 +3322,11 @@ def home_view(request):
         'recent_bids_json': json.dumps(recent_bids_data),
         'now': timezone.now(),
         'user': request.user,
+        'user_city': user_city,
+        'user_state': user_state,
+        'is_service_available': is_service_available,
+        'service_not_available': not is_service_available if user_city else False,
+        'service_unavailable_city': user_city,
     }
     return render(request, 'index.html', context)
 
@@ -2867,7 +3402,7 @@ def register_user_view(request):
             user.save()
             profile_img = request.FILES.get('profile_image')
             UserProfile.objects.create(user=user, phone_number=mobile, profile_image=profile_img)
-            login(request, user)
+            login(request, user, backend='django.contrib.auth.backends.ModelBackend')
             return redirect('user_dashboard')
     
     return render(request, 'register_user.html', {'error': error})
@@ -3062,8 +3597,38 @@ def vendor_dashboard(request):
     kyc = VendorKYC.objects.filter(vendor=user).first()
     pending_payouts_sum = PayoutRequest.objects.filter(vendor=user, status='pending').aggregate(total=Sum('amount'))['total'] or 0
 
-    available_qs = QuickService.objects.filter(status='open').count()
-    available_jobs = Job.objects.filter(status='open').count()
+    vendor_city = None
+    if vendor_profile and vendor_profile.location and vendor_profile.location.strip():
+        vendor_city = vendor_profile.location.strip().split(',')[0].strip()
+
+    jobs_base = Job.objects.filter(status='open')
+    if vendor_city:
+        city_filter = (
+            Q(location__city__iexact=vendor_city) |
+            (Q(location__isnull=True) & (Q(address__icontains=vendor_city) | Q(locality__icontains=vendor_city)))
+        )
+        jobs_base = jobs_base.filter(city_filter)
+
+    # Quick services strictly under 10km
+    v_lat, v_lon = resolve_coordinates_for_location(vendor_city or (vendor_profile.location if vendor_profile else ''))
+    all_active_qs = QuickService.objects.filter(status__in=['active', 'open']).select_related('category', 'location', 'vendor')
+    nearby_qs = []
+    for qs in all_active_qs:
+        q_lat = float(qs.latitude) if qs.latitude else None
+        q_lon = float(qs.longitude) if qs.longitude else None
+        if q_lat is None or q_lon is None:
+            loc_name = (qs.locality or '') + ' ' + (qs.location.city if qs.location else '')
+            q_lat, q_lon = resolve_coordinates_for_location(loc_name, default_coords=(None, None))
+        if q_lat is not None and q_lon is not None:
+            d = haversine_distance_km(v_lat, v_lon, q_lat, q_lon)
+            if d is not None and d <= 10.0:
+                qs.distance_km = d
+                qs.budget = float(qs.base_price)
+                nearby_qs.append(qs)
+
+    nearby_qs.sort(key=lambda x: getattr(x, 'distance_km', 999.0))
+    available_qs = len(nearby_qs)
+    available_jobs = jobs_base.count()
     
     # Active bids for this vendor
     active_bids_count = Bid.objects.filter(vendor=user).exclude(status__in=['rejected', 'completed']).count()
@@ -3098,8 +3663,8 @@ def vendor_dashboard(request):
     })
 
     # Fetch recent items
-    context['recent_quick_services'] = QuickService.objects.filter(status='open').order_by('-created_at')[:3]
-    context['recent_jobs'] = Job.objects.filter(status='open').order_by('-created_at')[:2]
+    context['recent_quick_services'] = nearby_qs[:3]
+    context['recent_jobs'] = jobs_base.order_by('-created_at')[:2]
 
     return render(request, 'infinity-vendor-dashboard/dashboard.html', context)
 
@@ -3151,7 +3716,7 @@ def user_dashboard(request):
                 pass
         return redirect('/user/dashboard')
 
-    context = get_user_dashboard_context(request.user)
+    context = get_user_dashboard_context(request.user, request=request)
     return render(request, 'user-dashboard/dashboard.html', context)
 
 # Re-export APIs from Api_views module
@@ -3176,26 +3741,60 @@ from .Api_views import (
     delete_category_api,
 )
 
+@login_required
 def manage_location_view(request):
+    if request.user.role != 'ADMIN' and not request.user.is_superuser:
+        return HttpResponseForbidden("Access Denied")
+
+    is_area_admin = (request.user.role == 'ADMIN' and not request.user.is_superuser)
+    admin_state = request.user.assigned_state
+
     if request.method == 'POST':
         action = request.POST.get('action')
         loc_id = request.POST.get('id')
         
         if action == 'delete':
             if loc_id:
-                Location.objects.filter(id=loc_id).delete()
+                loc = Location.objects.filter(id=loc_id).first()
+                if loc:
+                    if is_area_admin and admin_state and loc.state.lower() != admin_state.lower():
+                        messages.error(request, f"Permission Denied: You can only delete cities in your assigned state ({admin_state}).")
+                        return redirect('/master/locations')
+                    city_deleted = loc.city
+                    loc.delete()
+                    messages.success(request, f"City '{city_deleted}' deleted.")
         else:
-            state = request.POST.get('state_new', '').strip()
-            if not state:
-                state = request.POST.get('state', '').strip()
+            if is_area_admin:
+                # Force state strictly to assigned_state. Area Admin cannot create states or add cities in other states!
+                state = admin_state
+            else:
+                state = request.POST.get('state_new', '').strip() or request.POST.get('state', '').strip()
+
             city = request.POST.get('city', '').strip()
             status = request.POST.get('status', 'active')
             
-            if state and city:
-                if loc_id:
-                    Location.objects.filter(id=loc_id).update(state=state, city=city, status=status)
-                else:
-                    Location.objects.create(state=state, city=city, status=status)
+            if not state:
+                messages.error(request, "State is required.")
+                return redirect('/master/locations')
+
+            if not city:
+                messages.error(request, "City name is required.")
+                return redirect('/master/locations')
+
+            if loc_id:
+                loc = Location.objects.filter(id=loc_id).first()
+                if loc:
+                    if is_area_admin and admin_state and loc.state.lower() != admin_state.lower():
+                        messages.error(request, f"Permission Denied: You cannot modify locations outside your assigned state ({admin_state}).")
+                        return redirect('/master/locations')
+                    loc.city = city
+                    loc.state = state
+                    loc.status = status
+                    loc.save()
+                    messages.success(request, f"City '{city}' updated.")
+            else:
+                Location.objects.create(state=state, city=city, status=status)
+                messages.success(request, f"City '{city}' added to {state}.")
         
         return redirect('/master/locations')
     return redirect('/master/locations')
@@ -3213,11 +3812,25 @@ def approve_kyc_view(request, kyc_id):
             return HttpResponseForbidden("Access Denied")
         from .models import VendorKYC
         kyc = get_object_or_404(VendorKYC, id=kyc_id)
+        
+        # Territory authorization check: Area Admin can only approve vendors present in their state
+        if request.user.role == 'ADMIN' and not request.user.is_superuser:
+            admin_state = request.user.assigned_state
+            if not is_vendor_in_state(kyc.vendor, admin_state):
+                messages.error(request, f"Permission Denied: Vendor '{kyc.vendor.username}' does not belong to your assigned territory ({admin_state}).")
+                return redirect(request.META.get('HTTP_REFERER') or '/admin-dashboard/users/kyc-approvals.html')
+
         kyc.status = 'approved'
         kyc.reviewed_by = request.user
+        kyc.reviewed_at = timezone.now()
         kyc.save()
-        messages.success(request, f"KYC for {kyc.vendor.username} approved.")
-    return redirect('/admin-dashboard/users/kyc-approvals.html')
+        vendor_name = kyc.vendor.get_full_name() or kyc.vendor.username
+        messages.success(request, f"KYC verification for {vendor_name} approved successfully.")
+        
+        if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+            return JsonResponse({'status': 'success', 'message': f"KYC for {vendor_name} approved successfully."})
+            
+    return redirect(request.META.get('HTTP_REFERER') or '/admin-dashboard/users/kyc-approvals.html')
 
 @login_required
 def reject_kyc_view(request, kyc_id):
@@ -3226,12 +3839,79 @@ def reject_kyc_view(request, kyc_id):
             return HttpResponseForbidden("Access Denied")
         from .models import VendorKYC
         kyc = get_object_or_404(VendorKYC, id=kyc_id)
+        
+        # Territory authorization check: Area Admin can only reject vendors present in their state
+        if request.user.role == 'ADMIN' and not request.user.is_superuser:
+            admin_state = request.user.assigned_state
+            if not is_vendor_in_state(kyc.vendor, admin_state):
+                messages.error(request, f"Permission Denied: Vendor '{kyc.vendor.username}' does not belong to your assigned territory ({admin_state}).")
+                return redirect(request.META.get('HTTP_REFERER') or '/admin-dashboard/users/kyc-approvals.html')
+
+        reason = request.POST.get('admin_notes', '').strip() or "Documents did not meet platform verification criteria."
         kyc.status = 'rejected'
         kyc.reviewed_by = request.user
-        kyc.admin_notes = request.POST.get('admin_notes', '')
+        kyc.admin_notes = reason
+        kyc.reviewed_at = timezone.now()
         kyc.save()
-        messages.warning(request, f"KYC for {kyc.vendor.username} rejected.")
-    return redirect('/admin-dashboard/users/kyc-approvals.html')
+        vendor_name = kyc.vendor.get_full_name() or kyc.vendor.username
+        messages.warning(request, f"KYC verification for {vendor_name} has been rejected.")
+        
+        if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+            return JsonResponse({'status': 'success', 'message': f"KYC for {vendor_name} rejected."})
+
+    return redirect(request.META.get('HTTP_REFERER') or '/admin-dashboard/users/kyc-approvals.html')
+
+@login_required
+def update_quick_service_status_view(request, service_id):
+    if request.method != 'POST':
+        return HttpResponseForbidden("Only POST method allowed.")
+
+    if request.user.role != 'ADMIN' and not request.user.is_superuser:
+        return HttpResponseForbidden("Access Denied")
+
+    service = get_object_or_404(QuickService.objects.select_related('location', 'vendor', 'vendor__vendor_profile'), id=service_id)
+
+    # Territory authorization check: Area Admin can only modify quick services within their assigned state
+    if request.user.role == 'ADMIN' and not request.user.is_superuser:
+        admin_state = request.user.assigned_state
+        if not is_service_in_state(service, admin_state):
+            msg = f"Permission Denied: Quick Service '{service.title}' is outside your assigned territory ({admin_state})."
+            messages.error(request, msg)
+            if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+                return JsonResponse({'status': 'error', 'message': msg}, status=403)
+            return redirect(request.META.get('HTTP_REFERER') or '/quick-services/index.html')
+
+    new_status = request.POST.get('status', '').strip().lower()
+    valid_statuses = {'active', 'closed', 'completed', 'cancelled', 'paused'}
+    if new_status not in valid_statuses:
+        msg = f"Invalid status: '{new_status}'. Allowed: {', '.join(sorted(valid_statuses))}"
+        if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+            return JsonResponse({'status': 'error', 'message': msg}, status=400)
+        messages.error(request, msg)
+        return redirect(request.META.get('HTTP_REFERER') or '/quick-services/index.html')
+
+    old_status = service.status
+    service.status = new_status
+    service.save(update_fields=['status'])
+
+    action_label = "reactivated" if new_status == 'active' else "closed"
+    msg = f"Quick Service 'QS-{service.id:04d}' ({service.title}) {action_label} successfully (status: {new_status.title()})."
+    messages.success(request, msg)
+
+    if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+        return JsonResponse({
+            'status': 'success',
+            'message': msg,
+            'service_id': service.id,
+            'old_status': old_status,
+            'new_status': new_status
+        })
+
+    ref = request.META.get('HTTP_REFERER')
+    if ref:
+        return redirect(ref)
+    target_hash = '#closed' if new_status in {'closed', 'completed', 'cancelled', 'paused'} else '#active'
+    return redirect(f'/quick-services/index.html{target_hash}')
 
 def detect_location_api(request):
     from django.http import JsonResponse
@@ -3245,7 +3925,7 @@ def detect_location_api(request):
     if lat and lon:
         try:
             url = f"https://nominatim.openstreetmap.org/reverse?format=json&lat={lat}&lon={lon}"
-            req = urllib.request.Request(url, headers={'User-Agent': 'SugguLiveApp/1.0'})
+            req = urllib.request.Request(url, headers={'User-Agent': 'SuguLiveApp/1.0'})
             with urllib.request.urlopen(req, timeout=3) as resp:
                 data = json.loads(resp.read().decode())
                 addr = data.get('address', {})
@@ -3280,7 +3960,7 @@ def detect_location_api(request):
         # Try ipwho.is
         try:
             url = 'https://ipwho.is/' if client_ip.startswith(('192.168.', '10.', '172.', '127.')) else f'https://ipwho.is/{client_ip}'
-            req = urllib.request.Request(url, headers={'User-Agent': 'SugguLiveApp/1.0'})
+            req = urllib.request.Request(url, headers={'User-Agent': 'SuguLiveApp/1.0'})
             with urllib.request.urlopen(req, timeout=3) as resp:
                 data = json.loads(resp.read().decode())
                 if data.get('success', False):
@@ -3295,7 +3975,7 @@ def detect_location_api(request):
         if not ip_lat:
             try:
                 url = 'http://ip-api.com/json/' if client_ip.startswith(('192.168.', '10.', '172.', '127.')) else f'http://ip-api.com/json/{client_ip}'
-                req = urllib.request.Request(url, headers={'User-Agent': 'SugguLiveApp/1.0'})
+                req = urllib.request.Request(url, headers={'User-Agent': 'SuguLiveApp/1.0'})
                 with urllib.request.urlopen(req, timeout=3) as resp:
                     data = json.loads(resp.read().decode())
                     if data.get('status') == 'success':
@@ -3310,7 +3990,7 @@ def detect_location_api(request):
         if ip_lat and ip_lon:
             try:
                 url = f"https://nominatim.openstreetmap.org/reverse?format=json&lat={ip_lat}&lon={ip_lon}"
-                req = urllib.request.Request(url, headers={'User-Agent': 'SugguLiveApp/1.0'})
+                req = urllib.request.Request(url, headers={'User-Agent': 'SuguLiveApp/1.0'})
                 with urllib.request.urlopen(req, timeout=3) as resp:
                     rdata = json.loads(resp.read().decode())
                     addr = rdata.get('address', {})
@@ -3373,7 +4053,7 @@ def search_locations_api(request):
     try:
         encoded_q = urllib.parse.quote(q)
         url = f"https://nominatim.openstreetmap.org/search?format=json&q={encoded_q}&countrycodes=in&limit=8&addressdetails=1"
-        req = urllib.request.Request(url, headers={'User-Agent': 'SugguLiveApp/1.0'})
+        req = urllib.request.Request(url, headers={'User-Agent': 'SuguLiveApp/1.0'})
         with urllib.request.urlopen(req, timeout=3.5) as resp:
             data = json.loads(resp.read().decode())
             for item in data:

@@ -1,4 +1,4 @@
-/* Suggu Services Customer — shared Vanilla JS interactions */
+/* Sugu Customer — shared Vanilla JS interactions */
 (() => {
   'use strict';
   const $ = (s, c=document) => c.querySelector(s);
@@ -79,30 +79,60 @@
       const children=item.children.map(([k,l,p])=>`<a class="${navActive(k)?'active':''}" href="${route(p)}">${l}</a>`).join('');
       return `<div class="nav-parent ${active?'open':''}">${main}<button class="submenu-toggle" type="button" aria-label="Toggle ${item.label}">${icon('down')}</button></div><div class="nav-submenu">${children}</div>`;
     }).join('');
-    const initials = window.VENDOR_INITIALS || 'BR';
-    const name = window.VENDOR_NAME || 'BuildRight Contractors';
-    const type = window.VENDOR_TYPE || 'Company Vendor';
-    const loc = window.VENDOR_LOCATION || 'Ranchi';
-    const imgUrl = window.PROFILE_IMAGE_URL;
-    const avatarHtml = imgUrl ? `<img src="${imgUrl}" alt="Profile" class="avatar sm" style="object-fit:cover;">` : `<span class="avatar sm">${initials}</span>`;
-    const avatarTopHtml = imgUrl ? `<img src="${imgUrl}" alt="Profile" class="avatar" style="object-fit:cover;">` : `<span class="avatar">${initials}</span>`;
+
+    let cachedVendor = {};
+    try {
+      cachedVendor = JSON.parse(localStorage.getItem('sugu_vendor_profile') || '{}');
+    } catch(e) {}
+
+    if (window.PROFILE_IMAGE_URL !== undefined && window.PROFILE_IMAGE_URL !== null) {
+      cachedVendor.profile_image_url = window.PROFILE_IMAGE_URL;
+    }
+    if (window.VENDOR_NAME) cachedVendor.name = window.VENDOR_NAME;
+    if (window.VENDOR_INITIALS) cachedVendor.initials = window.VENDOR_INITIALS;
+    if (window.VENDOR_TYPE) cachedVendor.type = window.VENDOR_TYPE;
+    if (window.VENDOR_LOCATION) cachedVendor.location = window.VENDOR_LOCATION;
+    if (window.VENDOR_WALLET_BALANCE !== undefined) cachedVendor.wallet_balance = window.VENDOR_WALLET_BALANCE;
+    if (window.VENDOR_CREDITS !== undefined) cachedVendor.credits = window.VENDOR_CREDITS;
+
+    try {
+      localStorage.setItem('sugu_vendor_profile', JSON.stringify(cachedVendor));
+    } catch(e) {}
+
+    const initials = window.VENDOR_INITIALS || cachedVendor.initials || 'VN';
+    const name = window.VENDOR_NAME || cachedVendor.name || 'Vendor Partner';
+    const type = window.VENDOR_TYPE || cachedVendor.type || 'Vendor';
+    const loc = window.VENDOR_LOCATION || cachedVendor.location || 'Ranchi';
+    const imgUrl = (window.PROFILE_IMAGE_URL !== undefined && window.PROFILE_IMAGE_URL !== null) ? window.PROFILE_IMAGE_URL : (cachedVendor.profile_image_url || null);
+
+    const avatarHtml = imgUrl ?
+      `<span class="avatar sm vendor" style="position:relative;overflow:hidden;display:inline-grid;place-items:center;padding:0;"><img src="${imgUrl}" alt="Profile" style="width:100%;height:100%;object-fit:cover;position:absolute;inset:0;" onerror="this.remove()"><span>${initials}</span></span>` :
+      `<span class="avatar sm vendor">${initials}</span>`;
+
+    const avatarTopHtml = imgUrl ?
+      `<span class="avatar vendor" style="position:relative;overflow:hidden;display:inline-grid;place-items:center;width:34px;height:34px;border-radius:50%;padding:0;"><img src="${imgUrl}" alt="Profile" style="width:100%;height:100%;object-fit:cover;position:absolute;inset:0;" onerror="this.remove()"><span>${initials}</span></span>` :
+      `<span class="avatar vendor">${initials}</span>`;
 
     sidebarRoot.outerHTML = `<aside class="sidebar" id="sidebar" aria-label="Vendor navigation">
-      <a class="brand" href="${route('dashboard.html')}"><span class="brand-mark" style="background:transparent;box-shadow:none;padding:0;display:flex;align-items:center;justify-content:center;"><img src="/static/assets/images/logo.png" alt="Suggu Services" style="width:30px;height:30px;border-radius:8px;object-fit:contain;"></span><span class="brand-copy"><strong>Suggu Services</strong><span>Vendor Portal</span></span></a>
+      <a class="brand" href="${route('dashboard.html')}"><span class="brand-mark" style="background:transparent;box-shadow:none;padding:0;display:flex;align-items:center;justify-content:center;"><img src="/static/assets/images/logo.png" alt="Sugu" style="width:30px;height:30px;border-radius:8px;object-fit:contain;"></span><span class="brand-copy"><strong>Sugu</strong><span>Vendor Portal</span></span></a>
       <nav class="nav-scroll"><div class="nav-label">Workspace</div>${links}<div class="nav-label">Session</div><a class="nav-link" href="${route('dashboard.html')}" data-confirm="logout" data-tooltip="Logout">${icon('logout')}<span class="nav-text">Logout</span></a></nav>
       <div class="sidebar-bottom"><div class="side-user">${avatarHtml}<span class="side-user-copy"><strong>${name}</strong><span>${type} • ${loc}</span></span></div></div>
     </aside>`;
   }
   const topbarRoot = $('#topbar-root');
   if(topbarRoot){
-    const initials = window.VENDOR_INITIALS || 'BR';
-    const name = window.VENDOR_NAME || 'BuildRight';
-    const type = window.VENDOR_TYPE || 'Company Vendor';
-    const imgUrl = window.PROFILE_IMAGE_URL;
-    const avatarTopHtml = imgUrl ? `<img src="${imgUrl}" alt="Profile" class="avatar" style="object-fit:cover;width:32px;height:32px;border-radius:50%;">` : `<span class="avatar">${initials}</span>`;
+    let cachedVendor = {};
+    try { cachedVendor = JSON.parse(localStorage.getItem('sugu_vendor_profile') || '{}'); } catch(e){}
+    const initials = window.VENDOR_INITIALS || cachedVendor.initials || 'VN';
+    const name = window.VENDOR_NAME || cachedVendor.name || 'Vendor Partner';
+    const type = window.VENDOR_TYPE || cachedVendor.type || 'Vendor';
+    const imgUrl = (window.PROFILE_IMAGE_URL !== undefined && window.PROFILE_IMAGE_URL !== null) ? window.PROFILE_IMAGE_URL : (cachedVendor.profile_image_url || null);
+    const avatarTopHtml = imgUrl ?
+      `<span class="avatar vendor" style="position:relative;overflow:hidden;display:inline-grid;place-items:center;width:34px;height:34px;border-radius:50%;padding:0;"><img src="${imgUrl}" alt="Profile" style="width:100%;height:100%;object-fit:cover;position:absolute;inset:0;" onerror="this.remove()"><span>${initials}</span></span>` :
+      `<span class="avatar vendor">${initials}</span>`;
 
-    const walletBal = window.VENDOR_WALLET_BALANCE || '0.00';
-    const creditsCount = window.VENDOR_CREDITS !== undefined ? window.VENDOR_CREDITS : 0;
+    const walletBal = window.VENDOR_WALLET_BALANCE || cachedVendor.wallet_balance || '0.00';
+    const creditsCount = window.VENDOR_CREDITS !== undefined ? window.VENDOR_CREDITS : (cachedVendor.credits !== undefined ? cachedVendor.credits : 0);
     topbarRoot.outerHTML = `<header class="topbar"><div class="topbar-left"><button class="icon-btn hamburger" id="mobile-menu" aria-label="Open menu">${icon('menu')}</button><button class="icon-btn desktop-collapse" id="collapse-menu" aria-label="Collapse sidebar">${icon('panel')}</button><div><div class="topbar-title">${pageTitle}</div><div class="breadcrumbs"><a href="${route('dashboard.html')}">Vendor</a> &nbsp;/&nbsp; ${pageTitle}</div></div></div><div class="topbar-actions"><a class="vendor-credit-pill" href="${route('wallet/index.html')}" style="background:#eef2ff; color:#4338ca; border-color:#c7d2fe;">${icon('rupee')} ₹${walletBal}</a><a class="vendor-credit-pill" href="${route('bid-credits/packages.html')}">${icon('bolt')} ${creditsCount} credits</a><a class="icon-btn" href="${route('messages/index.html')}" aria-label="Messages">${icon('chat')}</a><div class="profile-menu"><button class="top-user profile-trigger" id="profile-trigger">${avatarTopHtml}<span class="top-user-copy"><strong>${name}</strong><span>${type}</span></span>${icon('down')}</button><div class="profile-dropdown" id="profile-dropdown"><a href="${route('profile/index.html')}">${icon('user')} View Profile</a><a href="${route('wallet/index.html')}">${icon('wallet')} Wallet &amp; Payouts</a><a href="${route('settings/index.html')}">${icon('settings')} Settings</a><a href="${route('bid-credits/packages.html')}">${icon('bolt')} Buy Bid Credits</a><button data-confirm="logout">${icon('logout')} Logout</button></div></div></div></header>`
   }
   if(!$('.mobile-overlay')) body.insertAdjacentHTML('beforeend','<div class="mobile-overlay" id="mobile-overlay"></div><div class="toast-container" id="toast-container" aria-live="polite"></div>');
@@ -127,8 +157,8 @@
   $$('[data-icon]').forEach(el => el.innerHTML = icon(el.dataset.icon));
 
   // Sidebar state and mobile drawer.
-  if(localStorage.getItem('suggu-vendor-sidebar') === 'collapsed' && innerWidth > 767) body.classList.add('sidebar-collapsed');
-  $('#collapse-menu')?.addEventListener('click', () => { body.classList.toggle('sidebar-collapsed'); localStorage.setItem('suggu-vendor-sidebar', body.classList.contains('sidebar-collapsed')?'collapsed':'expanded'); });
+  if(localStorage.getItem('sugu-vendor-sidebar') === 'collapsed' && innerWidth > 767) body.classList.add('sidebar-collapsed');
+  $('#collapse-menu')?.addEventListener('click', () => { body.classList.toggle('sidebar-collapsed'); localStorage.setItem('sugu-vendor-sidebar', body.classList.contains('sidebar-collapsed')?'collapsed':'expanded'); });
   const closeMobile = () => body.classList.remove('mobile-menu-open');
   $('#mobile-menu')?.addEventListener('click', () => body.classList.add('mobile-menu-open'));
   $('#mobile-overlay')?.addEventListener('click', closeMobile);
@@ -162,7 +192,7 @@
   $$('[data-modal-open]').forEach(b=>b.addEventListener('click',()=>$('#'+b.dataset.modalOpen)?.classList.add('open')));
   $$('[data-confirm]').forEach(el=>el.addEventListener('click',e=>{
     e.preventDefault(); const type=el.dataset.confirm; const map={
-      logout:['Log out of Suggu Services?','You will need to sign in again to manage your services and jobs.','Log out','You have been logged out.'],
+      logout:['Log out of Sugu?','You will need to sign in again to manage your services and jobs.','Log out','You have been logged out.'],
       cancel:['Cancel this item?','This action will stop new vendor responses. A Quick Service may still be cancelled after a vendor is accepted.','Cancel item','Request cancelled'],
       close:['Close this item?','Closed requests no longer accept quotations. You can review the history at any time.','Close item','Request closed'],
       delete:['Delete this item?','This action cannot be undone.','Delete','Item deleted'],
@@ -193,12 +223,12 @@
   // Shared marketplace selection handlers.
   $$('[data-accept-quick]').forEach(btn=>btn.addEventListener('click',()=>{
     const name=btn.dataset.acceptQuick;
-    openGlobalModal('Accept vendor for this Quick Service?',`<div class="callout neutral">${icon('info')}<div><strong>${name}</strong>Are you sure you want to accept this vendor for this Quick Service? Other vendor responses will remain available.</div></div><p class="small muted">You can still cancel the Quick Service after accepting a vendor. Service payment is made directly to the vendor, not through Suggu Services.</p>`,'Accept vendor',()=>{ localStorage.setItem('suggu-quick-vendor',name); $$('[data-accept-quick]').forEach(b=>{b.textContent=b.dataset.acceptQuick===name?'Vendor accepted':'Accept vendor';b.disabled=b.dataset.acceptQuick!==name;}); showToast(`${name} selected`,'The vendor has been notified. Other quotations were not rejected.'); });
+    openGlobalModal('Accept vendor for this Quick Service?',`<div class="callout neutral">${icon('info')}<div><strong>${name}</strong>Are you sure you want to accept this vendor for this Quick Service? Other vendor responses will remain available.</div></div><p class="small muted">You can still cancel the Quick Service after accepting a vendor. Service payment is made directly to the vendor, not through Sugu.</p>`,'Accept vendor',()=>{ localStorage.setItem('sugu-quick-vendor',name); $$('[data-accept-quick]').forEach(b=>{b.textContent=b.dataset.acceptQuick===name?'Vendor accepted':'Accept vendor';b.disabled=b.dataset.acceptQuick!==name;}); showToast(`${name} selected`,'The vendor has been notified. Other quotations were not rejected.'); });
   }));
   $$('[data-select-job]').forEach(btn=>btn.addEventListener('click',()=>{
-    const name=btn.dataset.selectJob; let selected=JSON.parse(localStorage.getItem('suggu-job-vendors')||'[]'); const has=selected.includes(name);
-    if(has){ selected=selected.filter(n=>n!==name); localStorage.setItem('suggu-job-vendors',JSON.stringify(selected)); btn.classList.remove('btn-soft'); btn.classList.add('btn-primary'); btn.innerHTML=`${icon('plus')} Select vendor`; showToast(`${name} removed`,'You can add the vendor again at any time.'); }
-    else openGlobalModal('Select vendor for this job?',`<p>Select <strong>${name}</strong> for the Full House Renovation job?</p><div class="callout success">${icon('users')}<div><strong>Multiple vendors supported</strong>You can select other vendors and assign a different part of the work to each.</div></div>`,'Select vendor',()=>{selected.push(name);localStorage.setItem('suggu-job-vendors',JSON.stringify(selected));btn.classList.remove('btn-primary');btn.classList.add('btn-soft');btn.innerHTML=`${icon('check')} Selected`;showToast(`${name} selected`,'Next, assign this vendor a scope of work.');});
+    const name=btn.dataset.selectJob; let selected=JSON.parse(localStorage.getItem('sugu-job-vendors')||'[]'); const has=selected.includes(name);
+    if(has){ selected=selected.filter(n=>n!==name); localStorage.setItem('sugu-job-vendors',JSON.stringify(selected)); btn.classList.remove('btn-soft'); btn.classList.add('btn-primary'); btn.innerHTML=`${icon('plus')} Select vendor`; showToast(`${name} removed`,'You can add the vendor again at any time.'); }
+    else openGlobalModal('Select vendor for this job?',`<p>Select <strong>${name}</strong> for the Full House Renovation job?</p><div class="callout success">${icon('users')}<div><strong>Multiple vendors supported</strong>You can select other vendors and assign a different part of the work to each.</div></div>`,'Select vendor',()=>{selected.push(name);localStorage.setItem('sugu-job-vendors',JSON.stringify(selected));btn.classList.remove('btn-primary');btn.classList.add('btn-soft');btn.innerHTML=`${icon('check')} Selected`;showToast(`${name} selected`,'Next, assign this vendor a scope of work.');});
   }));
 
   // Tabs filter table/card rows.
@@ -267,11 +297,11 @@
   $('#global-search')?.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();showToast(`Searching for “${e.target.value}”`,'Use the page filters to narrow results.','info');}});
 
   // Initial state for selected vendors.
-  const selectedJobs=JSON.parse(localStorage.getItem('suggu-job-vendors')||'[]');
+  const selectedJobs=JSON.parse(localStorage.getItem('sugu-job-vendors')||'[]');
   $$('[data-select-job]').forEach(btn=>{if(selectedJobs.includes(btn.dataset.selectJob)){btn.classList.remove('btn-primary');btn.classList.add('btn-soft');btn.innerHTML=`${icon('check')} Selected`;}});
-  const selectedQuick=localStorage.getItem('suggu-quick-vendor');
+  const selectedQuick=localStorage.getItem('sugu-quick-vendor');
   if(selectedQuick) $$('[data-accept-quick]').forEach(b=>{if(b.dataset.acceptQuick===selectedQuick)b.innerHTML=`${icon('check')} Vendor accepted`;});
 
   // Expose helpers for small page scripts.
-  window.SugguServices={icon,openModal:openGlobalModal,closeModal,showToast};
+  window.SugguServices=window.SuguServices={icon,openModal:openGlobalModal,closeModal,showToast};
 })();

@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta name="description" content="Suggu Services User Portal - Complaint Details">
-  <title>Complaint {{ ticket.ticket_id }} · Suggu Services User</title>
+  <meta name="description" content="Sugu User Portal - Complaint Details">
+  <title>Complaint {{ ticket.ticket_id }} · Sugu User</title>
   <link rel="stylesheet" href="../assets/styles.css">
   <script defer src="../assets/app.js"></script>
 </head>
@@ -138,7 +138,7 @@
               <div class="card-head">
                 <div>
                   <h2>Conversation History</h2>
-                  <p>Direct communication between you, the assigned vendor, and Suggu Services Support.</p>
+                  <p>Direct communication between you, the assigned vendor, and Sugu Support.</p>
                 </div>
               </div>
               <div class="card-body">
@@ -153,7 +153,7 @@
                         {% if m.sender == request.user %}
                           You
                         {% elif m.sender.is_superuser %}
-                          Support Team ({{ m.sender.get_full_name|default:"Suggu Services" }})
+                          Support Team ({{ m.sender.get_full_name|default:"Sugu" }})
                         {% else %}
                           {{ m.sender.vendor_profile.company_name|default:m.sender.username }} (Vendor)
                         {% endif %}
