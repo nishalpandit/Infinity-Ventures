@@ -1759,9 +1759,34 @@ def user_post_job_api(request):
         if not category_obj:
             category_obj = Category.objects.filter(status='active').first()
 
-        # Location resolution (ID or City/State)
+        # Location resolution (ID or City/State/Locality)
+        locality = (data.get('locality') or '').strip()
+        city = (data.get('city') or '').strip()
+        state = (data.get('state') or '').strip()
+        lat_val = data.get('latitude') or data.get('lat')
+        lon_val = data.get('longitude') or data.get('lon') or data.get('long')
+
+        comb = f"{locality} {address} {data.get('location', '')}".lower()
+        if not city:
+            if any(k in comb for k in ['lalpur', 'harmu', 'doranda', 'morabadi', 'bariatu', 'ashok nagar', 'kokar', 'ranchi', 'circular road', 'kanke', 'hehal']):
+                city = "Ranchi"
+                state = state or "Jharkhand"
+            elif any(k in comb for k in ['bandra', 'andheri', 'colaba', 'mumbai', 'bombay', 'dadar', 'borivali', 'kurla', 'bkc', 'thane', 'navi mumbai']):
+                city = "Mumbai"
+                state = state or "Maharashtra"
+            elif any(k in comb for k in ['indiranagar', 'koramangala', 'hsr', 'whitefield', 'jayanagar', 'bengaluru', 'bangalore']):
+                city = "Bengaluru"
+                state = state or "Karnataka"
+            elif any(k in comb for k in ['saket', 'connaught place', 'delhi', 'new delhi', 'dwarka', 'noida']):
+                city = "New Delhi"
+                state = state or "Delhi"
+
+        if not city:
+            city = "Ranchi"
+            state = state or "Jharkhand"
+
         location_obj = None
-        location_param = data.get('location_id') or data.get('location') or data.get('city')
+        location_param = data.get('location_id') or data.get('location') or city
         if location_param:
             if str(location_param).isdigit():
                 location_obj = Location.objects.filter(id=int(location_param)).first()
@@ -1769,8 +1794,14 @@ def user_post_job_api(request):
                 location_obj = Location.objects.filter(city__iexact=str(location_param).strip()).first()
             if not location_obj:
                 location_obj = Location.objects.filter(Q(city__icontains=str(location_param).strip()) | Q(state__icontains=str(location_param).strip())).first()
-        if not location_obj:
-            location_obj = Location.objects.filter(status='active').first()
+        if not location_obj and city:
+            try:
+                location_obj, _ = Location.objects.get_or_create(
+                    city=city,
+                    defaults={'state': state or 'Jharkhand', 'status': 'active'}
+                )
+            except Exception:
+                location_obj = None
 
         # Dates
         pref_start_date = data.get('preferred_start_date') or None
@@ -1804,7 +1835,12 @@ def user_post_job_api(request):
             required_time=required_time,
             shift_availability=shift_availability,
             working_hours=working_hours,
+            locality=locality,
+            city=city,
+            state=state,
             location=location_obj,
+            latitude=lat_val,
+            longitude=lon_val,
             address=address,
             pincode=pincode,
             contact_name=contact_name,
