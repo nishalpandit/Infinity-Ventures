@@ -86,23 +86,75 @@
           </article>
         </section>
 
-        <div class="stack full-width" style="display: flex; flex-direction: column; gap: 18px; width: 100%;">
+        <div class="stack full-width" style="display: flex; flex-direction: column; gap: 24px; width: 100%;">
+          
+          <!-- Available Quick Services Section -->
           <section class="card">
             <div class="card-head">
               <div>
-                <h2>Recent Quick Services</h2>
-                <p>Your latest small service requests</p>
+                <h2>Available Quick Services</h2>
+                <p>Verified doorstep services ready to book instantly</p>
               </div>
-              <a class="link small" href="quick-services/index.html">View all →</a>
+              <a class="link small" href="/user/services/browse.html">Browse all in catalog →</a>
+            </div>
+            <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; padding: 6px 0;">
+              {% for srv in available_services %}
+              <div class="card" style="padding: 16px; border: 1px solid var(--border-color, #e2e8f0); border-radius: 12px; display: flex; flex-direction: column; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.04);">
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
+                  <span class="badge" style="background: rgba(99, 102, 241, 0.08); color: #4f46e5; font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 6px;">
+                    {{ srv.category.name|default:"Quick Service" }}
+                  </span>
+                  <span class="badge badge-success" style="font-size: 10.5px; padding: 2px 7px;">Available</span>
+                </div>
+                
+                <h3 style="font-size: 15px; font-weight: 700; margin: 0 0 6px; line-height: 1.35;">{{ srv.title }}</h3>
+                <p style="font-size: 12.5px; color: var(--text-muted); margin: 0 0 12px; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">
+                  {{ srv.description|default:"Doorstep service by verified platform expert." }}
+                </p>
+
+                <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 12px; display: flex; align-items: center; gap: 6px;">
+                  <span class="avatar xs teal" style="width:20px; height:20px; font-size:10px;">{{ srv.vendor.username|slice:":1"|upper }}</span>
+                  <span>{{ srv.vendor.vendor_profile.company_name|default:srv.vendor.get_full_name|default:srv.vendor.username }}</span>
+                  {% if srv.locality %}
+                  <span>· {{ srv.locality }}</span>
+                  {% endif %}
+                </div>
+
+                <div style="margin-top: auto; padding-top: 12px; border-top: 1px solid var(--border-color, #e2e8f0); display: flex; align-items: center; justify-content: space-between;">
+                  <div>
+                    <div style="font-size: 10px; color: var(--text-muted); text-transform: uppercase; font-weight: 700;">Starting at</div>
+                    <strong style="font-size: 17px; font-weight: 800; color: #059669;">₹{{ srv.base_price|floatformat:"0" }}</strong>
+                  </div>
+                  <a href="/user/services/book.html?id={{ srv.id }}" class="btn btn-primary btn-sm" style="padding: 6px 14px; font-size: 12.5px; font-weight: 700;">
+                    Book Now
+                  </a>
+                </div>
+              </div>
+              {% empty %}
+              <div style="grid-column: 1 / -1; text-align: center; padding: 32px; color: var(--text-muted);">
+                No active quick services available right now. Check back soon!
+              </div>
+              {% endfor %}
+            </div>
+          </section>
+
+          <!-- Recent Bookings Section -->
+          <section class="card">
+            <div class="card-head">
+              <div>
+                <h2>My Service Bookings</h2>
+                <p>Your latest doorstep service requests & bookings</p>
+              </div>
+              <a class="link small" href="/user/services/my-bookings.html">View all bookings →</a>
             </div>
             <div class="table-wrap">
               <table class="data-table">
                 <thead>
                   <tr>
+                    <th>Booking ID</th>
                     <th>Service</th>
-                    <th>Budget</th>
-                    <th>Requests</th>
-                    <th>Selected vendor</th>
+                    <th>Package / Amount</th>
+                    <th>Selected Vendor</th>
                     <th>Status</th>
                     <th>Date</th>
                   </tr>
@@ -111,11 +163,16 @@
                   {% for qs in recent_qs %}
                   <tr>
                     <td>
-                      <a class="table-title" href="quick-services/details.html?id={{ qs.id }}">{{ qs.title }}</a>
-                      <div class="table-sub">QS-{{ qs.id|stringformat:"04d" }} · {{ qs.category.name|default:"General" }}</div>
+                      <div class="table-title">{{ qs.id_str|default:"BK" }}</div>
                     </td>
-                    <td>₹{{ qs.budget|floatformat:0 }}</td>
-                    <td><a class="link" href="quick-services/details.html?id={{ qs.id }}">{{ qs.bids.count }} {% if qs.bids.count == 1 %}vendor{% else %}vendors{% endif %}</a></td>
+                    <td>
+                      <a class="table-title" href="/user/services/my-bookings.html">{{ qs.title }}</a>
+                      <div class="table-sub">{{ qs.category_name|default:"Quick Service" }}</div>
+                    </td>
+                    <td>
+                      <div><strong>₹{{ qs.budget|floatformat:0 }}</strong></div>
+                      <div class="table-sub">{{ qs.package_name|default:"Standard" }}</div>
+                    </td>
                     <td>
                       {% if qs.selected_vendor_name %}
                       <div class="cell-user">
@@ -123,7 +180,7 @@
                         <span>{{ qs.selected_vendor_name }}</span>
                         {% if qs.is_vendor_verified %}
                         <span class="badge" style="background:#ecfdf5; color:#065f46; border:1px solid #a7f3d0; font-size:10px; padding:2px 7px; margin-left:4px;" title="KYC Verified Pro Vendor">
-                          <span data-icon="award"></span> Verified Pro
+                          <span data-icon="award"></span> Verified
                         </span>
                         {% endif %}
                       </div>
@@ -133,16 +190,22 @@
                     </td>
                     <td>
                       {% if qs.status == 'completed' %}
-                      <span class="badge badge-completed"><span data-icon="check"></span> Completed · Settled</span>
+                      <span class="badge badge-completed"><span data-icon="check"></span> Completed</span>
+                      {% elif qs.status == 'accepted' %}
+                      <span class="badge badge-success"><span data-icon="check"></span> Accepted</span>
+                      {% elif qs.status == 'cancelled' %}
+                      <span class="badge badge-danger">Cancelled</span>
                       {% else %}
-                      <span class="badge badge-{{ qs.status }}">{{ qs.get_status_display }}</span>
+                      <span class="badge badge-pending">Pending</span>
                       {% endif %}
                     </td>
                     <td>{{ qs.created_at|date:"d M Y" }}</td>
                   </tr>
                   {% empty %}
                   <tr>
-                    <td colspan="6" style="text-align: center; color: var(--text-muted); padding: 24px;">No quick services posted yet. <a href="quick-services/create.html">Post a quick service</a></td>
+                    <td colspan="6" style="text-align: center; color: var(--text-muted); padding: 24px;">
+                      You haven’t booked any quick services yet. Explore the available services above to book a verified professional!
+                    </td>
                   </tr>
                   {% endfor %}
                 </tbody>

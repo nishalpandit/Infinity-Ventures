@@ -482,17 +482,17 @@ button{cursor:pointer}
     <a href="/services/browse?category={{ service.category_id }}" class="svc-card"
        data-service-id="{{ service.id }}"
        data-category-id="{{ service.category_id }}"
-       data-lat="{{ service.latitude }}"
-       data-lon="{{ service.longitude }}"
-       data-radius="{{ service.service_radius_km|default:10.0 }}"
-       data-locality="{{ service.locality|default:'Ranchi' }}">
+       data-lat="{{ service.latitude|default:'' }}"
+       data-lon="{{ service.longitude|default:'' }}"
+       data-radius="{{ service.service_radius_km|default:15.0 }}"
+       data-locality="{{ service.locality|default:'Available' }}">
       <div class="svc-card-img">
         {% if service.image %}
-          <img src="{{ service.image.url }}" alt="{{ service.title }}">
+          <img src="{{ service.image.url }}" alt="{{ service.title }}" loading="lazy">
         {% elif service.image_url %}
-          <img src="{{ service.image_url }}" alt="{{ service.title }}">
+          <img src="{{ service.image_url }}" alt="{{ service.title }}" loading="lazy">
         {% else %}
-          <img src="https://images.unsplash.com/photo-1581578731548-c64695cc6952?w=400&auto=format&fit=crop&q=60" alt="{{ service.title }}">
+          <img src="https://images.unsplash.com/photo-1581578731548-c64695cc6952?w=400&auto=format&fit=crop&q=60" alt="{{ service.title }}" loading="lazy">
         {% endif %}
       </div>
       <div class="svc-card-title">{{ service.title }}</div>
@@ -502,7 +502,7 @@ button{cursor:pointer}
         <span class="eta svc-card-dist"><i class="fa-solid fa-location-dot" style="font-size:10px"></i> <span class="dist-val">Available</span></span>
       </div>
       <div class="svc-card-price">₹{{ service.base_price|floatformat:"0" }}</div>
-      <div class="svc-card-vendor">by {{ service.vendor.get_full_name|default:service.vendor.username }} · {{ service.locality|default:"Ranchi" }}</div>
+      <div class="svc-card-vendor">by {{ service.vendor.vendor_profile.company_name|default:service.vendor.get_full_name|default:service.vendor.username }} · {{ service.locality|default:"Available" }}</div>
     </a>
     {% endfor %}
   </div>
@@ -663,34 +663,73 @@ function initHomepageLocationFiltering() {
 
     var allCards = document.querySelectorAll('#landingServicesGrid .svc-card');
     var emptyState = document.getElementById('landingEmptyServices');
-    var visibleCount = 0;
     var maxCardsToShow = 8; // Compact display: maximum 8 cards to eliminate endless scrolling
+
+    // Pass 1: find cards that match category and calculate distances
+    var inRangeMatches = [];
+    var catMatches = [];
 
     allCards.forEach(function(card) {
       var sLat = parseFloat(card.getAttribute('data-lat'));
       var sLon = parseFloat(card.getAttribute('data-lon'));
-      var radius = parseFloat(card.getAttribute('data-radius')) || 10.0;
+      var radius = parseFloat(card.getAttribute('data-radius')) || 15.0;
       var cardCat = String(card.getAttribute('data-category-id'));
       var distEl = card.querySelector('.dist-val');
 
-      if (isNaN(sLat) || isNaN(sLon)) {
+      var matchesCat = (currentSelectedCat === 'all' || cardCat === currentSelectedCat);
+      if (!matchesCat) {
         card.style.display = 'none';
         return;
       }
 
-      var dist = calculateHaversineKm(userLat, userLon, sLat, sLon);
-      var isWithinRange = dist <= radius;
-      var matchesCat = (currentSelectedCat === 'all' || cardCat === currentSelectedCat);
+      var dist = (!isNaN(sLat) && !isNaN(sLon)) ? calculateHaversineKm(userLat, userLon, sLat, sLon) : NaN;
+      var isWithinRange = !isNaN(dist) && dist <= radius;
 
-      if (distEl && !isNaN(dist)) {
-        distEl.textContent = dist + ' km away';
+      if (distEl) {
+        if (!isNaN(dist) && dist <= 50) {
+          distEl.textContent = dist + ' km away';
+        } else {
+          var locality = card.getAttribute('data-locality') || 'Available';
+          distEl.textContent = locality.split(',')[0];
+        }
       }
 
-      if (isWithinRange && matchesCat && visibleCount < maxCardsToShow) {
+      catMatches.push(card);
+      if (isWithinRange) {
+        inRangeMatches.push(card);
+      }
+    });
+
+    var cardsToShow = [];
+    var subtitle = document.getElementById('servicesSectionSubtitle');
+
+    if (inRangeMatches.length > 0) {
+      cardsToShow = inRangeMatches;
+      if (subtitle && locData.name) {
+        subtitle.textContent = 'Showing verified professionals near ' + locData.name.split(',')[0] + ' (within 10 km)';
+      }
+    } else {
+      // Fallback: Show available platform services in this category so the listing is ALWAYS visible!
+      cardsToShow = catMatches;
+      if (subtitle) {
+        if (currentSelectedCat === 'all') {
+          subtitle.textContent = 'Showing verified & newly listed services across our network';
+        } else {
+          subtitle.textContent = 'Showing verified services in this category';
+        }
+      }
+    }
+
+    // Now display up to maxCardsToShow
+    allCards.forEach(function(card) {
+      card.style.display = 'none';
+    });
+
+    var visibleCount = 0;
+    cardsToShow.forEach(function(card) {
+      if (visibleCount < maxCardsToShow) {
         card.style.display = 'block';
         visibleCount++;
-      } else {
-        card.style.display = 'none';
       }
     });
 
@@ -698,11 +737,6 @@ function initHomepageLocationFiltering() {
       if (emptyState) emptyState.style.display = 'block';
     } else {
       if (emptyState) emptyState.style.display = 'none';
-    }
-
-    var subtitle = document.getElementById('servicesSectionSubtitle');
-    if (subtitle && locData.name) {
-      subtitle.textContent = 'Showing verified professionals near ' + locData.name.split(',')[0] + ' (within 10 km)';
     }
   }
 

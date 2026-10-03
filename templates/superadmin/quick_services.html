@@ -1,23 +1,544 @@
 {% extends 'superadmin/base.html' %}
-{% block title %}Quick Services{% endblock %}
-{% block header_title %}Quick Services{% endblock %}
+{% block title %}Quick Services - Super Admin{% endblock %}
+{% block header_title %}Quick Services Catalog{% endblock %}
 
 {% block header_actions %}
 <a href="{% url 'super_admin_qs_create' %}" class="btn btn-primary btn-sm">
   <i class="fa-solid fa-plus"></i>
-  <span>Create Quick Booking</span>
+  <span>Create Quick Service</span>
 </a>
 {% endblock %}
 
 {% block content %}
-<div class="card" style="padding: 0;">
+<style>
+  /* ── Metric Ribbon ── */
+  .qs-metrics-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+  .qs-metric-card {
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: var(--r-md);
+    padding: 18px 20px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    box-shadow: var(--shadow-xs);
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+  .qs-metric-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-sm);
+  }
+  .qs-metric-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: var(--r-sm);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    flex-shrink: 0;
+  }
+  .qs-metric-icon.purple { background: rgba(99, 102, 241, 0.1); color: #6366f1; }
+  .qs-metric-icon.green  { background: rgba(16, 185, 129, 0.1); color: #10b981; }
+  .qs-metric-icon.amber  { background: rgba(245, 158, 11, 0.1); color: #f59e0b; }
+  .qs-metric-icon.slate  { background: rgba(100, 116, 139, 0.1); color: #64748b; }
+  .qs-metric-info h3 {
+    font-size: 22px;
+    font-weight: 800;
+    color: var(--text-main);
+    line-height: 1.2;
+    margin-bottom: 2px;
+  }
+  .qs-metric-info span {
+    font-size: 12.5px;
+    color: var(--text-muted);
+    font-weight: 500;
+  }
+
+  /* ── Filter / Toolbar ── */
+  .qs-toolbar {
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: var(--r-md);
+    padding: 14px 18px;
+    margin-bottom: 22px;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    box-shadow: var(--shadow-xs);
+  }
+  .qs-search-wrap {
+    position: relative;
+    flex: 1;
+    min-width: 240px;
+    max-width: 400px;
+  }
+  .qs-search-wrap i {
+    position: absolute;
+    left: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-muted);
+    font-size: 13px;
+  }
+  .qs-search-input {
+    width: 100%;
+    height: 38px;
+    padding: 0 14px 0 38px;
+    border: 1px solid var(--border);
+    border-radius: var(--r-sm);
+    font-size: 13px;
+    background: var(--bg-main);
+    color: var(--text-main);
+    outline: none;
+    transition: all 0.2s;
+  }
+  .qs-search-input:focus {
+    border-color: var(--accent);
+    background: #fff;
+    box-shadow: 0 0 0 3px var(--accent-light);
+  }
+  .qs-filter-group {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .qs-select {
+    height: 38px;
+    padding: 0 12px;
+    border: 1px solid var(--border);
+    border-radius: var(--r-sm);
+    font-size: 13px;
+    background: var(--bg-main);
+    color: var(--text-main);
+    outline: none;
+    cursor: pointer;
+  }
+  .qs-select:focus {
+    border-color: var(--accent);
+  }
+  .qs-view-toggle {
+    display: flex;
+    background: var(--bg-main);
+    border: 1px solid var(--border);
+    border-radius: var(--r-sm);
+    padding: 3px;
+    gap: 2px;
+  }
+  .qs-view-btn {
+    border: none;
+    background: transparent;
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--text-muted);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.15s;
+  }
+  .qs-view-btn.active {
+    background: var(--bg-surface);
+    color: var(--accent);
+    box-shadow: var(--shadow-xs);
+  }
+
+  /* ── CARDS GRID ── */
+  .qs-cards-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 22px;
+    margin-bottom: 28px;
+  }
+  .qs-card-item {
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: var(--r-md);
+    overflow: hidden;
+    box-shadow: var(--shadow-xs);
+    display: flex;
+    flex-direction: column;
+    transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
+  }
+  .qs-card-item:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--shadow-md);
+    border-color: #cbd5e1;
+  }
+  .qs-card-media {
+    position: relative;
+    width: 100%;
+    height: 160px;
+    background: #f1f5f9;
+    overflow: hidden;
+  }
+  .qs-card-media img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.3s;
+  }
+  .qs-card-item:hover .qs-card-media img {
+    transform: scale(1.04);
+  }
+  .qs-card-placeholder {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #eef2ff, #f8fafc);
+    color: #818cf8;
+    gap: 8px;
+  }
+  .qs-badge-overlay-left {
+    position: absolute;
+    top: 12px;
+    left: 12px;
+    background: rgba(15, 23, 42, 0.78);
+    backdrop-filter: blur(6px);
+    color: #fff;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 4px 10px;
+    border-radius: 20px;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    letter-spacing: 0.2px;
+  }
+  .qs-badge-overlay-right {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 4px 10px;
+    border-radius: 20px;
+    backdrop-filter: blur(6px);
+  }
+  .qs-badge-overlay-right.active {
+    background: rgba(16, 185, 129, 0.9);
+    color: #fff;
+  }
+  .qs-badge-overlay-right.draft {
+    background: rgba(100, 116, 139, 0.9);
+    color: #fff;
+  }
+  .qs-badge-overlay-right.paused {
+    background: rgba(245, 158, 11, 0.9);
+    color: #fff;
+  }
+  .qs-card-body {
+    padding: 18px 20px;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+  }
+  .qs-card-title {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--text-main);
+    margin-bottom: 6px;
+    line-height: 1.35;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .qs-card-desc {
+    font-size: 12.5px;
+    color: var(--text-muted);
+    line-height: 1.45;
+    margin-bottom: 14px;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .qs-vendor-chip {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: #f8fafc;
+    border: 1px solid #f1f5f9;
+    padding: 8px 12px;
+    border-radius: var(--r-sm);
+    margin-bottom: 14px;
+  }
+  .qs-vendor-avatar {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: #4f46e5;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    font-weight: 700;
+    flex-shrink: 0;
+  }
+  .qs-vendor-names {
+    overflow: hidden;
+  }
+  .qs-vendor-company {
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--text-main);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .qs-vendor-user {
+    font-size: 11px;
+    color: var(--text-muted);
+  }
+  .qs-card-meta-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: auto;
+    padding-top: 12px;
+    border-top: 1px solid var(--border);
+  }
+  .qs-card-price {
+    display: flex;
+    flex-direction: column;
+  }
+  .qs-card-price-label {
+    font-size: 10.5px;
+    text-transform: uppercase;
+    font-weight: 700;
+    color: var(--text-light);
+    letter-spacing: 0.5px;
+  }
+  .qs-card-price-val {
+    font-size: 18px;
+    font-weight: 800;
+    color: var(--success);
+  }
+  .qs-card-loc {
+    font-size: 11.5px;
+    color: var(--text-muted);
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    max-width: 140px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .qs-card-actions {
+    display: flex;
+    gap: 8px;
+    padding: 12px 20px;
+    background: #fafafa;
+    border-top: 1px solid var(--border);
+  }
+  .qs-card-actions .btn {
+    flex: 1;
+    justify-content: center;
+  }
+
+  /* ── TABLE VIEW ── */
+  .qs-table-view {
+    display: none;
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: var(--r-md);
+    overflow: hidden;
+    box-shadow: var(--shadow-xs);
+    margin-bottom: 28px;
+  }
+</style>
+
+<!-- Metrics Ribbon -->
+<div class="qs-metrics-grid">
+  <div class="qs-metric-card">
+    <div class="qs-metric-icon purple">
+      <i class="fa-solid fa-bolt"></i>
+    </div>
+    <div class="qs-metric-info">
+      <h3>{{ total_count|default:"0" }}</h3>
+      <span>Total Quick Services</span>
+    </div>
+  </div>
+  <div class="qs-metric-card">
+    <div class="qs-metric-icon green">
+      <i class="fa-solid fa-circle-check"></i>
+    </div>
+    <div class="qs-metric-info">
+      <h3>{{ active_count|default:"0" }}</h3>
+      <span>Active Listings</span>
+    </div>
+  </div>
+  <div class="qs-metric-card">
+    <div class="qs-metric-icon slate">
+      <i class="fa-solid fa-file-pen"></i>
+    </div>
+    <div class="qs-metric-info">
+      <h3>{{ draft_count|default:"0" }}</h3>
+      <span>Drafts</span>
+    </div>
+  </div>
+  <div class="qs-metric-card">
+    <div class="qs-metric-icon amber">
+      <i class="fa-solid fa-pause"></i>
+    </div>
+    <div class="qs-metric-info">
+      <h3>{{ paused_count|default:"0" }}</h3>
+      <span>Paused</span>
+    </div>
+  </div>
+</div>
+
+<!-- Toolbar & View Switcher -->
+<form method="GET" class="qs-toolbar" id="qsFilterForm">
+  <div class="qs-search-wrap">
+    <i class="fa-solid fa-magnifying-glass"></i>
+    <input type="text" name="search" class="qs-search-input" placeholder="Search service, vendor, or area..." value="{{ search_query|default:'' }}">
+  </div>
+
+  <div class="qs-filter-group">
+    <!-- Category Filter -->
+    <select name="category" class="qs-select" onchange="this.form.submit()">
+      <option value="">All Categories</option>
+      {% for cat in categories %}
+        <option value="{{ cat.id }}" {% if selected_category == cat.id|stringformat:"s" %}selected{% endif %}>{{ cat.name }}</option>
+      {% endfor %}
+    </select>
+
+    <!-- Status Filter -->
+    <select name="status" class="qs-select" onchange="this.form.submit()">
+      <option value="all" {% if not selected_status or selected_status == 'all' %}selected{% endif %}>All Statuses</option>
+      <option value="active" {% if selected_status == 'active' %}selected{% endif %}>Active</option>
+      <option value="draft" {% if selected_status == 'draft' %}selected{% endif %}>Draft</option>
+      <option value="paused" {% if selected_status == 'paused' %}selected{% endif %}>Paused</option>
+    </select>
+
+    <!-- View Mode Switcher -->
+    <div class="qs-view-toggle">
+      <button type="button" class="qs-view-btn active" id="btnViewCards" onclick="switchView('cards')">
+        <i class="fa-solid fa-grip"></i> Cards
+      </button>
+      <button type="button" class="qs-view-btn" id="btnViewTable" onclick="switchView('table')">
+        <i class="fa-solid fa-list"></i> Table
+      </button>
+    </div>
+  </div>
+</form>
+
+<!-- CARDS VIEW (Primary Default) -->
+<div class="qs-cards-grid" id="qsCardsGrid">
+  {% for qs in qservices %}
+  <article class="qs-card-item">
+    <!-- Card Media -->
+    <div class="qs-card-media">
+      {% if qs.image %}
+        <img src="{{ qs.image.url }}" alt="{{ qs.title }}" loading="lazy">
+      {% elif qs.image_url %}
+        <img src="{{ qs.image_url }}" alt="{{ qs.title }}" loading="lazy">
+      {% else %}
+        <div class="qs-card-placeholder">
+          <i class="fa-solid fa-wrench" style="font-size:32px;"></i>
+          <span style="font-size:12px; font-weight:600;">{{ qs.category.name|default:"Quick Service" }}</span>
+        </div>
+      {% endif %}
+
+      <span class="qs-badge-overlay-left">
+        <i class="fa-solid fa-tag"></i> {{ qs.category.name|default:"General" }}
+      </span>
+
+      <span class="qs-badge-overlay-right {{ qs.status }}">
+        {% if qs.status == 'active' %}
+          <i class="fa-solid fa-circle-check"></i> Active
+        {% elif qs.status == 'draft' %}
+          <i class="fa-solid fa-file"></i> Draft
+        {% else %}
+          <i class="fa-solid fa-circle-pause"></i> {{ qs.get_status_display }}
+        {% endif %}
+      </span>
+    </div>
+
+    <!-- Card Body -->
+    <div class="qs-card-body">
+      <h3 class="qs-card-title" title="{{ qs.title }}">{{ qs.title }}</h3>
+      <p class="qs-card-desc">{{ qs.description|default:"Doorstep quick service by verified platform professional." }}</p>
+
+      <!-- Vendor Info -->
+      <div class="qs-vendor-chip">
+        <div class="qs-vendor-avatar">
+          {{ qs.vendor.username|slice:":2"|upper }}
+        </div>
+        <div class="qs-vendor-names">
+          <div class="qs-vendor-company">
+            {{ qs.vendor.vendor_profile.company_name|default:qs.vendor.get_full_name|default:qs.vendor.username }}
+          </div>
+          <div class="qs-vendor-user">
+            @{{ qs.vendor.username }}
+          </div>
+        </div>
+      </div>
+
+      <!-- Price & Location -->
+      <div class="qs-card-meta-row">
+        <div class="qs-card-price">
+          <span class="qs-card-price-label">Starting Price</span>
+          <span class="qs-card-price-val">₹{{ qs.base_price|floatformat:"0" }}</span>
+        </div>
+        <div class="qs-card-loc" title="{{ qs.locality|default:'Platform Wide' }}">
+          <i class="fa-solid fa-location-dot" style="color: #6366f1;"></i>
+          <span>{{ qs.locality|default:"Available" }}</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Card Actions -->
+    <div class="qs-card-actions">
+      <a href="{% url 'super_admin_qs_edit' qs.id %}" class="btn btn-outline btn-sm">
+        <i class="fa-solid fa-pen-to-square"></i> Edit
+      </a>
+      <a href="{% url 'super_admin_qs_delete' qs.id %}" class="btn btn-outline btn-sm" style="border-color: rgba(239,68,68,0.3); color: var(--danger);" onclick="return confirm('Delete service \'{{ qs.title }}\'? This cannot be undone.');">
+        <i class="fa-solid fa-trash"></i> Delete
+      </a>
+    </div>
+  </article>
+  {% empty %}
+  <div style="grid-column: 1 / -1; text-align: center; padding: 60px 20px; background: var(--bg-surface); border: 1px dashed var(--border); border-radius: var(--r-md);">
+    <i class="fa-solid fa-box-open" style="font-size: 40px; color: var(--text-light); margin-bottom: 14px; display: inline-block;"></i>
+    <h4 style="font-size: 16px; font-weight: 700; color: var(--text-main); margin-bottom: 6px;">No quick services found</h4>
+    <p style="font-size: 13.5px; color: var(--text-muted); max-width: 400px; margin: 0 auto 20px;">
+      There are no quick services matching your filter criteria. Try resetting search or create a new booking.
+    </p>
+    <a href="{% url 'super_admin_qs_create' %}" class="btn btn-primary btn-sm">
+      <i class="fa-solid fa-plus"></i> Create Quick Service
+    </a>
+  </div>
+  {% endfor %}
+</div>
+
+<!-- TABLE VIEW (Secondary Alternative) -->
+<div class="qs-table-view" id="qsTableView">
   <div class="table-container">
     <table>
       <thead>
         <tr>
-          <th>Title</th>
+          <th>Service Title</th>
           <th>Vendor</th>
           <th>Category</th>
+          <th>Locality</th>
           <th>Base Price</th>
           <th>Status</th>
           <th>Actions</th>
@@ -27,56 +548,92 @@
         {% for qs in qservices %}
         <tr>
           <td><strong>{{ qs.title }}</strong></td>
-          <td>{{ qs.vendor.username }}</td>
+          <td>{{ qs.vendor.vendor_profile.company_name|default:qs.vendor.username }}</td>
           <td>{{ qs.category.name|default:"-" }}</td>
-          <td style="color: var(--success); font-weight: 600;">₹{{ qs.base_price }}</td>
+          <td><i class="fa-solid fa-location-dot" style="font-size: 11px; color: var(--text-muted);"></i> {{ qs.locality|default:"-" }}</td>
+          <td style="color: var(--success); font-weight: 700;">₹{{ qs.base_price|floatformat:"0" }}</td>
           <td><span class="badge {% if qs.status == 'active' %}active{% elif qs.status == 'draft' %}inactive{% else %}warn{% endif %}">{{ qs.get_status_display }}</span></td>
           <td>
             <div style="display: flex; gap: 8px;">
               <a href="{% url 'super_admin_qs_edit' qs.id %}" class="btn btn-outline btn-sm"><i class="fa-solid fa-pen-to-square"></i> Edit</a>
-              <a href="{% url 'super_admin_qs_delete' qs.id %}" class="btn btn-outline btn-sm" style="border-color: rgba(239,68,68,0.3);" onclick="return confirm('Delete this quick service?')">
-                <i class="fa-solid fa-trash" style="color: var(--danger);"></i>
+              <a href="{% url 'super_admin_qs_delete' qs.id %}" class="btn btn-outline btn-sm" style="border-color: rgba(239,68,68,0.3); color: var(--danger);" onclick="return confirm('Delete this quick service?')">
+                <i class="fa-solid fa-trash"></i>
               </a>
             </div>
           </td>
         </tr>
         {% empty %}
-        <tr><td colspan="6" style="text-align: center; padding: 40px; color: var(--text-muted);">No quick services found.</td></tr>
+        <tr><td colspan="7" style="text-align: center; padding: 40px; color: var(--text-muted);">No quick services found.</td></tr>
         {% endfor %}
       </tbody>
     </table>
-    {% if qservices.has_other_pages %}
-    <div class="pagination-wrap">
-      <div>Showing <strong>{{ qservices.start_index|default:0 }}</strong> to <strong>{{ qservices.end_index|default:0 }}</strong> of <strong>{{ qservices.paginator.count }}</strong> quick services</div>
-      <nav class="pagination-nav" aria-label="Page navigation">
-        {% if qservices.has_previous %}
-          <a href="?page=1" class="page-link" title="First Page"><i class="fa-solid fa-angles-left"></i></a>
-          <a href="?page={{ qservices.previous_page_number }}" class="page-link" title="Previous Page"><i class="fa-solid fa-chevron-left"></i></a>
-        {% else %}
-          <span class="page-link disabled"><i class="fa-solid fa-angles-left"></i></span>
-          <span class="page-link disabled"><i class="fa-solid fa-chevron-left"></i></span>
-        {% endif %}
-
-        {% for p in page_range %}
-          {% if p == qservices.paginator.ELLIPSIS %}
-            <span class="page-link disabled">…</span>
-          {% elif p == qservices.number %}
-            <span class="page-link active">{{ p }}</span>
-          {% else %}
-            <a href="?page={{ p }}" class="page-link">{{ p }}</a>
-          {% endif %}
-        {% endfor %}
-
-        {% if qservices.has_next %}
-          <a href="?page={{ qservices.next_page_number }}" class="page-link" title="Next Page"><i class="fa-solid fa-chevron-right"></i></a>
-          <a href="?page={{ qservices.paginator.num_pages }}" class="page-link" title="Last Page"><i class="fa-solid fa-angles-right"></i></a>
-        {% else %}
-          <span class="page-link disabled"><i class="fa-solid fa-chevron-right"></i></span>
-          <span class="page-link disabled"><i class="fa-solid fa-angles-right"></i></span>
-        {% endif %}
-      </nav>
-    </div>
-    {% endif %}
   </div>
 </div>
+
+<!-- Pagination -->
+{% if qservices.has_other_pages %}
+<div class="pagination-wrap">
+  <div>Showing <strong>{{ qservices.start_index|default:0 }}</strong> to <strong>{{ qservices.end_index|default:0 }}</strong> of <strong>{{ qservices.paginator.count }}</strong> quick services</div>
+  <nav class="pagination-nav" aria-label="Page navigation">
+    {% if qservices.has_previous %}
+      <a href="?page=1{% if search_query %}&search={{ search_query }}{% endif %}{% if selected_category %}&category={{ selected_category }}{% endif %}{% if selected_status %}&status={{ selected_status }}{% endif %}" class="page-link" title="First Page"><i class="fa-solid fa-angles-left"></i></a>
+      <a href="?page={{ qservices.previous_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if selected_category %}&category={{ selected_category }}{% endif %}{% if selected_status %}&status={{ selected_status }}{% endif %}" class="page-link" title="Previous Page"><i class="fa-solid fa-chevron-left"></i></a>
+    {% else %}
+      <span class="page-link disabled"><i class="fa-solid fa-angles-left"></i></span>
+      <span class="page-link disabled"><i class="fa-solid fa-chevron-left"></i></span>
+    {% endif %}
+
+    {% for p in page_range %}
+      {% if p == qservices.paginator.ELLIPSIS %}
+        <span class="page-link disabled">…</span>
+      {% elif p == qservices.number %}
+        <span class="page-link active">{{ p }}</span>
+      {% else %}
+        <a href="?page={{ p }}{% if search_query %}&search={{ search_query }}{% endif %}{% if selected_category %}&category={{ selected_category }}{% endif %}{% if selected_status %}&status={{ selected_status }}{% endif %}" class="page-link">{{ p }}</a>
+      {% endif %}
+    {% endfor %}
+
+    {% if qservices.has_next %}
+      <a href="?page={{ qservices.next_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if selected_category %}&category={{ selected_category }}{% endif %}{% if selected_status %}&status={{ selected_status }}{% endif %}" class="page-link" title="Next Page"><i class="fa-solid fa-chevron-right"></i></a>
+      <a href="?page={{ qservices.paginator.num_pages }}{% if search_query %}&search={{ search_query }}{% endif %}{% if selected_category %}&category={{ selected_category }}{% endif %}{% if selected_status %}&status={{ selected_status }}{% endif %}" class="page-link" title="Last Page"><i class="fa-solid fa-angles-right"></i></a>
+    {% else %}
+      <span class="page-link disabled"><i class="fa-solid fa-chevron-right"></i></span>
+      <span class="page-link disabled"><i class="fa-solid fa-angles-right"></i></span>
+    {% endif %}
+  </nav>
+</div>
+{% endif %}
+
+<script>
+  function switchView(mode) {
+    const cardsGrid = document.getElementById('qsCardsGrid');
+    const tableView = document.getElementById('qsTableView');
+    const btnCards = document.getElementById('btnViewCards');
+    const btnTable = document.getElementById('btnViewTable');
+
+    if (mode === 'table') {
+      cardsGrid.style.display = 'none';
+      tableView.style.display = 'block';
+      btnCards.classList.remove('active');
+      btnTable.classList.add('active');
+      localStorage.setItem('qs_admin_view', 'table');
+    } else {
+      cardsGrid.style.display = 'grid';
+      tableView.style.display = 'none';
+      btnTable.classList.remove('active');
+      btnCards.classList.add('active');
+      localStorage.setItem('qs_admin_view', 'cards');
+    }
+  }
+
+  // Preserve user preference if stored
+  document.addEventListener('DOMContentLoaded', () => {
+    const saved = localStorage.getItem('qs_admin_view');
+    if (saved === 'table') {
+      switchView('table');
+    } else {
+      switchView('cards');
+    }
+  });
+</script>
 {% endblock %}

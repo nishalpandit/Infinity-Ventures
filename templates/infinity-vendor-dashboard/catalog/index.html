@@ -726,9 +726,21 @@
                     </div>
 
                     <!-- Short Description -->
-                    <div class="field" style="margin:0;">
+                    <div class="field" style="margin:0 0 14px;">
                       <label>Subtitle / Tagline</label>
                       <input type="text" name="description" id="formDescription" class="input" placeholder="e.g. Professional switchboard repair service by verified experts." oninput="updateLivePreview()">
+                    </div>
+
+                    <!-- Locality & Service Radius -->
+                    <div style="display:grid; grid-template-columns:2fr 1fr; gap:14px; margin:0;">
+                      <div class="field" style="margin:0;">
+                        <label>Locality / Service Area</label>
+                        <input type="text" name="locality" id="formLocality" class="input" placeholder="e.g. Lalpur, Ranchi or Indiranagar, Bengaluru" value="{{ user.vendor_profile.location|default:user.assigned_city|default:'Ranchi' }}">
+                      </div>
+                      <div class="field" style="margin:0;">
+                        <label>Service Radius (km)</label>
+                        <input type="number" name="service_radius_km" class="input" value="15" min="1" max="100">
+                      </div>
                     </div>
                   </div>
 

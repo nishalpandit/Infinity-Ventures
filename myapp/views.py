@@ -223,10 +223,17 @@ def get_user_dashboard_context(user, request=None):
     from .models import VendorKYC
     approved_kyc_vendor_ids = set(VendorKYC.objects.filter(status='approved').values_list('vendor_id', flat=True))
 
-    recent_qs = qs_bookings.select_related('quick_service', 'vendor', 'vendor__vendor_profile').order_by('-created_at')[:5]
+    recent_qs = qs_bookings.select_related('quick_service', 'quick_service__category', 'vendor', 'vendor__vendor_profile').order_by('-created_at')[:5]
     for b in recent_qs:
         b.selected_vendor_name = b.vendor.vendor_profile.company_name if hasattr(b.vendor, 'vendor_profile') and b.vendor.vendor_profile.company_name else (b.vendor.get_full_name() or b.vendor.username)
         b.is_vendor_verified = b.vendor_id in approved_kyc_vendor_ids
+        b.title = b.quick_service.title if b.quick_service else b.package_name
+        b.category_name = b.quick_service.category.name if (b.quick_service and b.quick_service.category) else 'Quick Service'
+        b.budget = b.total_amount
+        b.id_str = f"BK-{b.id:04d}"
+
+    available_services = QuickService.objects.filter(status='active').select_related('vendor', 'vendor__vendor_profile', 'category', 'location').order_by('-created_at')[:8]
+    total_available_services = QuickService.objects.filter(status='active').count()
 
     recent_jobs = job_list.select_related('category', 'location').order_by('-created_at')[:5]
     for j in recent_jobs:
@@ -270,7 +277,9 @@ def get_user_dashboard_context(user, request=None):
         'is_service_available': is_service_available,
         'service_not_available': not is_service_available,
         'service_unavailable_city': user_city,
-        'active_qs': active_qs,
+        'active_qs': total_available_services,
+        'user_active_bookings': active_qs,
+        'available_services': available_services,
         'active_jobs': active_jobs,
         'pending_quotations': pending_quotations,
         'selected_vendors': selected_vendors,
@@ -688,16 +697,33 @@ def dashboard_view(request, path=''):
             category_id = request.POST.get('category_id')
             base_price = request.POST.get('base_price', '199')
             description = request.POST.get('description', '').strip()
-            locality = request.POST.get('locality', '').strip() or "Lalpur, Ranchi"
+
+            vp = getattr(request.user, 'vendor_profile', None)
+            default_locality = ""
+            if vp and vp.location:
+                default_locality = vp.location.strip()
+            elif getattr(request.user, 'assigned_city', None):
+                default_locality = request.user.assigned_city.strip()
+            if not default_locality:
+                default_locality = "Lalpur, Ranchi"
+
+            locality = request.POST.get('locality', '').strip() or default_locality
             lat_val = request.POST.get('latitude')
             lon_val = request.POST.get('longitude')
             radius_val = request.POST.get('service_radius_km', 10.0)
 
-            try: lat = float(lat_val) if lat_val else 23.3697
-            except (ValueError, TypeError): lat = 23.3697
+            default_lat = 23.3697
+            default_lon = 85.3346
+            for city_key, coords in CITY_COORDINATES_MAP.items():
+                if city_key in locality.lower():
+                    default_lat, default_lon = coords
+                    break
 
-            try: lon = float(lon_val) if lon_val else 85.3346
-            except (ValueError, TypeError): lon = 85.3346
+            try: lat = float(lat_val) if lat_val else default_lat
+            except (ValueError, TypeError): lat = default_lat
+
+            try: lon = float(lon_val) if lon_val else default_lon
+            except (ValueError, TypeError): lon = default_lon
 
             try: radius = float(radius_val) if radius_val else 10.0
             except (ValueError, TypeError): radius = 10.0
@@ -1972,9 +1998,8 @@ def dashboard_view(request, path=''):
         if request.user.is_authenticated:
             context['my_bookings'] = ServiceBooking.objects.filter(vendor=request.user).select_related('customer', 'quick_service').order_by('-created_at')
     if path in ['user/services/browse', 'user/services/browse.html']:
-        if request.user.is_authenticated:
-            context['services'] = QuickService.objects.filter(status='open').select_related('vendor', 'category').order_by('-created_at')
-            context['categories'] = Category.objects.filter(status='active')
+        context['services'] = QuickService.objects.filter(status='active').select_related('vendor', 'vendor__vendor_profile', 'category', 'location').order_by('-created_at')
+        context['categories'] = Category.objects.filter(status='active')
 
     if path in ['user/services/book', 'user/services/book.html']:
         if request.method == 'POST' and request.user.is_authenticated:
