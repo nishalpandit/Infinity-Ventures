@@ -2167,30 +2167,15 @@ def _handle_vendor_profile_update(request, user, vp):
             return JsonResponse({'status': 'error', 'message': f"Email '{email}' is already in use by another account."}, status=400)
         user.email = email
 
-    # 3. Update Mobile / Contact
-    mobile = (data.get('mobile') or data.get('contact') or data.get('phone') or '').strip()
-    if mobile:
-        norm_phone = _normalize_phone(mobile)
-        if len(norm_phone) >= 10:
-            existing_user = _resolve_user_identifier(norm_phone)
-            if existing_user and existing_user.id != user.id:
-                return JsonResponse({'status': 'error', 'message': f"Mobile number '{mobile}' is already in use by another account."}, status=400)
-            vp.mobile = norm_phone
-            u_prof, _ = UserProfile.objects.get_or_create(user=user)
-            u_prof.phone_number = norm_phone
-            u_prof.save()
+    # 3. Mobile / Phone number, Category, and Vendor Type cannot be changed by the vendor
+    # (Mobile is primary auth identity; category and vendor type are verified via KYC)
 
     # 4. Update Company Name
     company_name = (data.get('company_name') or '').strip()
     if company_name:
         vp.company_name = company_name
 
-    # 5. Update Category
-    category = (data.get('category') or '').strip()
-    if category:
-        vp.category = category
-
-    # 6. Update Location, City & State
+    # 5. Update Location, City & State
     city = (data.get('city') or '').strip()
     state = (data.get('state') or '').strip()
     location = (data.get('location') or '').strip()
@@ -2204,14 +2189,9 @@ def _handle_vendor_profile_update(request, user, vp):
     elif state:
         vp.location = state
 
-    # 7. Update Address
+    # 6. Update Address
     if 'address' in data:
         vp.address = (data.get('address') or '').strip()
-
-    # 8. Update Vendor Type
-    vendor_type = (data.get('vendor_type') or '').strip().lower()
-    if vendor_type in ['vendor', 'company']:
-        vp.vendor_type = vendor_type
 
     # 9. Update Experience
     if 'experience' in data:
