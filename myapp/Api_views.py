@@ -59,8 +59,9 @@ def _resolve_user_identifier(identifier):
     """
     Resolves a user record using either:
     1. Exact Username
-    2. Email address
-    3. Mobile phone number (from UserProfile, with normalization)
+    2. Email address (if contains @)
+    3. Mobile phone number (from UserProfile or VendorProfile, with normalization)
+    4. Auto-generated phone-based username
     """
     if not identifier:
         return None
@@ -71,22 +72,39 @@ def _resolve_user_identifier(identifier):
     if user:
         return user
 
-    # 2. By email
-    user = User.objects.filter(email__iexact=ident).first()
-    if user:
-        return user
+    # 2. By email (only if string contains '@' and is non-empty)
+    if '@' in ident:
+        user = User.objects.filter(email__iexact=ident).first()
+        if user:
+            return user
 
-    # 3. By mobile number in UserProfile (supports normalized search)
+    # 3. By mobile number (from UserProfile or VendorProfile)
     norm_phone = _normalize_phone(ident)
-    query = Q(phone_number__iexact=ident)
+
+    # 3a. Search UserProfile
+    query_u = Q(phone_number__iexact=ident)
     if norm_phone:
-        query |= Q(phone_number__iexact=norm_phone) | Q(phone_number__endswith=norm_phone)
-    u_prof = UserProfile.objects.filter(query).select_related('user').first()
+        query_u |= Q(phone_number__iexact=norm_phone) | Q(phone_number__endswith=norm_phone)
+    u_prof = UserProfile.objects.filter(query_u).select_related('user').first()
     if u_prof and u_prof.user:
         return u_prof.user
 
+    # 3b. Search VendorProfile
+    query_v = Q(mobile__iexact=ident)
+    if norm_phone:
+        query_v |= Q(mobile__iexact=norm_phone) | Q(mobile__endswith=norm_phone)
+    v_prof = VendorProfile.objects.filter(query_v).select_related('user').first()
+    if v_prof and v_prof.user:
+        return v_prof.user
+
+    # 4. Fallback by normalized phone username
     if norm_phone and len(norm_phone) >= 10:
-        user = User.objects.filter(Q(username__endswith=norm_phone) | Q(email__startswith=norm_phone)).first()
+        user = User.objects.filter(
+            Q(username__iexact=norm_phone) |
+            Q(username__iexact=f"usr_{norm_phone}") |
+            Q(username__iexact=f"ven_{norm_phone}") |
+            Q(username__endswith=norm_phone)
+        ).first()
         if user:
             return user
 
@@ -291,23 +309,38 @@ def user_signup_api(request):
 
         if not name:
             return JsonResponse({'status': 'error', 'message': "Field 'name' is required."}, status=400)
-        if not email:
-            return JsonResponse({'status': 'error', 'message': "Field 'email' is required."}, status=400)
+        if not mobile:
+            return JsonResponse({'status': 'error', 'message': "Field 'mobile' is required."}, status=400)
+
+        norm_phone = _normalize_phone(mobile)
+        if len(norm_phone) < 10:
+            return JsonResponse({'status': 'error', 'message': "Please enter a valid 10-digit mobile number."}, status=400)
+
+        existing_user = _resolve_user_identifier(mobile)
+        if existing_user:
+            return JsonResponse({
+                'status': 'error',
+                'message': f"Mobile number '{mobile}' is already registered with an existing account. Please log in."
+            }, status=400)
+
         if not password:
             return JsonResponse({'status': 'error', 'message': "Field 'password' is required."}, status=400)
         if confirm_password and password != confirm_password:
             return JsonResponse({'status': 'error', 'message': "Passwords do not match."}, status=400)
 
-        if User.objects.filter(email__iexact=email).exists():
-            return JsonResponse({'status': 'error', 'message': f"Email '{email}' is already registered."}, status=400)
+        if email:
+            if User.objects.filter(email__iexact=email).exists():
+                return JsonResponse({'status': 'error', 'message': f"Email '{email}' is already registered."}, status=400)
+        else:
+            email = ''
 
         username = (data.get('username') or '').strip()
         if not username:
-            base_username = email.split('@')[0] if '@' in email else name.replace(" ", "").lower()
+            base_username = f"usr_{norm_phone}"
             username = base_username
             counter = 1
             while User.objects.filter(username__iexact=username).exists():
-                username = f"{base_username}{counter}"
+                username = f"{base_username}_{counter}"
                 counter += 1
         elif User.objects.filter(username__iexact=username).exists():
             return JsonResponse({'status': 'error', 'message': f"Username '{username}' is already taken."}, status=400)
@@ -322,9 +355,8 @@ def user_signup_api(request):
         user.save()
 
         user_profile, _ = UserProfile.objects.get_or_create(user=user)
-        if mobile:
-            user_profile.phone_number = mobile
-            user_profile.save()
+        user_profile.phone_number = mobile
+        user_profile.save()
 
         code = f"USR{user.id:03d}"
         token_key = _get_or_create_auth_token(user)
@@ -463,25 +495,38 @@ def vendor_signup_api(request):
 
         if not name:
             return JsonResponse({'status': 'error', 'message': "Field 'name' is required."}, status=400)
-        if not email:
-            return JsonResponse({'status': 'error', 'message': "Field 'email' is required."}, status=400)
+        if not mobile:
+            return JsonResponse({'status': 'error', 'message': "Field 'mobile' is required."}, status=400)
+
+        norm_phone = _normalize_phone(mobile)
+        if len(norm_phone) < 10:
+            return JsonResponse({'status': 'error', 'message': "Please enter a valid 10-digit mobile number."}, status=400)
+
+        existing_user = _resolve_user_identifier(mobile)
+        if existing_user:
+            return JsonResponse({
+                'status': 'error',
+                'message': f"Mobile number '{mobile}' is already registered with an existing account. Please log in."
+            }, status=400)
+
         if not password:
             return JsonResponse({'status': 'error', 'message': "Field 'password' is required."}, status=400)
         if confirm_password and password != confirm_password:
             return JsonResponse({'status': 'error', 'message': "Passwords do not match."}, status=400)
 
-        if User.objects.filter(email__iexact=email).exists():
-            return JsonResponse({'status': 'error', 'message': f"Email '{email}' is already registered."}, status=400)
+        if email:
+            if User.objects.filter(email__iexact=email).exists():
+                return JsonResponse({'status': 'error', 'message': f"Email '{email}' is already registered."}, status=400)
+        else:
+            email = ''
 
         username = (data.get('username') or '').strip()
         if not username:
-            base_username = email.split('@')[0] if '@' in email else (company_name or name).replace(" ", "").lower()
-            if not base_username:
-                base_username = 'vendor'
+            base_username = f"ven_{norm_phone}"
             username = base_username
             counter = 1
             while User.objects.filter(username__iexact=username).exists():
-                username = f"{base_username}{counter}"
+                username = f"{base_username}_{counter}"
                 counter += 1
         elif User.objects.filter(username__iexact=username).exists():
             return JsonResponse({'status': 'error', 'message': f"Username '{username}' is already taken."}, status=400)
@@ -614,9 +659,11 @@ def vendor_login_api(request):
         vendor_type = profile.vendor_type if profile else 'vendor'
         experience = profile.experience if profile else 0
 
-        mobile = '—'
+        mobile = ''
         try:
-            if hasattr(user, 'user_profile') and user.user_profile.phone_number:
+            if profile and profile.mobile:
+                mobile = profile.mobile
+            elif hasattr(user, 'user_profile') and user.user_profile.phone_number:
                 mobile = user.user_profile.phone_number
         except Exception:
             pass
@@ -636,17 +683,17 @@ def vendor_login_api(request):
                 'company_name': company_name,
                 'contact': mobile,
                 'mobile': mobile,
-                'email': user.email or '—',
+                'email': user.email or '',
                 'category': category,
                 'location': location,
                 'address': address,
                 'vendor_type': vendor_type,
                 'experience': experience,
-                'dob': str(vendor_profile.dob) if vendor_profile.dob else '',
-                'gender': vendor_profile.gender or '',
-                'id_proof': vendor_profile.id_proof or '',
-                'about': vendor_profile.about or '',
-                'profile_image': vendor_profile.profile_image.url if vendor_profile.profile_image else '',
+                'dob': str(profile.dob) if profile and profile.dob else '',
+                'gender': profile.gender if profile and profile.gender else '',
+                'id_proof': profile.id_proof if profile and profile.id_proof else '',
+                'about': profile.about if profile and profile.about else '',
+                'profile_image': profile.profile_image.url if profile and profile.profile_image else '',
                 'role': 'VENDOR'
             }
         }
@@ -1052,6 +1099,15 @@ def check_phone_api(request):
         user = u_prof.user if (u_prof and u_prof.user) else None
 
         if not user:
+            # Check VendorProfile by mobile
+            query_v = Q(mobile__iexact=mobile)
+            if norm_phone:
+                query_v |= Q(mobile__iexact=norm_phone) | Q(mobile__endswith=norm_phone)
+            v_prof = VendorProfile.objects.filter(query_v).select_related('user').first()
+            if v_prof and v_prof.user:
+                user = v_prof.user
+
+        if not user:
             # Fallback check in CustomUser if username matches phone
             user = User.objects.filter(
                 Q(username__iexact=mobile) | 
@@ -1073,7 +1129,7 @@ def check_phone_api(request):
                     'user_code': code,
                     'name': full_name,
                     'role': user.role,
-                    'email': user.email or '—'
+                    'email': user.email or ''
                 }
             }
             if role:
@@ -1228,12 +1284,12 @@ def user_otp_signup_api(request):
                 'message': f"Mobile number '{mobile}' is already registered with an existing account. Please log in."
             }, status=400)
 
-        # 3. Check / generate email
+        # 3. Check / handle optional email
         if email:
             if User.objects.filter(email__iexact=email).exists():
                 return JsonResponse({'status': 'error', 'message': f"Email '{email}' is already registered."}, status=400)
         else:
-            email = f"user_{norm_phone}@sugu.local"
+            email = ''
 
         # 4. Generate unique username
         username = (data.get('username') or '').strip()
@@ -1444,12 +1500,12 @@ def vendor_otp_signup_api(request):
                 'message': f"Mobile number '{mobile}' is already registered with an existing account. Please log in."
             }, status=400)
 
-        # 3. Check / generate email
+        # 3. Check / handle optional email
         if email:
             if User.objects.filter(email__iexact=email).exists():
                 return JsonResponse({'status': 'error', 'message': f"Email '{email}' is already registered."}, status=400)
         else:
-            email = f"vendor_{norm_phone}@sugu.local"
+            email = ''
 
         # 4. Generate unique username
         username = (data.get('username') or '').strip()
@@ -1608,15 +1664,8 @@ def vendor_otp_login_api(request):
         user.backend = 'django.contrib.auth.backends.ModelBackend'
         login(request, user)
 
-        profile = getattr(user, 'vendor_profile', None)
-        v_id = profile.id if profile else user.id
-        code = f"VEN{v_id:03d}"
-        company_name = (profile.company_name if profile and profile.company_name else user.get_full_name()) or user.username
-        category = profile.category if profile else 'General'
-        location = profile.location if profile else 'Unknown'
-        address = profile.address if profile and profile.address else '—'
-        vendor_type = profile.vendor_type if profile else 'vendor'
-        experience = profile.experience if profile else 0
+        vendor_data = _serialize_vendor_profile_data(user, request)
+        company_name = vendor_data.get('company_name') or vendor_data.get('name') or user.username
         token_key = _get_or_create_auth_token(user)
 
         response_data = {
@@ -1624,28 +1673,7 @@ def vendor_otp_login_api(request):
             'message': f"Vendor '{company_name}' logged in successfully via OTP",
             'token': token_key,
             'token_type': 'Bearer',
-            'vendor': {
-                'id': code,
-                'vendor_id': v_id,
-                'vendor_code': code,
-                'user_id': user.id,
-                'name': user.get_full_name() or user.username,
-                'company_name': company_name,
-                'contact': mobile,
-                'mobile': mobile,
-                'email': user.email or '—',
-                'category': category,
-                'location': location,
-                'address': address,
-                'vendor_type': vendor_type,
-                'experience': experience,
-                'dob': str(vendor_profile.dob) if vendor_profile.dob else '',
-                'gender': vendor_profile.gender or '',
-                'id_proof': vendor_profile.id_proof or '',
-                'about': vendor_profile.about or '',
-                'profile_image': vendor_profile.profile_image.url if vendor_profile.profile_image else '',
-                'role': 'VENDOR'
-            }
+            'vendor': vendor_data
         }
         return JsonResponse(response_data, status=200)
     except Exception as e:
@@ -2392,6 +2420,7 @@ def get_vendor_types_api(request):
     return JsonResponse({'status': 'error', 'message': 'Method not allowed'}, status=405)
 
 
+<<<<<<< HEAD
 def _authenticate_api_user(request):
     auth_header = request.headers.get('Authorization', '')
     if auth_header.startswith('Bearer '):
@@ -2537,3 +2566,474 @@ def top_professionals_api(request):
         'status': 'success',
         'professionals': vendors_data
     })
+=======
+# =====================================================================
+# VENDOR PROFILE & EDIT PROFILE APIS (Bearer Token Protected)
+# =====================================================================
+
+def _serialize_vendor_profile_data(user, request=None):
+    """
+    Serializes comprehensive vendor profile data for profile and auth APIs.
+    """
+    vp = getattr(user, 'vendor_profile', None)
+    if not vp:
+        vp, _ = VendorProfile.objects.get_or_create(user=user)
+
+    if not vp.vendor_code:
+        vp.vendor_code = f"VEN{vp.id:03d}"
+        vp.save(update_fields=['vendor_code'])
+
+    code = vp.vendor_code or f"VEN{vp.id:03d}"
+    company_name = vp.company_name or user.get_full_name() or user.username
+    name = user.get_full_name() or user.first_name or user.username
+
+    mobile = vp.mobile or ''
+    if not mobile:
+        try:
+            if hasattr(user, 'user_profile') and user.user_profile.phone_number:
+                mobile = user.user_profile.phone_number
+        except Exception:
+            pass
+
+    city = ''
+    state = ''
+    loc = vp.location or ''
+    if ',' in loc:
+        parts = [p.strip() for p in loc.split(',', 1)]
+        city = parts[0]
+        state = parts[1]
+    elif loc:
+        city = loc
+
+    profile_image_url = ''
+    if vp.profile_image:
+        try:
+            profile_image_url = request.build_absolute_uri(vp.profile_image.url) if request else vp.profile_image.url
+        except Exception:
+            profile_image_url = vp.profile_image.url
+
+    kyc_status = 'not_submitted'
+    try:
+        if hasattr(user, 'kyc_document'):
+            kyc_status = user.kyc_document.status
+        else:
+            kyc = VendorKYC.objects.filter(vendor=user).first()
+            if kyc:
+                kyc_status = kyc.status
+    except Exception:
+        pass
+
+    return {
+        'id': code,
+        'vendor_id': vp.id,
+        'vendor_code': code,
+        'user_id': user.id,
+        'name': name,
+        'company_name': company_name,
+        'contact': mobile,
+        'mobile': mobile,
+        'email': user.email or '',
+        'category': vp.category or '',
+        'location': vp.location or '',
+        'city': city,
+        'state': state,
+        'address': vp.address or '',
+        'vendor_type': vp.vendor_type or 'vendor',
+        'experience': vp.experience or 0,
+        'dob': str(vp.dob) if vp.dob else '',
+        'gender': vp.gender or '',
+        'id_proof': vp.id_proof or '',
+        'about': vp.about or '',
+        'profile_image': profile_image_url,
+        'rating': float(vp.rating) if vp.rating else 0.0,
+        'available_bids': vp.available_bids if vp.available_bids is not None else 5,
+        'kyc_status': kyc_status,
+        'registered_date': vp.registered_date.strftime("%Y-%m-%d %H:%M:%S") if vp.registered_date else '',
+        'role': 'VENDOR'
+    }
+
+
+def _handle_vendor_profile_update(request, user, vp):
+    """
+    Internal helper to process profile update data from either JSON or multipart form.
+    """
+    data = _parse_api_request(request)
+
+    # 1. Update Name (User first_name & last_name / full name)
+    name = (data.get('name') or data.get('full_name') or data.get('first_name') or '').strip()
+    if name:
+        parts = name.split(' ', 1)
+        user.first_name = parts[0]
+        user.last_name = parts[1] if len(parts) > 1 else ''
+
+    # 2. Update Email
+    email = (data.get('email') or '').strip()
+    if email:
+        if User.objects.filter(email__iexact=email).exclude(id=user.id).exists():
+            return JsonResponse({'status': 'error', 'message': f"Email '{email}' is already in use by another account."}, status=400)
+        user.email = email
+
+    # 3. Mobile / Phone number, Category, and Vendor Type cannot be changed by the vendor
+    # (Mobile is primary auth identity; category and vendor type are verified via KYC)
+
+    # 4. Update Company Name
+    company_name = (data.get('company_name') or '').strip()
+    if company_name:
+        vp.company_name = company_name
+
+    # 5. Update Location, City & State
+    city = (data.get('city') or '').strip()
+    state = (data.get('state') or '').strip()
+    location = (data.get('location') or '').strip()
+
+    if city and state:
+        vp.location = f"{city}, {state}"
+    elif location:
+        vp.location = location
+    elif city:
+        vp.location = city
+    elif state:
+        vp.location = state
+
+    # 6. Update Address
+    if 'address' in data:
+        vp.address = (data.get('address') or '').strip()
+
+    # 9. Update Experience
+    if 'experience' in data:
+        try:
+            vp.experience = int(data.get('experience') or 0)
+        except (ValueError, TypeError):
+            pass
+
+    # 10. Update DOB (Date of Birth)
+    dob_raw = (data.get('dob') or '').strip()
+    if dob_raw:
+        from datetime import datetime
+        parsed_dob = None
+        for fmt in ("%d-%m-%Y", "%Y-%m-%d", "%d/%m/%Y"):
+            try:
+                parsed_dob = datetime.strptime(dob_raw, fmt).date()
+                break
+            except ValueError:
+                pass
+        if parsed_dob:
+            vp.dob = parsed_dob
+        else:
+            return JsonResponse({'status': 'error', 'message': "Invalid 'dob' format. Expected dd-mm-yyyy or yyyy-mm-dd."}, status=400)
+
+    # 11. Update Gender
+    if 'gender' in data:
+        vp.gender = (data.get('gender') or '').strip()
+
+    # 12. Update ID Proof / ID Number
+    if 'id_proof' in data:
+        vp.id_proof = (data.get('id_proof') or '').strip()
+
+    # 13. Update About / Bio
+    if 'about' in data:
+        vp.about = (data.get('about') or '').strip()
+
+    # 14. Update Profile Image
+    profile_image = request.FILES.get('profile_image') or request.FILES.get('image')
+    if profile_image:
+        vp.profile_image = profile_image
+
+    # Save changes
+    user.save()
+    vp.save()
+
+    return JsonResponse({
+        'status': 'success',
+        'message': 'Vendor profile updated successfully',
+        'vendor': _serialize_vendor_profile_data(user, request)
+    }, status=200)
+
+
+@csrf_exempt
+def vendor_profile_api(request):
+    """
+    API for Vendor Profile Details (GET) and Update (POST/PUT/PATCH)
+    URL: /api/vendor/profile/
+    Method: GET, POST, PUT, PATCH
+    Header: Authorization: Bearer <token>
+    """
+    user, err = _get_user_from_bearer_token(request)
+    if err:
+        return JsonResponse({'status': 'error', 'message': err}, status=401)
+
+    if user.role != 'VENDOR' and not user.is_superuser:
+        return JsonResponse({'status': 'error', 'message': "Access denied. Only vendors can access this profile."}, status=403)
+
+    vp, _ = VendorProfile.objects.get_or_create(user=user)
+
+    if request.method == 'GET':
+        return JsonResponse({
+            'status': 'success',
+            'message': 'Vendor profile fetched successfully',
+            'vendor': _serialize_vendor_profile_data(user, request)
+        }, status=200)
+
+    elif request.method in ['POST', 'PUT', 'PATCH']:
+        return _handle_vendor_profile_update(request, user, vp)
+
+    return JsonResponse({'status': 'error', 'message': 'Method not allowed. Use GET to view or POST/PUT to edit.'}, status=405)
+
+
+@csrf_exempt
+def vendor_edit_profile_api(request):
+    """
+    Dedicated API for Vendor Edit Profile
+    URL: /api/vendor/profile/edit/ or /api/vendor/profile/update/
+    Method: POST, PUT, PATCH
+    Header: Authorization: Bearer <token>
+    """
+    if request.method not in ['POST', 'PUT', 'PATCH']:
+        return JsonResponse({'status': 'error', 'message': 'Method not allowed. Use POST or PUT to edit profile.'}, status=405)
+
+    user, err = _get_user_from_bearer_token(request)
+    if err:
+        return JsonResponse({'status': 'error', 'message': err}, status=401)
+
+    if user.role != 'VENDOR' and not user.is_superuser:
+        return JsonResponse({'status': 'error', 'message': "Access denied. Only vendors can edit vendor profile."}, status=403)
+
+    vp, _ = VendorProfile.objects.get_or_create(user=user)
+    return _handle_vendor_profile_update(request, user, vp)
+
+
+# =====================================================================
+# 10. VENDOR DASHBOARD & JOBS APIS (Dynamic Mobile App Integration)
+# =====================================================================
+
+from .models import Job, QuickService, Bid, PayoutRequest, VendorKYC, VendorProfile
+
+
+def _format_time_ago(dt):
+    if not dt:
+        return ""
+    try:
+        from django.utils.timesince import timesince
+        ts = timesince(dt).split(',')[0].strip()
+        return f"{ts} ago"
+    except Exception:
+        return ""
+
+
+def _serialize_job_summary(job, vendor_user=None, request=None):
+    category_name = job.category.name if job.category else "General Services"
+    budget_val = float(job.budget) if job.budget else 0.0
+    locality = job.locality or ""
+    city = job.location.city if job.location else ""
+    loc_display = locality or city or job.address or "Local Area"
+    if locality and city and locality.lower() != city.lower():
+        loc_display = f"{locality}, {city}"
+
+    has_bid = False
+    if vendor_user:
+        has_bid = Bid.objects.filter(job=job, vendor=vendor_user).exists()
+
+    return {
+        'id': job.id,
+        'job_code': f"JOB{job.id:04d}",
+        'title': job.title,
+        'category': category_name,
+        'description': job.description or "",
+        'budget': budget_val,
+        'budget_formatted': f"₹{int(budget_val):,}" if budget_val >= 1000 else f"₹{budget_val:.0f}",
+        'budget_type': job.budget_type or "Fixed Budget",
+        'location': loc_display,
+        'address': job.address or "",
+        'pincode': job.pincode or "",
+        'distance': "Nearby",
+        'time_posted': _format_time_ago(job.created_at),
+        'created_at': job.created_at.strftime("%Y-%m-%d %H:%M:%S"),
+        'urgent': bool(budget_val >= 10000 or (job.title and 'urgent' in job.title.lower())),
+        'bids_count': job.bids_count or job.bids.count(),
+        'max_bids': job.max_bids or 10,
+        'status': job.status,
+        'customer_name': job.contact_name or (job.user.get_full_name() if job.user else "Customer"),
+        'has_bid': has_bid
+    }
+
+
+def _serialize_quick_service_summary(qs, vendor_user=None, request=None):
+    category_name = qs.category.name if qs.category else "Quick Service"
+    base_price = float(qs.base_price) if qs.base_price else 0.0
+    locality = qs.locality or ""
+    city = qs.location.city if qs.location else ""
+    loc_display = locality or city or "Nearby"
+    if locality and city and locality.lower() != city.lower():
+        loc_display = f"{locality}, {city}"
+
+    image_url = ""
+    if qs.image:
+        try:
+            image_url = request.build_absolute_uri(qs.image.url) if request else qs.image.url
+        except Exception:
+            image_url = qs.image.url
+    elif qs.image_url:
+        image_url = qs.image_url
+
+    return {
+        'id': qs.id,
+        'service_code': f"QS{qs.id:04d}",
+        'title': qs.title,
+        'category': category_name,
+        'description': qs.description or "",
+        'budget': base_price,
+        'budget_formatted': f"₹{int(base_price):,}" if base_price >= 1000 else f"₹{base_price:.0f}",
+        'location': loc_display,
+        'distance': f"{qs.service_radius_km:.1f} km",
+        'time_posted': _format_time_ago(qs.created_at),
+        'created_at': qs.created_at.strftime("%Y-%m-%d %H:%M:%S"),
+        'urgent': True,
+        'image_url': image_url,
+        'status': qs.status
+    }
+
+
+@csrf_exempt
+def vendor_dashboard_api(request):
+    """
+    API for Full Vendor Dashboard (Dynamic Data Matching Web Dashboard)
+    URL: /api/vendor/dashboard/
+    Method: GET
+    Header: Authorization: Bearer <token>
+    """
+    if request.method != 'GET':
+        return JsonResponse({'status': 'error', 'message': 'Method not allowed. Use GET.'}, status=405)
+
+    user, err = _get_user_from_bearer_token(request)
+    if err:
+        return JsonResponse({'status': 'error', 'message': err}, status=401)
+
+    if user.role != 'VENDOR' and not user.is_superuser:
+        return JsonResponse({'status': 'error', 'message': "Access denied. Only vendors can access vendor dashboard."}, status=403)
+
+    try:
+        from .wallet_services import get_or_create_wallet
+        from .models import PayoutRequest, Job, QuickService, Bid, VendorKYC, VendorProfile
+        from django.db.models import Sum
+
+        vp = getattr(user, 'vendor_profile', None)
+        if not vp:
+            vp, _ = VendorProfile.objects.get_or_create(user=user)
+
+        wallet = get_or_create_wallet(user)
+        kyc = VendorKYC.objects.filter(vendor=user).first()
+        pending_payouts_sum = PayoutRequest.objects.filter(vendor=user, status='pending').aggregate(total=Sum('amount'))['total'] or 0
+
+        # Dynamic query for open jobs and quick services
+        open_jobs_qs = Job.objects.filter(status='open').select_related('category', 'location', 'user').order_by('-created_at')
+        active_qs_qs = QuickService.objects.filter(status__in=['active', 'open']).select_related('category', 'location').order_by('-created_at')
+
+        # Bids counts
+        active_bids_count = Bid.objects.filter(vendor=user).exclude(status__in=['rejected', 'completed', 'withdrawn']).count()
+        selected_bids_count = Bid.objects.filter(vendor=user, status='selected').count()
+        completed_bids_count = Bid.objects.filter(vendor=user, status='completed').count()
+
+        # Serialized lists
+        jobs_list = [_serialize_job_summary(j, vendor_user=user, request=request) for j in open_jobs_qs]
+        qs_list = [_serialize_quick_service_summary(q, vendor_user=user, request=request) for q in active_qs_qs[:12]]
+
+        # Next Appointment / In-Progress Task
+        next_appointment = None
+        selected_bid = Bid.objects.filter(vendor=user, status='selected').select_related('job', 'quick_service').first()
+        if selected_bid:
+            target = selected_bid.job or selected_bid.quick_service
+            if target:
+                next_appointment = {
+                    'bid_id': selected_bid.id,
+                    'title': target.title,
+                    'amount_formatted': f"₹{int(selected_bid.amount):,}",
+                    'client_name': getattr(target, 'contact_name', None) or (target.user.get_full_name() if hasattr(target, 'user') and target.user else "Client"),
+                    'location': getattr(target, 'locality', None) or getattr(target, 'address', 'Scheduled Location'),
+                    'status': 'Selected / In Progress'
+                }
+
+        vendor_data = _serialize_vendor_profile_data(user, request)
+
+        response_data = {
+            'status': 'success',
+            'vendor': vendor_data,
+            'kyc': {
+                'status': kyc.status if kyc else 'not_submitted',
+                'is_verified': bool(kyc and kyc.status == 'approved'),
+                'admin_notes': kyc.admin_notes if (kyc and kyc.admin_notes) else '',
+                'id_type': kyc.get_id_type_display() if kyc else '',
+                'id_number': kyc.id_number if kyc else ''
+            },
+            'wallet': {
+                'available_balance': float(wallet.available_balance),
+                'available_balance_formatted': f"₹{wallet.available_balance:,.2f}",
+                'total_earned': float(wallet.total_earned),
+                'total_earned_formatted': f"₹{wallet.total_earned:,.2f}",
+                'total_withdrawn': float(wallet.total_withdrawn),
+                'total_withdrawn_formatted': f"₹{wallet.total_withdrawn:,.2f}",
+                'pending_payouts': float(pending_payouts_sum),
+                'pending_payouts_formatted': f"₹{pending_payouts_sum:,.2f}"
+            },
+            'stats': {
+                'today_jobs_count': selected_bids_count if selected_bids_count > 0 else (1 if active_bids_count > 0 else 0),
+                'available_jobs_count': open_jobs_qs.count(),
+                'available_qs_count': active_qs_qs.count(),
+                'remaining_credits': vp.available_bids if vp.available_bids is not None else 5,
+                'active_bids_count': active_bids_count,
+                'selected_jobs_count': selected_bids_count,
+                'completed_work_count': completed_bids_count,
+                'rating': float(vp.rating) if vp.rating else 4.9
+            },
+            'next_appointment': next_appointment,
+            'jobs': jobs_list,
+            'quick_services': qs_list
+        }
+        return JsonResponse(response_data, status=200)
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+
+@csrf_exempt
+def vendor_jobs_api(request):
+    """
+    API for Browsing All Available Jobs
+    URL: /api/vendor/jobs/
+    Method: GET
+    Header: Authorization: Bearer <token>
+    """
+    if request.method != 'GET':
+        return JsonResponse({'status': 'error', 'message': 'Method not allowed. Use GET.'}, status=405)
+
+    user, err = _get_user_from_bearer_token(request)
+    if err:
+        return JsonResponse({'status': 'error', 'message': err}, status=401)
+
+    try:
+        jobs_qs = Job.objects.filter(status='open').select_related('category', 'location', 'user').order_by('-created_at')
+
+        search_query = request.GET.get('search', '').strip()
+        if search_query:
+            jobs_qs = jobs_qs.filter(
+                Q(title__icontains=search_query) |
+                Q(description__icontains=search_query) |
+                Q(category__name__icontains=search_query) |
+                Q(locality__icontains=search_query) |
+                Q(address__icontains=search_query)
+            )
+
+        category_filter = request.GET.get('category', '').strip()
+        if category_filter:
+            jobs_qs = jobs_qs.filter(category__name__iexact=category_filter)
+
+        jobs_list = [_serialize_job_summary(j, vendor_user=user, request=request) for j in jobs_qs]
+        return JsonResponse({
+            'status': 'success',
+            'count': len(jobs_list),
+            'jobs': jobs_list
+        }, status=200)
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+
+
+>>>>>>> 3785b30120d1a7701b3ec2a30b34dfb1b6441034
