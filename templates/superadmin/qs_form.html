@@ -1,89 +1,746 @@
 {% extends 'superadmin/base.html' %}
-{% block title %}{% if mode == 'create' %}Create Quick Service{% else %}Edit Quick Service{% endif %}{% endblock %}
-{% block header_title %}{% if mode == 'create' %}Create Quick Service{% else %}Edit Quick Service{% endif %}{% endblock %}
+{% block title %}{% if mode == 'create' %}Create Quick Service{% else %}Edit Quick Service: {{ qs.title }}{% endif %} - Super Admin{% endblock %}
+{% block header_title %}{% if mode == 'create' %}Create Quick Service Listing{% else %}Edit Quick Service{% endif %}{% endblock %}
 
 {% block header_actions %}
-<a href="{% url 'super_admin_quick_services' %}" class="btn btn-outline btn-sm">
-  <i class="fa-solid fa-arrow-left"></i>
-  <span>Back to Quick Services</span>
-</a>
+<div style="display:flex; align-items:center; gap:10px;">
+  {% if mode == 'edit' and qs.category_id %}
+  <a href="/services/browse?category={{ qs.category_id }}" target="_blank" class="btn btn-outline btn-sm">
+    <i class="fa-solid fa-arrow-up-right-from-square"></i>
+    <span>Customer View</span>
+  </a>
+  {% endif %}
+  <a href="{% url 'super_admin_quick_services' %}" class="btn btn-outline btn-sm">
+    <i class="fa-solid fa-arrow-left"></i>
+    <span>Back to Catalog</span>
+  </a>
+</div>
 {% endblock %}
 
 {% block content %}
-<div class="card form-card">
-  <h3 style="font-size: 20px; font-weight: 700; margin-bottom: 24px;">
-    {% if mode == 'create' %}Post Quick Service Listing{% else %}Edit: {{ qs.title }}{% endif %}
-  </h3>
-  
-  <form method="POST">
-    {% csrf_token %}
+<style>
+  .qs-edit-layout {
+    display: grid;
+    grid-template-columns: 1fr 360px;
+    gap: 24px;
+    align-items: start;
+    margin-bottom: 40px;
+  }
+  @media(max-width: 1024px) {
+    .qs-edit-layout {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  .qs-form-card {
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: var(--r-md);
+    padding: 24px;
+    margin-bottom: 24px;
+    box-shadow: var(--shadow-xs);
+  }
+  .qs-form-card-title {
+    font-size: 16px;
+    font-weight: 800;
+    color: var(--text-main);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 6px;
+  }
+  .qs-form-card-sub {
+    font-size: 13px;
+    color: var(--text-muted);
+    margin-bottom: 20px;
+  }
+
+  .form-row-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 16px;
+  }
+  @media(max-width: 640px) {
+    .form-row-2 {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  .form-field {
+    margin-bottom: 16px;
+  }
+  .form-field label {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-main);
+    margin-bottom: 6px;
+  }
+  .form-field .field-hint {
+    font-size: 11.5px;
+    color: var(--text-muted);
+    margin-top: 4px;
+  }
+  .form-input, .form-select, .form-textarea {
+    width: 100%;
+    padding: 9px 13px;
+    border: 1.5px solid var(--border);
+    border-radius: var(--r-sm);
+    font-size: 13.5px;
+    color: var(--text-main);
+    background: var(--bg-main);
+    outline: none;
+    transition: all 0.2s;
+    font-family: inherit;
+  }
+  .form-input:focus, .form-select:focus, .form-textarea:focus {
+    border-color: var(--accent);
+    background: #fff;
+    box-shadow: 0 0 0 3px var(--accent-light);
+  }
+
+  /* Status Badge in Field */
+  .status-pill-select {
+    display: flex;
+    gap: 8px;
+    margin-top: 6px;
+  }
+  .status-radio-label {
+    flex: 1;
+    border: 1.5px solid var(--border);
+    border-radius: var(--r-sm);
+    padding: 8px 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    font-size: 12.5px;
+    font-weight: 700;
+    cursor: pointer;
+    background: var(--bg-main);
+    transition: all 0.2s;
+  }
+  .status-radio-label input { display: none; }
+  .status-radio-label.active-pill { color: #10b981; }
+  .status-radio-label.active-pill.checked {
+    background: rgba(16, 185, 129, 0.12);
+    border-color: #10b981;
+  }
+  .status-radio-label.paused-pill { color: #f59e0b; }
+  .status-radio-label.paused-pill.checked {
+    background: rgba(245, 158, 11, 0.12);
+    border-color: #f59e0b;
+  }
+  .status-radio-label.draft-pill { color: #64748b; }
+  .status-radio-label.draft-pill.checked {
+    background: rgba(100, 116, 139, 0.12);
+    border-color: #64748b;
+  }
+
+  /* Packages Table Editor */
+  .pkg-table-wrap {
+    border: 1px solid var(--border);
+    border-radius: var(--r-sm);
+    overflow: hidden;
+    margin-bottom: 12px;
+  }
+  .pkg-table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+  .pkg-table th {
+    background: #f8fafc;
+    padding: 10px 14px;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text-muted);
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+  }
+  .pkg-table td {
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border);
+    vertical-align: middle;
+  }
+  .pkg-table tr:last-child td { border-bottom: none; }
+
+  /* Inclusions / Exclusions chip builder */
+  .chip-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+  .chip-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: #f8fafc;
+    border: 1px solid var(--border);
+    border-radius: var(--r-sm);
+    padding: 6px 12px;
+  }
+  .chip-item input {
+    flex: 1;
+    border: none;
+    background: transparent;
+    font-size: 13px;
+    outline: none;
+    color: var(--text-main);
+  }
+  .chip-del-btn {
+    border: none;
+    background: transparent;
+    color: #ef4444;
+    cursor: pointer;
+    font-size: 13px;
+    padding: 4px;
+  }
+
+  /* Sticky Footer Actions */
+  .qs-sticky-footer {
+    position: sticky;
+    bottom: 20px;
+    z-index: 10;
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: var(--r-md);
+    padding: 16px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    box-shadow: 0 10px 25px -5px rgba(0,0,0,0.1);
+  }
+</style>
+
+<form method="POST" enctype="multipart/form-data" id="qsEditForm">
+  {% csrf_token %}
+  <input type="hidden" name="packages_json" id="hiddenPackagesJson">
+  <input type="hidden" name="inclusions_json" id="hiddenInclusionsJson">
+  <input type="hidden" name="exclusions_json" id="hiddenExclusionsJson">
+
+  <div class="qs-edit-layout">
     
-    <div class="form-row">
-      <div class="form-group">
-        <label>Vendor Account</label>
-        <select name="vendor" class="form-control" required>
-          <option value="">-- Select Vendor --</option>
-          {% for v in vendors %}
-          <option value="{{ v.id }}" {% if qs.vendor_id == v.id %}selected{% endif %}>{{ v.username }} ({{ v.vendor_profile.company_name|default:v.get_full_name|default:v.email }})</option>
-          {% endfor %}
-        </select>
+    <!-- ════════════════════════════════════════════════════════════════════════ -->
+    <!-- LEFT MAIN COLUMN                                                        -->
+    <!-- ════════════════════════════════════════════════════════════════════════ -->
+    <div class="qs-main-col">
+      
+      <!-- CARD 1: BASIC INFORMATION -->
+      <div class="qs-form-card">
+        <div class="qs-form-card-title">
+          <i class="fa-solid fa-file-lines" style="color:var(--accent);"></i>
+          <span>General Service Information</span>
+        </div>
+        <div class="qs-form-card-sub">Core service title, category classification, and operational status</div>
+
+        <!-- Title -->
+        <div class="form-field">
+          <label>Service Title <span style="color:#ef4444;">*</span></label>
+          <input type="text" name="title" class="form-input" value="{{ qs.title|default:'' }}" placeholder="e.g. AC PCB & Compressor Repair" required id="qsTitleInput">
+        </div>
+
+        <div class="form-row-2">
+          <!-- Category -->
+          <div class="form-field">
+            <label>Category <span style="color:#ef4444;">*</span></label>
+            <select name="category" class="form-select" required>
+              <option value="">-- Select Category --</option>
+              {% for cat in categories %}
+                <option value="{{ cat.id }}" {% if qs.category_id == cat.id %}selected{% endif %}>{{ cat.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <!-- Status -->
+          <div class="form-field">
+            <label>Listing Status <span style="color:#ef4444;">*</span></label>
+            <div class="status-pill-select">
+              <label class="status-radio-label active-pill {% if qs.status == 'active' or not qs.status %}checked{% endif %}">
+                <input type="radio" name="status" value="active" {% if qs.status == 'active' or not qs.status %}checked{% endif %} onchange="updateStatusPills()">
+                <i class="fa-solid fa-circle-check"></i> Active
+              </label>
+              <label class="status-radio-label paused-pill {% if qs.status == 'paused' %}checked{% endif %}">
+                <input type="radio" name="status" value="paused" {% if qs.status == 'paused' %}checked{% endif %} onchange="updateStatusPills()">
+                <i class="fa-solid fa-circle-pause"></i> Paused
+              </label>
+              <label class="status-radio-label draft-pill {% if qs.status == 'draft' %}checked{% endif %}">
+                <input type="radio" name="status" value="draft" {% if qs.status == 'draft' %}checked{% endif %} onchange="updateStatusPills()">
+                <i class="fa-solid fa-file-pen"></i> Draft
+              </label>
+            </div>
+            <div class="field-hint">Active = Visible to customers on app & website; Paused = Temporarily disabled; Draft = Staged.</div>
+          </div>
+        </div>
+
+        <!-- Description -->
+        <div class="form-field" style="margin-bottom:0;">
+          <label>Description & Scope of Work</label>
+          <textarea name="description" class="form-textarea" rows="3" placeholder="Describe the diagnostic procedures, technical specs, and parts guarantee...">{{ qs.description|default:'' }}</textarea>
+        </div>
       </div>
-      <div class="form-group">
-        <label>Service Location</label>
-        <select name="location" class="form-control">
-          <option value="">-- Select Location --</option>
-          {% for loc in locations %}
-          <option value="{{ loc.id }}" {% if qs.location_id == loc.id %}selected{% endif %}>{{ loc.city }}, {{ loc.state }}</option>
-          {% endfor %}
-        </select>
+
+      <!-- CARD 2: PACKAGE TIERS & PRICING -->
+      <div class="qs-form-card">
+        <div class="qs-form-card-title" style="justify-content:space-between;">
+          <div style="display:flex; align-items:center; gap:10px;">
+            <i class="fa-solid fa-layer-group" style="color:#059669;"></i>
+            <span>Package Tiers & Pricing Breakdown</span>
+          </div>
+          <button type="button" class="btn btn-secondary btn-sm" onclick="addPackageRow()">
+            <i class="fa-solid fa-plus"></i> Add Package Tier
+          </button>
+        </div>
+        <div class="qs-form-card-sub">
+          Single-price catalog system: customer price is auto-computed with platform markup ({{ global_settings.get_qs_commission_percent|default:10 }}%) + CGST ({{ global_settings.get_qs_cgst_percent|default:9 }}%) + SGST ({{ global_settings.get_qs_sgst_percent|default:9 }}%).
+        </div>
+
+        <div class="pkg-table-wrap">
+          <table class="pkg-table" id="packagesTable">
+            <thead>
+              <tr>
+                <th style="width:28%;">Package Name</th>
+                <th style="width:22%;">Base Payout (₹)</th>
+                <th style="width:24%;">Customer Price (₹)</th>
+                <th style="width:20%;">Short Note</th>
+                <th style="width:6%; text-align:center;"></th>
+              </tr>
+            </thead>
+            <tbody id="packageRowsBody">
+              <!-- Dynamically rendered via JS from packages_json or default -->
+            </tbody>
+          </table>
+        </div>
+
+        <div style="display:flex; justify-content:space-between; align-items:center; background:#f8fafc; border:1px dashed var(--border); border-radius:var(--r-sm); padding:12px 16px;">
+          <div>
+            <span style="font-size:12px; color:var(--text-muted); display:block; font-weight:600;">Starting Base / Display Price</span>
+            <span style="font-size:11px; color:var(--text-light);">Lowest tier price automatically displayed on card badges</span>
+          </div>
+          <div style="display:flex; align-items:center; gap:8px;">
+            <strong style="font-size:20px; color:#059669;" id="summaryStartingPrice">₹{{ qs.base_price|default:199|floatformat:"0" }}</strong>
+            <input type="hidden" name="base_price" id="hiddenBasePrice" value="{{ qs.base_price|default:199 }}">
+          </div>
+        </div>
       </div>
+
+      <!-- CARD 3: INCLUSIONS & QUALITY ASSURANCES -->
+      <div class="qs-form-card">
+        <div class="qs-form-card-title" style="justify-content:space-between;">
+          <div style="display:flex; align-items:center; gap:10px;">
+            <i class="fa-solid fa-circle-check" style="color:#059669;"></i>
+            <span>Included in Service (Inclusions)</span>
+          </div>
+          <button type="button" class="btn btn-secondary btn-sm" onclick="addInclusionItem()">
+            <i class="fa-solid fa-plus"></i> Add Item
+          </button>
+        </div>
+        <div class="qs-form-card-sub">Checklist items displayed to customer confirming quality assurances and warranties</div>
+
+        <div class="chip-list" id="inclusionsList">
+          <!-- Dynamically populated -->
+        </div>
+      </div>
+
+      <!-- CARD 4: EXCLUSIONS -->
+      <div class="qs-form-card">
+        <div class="qs-form-card-title" style="justify-content:space-between;">
+          <div style="display:flex; align-items:center; gap:10px;">
+            <i class="fa-solid fa-circle-xmark" style="color:#ef4444;"></i>
+            <span>Not Included (Exclusions)</span>
+          </div>
+          <button type="button" class="btn btn-secondary btn-sm" onclick="addExclusionItem()">
+            <i class="fa-solid fa-plus"></i> Add Item
+          </button>
+        </div>
+        <div class="qs-form-card-sub">Clarify out-of-scope work such as spare parts, major civil masonry, or pipe embedding</div>
+
+        <div class="chip-list" id="exclusionsList">
+          <!-- Dynamically populated -->
+        </div>
+      </div>
+
     </div>
 
-    <div class="form-group">
-      <label>Service Title</label>
-      <input type="text" name="title" class="form-control" value="{{ qs.title|default:'' }}" placeholder="e.g. AC Installation & Servicing" required>
-    </div>
-    
-    <div class="form-row">
-      <div class="form-group">
-        <label>Category</label>
-        <select name="category" class="form-control">
-          <option value="">-- None --</option>
-          {% for cat in categories %}
-          <option value="{{ cat.id }}" {% if qs.category_id == cat.id %}selected{% endif %}>{{ cat.name }}</option>
-          {% endfor %}
-        </select>
+
+    <!-- ════════════════════════════════════════════════════════════════════════ -->
+    <!-- RIGHT SIDEBAR COLUMN                                                    -->
+    <!-- ════════════════════════════════════════════════════════════════════════ -->
+    <div class="qs-side-col">
+
+      <!-- CARD 5: MEDIA & COVER PHOTO -->
+      <div class="qs-form-card">
+        <div class="qs-form-card-title">
+          <i class="fa-solid fa-image" style="color:#6366f1;"></i>
+          <span>Service Cover Media</span>
+        </div>
+        <div class="qs-form-card-sub">Featured photo displayed on cards across landing and customer dashboards</div>
+
+        <div style="width:100%; height:160px; background:#f1f5f9; border-radius:var(--r-sm); overflow:hidden; margin-bottom:14px; border:1px solid var(--border); display:flex; align-items:center; justify-content:center; position:relative;">
+          {% if qs.image %}
+            <img src="{{ qs.image.url }}" alt="{{ qs.title }}" id="coverPreviewImg" style="width:100%; height:100%; object-fit:cover;">
+          {% elif qs.image_url %}
+            <img src="{{ qs.image_url }}" alt="{{ qs.title }}" id="coverPreviewImg" style="width:100%; height:100%; object-fit:cover;">
+          {% else %}
+            <div id="coverPlaceholder" style="text-align:center; color:var(--text-light);">
+              <i class="fa-solid fa-camera" style="font-size:28px; margin-bottom:6px; display:block;"></i>
+              <span style="font-size:12px;">No photo uploaded</span>
+            </div>
+            <img src="" id="coverPreviewImg" style="display:none; width:100%; height:100%; object-fit:cover;">
+          {% endif %}
+        </div>
+
+        <div class="form-field">
+          <label>Upload New Photo</label>
+          <input type="file" name="image" class="form-input" accept="image/*" onchange="previewSelectedImage(this)">
+          <div class="field-hint">JPG, PNG, or WebP. Recommended 800x500px.</div>
+        </div>
+
+        <div class="form-field" style="margin-bottom:0;">
+          <label>Or Preset Image URL</label>
+          <input type="url" name="image_url" class="form-input" value="{{ qs.image_url|default:'' }}" placeholder="https://images.unsplash.com/..." oninput="previewPresetUrl(this.value)">
+        </div>
       </div>
-      <div class="form-group">
-        <label>Status</label>
-        <select name="status" class="form-control">
-          <option value="active" {% if qs.status == 'active' %}selected{% endif %}>Active</option>
-          <option value="paused" {% if qs.status == 'paused' %}selected{% endif %}>Paused</option>
-          <option value="draft" {% if qs.status == 'draft' %}selected{% endif %}>Draft</option>
-        </select>
+
+      <!-- CARD 6: VENDOR & LOCATION ASSIGNMENT -->
+      <div class="qs-form-card">
+        <div class="qs-form-card-title">
+          <i class="fa-solid fa-user-gear" style="color:#0ea5e9;"></i>
+          <span>Vendor & Territory</span>
+        </div>
+        <div class="qs-form-card-sub">Assign service provider and specify delivery radius</div>
+
+        <!-- Vendor -->
+        <div class="form-field">
+          <label>Assigned Vendor <span style="color:#ef4444;">*</span></label>
+          <select name="vendor" class="form-select" required>
+            <option value="">-- Select Vendor --</option>
+            {% for v in vendors %}
+              <option value="{{ v.id }}" {% if qs.vendor_id == v.id %}selected{% endif %}>
+                {{ v.username }} ({{ v.vendor_profile.company_name|default:v.get_full_name|default:v.email }})
+              </option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <!-- Master City / Location -->
+        <div class="form-field">
+          <label>Master Operational City</label>
+          <select name="location" class="form-select">
+            <option value="">-- Optional Master Location --</option>
+            {% for loc in locations %}
+              <option value="{{ loc.id }}" {% if qs.location_id == loc.id %}selected{% endif %}>{{ loc.city }}, {{ loc.state }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <!-- Locality Text -->
+        <div class="form-field">
+          <label>Locality / Coverage Area</label>
+          <input type="text" name="locality" class="form-input" value="{{ qs.locality|default:'' }}" placeholder="e.g. Lalpur, Ranchi or Indiranagar, Bengaluru">
+          <div class="field-hint">Used for display badges & geo-targeting</div>
+        </div>
+
+        <!-- Service Radius -->
+        <div class="form-field">
+          <label>Delivery Radius (km)</label>
+          <input type="number" step="0.5" name="service_radius_km" class="form-input" value="{{ qs.service_radius_km|default:10.0 }}" min="1" max="100">
+          <div class="field-hint">Range within which this service is available</div>
+        </div>
+
+        <!-- Coordinates -->
+        <div class="form-row-2" style="margin-bottom:0;">
+          <div class="form-field" style="margin-bottom:0;">
+            <label style="font-size:12px;">Latitude</label>
+            <input type="number" step="0.000001" name="latitude" class="form-input" value="{{ qs.latitude|default:'' }}" placeholder="23.3697">
+          </div>
+          <div class="form-field" style="margin-bottom:0;">
+            <label style="font-size:12px;">Longitude</label>
+            <input type="number" step="0.000001" name="longitude" class="form-input" value="{{ qs.longitude|default:'' }}" placeholder="85.3346">
+          </div>
+        </div>
       </div>
-    </div>
-    
-    <div class="form-row">
-      <div class="form-group">
-        <label>Base Price (₹)</label>
-        <input type="number" step="0.01" name="base_price" class="form-control" value="{{ qs.base_price|default:0 }}" required>
+
+      <!-- CARD 7: PLATFORM FINANCIAL RULES -->
+      <div class="qs-form-card" style="background:#f8fafc; border-color:#e2e8f0;">
+        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;">
+          <div style="font-size:13px; font-weight:800; color:var(--text-main);">
+            <i class="fa-solid fa-calculator" style="color:var(--accent);"></i> Super Admin Levers
+          </div>
+          <a href="/super-admin/settings/" target="_blank" style="font-size:11.5px; font-weight:700; color:var(--accent); text-decoration:none;">
+            Edit Levers →
+          </a>
+        </div>
+        <div style="font-size:12px; color:var(--text-muted); line-height:1.5;">
+          Current settings: <strong>{{ global_settings.get_qs_commission_percent|default:10 }}%</strong> Commission cut + <strong>{{ global_settings.get_qs_cgst_percent|default:9 }}%</strong> CGST + <strong>{{ global_settings.get_qs_sgst_percent|default:9 }}%</strong> SGST.
+        </div>
       </div>
-      <div class="form-group">
-        <label>Locality / Coverage Area</label>
-        <input type="text" name="locality" class="form-control" value="{{ qs.locality|default:'' }}" placeholder="e.g. Lalpur, Doranda">
-      </div>
+
     </div>
-    
-    <div class="form-group">
-      <label>Description & Requirements</label>
-      <textarea name="description" class="form-control" placeholder="Describe the service offering, package details, or warranties...">{{ qs.description|default:'' }}</textarea>
+
+  </div>
+
+  <!-- STICKY ACTION BAR -->
+  <div class="qs-sticky-footer">
+    <div style="display:flex; align-items:center; gap:12px;">
+      <span class="badge {% if qs.status == 'active' or not qs.status %}active{% elif qs.status == 'paused' %}warn{% else %}inactive{% endif %}" id="footerStatusBadge">
+        {{ qs.get_status_display|default:"Active" }}
+      </span>
+      <span style="font-size:13px; color:var(--text-muted);">
+        {% if mode == 'edit' %}Editing Service #QS-{{ qs.id|stringformat:"04d" }}{% else %}New Service Draft{% endif %}
+      </span>
     </div>
-    
-    <div class="form-actions">
-      <button type="submit" class="btn btn-primary"><i class="fa-solid fa-check"></i> {% if mode == 'create' %}Create Quick Service{% else %}Save Changes{% endif %}</button>
+
+    <div style="display:flex; align-items:center; gap:10px;">
       <a href="{% url 'super_admin_quick_services' %}" class="btn btn-outline">Cancel</a>
+      <button type="submit" class="btn btn-primary" style="padding:10px 24px; font-weight:700;">
+        <i class="fa-solid fa-check"></i> Save Changes
+      </button>
     </div>
-  </form>
-</div>
+  </div>
+
+</form>
+
+<script>
+  // Global settings multipliers
+  const COMM_PCT = parseFloat("{{ global_settings.get_qs_commission_percent|default:10.0 }}");
+  const CGST_PCT = parseFloat("{{ global_settings.get_qs_cgst_percent|default:9.0 }}");
+  const SGST_PCT = parseFloat("{{ global_settings.get_qs_sgst_percent|default:9.0 }}");
+  const FLAT_FEE = parseFloat("{{ global_settings.get_qs_flat_fee|default:0.0 }}");
+  const TAX_MODE = "{{ global_settings.get_qs_tax_mode|default:'commission_only' }}";
+
+  function calcCustomerPrice(base) {
+    base = parseFloat(base) || 0;
+    const comm = (base * (COMM_PCT / 100)) + FLAT_FEE;
+    const taxable = (TAX_MODE === 'commission_only') ? comm : (base + comm);
+    const tax = taxable * ((CGST_PCT + SGST_PCT) / 100);
+    return Math.round(base + comm + tax);
+  }
+
+  // Pre-load data from Django
+  let currentPackages = {{ packages_json|safe }};
+  let currentInclusions = {{ inclusions_json|safe }};
+  let currentExclusions = {{ exclusions_json|safe }};
+
+  if (!currentPackages || currentPackages.length === 0) {
+    const defaultBase = parseFloat("{{ qs.base_price|default:199 }}") || 199;
+    currentPackages = [
+      { name: "Standard Service", price: calcCustomerPrice(defaultBase), vendor_payout: defaultBase, desc: "Standard complete inspection and service" }
+    ];
+  }
+
+  if (!currentInclusions || currentInclusions.length === 0) {
+    currentInclusions = [
+      "Complete diagnostic inspection of fittings & components",
+      "Execution by certified, background-checked professional",
+      "Post-service sanitization & debris cleanup",
+      "30 days Sugu protection warranty on workmanship"
+    ];
+  }
+
+  if (!currentExclusions || currentExclusions.length === 0) {
+    currentExclusions = [
+      "Major civil masonry, pipe embedding or wall tearing excluded",
+      "Spare parts / extra hardware charged separately"
+    ];
+  }
+
+  // Render Packages Table
+  function renderPackageRows() {
+    const tbody = document.getElementById('packageRowsBody');
+    tbody.innerHTML = '';
+
+    currentPackages.forEach((pkg, idx) => {
+      const tr = document.createElement('tr');
+      const payoutVal = pkg.vendor_payout !== undefined ? pkg.vendor_payout : (pkg.price || 199);
+      const custPrice = calcCustomerPrice(payoutVal);
+
+      tr.innerHTML = `
+        <td>
+          <input type="text" name="package_name[]" class="form-input" style="padding:6px 10px; font-size:13px;" value="${escapeHtml(pkg.name || '')}" placeholder="Tier Name" required oninput="currentPackages[${idx}].name=this.value;">
+        </td>
+        <td>
+          <div style="display:flex; align-items:center; gap:4px;">
+            <span style="font-size:13px; color:var(--text-muted); font-weight:700;">₹</span>
+            <input type="number" step="1" name="package_price[]" class="form-input" style="padding:6px 10px; font-size:13px; font-weight:700;" value="${payoutVal}" placeholder="199" required oninput="handlePkgPriceChange(${idx}, this.value)">
+          </div>
+        </td>
+        <td>
+          <strong style="color:#059669; font-size:15px;" id="custPriceDisplay_${idx}">₹${custPrice}</strong>
+          <span style="font-size:11px; color:var(--text-muted); display:block;">(+₹${custPrice - payoutVal} cut & GST)</span>
+        </td>
+        <td>
+          <input type="text" name="package_desc[]" class="form-input" style="padding:6px 10px; font-size:12px;" value="${escapeHtml(pkg.desc || '')}" placeholder="Details..." oninput="currentPackages[${idx}].desc=this.value;">
+        </td>
+        <td style="text-align:center;">
+          ${currentPackages.length > 1 ? `<button type="button" class="chip-del-btn" title="Remove Tier" onclick="removePackageRow(${idx})"><i class="fa-solid fa-trash"></i></button>` : ''}
+        </td>
+      `;
+      tbody.appendChild(tr);
+    });
+
+    updateSummaryStartingPrice();
+  }
+
+  function handlePkgPriceChange(idx, val) {
+    const payout = parseFloat(val) || 0;
+    currentPackages[idx].vendor_payout = payout;
+    const cust = calcCustomerPrice(payout);
+    currentPackages[idx].price = cust;
+
+    const custEl = document.getElementById(`custPriceDisplay_${idx}`);
+    if (custEl) {
+      custEl.innerHTML = `₹${cust}`;
+      if (custEl.nextElementSibling) {
+        custEl.nextElementSibling.textContent = `(+₹${cust - payout} cut & GST)`;
+      }
+    }
+    updateSummaryStartingPrice();
+  }
+
+  function addPackageRow() {
+    currentPackages.push({
+      name: `Tier ${currentPackages.length + 1}`,
+      vendor_payout: 299,
+      price: calcCustomerPrice(299),
+      desc: "Additional features & comprehensive repair"
+    });
+    renderPackageRows();
+  }
+
+  function removePackageRow(idx) {
+    if (currentPackages.length > 1) {
+      currentPackages.splice(idx, 1);
+      renderPackageRows();
+    }
+  }
+
+  function updateSummaryStartingPrice() {
+    let minCustPrice = 999999;
+    currentPackages.forEach(p => {
+      const cust = calcCustomerPrice(p.vendor_payout || p.price || 0);
+      if (cust < minCustPrice) minCustPrice = cust;
+    });
+    if (minCustPrice === 999999) minCustPrice = 199;
+    document.getElementById('summaryStartingPrice').textContent = `₹${minCustPrice}`;
+    document.getElementById('hiddenBasePrice').value = minCustPrice;
+  }
+
+  // Render Inclusions
+  function renderInclusions() {
+    const container = document.getElementById('inclusionsList');
+    container.innerHTML = '';
+    currentInclusions.forEach((text, idx) => {
+      const div = document.createElement('div');
+      div.className = 'chip-item';
+      div.innerHTML = `
+        <i class="fa-solid fa-check" style="color:#059669; font-size:12px;"></i>
+        <input type="text" name="inclusions[]" value="${escapeHtml(text)}" placeholder="Inclusion detail..." oninput="currentInclusions[${idx}]=this.value">
+        <button type="button" class="chip-del-btn" onclick="removeInclusion(${idx})"><i class="fa-solid fa-xmark"></i></button>
+      `;
+      container.appendChild(div);
+    });
+  }
+
+  function addInclusionItem() {
+    currentInclusions.push("");
+    renderInclusions();
+    const inputs = document.querySelectorAll('#inclusionsList input');
+    if (inputs.length) inputs[inputs.length - 1].focus();
+  }
+
+  function removeInclusion(idx) {
+    currentInclusions.splice(idx, 1);
+    renderInclusions();
+  }
+
+  // Render Exclusions
+  function renderExclusions() {
+    const container = document.getElementById('exclusionsList');
+    container.innerHTML = '';
+    currentExclusions.forEach((text, idx) => {
+      const div = document.createElement('div');
+      div.className = 'chip-item';
+      div.innerHTML = `
+        <i class="fa-solid fa-xmark" style="color:#ef4444; font-size:12px;"></i>
+        <input type="text" name="exclusions[]" value="${escapeHtml(text)}" placeholder="Exclusion item..." oninput="currentExclusions[${idx}]=this.value">
+        <button type="button" class="chip-del-btn" onclick="removeExclusion(${idx})"><i class="fa-solid fa-xmark"></i></button>
+      `;
+      container.appendChild(div);
+    });
+  }
+
+  function addExclusionItem() {
+    currentExclusions.push("");
+    renderExclusions();
+    const inputs = document.querySelectorAll('#exclusionsList input');
+    if (inputs.length) inputs[inputs.length - 1].focus();
+  }
+
+  function removeExclusion(idx) {
+    currentExclusions.splice(idx, 1);
+    renderExclusions();
+  }
+
+  // Image Preview Helpers
+  function previewSelectedImage(input) {
+    if (input.files && input.files[0]) {
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const img = document.getElementById('coverPreviewImg');
+        const ph = document.getElementById('coverPlaceholder');
+        img.src = e.target.result;
+        img.style.display = 'block';
+        if (ph) ph.style.display = 'none';
+      };
+      reader.readAsDataURL(input.files[0]);
+    }
+  }
+
+  function previewPresetUrl(url) {
+    const img = document.getElementById('coverPreviewImg');
+    const ph = document.getElementById('coverPlaceholder');
+    if (url && url.startsWith('http')) {
+      img.src = url;
+      img.style.display = 'block';
+      if (ph) ph.style.display = 'none';
+    }
+  }
+
+  // Status Radios Visual Updater
+  function updateStatusPills() {
+    const selected = document.querySelector('input[name="status"]:checked');
+    document.querySelectorAll('.status-radio-label').forEach(lbl => lbl.classList.remove('checked'));
+    if (selected) {
+      selected.closest('.status-radio-label').classList.add('checked');
+      const badge = document.getElementById('footerStatusBadge');
+      if (badge) {
+        badge.className = 'badge ' + (selected.value === 'active' ? 'active' : (selected.value === 'paused' ? 'warn' : 'inactive'));
+        badge.textContent = selected.value.charAt(0).toUpperCase() + selected.value.slice(1);
+      }
+    }
+  }
+
+  function escapeHtml(str) {
+    if (!str) return '';
+    return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    renderPackageRows();
+    renderInclusions();
+    renderExclusions();
+    updateStatusPills();
+
+    const form = document.getElementById('qsEditForm');
+    if (form) {
+      form.addEventListener('submit', () => {
+        document.getElementById('hiddenPackagesJson').value = JSON.stringify(currentPackages);
+        document.getElementById('hiddenInclusionsJson').value = JSON.stringify(currentInclusions.filter(x => x && x.trim()));
+        document.getElementById('hiddenExclusionsJson').value = JSON.stringify(currentExclusions.filter(x => x && x.trim()));
+      });
+    }
+  });
+</script>
 {% endblock %}
