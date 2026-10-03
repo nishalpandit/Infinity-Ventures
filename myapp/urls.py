@@ -221,6 +221,33 @@ urlpatterns = [
     path('api/vendor/otp-login/', Api_views.vendor_otp_login_api, name='vendor_otp_login_api'),
     path('api/vendor/otp-login', Api_views.vendor_otp_login_api),
 
+    # Vendor Profile APIs (Bearer Token Protected)
+    path('api/vendor/profile/', Api_views.vendor_profile_api, name='vendor_profile_api'),
+    path('api/vendor/profile', Api_views.vendor_profile_api),
+    path('api/vendor/profile/edit/', Api_views.vendor_edit_profile_api, name='vendor_edit_profile_api'),
+    path('api/vendor/profile/edit', Api_views.vendor_edit_profile_api),
+    path('api/vendor/profile/update/', Api_views.vendor_edit_profile_api, name='vendor_update_profile_api'),
+    path('api/vendor/profile/update', Api_views.vendor_edit_profile_api),
+
+    # Vendor Dashboard & Jobs APIs (Bearer Token Protected)
+    path('api/vendor/dashboard/', Api_views.vendor_dashboard_api, name='vendor_dashboard_api'),
+    path('api/vendor/dashboard', Api_views.vendor_dashboard_api),
+    path('api/vendor/jobs/', Api_views.vendor_jobs_api, name='vendor_jobs_api'),
+    path('api/vendor/jobs', Api_views.vendor_jobs_api),
+    path('api/vendor/services/', Api_views.vendor_services_api, name='vendor_services_api'),
+    path('api/vendor/services', Api_views.vendor_services_api),
+    path('api/vendor/service-suggestions/', Api_views.vendor_service_suggestions_api, name='vendor_service_suggestions_api'),
+    path('api/vendor/service-suggestions', Api_views.vendor_service_suggestions_api),
+    path('api/vendor/bookings/', Api_views.vendor_bookings_api, name='vendor_bookings_api'),
+    path('api/vendor/bookings', Api_views.vendor_bookings_api),
+    path('api/vendor/bookings/<int:booking_id>/status/', Api_views.vendor_booking_status_api, name='vendor_booking_status_api'),
+    path('api/vendor/send-quotation/', Api_views.vendor_send_quotation_api, name='vendor_send_quotation_api'),
+    path('api/vendor/send-quotation', Api_views.vendor_send_quotation_api),
+    path('api/vendor/bids/', Api_views.vendor_bids_api, name='vendor_bids_api'),
+    path('api/vendor/bids', Api_views.vendor_bids_api),
+    path('api/vendor/bids/<int:bid_id>/', Api_views.vendor_bid_detail_api, name='vendor_bid_detail_api'),
+    path('api/vendor/bids/<int:bid_id>', Api_views.vendor_bid_detail_api),
+
     # User Job & Service APIs (Bearer Token Protected)
     path('api/user/post-job/', Api_views.user_post_job_api, name='user_post_job_api'),
     path('api/user/post-job', Api_views.user_post_job_api),

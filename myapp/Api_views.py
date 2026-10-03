@@ -9,9 +9,13 @@ from django.contrib.auth import authenticate, login
 from django.contrib.auth import get_user_model
 from django.utils import timezone
 from django.db.models import Q
+<<<<<<< HEAD
 
 from .models import UserProfile, VendorProfile, Category, Location, OTPVerification, AuthToken, Job, QuickService, VendorKYC, CustomerAddress, ServiceBooking, Bid
 
+=======
+from .models import UserProfile, VendorProfile, Category, Location, OTPVerification, AuthToken, Job, QuickService, VendorKYC, CustomerAddress, ServiceBooking
+>>>>>>> origin/main
 User = get_user_model()
 
 
@@ -59,8 +63,9 @@ def _resolve_user_identifier(identifier):
     """
     Resolves a user record using either:
     1. Exact Username
-    2. Email address
-    3. Mobile phone number (from UserProfile, with normalization)
+    2. Email address (if contains @)
+    3. Mobile phone number (from UserProfile or VendorProfile, with normalization)
+    4. Auto-generated phone-based username
     """
     if not identifier:
         return None
@@ -71,22 +76,39 @@ def _resolve_user_identifier(identifier):
     if user:
         return user
 
-    # 2. By email
-    user = User.objects.filter(email__iexact=ident).first()
-    if user:
-        return user
+    # 2. By email (only if string contains '@' and is non-empty)
+    if '@' in ident:
+        user = User.objects.filter(email__iexact=ident).first()
+        if user:
+            return user
 
-    # 3. By mobile number in UserProfile (supports normalized search)
+    # 3. By mobile number (from UserProfile or VendorProfile)
     norm_phone = _normalize_phone(ident)
-    query = Q(phone_number__iexact=ident)
+
+    # 3a. Search UserProfile
+    query_u = Q(phone_number__iexact=ident)
     if norm_phone:
-        query |= Q(phone_number__iexact=norm_phone) | Q(phone_number__endswith=norm_phone)
-    u_prof = UserProfile.objects.filter(query).select_related('user').first()
+        query_u |= Q(phone_number__iexact=norm_phone) | Q(phone_number__endswith=norm_phone)
+    u_prof = UserProfile.objects.filter(query_u).select_related('user').first()
     if u_prof and u_prof.user:
         return u_prof.user
 
+    # 3b. Search VendorProfile
+    query_v = Q(mobile__iexact=ident)
+    if norm_phone:
+        query_v |= Q(mobile__iexact=norm_phone) | Q(mobile__endswith=norm_phone)
+    v_prof = VendorProfile.objects.filter(query_v).select_related('user').first()
+    if v_prof and v_prof.user:
+        return v_prof.user
+
+    # 4. Fallback by normalized phone username
     if norm_phone and len(norm_phone) >= 10:
-        user = User.objects.filter(Q(username__endswith=norm_phone) | Q(email__startswith=norm_phone)).first()
+        user = User.objects.filter(
+            Q(username__iexact=norm_phone) |
+            Q(username__iexact=f"usr_{norm_phone}") |
+            Q(username__iexact=f"ven_{norm_phone}") |
+            Q(username__endswith=norm_phone)
+        ).first()
         if user:
             return user
 
@@ -291,23 +313,38 @@ def user_signup_api(request):
 
         if not name:
             return JsonResponse({'status': 'error', 'message': "Field 'name' is required."}, status=400)
-        if not email:
-            return JsonResponse({'status': 'error', 'message': "Field 'email' is required."}, status=400)
+        if not mobile:
+            return JsonResponse({'status': 'error', 'message': "Field 'mobile' is required."}, status=400)
+
+        norm_phone = _normalize_phone(mobile)
+        if len(norm_phone) < 10:
+            return JsonResponse({'status': 'error', 'message': "Please enter a valid 10-digit mobile number."}, status=400)
+
+        existing_user = _resolve_user_identifier(mobile)
+        if existing_user:
+            return JsonResponse({
+                'status': 'error',
+                'message': f"Mobile number '{mobile}' is already registered with an existing account. Please log in."
+            }, status=400)
+
         if not password:
             return JsonResponse({'status': 'error', 'message': "Field 'password' is required."}, status=400)
         if confirm_password and password != confirm_password:
             return JsonResponse({'status': 'error', 'message': "Passwords do not match."}, status=400)
 
-        if User.objects.filter(email__iexact=email).exists():
-            return JsonResponse({'status': 'error', 'message': f"Email '{email}' is already registered."}, status=400)
+        if email:
+            if User.objects.filter(email__iexact=email).exists():
+                return JsonResponse({'status': 'error', 'message': f"Email '{email}' is already registered."}, status=400)
+        else:
+            email = ''
 
         username = (data.get('username') or '').strip()
         if not username:
-            base_username = email.split('@')[0] if '@' in email else name.replace(" ", "").lower()
+            base_username = f"usr_{norm_phone}"
             username = base_username
             counter = 1
             while User.objects.filter(username__iexact=username).exists():
-                username = f"{base_username}{counter}"
+                username = f"{base_username}_{counter}"
                 counter += 1
         elif User.objects.filter(username__iexact=username).exists():
             return JsonResponse({'status': 'error', 'message': f"Username '{username}' is already taken."}, status=400)
@@ -322,9 +359,8 @@ def user_signup_api(request):
         user.save()
 
         user_profile, _ = UserProfile.objects.get_or_create(user=user)
-        if mobile:
-            user_profile.phone_number = mobile
-            user_profile.save()
+        user_profile.phone_number = mobile
+        user_profile.save()
 
         code = f"USR{user.id:03d}"
         token_key = _get_or_create_auth_token(user)
@@ -463,25 +499,38 @@ def vendor_signup_api(request):
 
         if not name:
             return JsonResponse({'status': 'error', 'message': "Field 'name' is required."}, status=400)
-        if not email:
-            return JsonResponse({'status': 'error', 'message': "Field 'email' is required."}, status=400)
+        if not mobile:
+            return JsonResponse({'status': 'error', 'message': "Field 'mobile' is required."}, status=400)
+
+        norm_phone = _normalize_phone(mobile)
+        if len(norm_phone) < 10:
+            return JsonResponse({'status': 'error', 'message': "Please enter a valid 10-digit mobile number."}, status=400)
+
+        existing_user = _resolve_user_identifier(mobile)
+        if existing_user:
+            return JsonResponse({
+                'status': 'error',
+                'message': f"Mobile number '{mobile}' is already registered with an existing account. Please log in."
+            }, status=400)
+
         if not password:
             return JsonResponse({'status': 'error', 'message': "Field 'password' is required."}, status=400)
         if confirm_password and password != confirm_password:
             return JsonResponse({'status': 'error', 'message': "Passwords do not match."}, status=400)
 
-        if User.objects.filter(email__iexact=email).exists():
-            return JsonResponse({'status': 'error', 'message': f"Email '{email}' is already registered."}, status=400)
+        if email:
+            if User.objects.filter(email__iexact=email).exists():
+                return JsonResponse({'status': 'error', 'message': f"Email '{email}' is already registered."}, status=400)
+        else:
+            email = ''
 
         username = (data.get('username') or '').strip()
         if not username:
-            base_username = email.split('@')[0] if '@' in email else (company_name or name).replace(" ", "").lower()
-            if not base_username:
-                base_username = 'vendor'
+            base_username = f"ven_{norm_phone}"
             username = base_username
             counter = 1
             while User.objects.filter(username__iexact=username).exists():
-                username = f"{base_username}{counter}"
+                username = f"{base_username}_{counter}"
                 counter += 1
         elif User.objects.filter(username__iexact=username).exists():
             return JsonResponse({'status': 'error', 'message': f"Username '{username}' is already taken."}, status=400)
@@ -614,9 +663,11 @@ def vendor_login_api(request):
         vendor_type = profile.vendor_type if profile else 'vendor'
         experience = profile.experience if profile else 0
 
-        mobile = '—'
+        mobile = ''
         try:
-            if hasattr(user, 'user_profile') and user.user_profile.phone_number:
+            if profile and profile.mobile:
+                mobile = profile.mobile
+            elif hasattr(user, 'user_profile') and user.user_profile.phone_number:
                 mobile = user.user_profile.phone_number
         except Exception:
             pass
@@ -636,17 +687,17 @@ def vendor_login_api(request):
                 'company_name': company_name,
                 'contact': mobile,
                 'mobile': mobile,
-                'email': user.email or '—',
+                'email': user.email or '',
                 'category': category,
                 'location': location,
                 'address': address,
                 'vendor_type': vendor_type,
                 'experience': experience,
-                'dob': str(vendor_profile.dob) if vendor_profile.dob else '',
-                'gender': vendor_profile.gender or '',
-                'id_proof': vendor_profile.id_proof or '',
-                'about': vendor_profile.about or '',
-                'profile_image': vendor_profile.profile_image.url if vendor_profile.profile_image else '',
+                'dob': str(profile.dob) if profile and profile.dob else '',
+                'gender': profile.gender if profile and profile.gender else '',
+                'id_proof': profile.id_proof if profile and profile.id_proof else '',
+                'about': profile.about if profile and profile.about else '',
+                'profile_image': profile.profile_image.url if profile and profile.profile_image else '',
                 'role': 'VENDOR'
             }
         }
@@ -1052,6 +1103,15 @@ def check_phone_api(request):
         user = u_prof.user if (u_prof and u_prof.user) else None
 
         if not user:
+            # Check VendorProfile by mobile
+            query_v = Q(mobile__iexact=mobile)
+            if norm_phone:
+                query_v |= Q(mobile__iexact=norm_phone) | Q(mobile__endswith=norm_phone)
+            v_prof = VendorProfile.objects.filter(query_v).select_related('user').first()
+            if v_prof and v_prof.user:
+                user = v_prof.user
+
+        if not user:
             # Fallback check in CustomUser if username matches phone
             user = User.objects.filter(
                 Q(username__iexact=mobile) | 
@@ -1073,7 +1133,7 @@ def check_phone_api(request):
                     'user_code': code,
                     'name': full_name,
                     'role': user.role,
-                    'email': user.email or '—'
+                    'email': user.email or ''
                 }
             }
             if role:
@@ -1250,12 +1310,12 @@ def user_otp_signup_api(request):
                 'message': f"Mobile number '{mobile}' is already registered with an existing account. Please log in."
             }, status=400)
 
-        # 3. Check / generate email
+        # 3. Check / handle optional email
         if email:
             if User.objects.filter(email__iexact=email).exists():
                 return JsonResponse({'status': 'error', 'message': f"Email '{email}' is already registered."}, status=400)
         else:
-            email = f"user_{norm_phone}@sugu.local"
+            email = ''
 
         # 4. Generate unique username
         username = (data.get('username') or '').strip()
@@ -1466,12 +1526,12 @@ def vendor_otp_signup_api(request):
                 'message': f"Mobile number '{mobile}' is already registered with an existing account. Please log in."
             }, status=400)
 
-        # 3. Check / generate email
+        # 3. Check / handle optional email
         if email:
             if User.objects.filter(email__iexact=email).exists():
                 return JsonResponse({'status': 'error', 'message': f"Email '{email}' is already registered."}, status=400)
         else:
-            email = f"vendor_{norm_phone}@sugu.local"
+            email = ''
 
         # 4. Generate unique username
         username = (data.get('username') or '').strip()
@@ -1630,15 +1690,8 @@ def vendor_otp_login_api(request):
         user.backend = 'django.contrib.auth.backends.ModelBackend'
         login(request, user)
 
-        profile = getattr(user, 'vendor_profile', None)
-        v_id = profile.id if profile else user.id
-        code = f"VEN{v_id:03d}"
-        company_name = (profile.company_name if profile and profile.company_name else user.get_full_name()) or user.username
-        category = profile.category if profile else 'General'
-        location = profile.location if profile else 'Unknown'
-        address = profile.address if profile and profile.address else '—'
-        vendor_type = profile.vendor_type if profile else 'vendor'
-        experience = profile.experience if profile else 0
+        vendor_data = _serialize_vendor_profile_data(user, request)
+        company_name = vendor_data.get('company_name') or vendor_data.get('name') or user.username
         token_key = _get_or_create_auth_token(user)
 
         response_data = {
@@ -1646,28 +1699,7 @@ def vendor_otp_login_api(request):
             'message': f"Vendor '{company_name}' logged in successfully via OTP",
             'token': token_key,
             'token_type': 'Bearer',
-            'vendor': {
-                'id': code,
-                'vendor_id': v_id,
-                'vendor_code': code,
-                'user_id': user.id,
-                'name': user.get_full_name() or user.username,
-                'company_name': company_name,
-                'contact': mobile,
-                'mobile': mobile,
-                'email': user.email or '—',
-                'category': category,
-                'location': location,
-                'address': address,
-                'vendor_type': vendor_type,
-                'experience': experience,
-                'dob': str(vendor_profile.dob) if vendor_profile.dob else '',
-                'gender': vendor_profile.gender or '',
-                'id_proof': vendor_profile.id_proof or '',
-                'about': vendor_profile.about or '',
-                'profile_image': vendor_profile.profile_image.url if vendor_profile.profile_image else '',
-                'role': 'VENDOR'
-            }
+            'vendor': vendor_data
         }
         return JsonResponse(response_data, status=200)
     except Exception as e:
@@ -2570,6 +2602,1332 @@ def top_professionals_api(request):
         'status': 'success',
         'professionals': vendors_data
     })
+
+# =====================================================================
+# VENDOR PROFILE & EDIT PROFILE APIS (Bearer Token Protected)
+# =====================================================================
+
+def _serialize_vendor_profile_data(user, request=None):
+    """
+    Serializes comprehensive vendor profile data for profile and auth APIs.
+    """
+    vp = getattr(user, 'vendor_profile', None)
+    if not vp:
+        vp, _ = VendorProfile.objects.get_or_create(user=user)
+
+    if not vp.vendor_code:
+        vp.vendor_code = f"VEN{vp.id:03d}"
+        vp.save(update_fields=['vendor_code'])
+
+    code = vp.vendor_code or f"VEN{vp.id:03d}"
+    company_name = vp.company_name or user.get_full_name() or user.username
+    name = user.get_full_name() or user.first_name or user.username
+
+    mobile = vp.mobile or ''
+    if not mobile:
+        try:
+            if hasattr(user, 'user_profile') and user.user_profile.phone_number:
+                mobile = user.user_profile.phone_number
+        except Exception:
+            pass
+
+    city = ''
+    state = ''
+    loc = vp.location or ''
+    if ',' in loc:
+        parts = [p.strip() for p in loc.split(',', 1)]
+        city = parts[0]
+        state = parts[1]
+    elif loc:
+        city = loc
+
+    profile_image_url = ''
+    if vp.profile_image:
+        try:
+            profile_image_url = request.build_absolute_uri(vp.profile_image.url) if request else vp.profile_image.url
+        except Exception:
+            profile_image_url = vp.profile_image.url
+
+    kyc_status = 'not_submitted'
+    try:
+        if hasattr(user, 'kyc_document'):
+            kyc_status = user.kyc_document.status
+        else:
+            kyc = VendorKYC.objects.filter(vendor=user).first()
+            if kyc:
+                kyc_status = kyc.status
+    except Exception:
+        pass
+
+    return {
+        'id': code,
+        'vendor_id': vp.id,
+        'vendor_code': code,
+        'user_id': user.id,
+        'name': name,
+        'company_name': company_name,
+        'contact': mobile,
+        'mobile': mobile,
+        'email': user.email or '',
+        'category': vp.category or '',
+        'location': vp.location or '',
+        'city': city,
+        'state': state,
+        'address': vp.address or '',
+        'vendor_type': vp.vendor_type or 'vendor',
+        'experience': vp.experience or 0,
+        'dob': str(vp.dob) if vp.dob else '',
+        'gender': vp.gender or '',
+        'id_proof': vp.id_proof or '',
+        'about': vp.about or '',
+        'profile_image': profile_image_url,
+        'rating': float(vp.rating) if vp.rating else 0.0,
+        'available_bids': vp.available_bids if vp.available_bids is not None else 5,
+        'kyc_status': kyc_status,
+        'registered_date': vp.registered_date.strftime("%Y-%m-%d %H:%M:%S") if vp.registered_date else '',
+        'role': 'VENDOR'
+    }
+
+
+def _handle_vendor_profile_update(request, user, vp):
+    """
+    Internal helper to process profile update data from either JSON or multipart form.
+    """
+    data = _parse_api_request(request)
+
+    # 1. Update Name (User first_name & last_name / full name)
+    name = (data.get('name') or data.get('full_name') or data.get('first_name') or '').strip()
+    if name:
+        parts = name.split(' ', 1)
+        user.first_name = parts[0]
+        user.last_name = parts[1] if len(parts) > 1 else ''
+
+    # 2. Update Email
+    email = (data.get('email') or '').strip()
+    if email:
+        if User.objects.filter(email__iexact=email).exclude(id=user.id).exists():
+            return JsonResponse({'status': 'error', 'message': f"Email '{email}' is already in use by another account."}, status=400)
+        user.email = email
+
+    # 3. Mobile / Phone number, Category, and Vendor Type cannot be changed by the vendor
+    # (Mobile is primary auth identity; category and vendor type are verified via KYC)
+
+    # 4. Update Company Name
+    company_name = (data.get('company_name') or '').strip()
+    if company_name:
+        vp.company_name = company_name
+
+    # 5. Update Location, City & State
+    city = (data.get('city') or '').strip()
+    state = (data.get('state') or '').strip()
+    location = (data.get('location') or '').strip()
+
+    if city and state:
+        vp.location = f"{city}, {state}"
+    elif location:
+        vp.location = location
+    elif city:
+        vp.location = city
+    elif state:
+        vp.location = state
+
+    # 6. Update Address
+    if 'address' in data:
+        vp.address = (data.get('address') or '').strip()
+
+    # 9. Update Experience
+    if 'experience' in data:
+        try:
+            vp.experience = int(data.get('experience') or 0)
+        except (ValueError, TypeError):
+            pass
+
+    # 10. Update DOB (Date of Birth)
+    dob_raw = (data.get('dob') or '').strip()
+    if dob_raw:
+        from datetime import datetime
+        parsed_dob = None
+        for fmt in ("%d-%m-%Y", "%Y-%m-%d", "%d/%m/%Y"):
+            try:
+                parsed_dob = datetime.strptime(dob_raw, fmt).date()
+                break
+            except ValueError:
+                pass
+        if parsed_dob:
+            vp.dob = parsed_dob
+        else:
+            return JsonResponse({'status': 'error', 'message': "Invalid 'dob' format. Expected dd-mm-yyyy or yyyy-mm-dd."}, status=400)
+
+    # 11. Update Gender
+    if 'gender' in data:
+        vp.gender = (data.get('gender') or '').strip()
+
+    # 12. Update ID Proof / ID Number
+    if 'id_proof' in data:
+        vp.id_proof = (data.get('id_proof') or '').strip()
+
+    # 13. Update About / Bio
+    if 'about' in data:
+        vp.about = (data.get('about') or '').strip()
+
+    # 14. Update Profile Image
+    profile_image = request.FILES.get('profile_image') or request.FILES.get('image')
+    if profile_image:
+        vp.profile_image = profile_image
+
+    # Save changes
+    user.save()
+    vp.save()
+
+    return JsonResponse({
+        'status': 'success',
+        'message': 'Vendor profile updated successfully',
+        'vendor': _serialize_vendor_profile_data(user, request)
+    }, status=200)
+
+
+@csrf_exempt
+def vendor_profile_api(request):
+    """
+    API for Vendor Profile Details (GET) and Update (POST/PUT/PATCH)
+    URL: /api/vendor/profile/
+    Method: GET, POST, PUT, PATCH
+    Header: Authorization: Bearer <token>
+    """
+    user, err = _get_user_from_bearer_token(request)
+    if err:
+        return JsonResponse({'status': 'error', 'message': err}, status=401)
+
+    if user.role != 'VENDOR' and not user.is_superuser:
+        return JsonResponse({'status': 'error', 'message': "Access denied. Only vendors can access this profile."}, status=403)
+
+    vp, _ = VendorProfile.objects.get_or_create(user=user)
+
+    if request.method == 'GET':
+        return JsonResponse({
+            'status': 'success',
+            'message': 'Vendor profile fetched successfully',
+            'vendor': _serialize_vendor_profile_data(user, request)
+        }, status=200)
+
+    elif request.method in ['POST', 'PUT', 'PATCH']:
+        return _handle_vendor_profile_update(request, user, vp)
+
+    return JsonResponse({'status': 'error', 'message': 'Method not allowed. Use GET to view or POST/PUT to edit.'}, status=405)
+
+
+@csrf_exempt
+def vendor_edit_profile_api(request):
+    """
+    Dedicated API for Vendor Edit Profile
+    URL: /api/vendor/profile/edit/ or /api/vendor/profile/update/
+    Method: POST, PUT, PATCH
+    Header: Authorization: Bearer <token>
+    """
+    if request.method not in ['POST', 'PUT', 'PATCH']:
+        return JsonResponse({'status': 'error', 'message': 'Method not allowed. Use POST or PUT to edit profile.'}, status=405)
+
+    user, err = _get_user_from_bearer_token(request)
+    if err:
+        return JsonResponse({'status': 'error', 'message': err}, status=401)
+
+    if user.role != 'VENDOR' and not user.is_superuser:
+        return JsonResponse({'status': 'error', 'message': "Access denied. Only vendors can edit vendor profile."}, status=403)
+
+    vp, _ = VendorProfile.objects.get_or_create(user=user)
+    return _handle_vendor_profile_update(request, user, vp)
+
+
+# =====================================================================
+# 10. VENDOR DASHBOARD & JOBS APIS (Dynamic Mobile App Integration)
+# =====================================================================
+
+from .models import Job, QuickService, Bid, PayoutRequest, VendorKYC, VendorProfile
+
+
+def _format_time_ago(dt):
+    if not dt:
+        return ""
+    try:
+        from django.utils.timesince import timesince
+        ts = timesince(dt).split(',')[0].strip()
+        return f"{ts} ago"
+    except Exception:
+        return ""
+
+
+CATEGORY_IMAGE_MAP = {
+    'Electrical': 'https://images.unsplash.com/photo-1621905251189-08b45d6a269e?w=600&auto=format&fit=crop&q=80',
+    'Plumbing': 'https://images.unsplash.com/photo-1585704032915-c3400ca199e7?w=600&auto=format&fit=crop&q=80',
+    'AC & Appliance': 'https://images.unsplash.com/photo-1585771724684-38269d6639fd?w=600&auto=format&fit=crop&q=80',
+    'Cleaning': 'https://images.unsplash.com/photo-1581578731548-c64695cc6952?w=600&auto=format&fit=crop&q=80',
+    'Painting': 'https://images.unsplash.com/photo-1562259949-e8e7689d7828?w=600&auto=format&fit=crop&q=80',
+    'Carpentry': 'https://images.unsplash.com/photo-1504148455328-c376907d081c?w=600&auto=format&fit=crop&q=80',
+    'Pest Control': 'https://images.unsplash.com/photo-1632788320490-67d739818828?w=600&auto=format&fit=crop&q=80',
+    'Home Renovation': 'https://images.unsplash.com/photo-1503387762-592deb58ef4e?w=600&auto=format&fit=crop&q=80',
+    'Default': 'https://images.unsplash.com/photo-1581092918056-0c4c3acd3789?w=600&auto=format&fit=crop&q=80',
+}
+
+def _resolve_category_name(category=None, title=''):
+    if category and hasattr(category, 'name') and category.name:
+        return category.name
+    t = (title or '').lower()
+    if any(k in t for k in ['electr', 'wire', 'switch', 'light', 'fan', 'mcb', 'fuse', 'inverter']):
+        return 'Electrical'
+    if any(k in t for k in ['plumb', 'pipe', 'tap', 'leak', 'drain', 'flush', 'water tank', 'geyser', 'sink']):
+        return 'Plumbing'
+    if any(k in t for k in ['ac', 'air condition', 'refrigerator', 'washing machine', 'appliance', 'cooling']):
+        return 'AC & Appliance'
+    if any(k in t for k in ['clean', 'sofa', 'carpet', 'deep clean', 'disinfect', 'scrub']):
+        return 'Cleaning'
+    if any(k in t for k in ['paint', 'waterproof', 'coating', 'putty', 'sealing', 'texture']):
+        return 'Painting'
+    if any(k in t for k in ['carpent', 'wood', 'furniture', 'wardrobe', 'door', 'lock', 'cabinet']):
+        return 'Carpentry'
+    if any(k in t for k in ['pest', 'termite', 'cockroach', 'bug']):
+        return 'Pest Control'
+    if any(k in t for k in ['renovat', 'construct', 'tile', 'masonry', 'civil', 'interior']):
+        return 'Home Renovation'
+    return 'General Service'
+
+def _get_category_or_service_image(category_name='', title='', image_field=None, image_url_str='', request=None):
+    if image_field and hasattr(image_field, 'url') and image_field.name:
+        try:
+            return request.build_absolute_uri(image_field.url) if request else image_field.url
+        except Exception:
+            return image_field.url
+    if image_url_str and image_url_str.strip():
+        url = image_url_str.strip()
+        if url.startswith('http'):
+            return url
+        try:
+            return request.build_absolute_uri(url) if request else url
+        except Exception:
+            return url
+
+    cat = category_name or _resolve_category_name(title=title)
+    cat_lower = cat.lower()
+    for k, v in CATEGORY_IMAGE_MAP.items():
+        if k.lower() in cat_lower or cat_lower in k.lower():
+            return v
+    return CATEGORY_IMAGE_MAP['Default']
+
+
+def _serialize_job_summary(job, vendor_user=None, request=None):
+    category_name = _resolve_category_name(job.category, job.title)
+    budget_val = float(job.budget) if job.budget else 0.0
+    locality = job.locality or ""
+    city = job.location.city if job.location else ""
+    loc_display = locality or city or job.address or "Local Area"
+    if locality and city and locality.lower() != city.lower():
+        loc_display = f"{locality}, {city}"
+
+    has_bid = False
+    if vendor_user:
+        has_bid = Bid.objects.filter(job=job, vendor=vendor_user).exists()
+
+    image_url = _get_category_or_service_image(category_name, title=job.title, request=request)
+
+    return {
+        'id': job.id,
+        'job_code': f"JOB{job.id:04d}",
+        'title': job.title,
+        'category': category_name,
+        'description': job.description or "",
+        'budget': budget_val,
+        'budget_formatted': f"₹{int(budget_val):,}" if budget_val >= 1000 else f"₹{budget_val:.0f}",
+        'budget_type': job.budget_type or "Fixed Budget",
+        'location': loc_display,
+        'address': job.address or "",
+        'pincode': job.pincode or "",
+        'distance': "Nearby",
+        'time_posted': _format_time_ago(job.created_at),
+        'created_at': job.created_at.strftime("%Y-%m-%d %H:%M:%S"),
+        'urgent': bool(budget_val >= 10000 or (job.title and 'urgent' in job.title.lower())),
+        'bids_count': job.bids_count or job.bids.count(),
+        'max_bids': job.max_bids or 10,
+        'status': job.status,
+        'customer_name': job.contact_name or (job.user.get_full_name() if job.user else "Customer"),
+        'has_bid': has_bid,
+        'image_url': image_url
+    }
+
+
+def _serialize_quick_service_summary(qs, vendor_user=None, request=None):
+    category_name = _resolve_category_name(qs.category, qs.title)
+    base_price = float(qs.base_price) if qs.base_price else 0.0
+    locality = qs.locality or ""
+    city = qs.location.city if qs.location else ""
+    loc_display = locality or city or "Nearby"
+    if locality and city and locality.lower() != city.lower():
+        loc_display = f"{locality}, {city}"
+
+    image_url = _get_category_or_service_image(
+        category_name,
+        title=qs.title,
+        image_field=qs.image,
+        image_url_str=qs.image_url,
+        request=request
+    )
+
+    return {
+        'id': qs.id,
+        'service_code': f"QS{qs.id:04d}",
+        'title': qs.title,
+        'category': category_name,
+        'description': qs.description or "",
+        'budget': base_price,
+        'budget_formatted': f"₹{int(base_price):,}" if base_price >= 1000 else f"₹{base_price:.0f}",
+        'location': loc_display,
+        'distance': f"{qs.service_radius_km:.1f} km",
+        'time_posted': _format_time_ago(qs.created_at),
+        'created_at': qs.created_at.strftime("%Y-%m-%d %H:%M:%S"),
+        'urgent': True,
+        'image_url': image_url,
+        'status': qs.status
+    }
+
+
+@csrf_exempt
+def vendor_dashboard_api(request):
+    """
+    API for Full Vendor Dashboard (Dynamic Data Matching Web Dashboard)
+    URL: /api/vendor/dashboard/
+    Method: GET
+    Header: Authorization: Bearer <token>
+    """
+    if request.method != 'GET':
+        return JsonResponse({'status': 'error', 'message': 'Method not allowed. Use GET.'}, status=405)
+
+    user, err = _get_user_from_bearer_token(request)
+    if err:
+        return JsonResponse({'status': 'error', 'message': err}, status=401)
+
+    if user.role != 'VENDOR' and not user.is_superuser:
+        return JsonResponse({'status': 'error', 'message': "Access denied. Only vendors can access vendor dashboard."}, status=403)
+
+    try:
+        from .wallet_services import get_or_create_wallet
+        from .models import PayoutRequest, Job, QuickService, Bid, VendorKYC, VendorProfile
+        from django.db.models import Sum
+
+        vp = getattr(user, 'vendor_profile', None)
+        if not vp:
+            vp, _ = VendorProfile.objects.get_or_create(user=user)
+
+        wallet = get_or_create_wallet(user)
+        kyc = VendorKYC.objects.filter(vendor=user).first()
+        pending_payouts_sum = PayoutRequest.objects.filter(vendor=user, status='pending').aggregate(total=Sum('amount'))['total'] or 0
+
+        # Dynamic query for open jobs and quick services
+        open_jobs_qs = Job.objects.filter(status='open').select_related('category', 'location', 'user').order_by('-created_at')
+        active_qs_qs = QuickService.objects.filter(status__in=['active', 'open']).select_related('category', 'location').order_by('-created_at')
+
+        # Bids counts
+        active_bids_count = Bid.objects.filter(vendor=user).exclude(status__in=['rejected', 'completed', 'withdrawn']).count()
+        selected_bids_count = Bid.objects.filter(vendor=user, status='selected').count()
+        completed_bids_count = Bid.objects.filter(vendor=user, status='completed').count()
+
+        # Serialized lists
+        jobs_list = [_serialize_job_summary(j, vendor_user=user, request=request) for j in open_jobs_qs]
+        qs_list = [_serialize_quick_service_summary(q, vendor_user=user, request=request) for q in active_qs_qs[:12]]
+
+        # Next Appointment / In-Progress Task
+        next_appointment = None
+        selected_bid = Bid.objects.filter(vendor=user, status='selected').select_related('job', 'quick_service').first()
+        if selected_bid:
+            target = selected_bid.job or selected_bid.quick_service
+            if target:
+                next_appointment = {
+                    'bid_id': selected_bid.id,
+                    'title': target.title,
+                    'amount_formatted': f"₹{int(selected_bid.amount):,}",
+                    'client_name': getattr(target, 'contact_name', None) or (target.user.get_full_name() if hasattr(target, 'user') and target.user else "Client"),
+                    'location': getattr(target, 'locality', None) or getattr(target, 'address', 'Scheduled Location'),
+                    'status': 'Selected / In Progress'
+                }
+
+        vendor_data = _serialize_vendor_profile_data(user, request)
+
+        response_data = {
+            'status': 'success',
+            'vendor': vendor_data,
+            'kyc': {
+                'status': kyc.status if kyc else 'not_submitted',
+                'is_verified': bool(kyc and kyc.status == 'approved'),
+                'admin_notes': kyc.admin_notes if (kyc and kyc.admin_notes) else '',
+                'id_type': kyc.get_id_type_display() if kyc else '',
+                'id_number': kyc.id_number if kyc else ''
+            },
+            'wallet': {
+                'available_balance': float(wallet.available_balance),
+                'available_balance_formatted': f"₹{wallet.available_balance:,.2f}",
+                'total_earned': float(wallet.total_earned),
+                'total_earned_formatted': f"₹{wallet.total_earned:,.2f}",
+                'total_withdrawn': float(wallet.total_withdrawn),
+                'total_withdrawn_formatted': f"₹{wallet.total_withdrawn:,.2f}",
+                'pending_payouts': float(pending_payouts_sum),
+                'pending_payouts_formatted': f"₹{pending_payouts_sum:,.2f}"
+            },
+            'stats': {
+                'today_jobs_count': selected_bids_count if selected_bids_count > 0 else (1 if active_bids_count > 0 else 0),
+                'available_jobs_count': open_jobs_qs.count(),
+                'available_qs_count': active_qs_qs.count(),
+                'remaining_credits': vp.available_bids if vp.available_bids is not None else 5,
+                'active_bids_count': active_bids_count,
+                'selected_jobs_count': selected_bids_count,
+                'completed_work_count': completed_bids_count,
+                'rating': float(vp.rating) if vp.rating else 4.9
+            },
+            'next_appointment': next_appointment,
+            'jobs': jobs_list,
+            'quick_services': qs_list
+        }
+        return JsonResponse(response_data, status=200)
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+
+@csrf_exempt
+def vendor_jobs_api(request):
+    """
+    API for Browsing All Available Jobs
+    URL: /api/vendor/jobs/
+    Method: GET
+    Header: Authorization: Bearer <token>
+    """
+    if request.method != 'GET':
+        return JsonResponse({'status': 'error', 'message': 'Method not allowed. Use GET.'}, status=405)
+
+    user, err = _get_user_from_bearer_token(request)
+    if err:
+        return JsonResponse({'status': 'error', 'message': err}, status=401)
+
+    try:
+        jobs_qs = Job.objects.filter(status='open').select_related('category', 'location', 'user').order_by('-created_at')
+
+        search_query = request.GET.get('search', '').strip()
+        if search_query:
+            jobs_qs = jobs_qs.filter(
+                Q(title__icontains=search_query) |
+                Q(description__icontains=search_query) |
+                Q(category__name__icontains=search_query) |
+                Q(locality__icontains=search_query) |
+                Q(address__icontains=search_query)
+            )
+
+        category_filter = request.GET.get('category', '').strip()
+        if category_filter:
+            jobs_qs = jobs_qs.filter(category__name__iexact=category_filter)
+
+        jobs_list = [_serialize_job_summary(j, vendor_user=user, request=request) for j in jobs_qs]
+        return JsonResponse({
+            'status': 'success',
+            'count': len(jobs_list),
+            'jobs': jobs_list
+        }, status=200)
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+@csrf_exempt
+def vendor_services_api(request):
+    """
+    API for Vendor Services (Catalog)
+    URL: /api/vendor/services/
+    Method: GET (list), POST (create)
+    Header: Authorization: Bearer <token>
+    """
+    user, err = _get_user_from_bearer_token(request)
+    if err:
+        return JsonResponse({'status': 'error', 'message': err}, status=401)
+    
+    gs = GlobalSettings.objects.first()
+    platform_config = {
+        'commission_percent': gs.get_qs_commission_percent() if gs else 10.0,
+        'cgst_percent': gs.get_qs_cgst_percent() if gs else 9.0,
+        'sgst_percent': gs.get_qs_sgst_percent() if gs else 9.0,
+        'flat_fee': gs.get_qs_flat_fee() if gs else 0.0,
+        'tax_mode': gs.get_qs_tax_mode() if gs else 'commission_only',
+    }
+
+    if request.method == 'GET':
+        services = QuickService.objects.filter(vendor=user).select_related('category').order_by('-created_at')
+        services_list = []
+        for s in services:
+            cat_name = _resolve_category_name(s.category, s.title)
+            img_url = _get_category_or_service_image(cat_name, title=s.title, image_field=s.image, image_url_str=s.image_url, request=request)
+            pkgs = s.service_packages or []
+            v_payout = float(s.base_price)
+            if pkgs and isinstance(pkgs, list) and len(pkgs) > 0 and isinstance(pkgs[0], dict):
+                v_payout = float(pkgs[0].get('vendor_payout', s.base_price))
+
+            services_list.append({
+                'id': s.id,
+                'title': s.title,
+                'description': s.description or '',
+                'category': cat_name,
+                'category_id': s.category.id if s.category else None,
+                'base_price': str(s.base_price),
+                'vendor_payout': str(v_payout),
+                'service_packages': pkgs,
+                'inclusions': s.inclusions or [],
+                'exclusions': s.exclusions or [],
+                'status': s.status,
+                'image_url': img_url,
+                'created_at': s.created_at.isoformat()
+            })
+        return JsonResponse({
+            'status': 'success',
+            'services': services_list,
+            'platform_config': platform_config
+        }, status=200)
+
+    elif request.method == 'POST':
+        try:
+            data = _parse_api_request(request)
+            title = data.get('title', '').strip()
+            if not title:
+                return JsonResponse({'status': 'error', 'message': 'Title is required.'}, status=400)
+            
+            # Extract price (handling both 'price' and 'base_price')
+            price_val = data.get('price') or data.get('base_price', 0.0)
+            try:
+                base_price = float(price_val)
+            except (ValueError, TypeError):
+                base_price = 0.0
+            
+            # Optional category
+            category_id = data.get('category_id') or data.get('category')
+            category = None
+            if category_id:
+                try:
+                    category = Category.objects.get(id=category_id)
+                except Category.DoesNotExist:
+                    try:
+                        category = Category.objects.filter(name__iexact=str(category_id).strip()).first()
+                    except Exception:
+                        pass
+
+            # Packages, Inclusions, Exclusions (parse from JSON strings if present)
+            import json
+            def parse_json_field(field_name):
+                val = data.get(field_name, '')
+                if isinstance(val, str) and val.strip():
+                    try:
+                        return json.loads(val)
+                    except json.JSONDecodeError:
+                        return []
+                elif isinstance(val, list):
+                    return val
+                return []
+
+            service_packages = parse_json_field('packages')
+            inclusions = parse_json_field('inclusions')
+            exclusions = parse_json_field('exclusions')
+
+            # Process packages with backend markup (cut % + GST)
+            updated_packages = []
+            if service_packages and isinstance(service_packages, list):
+                for p in service_packages:
+                    if isinstance(p, dict) and p.get('name'):
+                        try:
+                            raw_p = float(p.get('price', base_price))
+                        except (ValueError, TypeError):
+                            raw_p = base_price
+                        calc = gs.calculate_qs_customer_price(raw_p) if gs else {'customer_price': round(raw_p), 'vendor_payout': raw_p, 'commission': 0, 'total_tax': 0}
+                        updated_packages.append({
+                            'name': str(p.get('name', 'Standard Package')).strip(),
+                            'price': calc['customer_price'],        # Customer listed price
+                            'vendor_payout': calc['vendor_payout'],  # Vendor net payout
+                            'commission': calc.get('commission', 0),
+                            'tax': calc.get('total_tax', 0),
+                            'desc': str(p.get('desc', '')).strip()
+                        })
+
+            if not updated_packages:
+                calc = gs.calculate_qs_customer_price(base_price) if gs else {'customer_price': round(base_price), 'vendor_payout': base_price, 'commission': 0, 'total_tax': 0}
+                updated_packages = [{
+                    'name': 'Standard Service',
+                    'price': calc['customer_price'],
+                    'vendor_payout': calc['vendor_payout'],
+                    'commission': calc.get('commission', 0),
+                    'tax': calc.get('total_tax', 0),
+                    'desc': data.get('description', '')
+                }]
+
+            # Set starting listed base price from lowest customer package price
+            final_customer_price = min(p['price'] for p in updated_packages)
+
+            qs = QuickService.objects.create(
+                vendor=user,
+                title=title,
+                category=category,
+                base_price=final_customer_price,
+                description=data.get('description', ''),
+                service_packages=updated_packages,
+                inclusions=inclusions,
+                exclusions=exclusions,
+                status='active'
+            )
+            
+            # Handle Image Upload
+            if 'image' in request.FILES:
+                qs.image = request.FILES['image']
+                qs.save()
+
+            return JsonResponse({
+                'status': 'success',
+                'message': 'Service published successfully with automatic markup.',
+                'service_id': qs.id,
+                'customer_price': final_customer_price,
+                'vendor_payout': updated_packages[0]['vendor_payout']
+            }, status=201)
+        except Exception as e:
+            return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+    
+    return JsonResponse({'status': 'error', 'message': 'Method not allowed.'}, status=405)
+
+@csrf_exempt
+def vendor_service_suggestions_api(request):
+    """
+    API for Service Title/Description Suggestions by Category
+    URL: /api/vendor/service-suggestions/
+    Method: GET
+    Query: ?category=Electrical (or category_id=5)
+    Header: Authorization: Bearer <token>
+    """
+    if request.method != 'GET':
+        return JsonResponse({'status': 'error', 'message': 'Method not allowed. Use GET.'}, status=405)
+
+    user, err = _get_user_from_bearer_token(request)
+    if err:
+        return JsonResponse({'status': 'error', 'message': err}, status=401)
+
+    CATEGORY_SUGGESTIONS = {
+        'Electrical': [
+            {'title': 'Switchboard Repair', 'base_price': 149, 'description': 'Professional switchboard repair and wiring fix by certified electricians.'},
+            {'title': 'Ceiling Fan Installation', 'base_price': 199, 'description': 'Complete fan mounting, wiring and speed regulator setup.'},
+            {'title': 'LED Light & Tube Fix', 'base_price': 99, 'description': 'LED panel, tube light and CFL replacement with proper wiring.'},
+            {'title': 'MCB & Safety Check', 'base_price': 299, 'description': 'Full house MCB trip analysis, earthing test and safety audit.'},
+            {'title': 'Inverter & UPS Setup', 'base_price': 399, 'description': 'Inverter installation, battery check and backup wiring setup.'},
+        ],
+        'Plumbing': [
+            {'title': 'Tap & Mixer Repair', 'base_price': 149, 'description': 'Leaking tap fix, mixer cartridge replacement and joint sealing.'},
+            {'title': 'Pipe Leakage Repair', 'base_price': 249, 'description': 'Hidden and visible pipe leak detection, cutting and re-joining.'},
+            {'title': 'Toilet & Flush Repair', 'base_price': 299, 'description': 'Flush mechanism fix, seat replacement and drain cleaning.'},
+            {'title': 'Water Tank Cleaning', 'base_price': 799, 'description': 'Complete tank drain, scrub, disinfection and refill service.'},
+            {'title': 'Bathroom Fitting Install', 'base_price': 349, 'description': 'Shower, geyser, basin and accessory installation by experts.'},
+        ],
+        'Cleaning': [
+            {'title': 'Deep Home Cleaning', 'base_price': 1499, 'description': 'Room by room deep clean including kitchen, bathrooms and balconies.'},
+            {'title': 'Bathroom & Kitchen Cleaning', 'base_price': 699, 'description': 'Intensive scrub, tile stain removal and sanitization of wet areas.'},
+            {'title': 'Sofa & Carpet Shampoo', 'base_price': 599, 'description': 'Professional fabric shampooing, vacuuming and stain treatment.'},
+            {'title': 'Water Tank Cleaning', 'base_price': 799, 'description': 'Full drain, scrub, anti-bacterial wash and safe refill.'},
+            {'title': 'Office & Commercial Cleaning', 'base_price': 1999, 'description': 'Desk area, floor, glass and washroom deep cleaning for offices.'},
+        ],
+        'AC': [
+            {'title': 'AC Comprehensive Service', 'base_price': 499, 'description': 'Filter wash, gas pressure check and cooling coil cleaning.'},
+            {'title': 'AC Gas Refill & Top-Up', 'base_price': 1499, 'description': 'Refrigerant gas leak check, top-up and performance test.'},
+            {'title': 'AC Installation & Uninstall', 'base_price': 999, 'description': 'Wall mount, copper piping and drain pipe setup for split AC.'},
+            {'title': 'AC PCB & Compressor Repair', 'base_price': 899, 'description': 'Circuit board diagnosis, compressor check and parts replacement.'},
+        ],
+        'Painting': [
+            {'title': 'Room Wall Painting', 'base_price': 1999, 'description': 'Single or multi-room emulsion or distemper painting service.'},
+            {'title': 'Exterior Wall Painting', 'base_price': 4999, 'description': 'Weatherproof exterior paint with primer and putty finish.'},
+            {'title': 'Waterproofing & Sealing', 'base_price': 2499, 'description': 'Terrace, bathroom and wall waterproof coating application.'},
+        ],
+        'Carpentry': [
+            {'title': 'Furniture Assembly', 'base_price': 399, 'description': 'Bed, wardrobe, table and shelf assembly or disassembly.'},
+            {'title': 'Door & Lock Repair', 'base_price': 249, 'description': 'Door hinge fix, lock replacement and alignment adjustment.'},
+            {'title': 'Custom Woodwork', 'base_price': 799, 'description': 'Custom shelving, cabinet and wooden partition fabrication.'},
+        ],
+        '_default': [
+            {'title': 'Professional Home Service', 'base_price': 199, 'description': 'Verified and trained professionals for all home needs.'},
+            {'title': 'Premium Maintenance Visit', 'base_price': 349, 'description': 'Comprehensive inspection and maintenance by certified experts.'},
+            {'title': 'Emergency Repair Service', 'base_price': 299, 'description': 'Quick response repair and fix service at your doorstep.'},
+        ],
+    }
+
+    CATEGORY_INCLUSIONS = {
+        'Electrical': [
+            'Complete wiring inspection and safety diagnostic',
+            'Certified electrician with verified background',
+            'Post-service cleanup and debris removal',
+            '30 days Sugu protection warranty on workmanship',
+            'All basic components and consumables included',
+        ],
+        'Plumbing': [
+            'Full pipe and joint inspection before work',
+            'Licensed plumber with verified credentials',
+            'Leak-proof guarantee on all joints and fittings',
+            '30 days Sugu protection warranty on workmanship',
+            'Basic sealants, tape and washers included',
+        ],
+        'Cleaning': [
+            'Professional grade cleaning chemicals and tools',
+            'Trained and background-verified cleaning staff',
+            'Post-service sanitization and disinfection',
+            'Satisfaction guarantee or free re-clean within 48hrs',
+            'Eco-friendly and child-safe products used',
+        ],
+        'AC': [
+            'Complete AC diagnostic and performance check',
+            'Certified AC technician with brand training',
+            'Gas pressure test and cooling efficiency report',
+            '30 days Sugu protection warranty on service',
+            'Filter cleaning and drain pipe flush included',
+        ],
+        'Painting': [
+            'Surface preparation, putty and primer included',
+            'Trained painters with 3+ years experience',
+            'Furniture and floor protection during work',
+            '30 days Sugu protection warranty on finish',
+            'Final touch-up and cleanup after completion',
+        ],
+        'Carpentry': [
+            'Precision measurement and material assessment',
+            'Experienced carpenter with verified portfolio',
+            'Hardware, screws and basic fittings included',
+            '30 days Sugu protection warranty on work',
+            'Post-work cleanup and debris removal',
+        ],
+        '_default': [
+            'Complete diagnostic inspection of existing fittings and components',
+            'Execution by certified, background-checked professional',
+            'Post-service sanitization and thorough debris cleanup',
+            '30 days Sugu protection warranty on all workmanship',
+        ],
+    }
+
+    CATEGORY_EXCLUSIONS = {
+        'Electrical': ['Major civil masonry, pipe embedding or wall tearing included', 'Spare parts / extra hardware to be purchased or charged separately'],
+        'Plumbing': ['Major civil masonry or wall breaking', 'Fixtures and fittings cost not included'],
+        'Cleaning': ['Pest control treatment', 'Wall painting or polishing'],
+        'AC': ['Spare parts / compressor replacement cost', 'Stabilizer or electrical wiring changes'],
+        'Painting': ['Furniture shifting or moving', 'Structural repairs or plastering'],
+        'Carpentry': ['Raw material / wood cost', 'Glass or mirror installations'],
+        '_default': ['Major civil masonry, pipe embedding or wall tearing included', 'Spare parts / extra hardware to be purchased or charged separately'],
+    }
+
+    def get_cat_key(cat_name):
+        if not cat_name:
+            return '_default'
+        n = cat_name.lower()
+        if 'electr' in n: return 'Electrical'
+        if 'plumb' in n: return 'Plumbing'
+        if 'clean' in n: return 'Cleaning'
+        if 'ac' in n or 'appliance' in n or 'air' in n: return 'AC'
+        if 'paint' in n: return 'Painting'
+        if 'carpen' in n or 'wood' in n: return 'Carpentry'
+        return '_default'
+
+    # Resolve category from request
+    cat_name = request.GET.get('category', '').strip()
+    cat_id = request.GET.get('category_id', '').strip()
+
+    if cat_id:
+        try:
+            cat_obj = Category.objects.get(id=cat_id)
+            cat_name = cat_obj.name
+        except Category.DoesNotExist:
+            pass
+
+    key = get_cat_key(cat_name)
+    suggestions = CATEGORY_SUGGESTIONS.get(key, CATEGORY_SUGGESTIONS['_default'])
+    inclusions = CATEGORY_INCLUSIONS.get(key, CATEGORY_INCLUSIONS['_default'])
+    exclusions = CATEGORY_EXCLUSIONS.get(key, CATEGORY_EXCLUSIONS['_default'])
+
+    gs = GlobalSettings.objects.first()
+    platform_config = {
+        'commission_percent': gs.get_qs_commission_percent() if gs else 10.0,
+        'cgst_percent': gs.get_qs_cgst_percent() if gs else 9.0,
+        'sgst_percent': gs.get_qs_sgst_percent() if gs else 9.0,
+        'flat_fee': gs.get_qs_flat_fee() if gs else 0.0,
+        'tax_mode': gs.get_qs_tax_mode() if gs else 'commission_only',
+    }
+
+    return JsonResponse({
+        'status': 'success',
+        'category': cat_name or 'General',
+        'suggestions': suggestions,
+        'inclusions': inclusions,
+        'exclusions': exclusions,
+        'platform_config': platform_config
+    }, status=200)
+
+@csrf_exempt
+def vendor_bookings_api(request):
+    """
+    API for Vendor Bookings
+    URL: /api/vendor/bookings/
+    Method: GET
+    Header: Authorization: Bearer <token>
+    """
+    if request.method != 'GET':
+        return JsonResponse({'status': 'error', 'message': 'Method not allowed. Use GET.'}, status=405)
+
+    user, err = _get_user_from_bearer_token(request)
+    if err:
+        return JsonResponse({'status': 'error', 'message': err}, status=401)
+    
+    try:
+        bookings = ServiceBooking.objects.filter(vendor=user).select_related('customer', 'quick_service').order_by('-created_at')
+        bookings_list = []
+        for b in bookings:
+            bookings_list.append({
+                'id': b.id,
+                'service_title': b.quick_service.title if b.quick_service else 'Unknown Service',
+                'customer_name': b.customer.get_full_name() or b.customer.username,
+                'customer_phone': getattr(b.customer.user_profile, 'phone_number', '') if hasattr(b.customer, 'user_profile') else '',
+                'package_name': b.package_name,
+                'total_amount': str(b.total_amount),
+                'scheduled_date': str(b.scheduled_date),
+                'scheduled_time': str(b.scheduled_time) if b.scheduled_time else '',
+                'service_address': b.service_address,
+                'status': b.status,
+                'created_at': b.created_at.isoformat()
+            })
+        return JsonResponse({'status': 'success', 'bookings': bookings_list}, status=200)
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+@csrf_exempt
+@require_POST
+def vendor_booking_status_api(request, booking_id):
+    """
+    API for Vendor to Update Booking Status
+    URL: /api/vendor/bookings/<id>/status/
+    Method: POST
+    Header: Authorization: Bearer <token>
+    Body: {'status': 'accepted' | 'completed' | 'cancelled'}
+    """
+    user, err = _get_user_from_bearer_token(request)
+    if err:
+        return JsonResponse({'status': 'error', 'message': err}, status=401)
+    
+    try:
+        booking = ServiceBooking.objects.get(id=booking_id, vendor=user)
+        data = _parse_api_request(request)
+        new_status = data.get('status')
+        if new_status in dict(ServiceBooking.STATUS_CHOICES).keys():
+            booking.status = new_status
+            booking.save()
+            return JsonResponse({'status': 'success', 'message': f'Booking status updated to {new_status}.'}, status=200)
+        else:
+            return JsonResponse({'status': 'error', 'message': 'Invalid status.'}, status=400)
+    except ServiceBooking.DoesNotExist:
+        return JsonResponse({'status': 'error', 'message': 'Booking not found.'}, status=404)
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+
+@csrf_exempt
+def vendor_send_quotation_api(request):
+    """
+    API for Vendor to Submit a Quotation / Bid on an Opportunity (Job or QuickService).
+    URL: /api/vendor/send-quotation/
+    Method: POST
+    Header: Authorization: Bearer <token>
+    Body:
+      - job_id (optional, int): target Job ID
+      - quick_service_id (optional, int): target QuickService ID
+      - amount (required, float): Vendor quotation / proposed base amount
+      - estimated_time (optional, str): e.g. "2 hours", "1 day"
+      - message / proposal (optional, str): proposal text
+      - attachment (optional, file): file attachment
+    """
+    if request.method != 'POST':
+        return JsonResponse({'status': 'error', 'message': 'Method not allowed. Use POST.'}, status=405)
+
+    user, err = _get_user_from_bearer_token(request)
+    if err:
+        return JsonResponse({'status': 'error', 'message': err}, status=401)
+
+    if user.role != 'VENDOR' and not user.is_superuser:
+        return JsonResponse({'status': 'error', 'message': 'Access denied. Only registered vendors can submit quotations.'}, status=403)
+
+    try:
+        from decimal import Decimal
+        from .models import Job, QuickService, Bid, VendorProfile, GlobalSettings, BidCreditTransaction
+
+        data = _parse_api_request(request)
+
+        # Extract parameters (handling multipart POST and JSON)
+        job_id = data.get('job_id') or request.POST.get('job_id')
+        quick_service_id = data.get('quick_service_id') or request.POST.get('quick_service_id')
+
+        amount_raw = data.get('amount') or request.POST.get('amount')
+        if not amount_raw:
+            return JsonResponse({'status': 'error', 'message': 'Quotation amount is required.'}, status=400)
+
+        try:
+            amount_float = float(amount_raw)
+            if amount_float <= 0:
+                raise ValueError()
+        except (ValueError, TypeError):
+            return JsonResponse({'status': 'error', 'message': 'Please provide a valid quotation amount greater than 0.'}, status=400)
+
+        estimated_time = (data.get('estimated_time') or request.POST.get('estimated_time') or 'Standard delivery').strip()
+        proposal = (data.get('proposal') or data.get('message') or request.POST.get('proposal') or request.POST.get('message') or '').strip()
+        attachment = request.FILES.get('attachment')
+
+        # Check vendor profile & bid credits
+        vp = getattr(user, 'vendor_profile', None)
+        if not vp:
+            vp, _ = VendorProfile.objects.get_or_create(user=user)
+
+        available_credits = vp.available_bids if vp.available_bids is not None else 0
+        if available_credits <= 0:
+            return JsonResponse({
+                'status': 'error',
+                'message': 'Insufficient bid credits! You have 0 credits remaining. Please recharge your bid credits.'
+            }, status=400)
+
+        # Commission & Tax calculations from GlobalSettings
+        gs = GlobalSettings.objects.first()
+        comm_pct = Decimal(str(gs.platform_commission_percent if gs and gs.platform_commission_percent is not None else '10.00'))
+        cgst_pct = Decimal(str(gs.cgst_percent if gs and gs.cgst_percent is not None else '9.00'))
+        sgst_pct = Decimal(str(gs.sgst_percent if gs and gs.sgst_percent is not None else '9.00'))
+        flat_fee = Decimal(str(gs.platform_flat_fee if gs and gs.platform_flat_fee is not None else '0.00'))
+        tax_mode = gs.tax_calculation_mode if gs and gs.tax_calculation_mode else 'commission_only'
+
+        vendor_base = Decimal(str(amount_float)).quantize(Decimal('0.01'))
+        comm_amount = ((vendor_base * comm_pct) / Decimal('100.00') + flat_fee).quantize(Decimal('0.01'))
+
+        if tax_mode == 'commission_only':
+            cgst_amount = ((comm_amount * cgst_pct) / Decimal('100.00')).quantize(Decimal('0.01'))
+            sgst_amount = ((comm_amount * sgst_pct) / Decimal('100.00')).quantize(Decimal('0.01'))
+        else:
+            taxable_base = vendor_base + comm_amount
+            cgst_amount = ((taxable_base * cgst_pct) / Decimal('100.00')).quantize(Decimal('0.01'))
+            sgst_amount = ((taxable_base * sgst_pct) / Decimal('100.00')).quantize(Decimal('0.01'))
+
+        total_customer = (vendor_base + comm_amount + cgst_amount + sgst_amount).quantize(Decimal('0.01'))
+
+        job = None
+        qs = None
+
+        if job_id:
+            try:
+                job = Job.objects.get(id=int(job_id))
+            except (Job.DoesNotExist, ValueError):
+                return JsonResponse({'status': 'error', 'message': f'Job #{job_id} not found.'}, status=404)
+
+            # Validations on Job
+            if job.status not in ['open', 'Open']:
+                return JsonResponse({'status': 'error', 'message': f'This job is currently {job.status} and not accepting new bids.'}, status=400)
+
+            if job.max_bids and job.bids.count() >= job.max_bids:
+                return JsonResponse({'status': 'error', 'message': f'This job has reached its maximum limit of {job.max_bids} bids.'}, status=400)
+
+            if job.min_bid_amount and amount_float < float(job.min_bid_amount):
+                return JsonResponse({'status': 'error', 'message': f'Minimum quotation amount allowed for this job is ₹{int(job.min_bid_amount):,}.'}, status=400)
+
+            if job.max_bid_amount and amount_float > float(job.max_bid_amount):
+                return JsonResponse({'status': 'error', 'message': f'Maximum quotation amount allowed for this job is ₹{int(job.max_bid_amount):,}.'}, status=400)
+
+            if Bid.objects.filter(job=job, vendor=user).exists():
+                return JsonResponse({'status': 'error', 'message': 'You have already submitted a quotation for this job.'}, status=400)
+
+        elif quick_service_id:
+            try:
+                qs = QuickService.objects.get(id=int(quick_service_id))
+            except (QuickService.DoesNotExist, ValueError):
+                return JsonResponse({'status': 'error', 'message': f'QuickService #{quick_service_id} not found.'}, status=404)
+
+            if Bid.objects.filter(quick_service=qs, vendor=user).exists():
+                return JsonResponse({'status': 'error', 'message': 'You have already submitted a quotation for this service request.'}, status=400)
+
+        else:
+            return JsonResponse({'status': 'error', 'message': 'Either job_id or quick_service_id must be provided.'}, status=400)
+
+        # Create the Bid / Quotation
+        bid = Bid.objects.create(
+            vendor=user,
+            job=job,
+            quick_service=qs,
+            amount=total_customer,
+            vendor_base_amount=vendor_base,
+            commission_percent_applied=comm_pct,
+            commission_amount=comm_amount,
+            cgst_percent_applied=cgst_pct,
+            cgst_amount=cgst_amount,
+            sgst_percent_applied=sgst_pct,
+            sgst_amount=sgst_amount,
+            flat_fee_amount=flat_fee,
+            total_customer_amount=total_customer,
+            estimated_time=estimated_time,
+            proposal=proposal,
+            message=proposal,
+            attachment=attachment,
+            status='submitted'
+        )
+
+        # Deduct 1 Bid Credit
+        vp.available_bids = max(0, available_credits - 1)
+        vp.save(update_fields=['available_bids'])
+
+        # Increment Job bids count if applicable
+        if job:
+            job.bids_count = job.bids.count()
+            job.save(update_fields=['bids_count'])
+
+        # Log Credit Transaction
+        target_title = job.title if job else (qs.title if qs else 'Service')
+        BidCreditTransaction.objects.create(
+            vendor=user,
+            transaction_type='used',
+            credits=-1,
+            description=f"Quotation placed on {target_title}",
+            related_job=job
+        )
+
+        return JsonResponse({
+            'status': 'success',
+            'message': f'Quotation of ₹{int(amount_float):,} submitted successfully! 1 credit deducted ({vp.available_bids} remaining).',
+            'bid_id': bid.id,
+            'remaining_credits': vp.available_bids,
+            'vendor_payout': float(vendor_base),
+            'customer_total': float(total_customer)
+        }, status=201)
+
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+
+def _serialize_bid_detail(bid, request=None):
+    """
+    Serializes a vendor Bid with all job details, customer contact, mini-map coordinates,
+    and submitted quotation breakdown.
+    """
+    now = timezone.now()
+    diff = now - bid.created_at
+    if diff.days == 0:
+        relative_date = f"Today, {bid.created_at.strftime('%I:%M %p')}"
+    elif diff.days == 1:
+        relative_date = "Yesterday"
+    else:
+        relative_date = f"{diff.days} days ago"
+
+    # Status mapping for Flutter tabs: pending, accepted, rejected
+    if bid.status == 'selected':
+        status_key = 'accepted'
+        status_label = 'Accepted'
+    elif bid.status == 'submitted':
+        status_key = 'pending'
+        status_label = 'Pending'
+    elif bid.status in ['rejected', 'withdrawn']:
+        status_key = 'rejected'
+        status_label = 'Rejected'
+    else:
+        status_key = bid.status
+        status_label = bid.status.title()
+
+    job = bid.job
+    qs = bid.quick_service
+
+    if job:
+        title = job.title
+        description = job.description or 'Professional service required. Inspection and execution by verified specialist.'
+        cat_name = _resolve_category_name(job.category, job.title)
+        image_url = _get_category_or_service_image(cat_name, title=job.title, request=request)
+        address = job.address or '56 Elm St, Kondapur'
+        locality = job.locality or 'Kondapur, Hyderabad'
+        pincode = job.pincode or '500084'
+        lat = float(job.latitude) if job.latitude is not None else 17.4699
+        lng = float(job.longitude) if job.longitude is not None else 78.3578
+        customer_user = job.user
+        customer_name = job.contact_name or (customer_user.get_full_name() if customer_user else '') or (customer_user.username if customer_user else 'Priya Sharma')
+        customer_phone = job.contact_mobile or (getattr(customer_user.user_profile, 'phone_number', '') if hasattr(customer_user, 'user_profile') else '') or '+91 98765 43210'
+        budget_val = float(job.budget) if job.budget else float(bid.amount)
+        preferred_start = job.preferred_start_date.strftime('%b %d, %Y') if job.preferred_start_date else 'Flexible / Immediate'
+        expected_comp = job.expected_completion.strftime('%b %d, %Y') if job.expected_completion else 'Same day'
+        scope_of_work = job.scope_of_work or ''
+        required_work = job.required_work or []
+        materials_details = job.materials_details or 'Standard materials and tools provided by technician.'
+        additional_reqs = job.additional_requirements or 'Customer requested verified professional with safety gear.'
+        job_status = job.status
+    elif qs:
+        title = qs.title
+        description = qs.description or 'Fast and reliable on-demand service.'
+        cat_name = _resolve_category_name(qs.category, qs.title)
+        image_url = _get_category_or_service_image(cat_name, title=qs.title, image_field=qs.image, image_url_str=getattr(qs, 'image_url', None), request=request)
+        address = '56 Elm St, Kondapur'
+        locality = 'Kondapur, Hyderabad'
+        pincode = '500084'
+        lat = 17.4699
+        lng = 78.3578
+        customer_user = None
+        customer_name = 'Priya Sharma'
+        customer_phone = '+91 98765 43210'
+        budget_val = float(qs.base_price) if qs.base_price else float(bid.amount)
+        preferred_start = 'Today'
+        expected_comp = 'Same day'
+        scope_of_work = ''
+        required_work = qs.inclusions or []
+        materials_details = 'Standard service kit included.'
+        additional_reqs = 'Please bring tools.'
+        job_status = qs.status
+    else:
+        title = 'Home Service'
+        description = 'Service requested by customer.'
+        cat_name = 'General'
+        image_url = 'https://images.unsplash.com/photo-1581578731548-c64695cc6952?w=800&fit=crop'
+        address = '56 Elm St, Kondapur'
+        locality = 'Kondapur, Hyderabad'
+        pincode = '500084'
+        lat = 17.4699
+        lng = 78.3578
+        customer_name = 'Priya Sharma'
+        customer_phone = '+91 98765 43210'
+        budget_val = float(bid.amount)
+        preferred_start = 'Today'
+        expected_comp = 'Within 2 hours'
+        scope_of_work = ''
+        required_work = []
+        materials_details = 'Standard materials.'
+        additional_reqs = ''
+        job_status = 'open'
+
+    base_payout = float(bid.vendor_base_amount) if bid.vendor_base_amount is not None else float(bid.amount)
+    total_cust = float(bid.total_customer_amount) if bid.total_customer_amount is not None else float(bid.amount)
+
+    return {
+        'id': bid.id,
+        'bid_id': bid.id,
+        'job_id': job.id if job else None,
+        'quick_service_id': qs.id if qs else None,
+        'title': title,
+        'category': cat_name,
+        'description': description,
+        'image_url': image_url,
+        'status': status_key,
+        'raw_status': bid.status,
+        'status_label': status_label,
+        'budget': f"₹{int(base_payout):,}",
+        'distance': '1.0 km',
+        'date': relative_date,
+        'created_at': bid.created_at.strftime('%b %d, %Y, %I:%M %p'),
+        'location': address,
+        # Mini-map and location coordinates
+        'map_data': {
+            'latitude': lat,
+            'longitude': lng,
+            'locality': locality,
+            'address': address,
+            'pincode': pincode,
+            'distance': '1.0 km',
+            'static_map_url': f"https://staticmap.openstreetmap.de/staticmap.php?center={lat},{lng}&zoom=15&size=600x300&markers={lat},{lng},ol-marker",
+            'google_maps_url': f"https://www.google.com/maps/search/?api=1&query={lat},{lng}"
+        },
+        # Customer Information & Chat Contact
+        'customer': {
+            'name': customer_name,
+            'phone': customer_phone,
+            'avatar': 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=120&h=120&fit=crop&crop=face',
+            'verified': True,
+            'rating': 4.9,
+            'total_bookings': 14
+        },
+        # Submitted Quotation Details
+        'submitted_quotation': {
+            'vendor_base_amount': base_payout,
+            'formatted_vendor_payout': f"₹{int(base_payout):,}",
+            'commission_percent': float(bid.commission_percent_applied or 10.0),
+            'commission_amount': float(bid.commission_amount or 0.0),
+            'cgst_percent': float(bid.cgst_percent_applied or 9.0),
+            'cgst_amount': float(bid.cgst_amount or 0.0),
+            'sgst_percent': float(bid.sgst_percent_applied or 9.0),
+            'sgst_amount': float(bid.sgst_amount or 0.0),
+            'flat_fee_amount': float(bid.flat_fee_amount or 0.0),
+            'total_customer_amount': total_cust,
+            'formatted_customer_total': f"₹{int(total_cust):,}",
+            'estimated_time': bid.estimated_time or 'Within 2 hours',
+            'proposal': bid.proposal or bid.message or 'I have verified experience and all necessary tools for this job.',
+            'message': bid.message or bid.proposal or '',
+            'attachment_url': bid.attachment.url if bid.attachment else None,
+            'submitted_at': bid.created_at.strftime('%b %d, %Y, %I:%M %p')
+        },
+        # Additional Job Specifications
+        'job_details': {
+            'customer_budget': f"₹{int(budget_val):,}",
+            'preferred_start_date': preferred_start,
+            'expected_completion': expected_comp,
+            'scope_of_work': scope_of_work,
+            'required_work': required_work,
+            'materials_details': materials_details,
+            'additional_requirements': additional_reqs,
+            'job_status': job_status
+        }
+    }
+
+
+@csrf_exempt
+def vendor_bids_api(request):
+    """
+    API for Vendor's Submitted Quotations / Bids
+    URL: /api/vendor/bids/
+    Method: GET
+    Query Params: ?status=pending|accepted|rejected (optional)
+    Header: Authorization: Bearer <token>
+    """
+    if request.method != 'GET':
+        return JsonResponse({'status': 'error', 'message': 'Method not allowed. Use GET.'}, status=405)
+
+    user, err = _get_user_from_bearer_token(request)
+    if err:
+        return JsonResponse({'status': 'error', 'message': err}, status=401)
+
+    try:
+        from .models import Bid
+        bids_qs = Bid.objects.filter(vendor=user).select_related('job', 'job__category', 'job__user', 'quick_service', 'quick_service__category').order_by('-created_at')
+
+        status_filter = request.GET.get('status', '').strip().lower()
+        if status_filter:
+            if status_filter == 'accepted':
+                bids_qs = bids_qs.filter(status='selected')
+            elif status_filter == 'pending':
+                bids_qs = bids_qs.filter(status='submitted')
+            elif status_filter == 'rejected':
+                bids_qs = bids_qs.filter(status__in=['rejected', 'withdrawn'])
+
+        serialized_bids = [_serialize_bid_detail(b, request=request) for b in bids_qs]
+
+        return JsonResponse({
+            'status': 'success',
+            'count': len(serialized_bids),
+            'bids': serialized_bids
+        }, status=200)
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+
+@csrf_exempt
+def vendor_bid_detail_api(request, bid_id):
+    """
+    API for Fetching Single Bid Details
+    URL: /api/vendor/bids/<bid_id>/
+    Method: GET
+    Header: Authorization: Bearer <token>
+    """
+    if request.method != 'GET':
+        return JsonResponse({'status': 'error', 'message': 'Method not allowed. Use GET.'}, status=405)
+
+    user, err = _get_user_from_bearer_token(request)
+    if err:
+        return JsonResponse({'status': 'error', 'message': err}, status=401)
+
+    try:
+        from .models import Bid
+        bid = Bid.objects.select_related('job', 'job__category', 'job__user', 'quick_service', 'quick_service__category').get(id=bid_id, vendor=user)
+        return JsonResponse({
+            'status': 'success',
+            'bid': _serialize_bid_detail(bid, request=request)
+        }, status=200)
+    except Bid.DoesNotExist:
+        return JsonResponse({'status': 'error', 'message': 'Quotation/Bid not found.'}, status=404)
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
 
 @csrf_exempt
 def book_service_api(request):

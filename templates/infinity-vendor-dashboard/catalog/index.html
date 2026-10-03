@@ -174,7 +174,7 @@
     }
     .pkg-grid-inputs {
       display: grid;
-      grid-template-columns: 1.5fr 1fr 1fr;
+      grid-template-columns: 1.5fr 1fr;
       gap: 12px;
       align-items: flex-end;
     }
@@ -813,12 +813,8 @@
                             <input type="text" name="package_name[]" class="input pkg-input-name" value="1 Point / Switch Fix" placeholder="e.g. 1 Point Fix" required oninput="updateLivePreview()">
                           </div>
                           <div>
-                            <label style="font-size:11px; font-weight:700; color:#64748b;">Selling Price (₹)</label>
+                            <label style="font-size:11px; font-weight:700; color:#64748b;">Your Base Price (Payout ₹)</label>
                             <input type="number" step="1" min="49" name="package_price[]" class="input pkg-input-price" value="149" placeholder="149" required oninput="handlePkgPriceChange(this)">
-                          </div>
-                          <div>
-                            <label style="font-size:11px; font-weight:700; color:#64748b;">Original Price (₹)</label>
-                            <input type="number" step="1" min="49" name="package_orig_price[]" class="input pkg-input-orig" value="229" placeholder="229" oninput="updateLivePreview()">
                           </div>
                         </div>
                         <div style="margin-top:8px;">
@@ -839,12 +835,8 @@
                             <input type="text" name="package_name[]" class="input pkg-input-name" value="3-5 Points Checkup" placeholder="e.g. 3-5 Points" required oninput="updateLivePreview()">
                           </div>
                           <div>
-                            <label style="font-size:11px; font-weight:700; color:#64748b;">Selling Price (₹)</label>
+                            <label style="font-size:11px; font-weight:700; color:#64748b;">Your Base Price (Payout ₹)</label>
                             <input type="number" step="1" min="49" name="package_price[]" class="input pkg-input-price" value="349" placeholder="349" required oninput="handlePkgPriceChange(this)">
-                          </div>
-                          <div>
-                            <label style="font-size:11px; font-weight:700; color:#64748b;">Original Price (₹)</label>
-                            <input type="number" step="1" min="49" name="package_orig_price[]" class="input pkg-input-orig" value="499" placeholder="499" oninput="updateLivePreview()">
                           </div>
                         </div>
                         <div style="margin-top:8px;">
@@ -865,12 +857,8 @@
                             <input type="text" name="package_name[]" class="input pkg-input-name" value="Full Safety MCB Check" placeholder="e.g. Full Safety" required oninput="updateLivePreview()">
                           </div>
                           <div>
-                            <label style="font-size:11px; font-weight:700; color:#64748b;">Selling Price (₹)</label>
+                            <label style="font-size:11px; font-weight:700; color:#64748b;">Your Base Price (Payout ₹)</label>
                             <input type="number" step="1" min="49" name="package_price[]" class="input pkg-input-price" value="599" placeholder="599" required oninput="handlePkgPriceChange(this)">
-                          </div>
-                          <div>
-                            <label style="font-size:11px; font-weight:700; color:#64748b;">Original Price (₹)</label>
-                            <input type="number" step="1" min="49" name="package_orig_price[]" class="input pkg-input-orig" value="899" placeholder="899" oninput="updateLivePreview()">
                           </div>
                         </div>
                         <div style="margin-top:8px;">
@@ -1151,6 +1139,7 @@
                     {% for pkg in srv.service_packages %}
                     <span class="scc-pkg-pill">
                       {{ pkg.name }}: <strong>₹{{ pkg.price|floatformat:"0" }}</strong>
+                      {% if pkg.vendor_payout %}<span style="color:#059669; font-size:10px; font-weight:600; margin-left:3px;">(Payout: ₹{{ pkg.vendor_payout|floatformat:"0" }})</span>{% endif %}
                     </span>
                     {% endfor %}
                   </div>
@@ -1165,7 +1154,7 @@
                   <!-- Footer Actions -->
                   <div class="scc-footer">
                     <div>
-                      <span style="font-size:11px; color:#64748b; display:block;">Starting from</span>
+                      <span style="font-size:11px; color:#64748b; display:block;">Starting Listed Price</span>
                       <strong style="font-size:17px; color:#0f172a;">₹{{ srv.base_price|floatformat:"0" }}</strong>
                     </div>
 
@@ -1488,19 +1477,14 @@
         inputsGrid.insertAdjacentElement('afterend', note);
       }
       note.innerHTML = `
-        <span><i class="fa-solid fa-calculator" style="margin-right:4px;"></i> Customer Price: <strong style="font-size:12px; color:#065f46;">₹${cp.customerPrice}</strong> <span style="color:#64748b; font-size:10px;">(Base ₹${Math.round(cp.vendorGets)} + Comm ₹${cp.commission} + GST ₹${cp.cgst + cp.sgst})</span></span>
+        <span><i class="fa-solid fa-calculator" style="margin-right:4px;"></i> Customer Listed Price: <strong style="font-size:12px; color:#065f46;">₹${cp.customerPrice}</strong> <span style="color:#64748b; font-size:10px;">(Base ₹${Math.round(cp.vendorGets)} + Comm ₹${cp.commission} + GST ₹${cp.cgst + cp.sgst})</span></span>
         <span style="font-size:10.5px; color:#065f46; font-weight:700;">Payout to you: ₹${Math.round(cp.vendorGets)}</span>
       `;
     }
 
-    // Package Price Change (Auto Calculate Original Price +35% and Card Breakdown)
+    // Package Price Change (Auto Calculates Customer Listed Price and Card Breakdown)
     function handlePkgPriceChange(input) {
       const card = input.closest('.pkg-card');
-      const origInput = card.querySelector('.pkg-input-orig');
-      const val = parseFloat(input.value) || 0;
-      if (val > 0) {
-        origInput.value = Math.round(val * 1.35);
-      }
       updateCardBreakdown(card);
       updateLivePreview();
     }
@@ -1533,12 +1517,8 @@
             <input type="text" name="package_name[]" class="input pkg-input-name" value="${tierName} Package" placeholder="e.g. ${tierName}" required oninput="updateLivePreview()">
           </div>
           <div>
-            <label style="font-size:11px; font-weight:700; color:#64748b;">Selling Price (₹)</label>
+            <label style="font-size:11px; font-weight:700; color:#64748b;">Your Base Price (Payout ₹)</label>
             <input type="number" step="1" min="49" name="package_price[]" class="input pkg-input-price" value="${defaultPrice}" placeholder="${defaultPrice}" required oninput="handlePkgPriceChange(this)">
-          </div>
-          <div>
-            <label style="font-size:11px; font-weight:700; color:#64748b;">Original Price (₹)</label>
-            <input type="number" step="1" min="49" name="package_orig_price[]" class="input pkg-input-orig" value="${Math.round(defaultPrice * 1.35)}" placeholder="Original" oninput="updateLivePreview()">
           </div>
         </div>
         <div style="margin-top:8px;">
@@ -1610,12 +1590,10 @@
       pkgCards.forEach(card => {
         const name = card.querySelector('.pkg-input-name').value.trim() || 'Service';
         const vendorPrice = parseFloat(card.querySelector('.pkg-input-price').value) || 149;
-        const vendorOrig = parseFloat(card.querySelector('.pkg-input-orig').value) || Math.round(vendorPrice * 1.35);
         const pDesc = card.querySelector('.pkg-input-desc').value.trim() || 'Standard procedure';
 
-        // Calculate final customer prices
+        // Calculate final customer price
         const cp = calcCustomerPrice(vendorPrice);
-        const origCp = calcCustomerPrice(vendorOrig);
 
         if (vendorPrice < minVendorPrice) minVendorPrice = vendorPrice;
         if (cp.customerPrice < minCustomerPrice) minCustomerPrice = cp.customerPrice;
@@ -1629,7 +1607,6 @@
             <div>
               <div class="rep-pkg-price-row">
                 <span class="rep-pkg-price">₹${cp.customerPrice}</span>
-                <span class="rep-pkg-old">₹${origCp.customerPrice}</span>
               </div>
               <div style="font-size:9px; color:#94a3b8; text-align:right; margin-top:1px;">incl. taxes & fees</div>
               <div class="rep-pkg-add-btn">Add</div>

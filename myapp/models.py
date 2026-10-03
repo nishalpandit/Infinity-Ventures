@@ -610,11 +610,88 @@ class GlobalSettings(models.Model):
     free_starter_bids = models.IntegerField(default=5, help_text="Free starter bids given to newly registered vendors")
     min_bids_per_job = models.IntegerField(default=1, help_text="Bids deducted per job quotation proposal")
 
+    # Quick Services Dedicated Pricing & Tax Levers (Does not affect custom jobs or bidding)
+    qs_commission_percent = models.DecimalField(max_digits=5, decimal_places=2, default=10.00, help_text="Quick Services Platform Commission Cut %")
+    qs_cgst_percent = models.DecimalField(max_digits=5, decimal_places=2, default=9.00, help_text="Quick Services Central GST %")
+    qs_sgst_percent = models.DecimalField(max_digits=5, decimal_places=2, default=9.00, help_text="Quick Services State GST %")
+    qs_flat_fee = models.DecimalField(max_digits=8, decimal_places=2, default=0.00, help_text="Quick Services Platform Flat Fee in INR")
+    qs_tax_mode = models.CharField(
+        max_length=20,
+        choices=[('commission_only', 'Tax on Platform Cut Only'), ('total_invoice', 'Tax on Total Service Price')],
+        default='commission_only',
+        help_text="Choose whether GST applies to platform cut only or full service price for Quick Services"
+    )
+
     class Meta:
         verbose_name_plural = "Global Settings"
 
     def __str__(self):
         return "Platform Settings"
+
+    def get_qs_commission_percent(self):
+        if self.qs_commission_percent is not None:
+            return float(self.qs_commission_percent)
+        return float(self.platform_commission_percent or 10.0)
+
+    def get_qs_cgst_percent(self):
+        if self.qs_cgst_percent is not None:
+            return float(self.qs_cgst_percent)
+        return float(self.cgst_percent or 9.0)
+
+    def get_qs_sgst_percent(self):
+        if self.qs_sgst_percent is not None:
+            return float(self.qs_sgst_percent)
+        return float(self.sgst_percent or 9.0)
+
+    def get_qs_flat_fee(self):
+        if self.qs_flat_fee is not None:
+            return float(self.qs_flat_fee)
+        return float(self.platform_flat_fee or 0.0)
+
+    def get_qs_tax_mode(self):
+        return self.qs_tax_mode or self.tax_calculation_mode or 'commission_only'
+
+    def calculate_qs_customer_price(self, base_vendor_payout):
+        """
+        Calculates final customer listed price from vendor base payout.
+        Formula:
+          comm = base * (comm_pct / 100) + flat_fee
+          taxable = comm if tax_mode == 'commission_only' else (base + comm)
+          cgst = taxable * (cgst_pct / 100)
+          sgst = taxable * (sgst_pct / 100)
+          customer_price = round(base + comm + cgst + sgst)
+        """
+        try:
+            base = float(base_vendor_payout or 0.0)
+        except (ValueError, TypeError):
+            base = 0.0
+        
+        comm_pct = self.get_qs_commission_percent()
+        cgst_pct = self.get_qs_cgst_percent()
+        sgst_pct = self.get_qs_sgst_percent()
+        flat = self.get_qs_flat_fee()
+        mode = self.get_qs_tax_mode()
+
+        comm = (base * (comm_pct / 100.0)) + flat
+        taxable = comm if mode == 'commission_only' else (base + comm)
+        cgst = taxable * (cgst_pct / 100.0)
+        sgst = taxable * (sgst_pct / 100.0)
+        customer_price = round(base + comm + cgst + sgst)
+
+        return {
+            'vendor_payout': round(base, 2),
+            'commission': round(comm, 2),
+            'cgst': round(cgst, 2),
+            'sgst': round(sgst, 2),
+            'total_tax': round(cgst + sgst, 2),
+            'customer_price': customer_price,
+            'commission_percent': comm_pct,
+            'cgst_percent': cgst_pct,
+            'sgst_percent': sgst_pct,
+            'flat_fee': flat,
+            'tax_mode': mode
+        }
+
 
 
 class PlatformRevenueLedger(models.Model):
