@@ -179,6 +179,12 @@ urlpatterns = [
     path('api/user/address/update/', Api_views.update_customer_address_api, name='update_customer_address_api'),
     path('api/user/address/update', Api_views.update_customer_address_api),
 
+    # User Profile APIs
+    path('api/user/profile/', Api_views.user_profile_api, name='user_profile_api'),
+    path('api/user/profile', Api_views.user_profile_api),
+    path('api/user/profile/update/', Api_views.user_update_profile_api, name='user_update_profile_api'),
+    path('api/user/profile/update', Api_views.user_update_profile_api),
+
     # Service Booking API
     path('api/user/services/book/', Api_views.book_service_api, name='book_service_api'),
     path('api/user/services/book', Api_views.book_service_api),
@@ -240,6 +246,8 @@ urlpatterns = [
     path('api/vendor/jobs', Api_views.vendor_jobs_api),
     path('api/vendor/services/', Api_views.vendor_services_api, name='vendor_services_api'),
     path('api/vendor/services', Api_views.vendor_services_api),
+    path('api/vendor/services/<int:service_id>/', Api_views.vendor_services_api, name='vendor_service_detail_api'),
+    path('api/vendor/services/<int:service_id>', Api_views.vendor_services_api),
     path('api/vendor/service-suggestions/', Api_views.vendor_service_suggestions_api, name='vendor_service_suggestions_api'),
     path('api/vendor/service-suggestions', Api_views.vendor_service_suggestions_api),
     path('api/vendor/bookings/', Api_views.vendor_bookings_api, name='vendor_bookings_api'),
@@ -270,7 +278,13 @@ urlpatterns = [
     path('api/vendors/<int:vendor_id>/profile/', Api_views.vendor_public_profile_api, name='vendor_public_profile_api'),
     path('api/vendors/<int:vendor_id>/profile', Api_views.vendor_public_profile_api),
     path('api/categories/with-services/', Api_views.categories_with_services_api, name='categories_with_services_api'),
-    path('api/categories/with-services', Api_views.categories_with_services_api),
+    # Chat & Messaging APIs (Bearer Token Protected)
+    path('api/chat/conversations/', Api_views.chat_conversations_api, name='chat_conversations_api'),
+    path('api/chat/conversations', Api_views.chat_conversations_api),
+    path('api/chat/messages/<int:other_user_id>/', Api_views.chat_messages_api, name='chat_messages_api'),
+    path('api/chat/messages/<int:other_user_id>', Api_views.chat_messages_api),
+    path('api/chat/send/', Api_views.chat_send_message_api, name='chat_send_message_api'),
+    path('api/chat/send', Api_views.chat_send_message_api),
 
     path('api/admin/kyc/<int:kyc_id>/approve/', views.approve_kyc_view, name='approve_kyc_view'),
     path('api/admin/kyc/<int:kyc_id>/reject/', views.reject_kyc_view, name='reject_kyc_view'),

@@ -1,0 +1,596 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="Sugu User Portal - {{ service.title }}">
+  <title>{{ service.title }} · Sugu</title>
+  <link rel="stylesheet" href="/user-dashboard/assets/styles.css">
+  <script defer src="/user-dashboard/assets/app.js"></script>
+  <style>
+    .detail-layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 380px;
+      gap: 28px;
+      align-items: start;
+    }
+    @media(max-width: 1024px) {
+      .detail-layout {
+        grid-template-columns: 1fr;
+      }
+    }
+    .detail-hero-media {
+      position: relative;
+      width: 100%;
+      height: 320px;
+      background: #f1f5f9;
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.06);
+    }
+    .detail-hero-media img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    .detail-hero-placeholder {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, #eef2ff 0%, #e0e7ff 100%);
+      color: #6366f1;
+    }
+    .hero-badge-left {
+      position: absolute;
+      top: 16px;
+      left: 16px;
+      display: flex;
+      gap: 8px;
+      z-index: 2;
+    }
+    .hero-badge-right {
+      position: absolute;
+      top: 16px;
+      right: 16px;
+      z-index: 2;
+    }
+    .hero-badge-bottom {
+      position: absolute;
+      bottom: 16px;
+      left: 16px;
+      right: 16px;
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      z-index: 2;
+    }
+    .glass-chip {
+      background: rgba(15, 23, 42, 0.78);
+      color: #fff;
+      font-size: 12px;
+      font-weight: 600;
+      padding: 6px 14px;
+      border-radius: 30px;
+      backdrop-filter: blur(8px);
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      border: 1px solid rgba(255,255,255,0.15);
+    }
+    .provider-strip {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 16px;
+      background: #f8fafc;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      margin: 18px 0;
+    }
+    .provider-avatar {
+      width: 48px;
+      height: 48px;
+      border-radius: 12px;
+      background: linear-gradient(135deg, #6366f1, #3b82f6);
+      color: #fff;
+      display: grid;
+      place-items: center;
+      font-size: 18px;
+      font-weight: 750;
+      flex-shrink: 0;
+    }
+    .package-tier-card {
+      border: 1.5px solid var(--line);
+      border-radius: 14px;
+      padding: 20px;
+      background: #fff;
+      transition: all 0.2s ease;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      position: relative;
+    }
+    .package-tier-card:hover {
+      border-color: var(--primary);
+      box-shadow: 0 6px 20px rgba(91,91,214,0.08);
+      transform: translateY(-2px);
+    }
+    .package-tier-card.selected {
+      border-color: var(--primary);
+      background: #fafaff;
+      box-shadow: 0 0 0 2px var(--primary-soft);
+    }
+    .check-list-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      margin-bottom: 10px;
+      font-size: 13.5px;
+      color: #334155;
+    }
+    .check-icon {
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: #ecfdf5;
+      color: #059669;
+      display: grid;
+      place-items: center;
+      font-size: 11px;
+      font-weight: 800;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+    .cross-icon {
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: #fef2f2;
+      color: #dc2626;
+      display: grid;
+      place-items: center;
+      font-size: 11px;
+      font-weight: 800;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+    .guarantee-box {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 14px;
+      margin: 20px 0;
+    }
+    @media(max-width: 640px) {
+      .guarantee-box {
+        grid-template-columns: 1fr;
+      }
+    }
+    .guarantee-item {
+      padding: 14px 16px;
+      background: #f8fafc;
+      border-radius: 12px;
+      border: 1px solid var(--line);
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+    }
+    .guarantee-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: 9px;
+      background: var(--primary-soft);
+      color: var(--primary);
+      display: grid;
+      place-items: center;
+      font-size: 18px;
+      flex-shrink: 0;
+    }
+    .sticky-booking-card {
+      position: sticky;
+      top: 96px;
+      border-radius: 16px;
+      box-shadow: 0 8px 30px rgba(0,0,0,0.07);
+      border: 1px solid var(--line);
+      background: #fff;
+      overflow: hidden;
+    }
+    .sticky-booking-head {
+      padding: 22px 24px;
+      background: linear-gradient(135deg, #1e293b, #0f172a);
+      color: #fff;
+    }
+    .sticky-booking-body {
+      padding: 24px;
+    }
+  </style>
+</head>
+<body data-page="browse" data-title="Service Details" data-root="../../">
+  <div class="app-shell">
+    <div id="sidebar-root"></div>
+    <div class="workspace">
+      <div id="topbar-root"></div>
+      <main class="page">
+
+        <!-- Top Navigation Bar -->
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:22px; flex-wrap:wrap; gap:12px;">
+          <a href="/user/services/browse.html" class="btn btn-secondary btn-sm" style="font-weight:600;">
+            ← Back to Browse Services
+          </a>
+          <div style="font-size:12.5px; color:var(--muted); display:flex; align-items:center; gap:6px;">
+            <span>Browse</span> / <span>{{ service.category.name|default:"Quick Service" }}</span> / <strong style="color:var(--ink);">{{ service.title }}</strong>
+          </div>
+        </div>
+
+        <div class="detail-layout">
+          <!-- MAIN CONTENT COLUMN (LEFT) -->
+          <div class="stack" style="gap:24px;">
+
+            <!-- Hero Image Banner -->
+            <div class="detail-hero-media">
+              {% if service.image %}
+                <img src="{{ service.image.url }}" alt="{{ service.title }}">
+              {% elif service.image_url %}
+                <img src="{{ service.image_url }}" alt="{{ service.title }}">
+              {% else %}
+                <div class="detail-hero-placeholder">
+                  <span data-icon="bolt" style="font-size:48px; margin-bottom:8px;"></span>
+                  <strong style="font-size:16px;">Professional Home Service</strong>
+                </div>
+              {% endif %}
+
+              <div class="hero-badge-left">
+                <span class="glass-chip">
+                  <span data-icon="tag"></span> {{ service.category.name|default:"Home Service" }}
+                </span>
+              </div>
+
+              <div class="hero-badge-right">
+                <span class="badge badge-success" style="font-size:12px; padding:6px 12px; border-radius:20px; font-weight:700;">
+                  ● Available for Booking
+                </span>
+              </div>
+
+              <div class="hero-badge-bottom">
+                {% if service.locality %}
+                <span class="glass-chip">
+                  📍 {{ service.locality }}
+                </span>
+                {% endif %}
+                <span class="glass-chip">
+                  ⚡ {{ service.service_radius_km|default:"10" }} km live service radius
+                </span>
+              </div>
+            </div>
+
+            <!-- Service Title & Provider Info Card -->
+            <section class="card" style="padding:24px;">
+              <div class="eyebrow" style="color:var(--primary); font-weight:800; font-size:12px; margin-bottom:6px;">
+                {{ service.category.name|default:"EXPERT DOORSTEP SERVICE"|upper }}
+              </div>
+              <h1 style="font-size:26px; font-weight:800; margin:0 0 14px; line-height:1.3; color:#0f172a;">
+                {{ service.title }}
+              </h1>
+
+              <!-- Provider Profile Banner -->
+              <div class="provider-strip">
+                <div class="provider-avatar">
+                  {{ service.vendor.vendor_profile.company_name|default:service.vendor.username|slice:":1"|upper }}
+                </div>
+                <div style="flex:1; min-width:0;">
+                  <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                    <strong style="font-size:15px; color:#0f172a;">
+                      {{ service.vendor.vendor_profile.company_name|default:service.vendor.get_full_name|default:service.vendor.username }}
+                    </strong>
+                    <span class="badge badge-info" style="font-size:10.5px; padding:3px 8px;">
+                      ✓ Verified Service Partner
+                    </span>
+                  </div>
+                  <div style="font-size:12px; color:var(--muted); margin-top:3px; display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
+                    <span>⭐ <strong>{{ avg_rating|default:"4.9" }}</strong> ({{ review_count|default:"15" }} ratings)</span>
+                    {% if service.locality %}
+                    <span>📍 {{ service.locality }}</span>
+                    {% endif %}
+                    <span>🛡️ Sugu Certified</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Full Description -->
+              <div style="margin-top:20px;">
+                <h3 style="font-size:16px; font-weight:750; margin:0 0 10px; color:#1e293b;">About This Service</h3>
+                <div style="font-size:14px; line-height:1.7; color:#475467; white-space:pre-line;">
+                  {{ service.description|default:"Get fast, reliable, and professional doorstep service delivered by experienced and background-checked technicians. We follow strict safety standards and use genuine replacement components to ensure long-lasting quality and complete customer satisfaction." }}
+                </div>
+              </div>
+            </section>
+
+            <!-- Packages / Pricing Tiers -->
+            <section class="card" style="padding:24px;">
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:18px;">
+                <div>
+                  <h3 style="font-size:18px; font-weight:750; margin:0 0 4px; color:#0f172a;">Available Service Packages</h3>
+                  <p class="muted" style="margin:0; font-size:13px;">Choose the exact package tier tailored to your requirement</p>
+                </div>
+              </div>
+
+              <div style="display:grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap:16px;">
+                <!-- Base Service Tier -->
+                <div class="package-tier-card selected">
+                  <div>
+                    <span class="badge badge-purple" style="font-size:10px; margin-bottom:8px; font-weight:700;">DEFAULT TIER</span>
+                    <h4 style="font-size:16px; font-weight:750; margin:0 0 6px;">Base / Standard Service</h4>
+                    <p style="font-size:12.5px; color:var(--muted); margin:0 0 14px; line-height:1.4;">
+                      Comprehensive doorstep inspection, diagnosis, standard servicing, and testing.
+                    </p>
+                  </div>
+                  <div>
+                    <div style="font-size:20px; font-weight:800; color:#059669; margin-bottom:12px;">
+                      ₹{{ service.base_price|floatformat:"0" }}
+                    </div>
+                    <a href="/user/services/book.html?id={{ service.id }}&pkg=Base+Service&amount={{ service.base_price }}" class="btn btn-primary btn-sm" style="width:100%;">
+                      Book This Tier →
+                    </a>
+                  </div>
+                </div>
+
+                <!-- Custom Packages from Service Package List -->
+                {% if service.service_packages %}
+                  {% for pkg in service.service_packages %}
+                  <div class="package-tier-card">
+                    <div>
+                      <span class="badge badge-info" style="font-size:10px; margin-bottom:8px; font-weight:700;">TIER OPTION</span>
+                      <h4 style="font-size:16px; font-weight:750; margin:0 0 6px;">{{ pkg.name }}</h4>
+                      <p style="font-size:12.5px; color:var(--muted); margin:0 0 14px; line-height:1.4;">
+                        {{ pkg.description|default:"Specialized scope of work including parts and skilled labour." }}
+                      </p>
+                    </div>
+                    <div>
+                      <div style="font-size:20px; font-weight:800; color:#059669; margin-bottom:12px;">
+                        ₹{{ pkg.price }}
+                      </div>
+                      <a href="/user/services/book.html?id={{ service.id }}&pkg={{ pkg.name|urlencode }}&amount={{ pkg.price }}" class="btn btn-secondary btn-sm" style="width:100%;">
+                        Book This Tier →
+                      </a>
+                    </div>
+                  </div>
+                  {% endfor %}
+                {% endif %}
+              </div>
+            </section>
+
+            <!-- Inclusions & Exclusions -->
+            <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap:20px;">
+              <!-- Inclusions -->
+              <section class="card" style="padding:22px;">
+                <h3 style="font-size:16px; font-weight:750; margin:0 0 14px; color:#059669; display:flex; align-items:center; gap:8px;">
+                  <span style="font-size:18px;">✓</span> What's Included
+                </h3>
+                {% if service.inclusions %}
+                  {% for inc in service.inclusions %}
+                    <div class="check-list-item">
+                      <div class="check-icon">✓</div>
+                      <div>{{ inc }}</div>
+                    </div>
+                  {% endfor %}
+                {% else %}
+                  <div class="check-list-item">
+                    <div class="check-icon">✓</div>
+                    <div>Doorstep inspection & diagnosis by verified technician</div>
+                  </div>
+                  <div class="check-list-item">
+                    <div class="check-icon">✓</div>
+                    <div>Standard repair & installation labour included</div>
+                  </div>
+                  <div class="check-list-item">
+                    <div class="check-icon">✓</div>
+                    <div>Post-service cleanup and operation testing</div>
+                  </div>
+                  <div class="check-list-item">
+                    <div class="check-icon">✓</div>
+                    <div>30-day Sugu service guarantee protection</div>
+                  </div>
+                {% endif %}
+              </section>
+
+              <!-- Exclusions -->
+              <section class="card" style="padding:22px;">
+                <h3 style="font-size:16px; font-weight:750; margin:0 0 14px; color:#dc2626; display:flex; align-items:center; gap:8px;">
+                  <span style="font-size:18px;">✕</span> What's Excluded
+                </h3>
+                {% if service.exclusions %}
+                  {% for exc in service.exclusions %}
+                    <div class="check-list-item">
+                      <div class="cross-icon">✕</div>
+                      <div>{{ exc }}</div>
+                    </div>
+                  {% endfor %}
+                {% else %}
+                  <div class="check-list-item">
+                    <div class="cross-icon">✕</div>
+                    <div>Non-standard spare parts (billed transparently at MRP if needed)</div>
+                  </div>
+                  <div class="check-list-item">
+                    <div class="cross-icon">✕</div>
+                    <div>Masonry or structural architectural changes</div>
+                  </div>
+                  <div class="check-list-item">
+                    <div class="cross-icon">✕</div>
+                    <div>Pre-existing damages caused by unverified third parties</div>
+                  </div>
+                {% endif %}
+              </section>
+            </div>
+
+            <!-- Trust & Safety Guarantees -->
+            <section class="card" style="padding:24px;">
+              <h3 style="font-size:16px; font-weight:750; margin:0 0 14px; color:#0f172a;">The Sugu Trust & Safety Promise</h3>
+              <div class="guarantee-box">
+                <div class="guarantee-item">
+                  <div class="guarantee-icon">🛡️</div>
+                  <div>
+                    <strong style="font-size:13.5px; display:block; margin-bottom:2px; color:#0f172a;">30-Day Guarantee</strong>
+                    <span style="font-size:12px; color:var(--muted); line-height:1.4;">Free revisit and repair if any issue reoccurs within 30 days of service.</span>
+                  </div>
+                </div>
+                <div class="guarantee-item">
+                  <div class="guarantee-icon">👷</div>
+                  <div>
+                    <strong style="font-size:13.5px; display:block; margin-bottom:2px; color:#0f172a;">Verified Professionals</strong>
+                    <span style="font-size:12px; color:var(--muted); line-height:1.4;">Police background-verified, certified, and experienced technicians.</span>
+                  </div>
+                </div>
+                <div class="guarantee-item">
+                  <div class="guarantee-icon">💳</div>
+                  <div>
+                    <strong style="font-size:13.5px; display:block; margin-bottom:2px; color:#0f172a;">Transparent Pricing</strong>
+                    <span style="font-size:12px; color:var(--muted); line-height:1.4;">Fixed, upfront rates with no hidden doorstep fees or unexpected costs.</span>
+                  </div>
+                </div>
+                <div class="guarantee-item">
+                  <div class="guarantee-icon">📞</div>
+                  <div>
+                    <strong style="font-size:13.5px; display:block; margin-bottom:2px; color:#0f172a;">24/7 Priority Support</strong>
+                    <span style="font-size:12px; color:var(--muted); line-height:1.4;">Dedicated customer assistance team standing by throughout your service.</span>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <!-- Customer Reviews -->
+            <section class="card" style="padding:24px;">
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+                <h3 style="font-size:16px; font-weight:750; margin:0; color:#0f172a;">Verified Customer Feedback</h3>
+                <div style="font-size:13px; font-weight:700; color:#059669;">
+                  ★ {{ avg_rating|default:"4.9" }} Rating Overall
+                </div>
+              </div>
+
+              {% if reviews %}
+                <div class="stack" style="gap:14px;">
+                  {% for rev in reviews %}
+                  <div style="padding:14px; background:#f8fafc; border-radius:10px; border:1px solid var(--line);">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                      <strong style="font-size:13.5px;">{{ rev.customer.get_full_name|default:rev.customer.username }}</strong>
+                      <span style="color:#eab308; font-size:14px;">
+                        {% for i in "12345"|make_list %}
+                          {% if forloop.counter <= rev.rating %}★{% else %}☆{% endif %}
+                        {% endfor %}
+                      </span>
+                    </div>
+                    {% if rev.review_title %}
+                    <div style="font-weight:600; font-size:12.5px; color:#1e293b; margin-bottom:4px;">{{ rev.review_title }}</div>
+                    {% endif %}
+                    <p style="margin:0; font-size:12.5px; color:#475467; line-height:1.5;">{{ rev.comment }}</p>
+                    <div style="font-size:10.5px; color:var(--subtle); margin-top:6px;">{{ rev.created_at|date:"d M Y" }}</div>
+                  </div>
+                  {% endfor %}
+                </div>
+              {% else %}
+                <div style="padding:24px; text-align:center; background:#fbfcfe; border-radius:10px; border:1px dashed var(--line-strong);">
+                  <div style="font-size:24px; margin-bottom:6px;">⭐</div>
+                  <strong style="font-size:14px; display:block; color:#1e293b;">Verified Top Rated Partner</strong>
+                  <p style="font-size:12px; color:var(--muted); margin:4px 0 0;">This service maintains a 4.9+ star satisfaction rate across past appointments.</p>
+                </div>
+              {% endif %}
+            </section>
+
+          </div>
+
+          <!-- SIDEBAR COLUMN (RIGHT - STICKY BOOKING CARD) -->
+          <div>
+            <div class="sticky-booking-card">
+              <div class="sticky-booking-head">
+                <div style="font-size:11px; text-transform:uppercase; letter-spacing:1px; color:#94a3b8; font-weight:700;">Starting from</div>
+                <div style="display:flex; align-items:baseline; gap:8px; margin-top:2px;">
+                  <strong style="font-size:32px; font-weight:800; color:#10b981;" id="sidebar-display-price">₹{{ service.base_price|floatformat:"0" }}</strong>
+                  <span style="font-size:12px; color:#cbd5e1;">all taxes included</span>
+                </div>
+                <div style="font-size:12px; color:#94a3b8; margin-top:4px;">
+                  ✓ Doorstep delivery available today
+                </div>
+              </div>
+
+              <div class="sticky-booking-body">
+                <div style="margin-bottom:18px;">
+                  <label class="label" style="font-size:12px; font-weight:700; color:#334155; margin-bottom:8px; display:block;">Select Package Tier</label>
+                  <select id="quick-pkg-select" class="select" style="font-weight:600; height:44px;" onchange="updateSidebarPackage(this)">
+                    <option value="{{ service.base_price }}" data-name="Base Service" selected>
+                      Base Service — ₹{{ service.base_price|floatformat:"0" }}
+                    </option>
+                    {% if service.service_packages %}
+                      {% for pkg in service.service_packages %}
+                        <option value="{{ pkg.price }}" data-name="{{ pkg.name }}">
+                          {{ pkg.name }} — ₹{{ pkg.price }}
+                        </option>
+                      {% endfor %}
+                    {% endif %}
+                  </select>
+                </div>
+
+                <div style="background:#f8fafc; border-radius:10px; padding:14px; margin-bottom:20px; border:1px solid var(--line);">
+                  <div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:6px;">
+                    <span class="muted">Selected Tier</span>
+                    <strong id="sidebar-pkg-name" style="color:#0f172a;">Base Service</strong>
+                  </div>
+                  <div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:6px;">
+                    <span class="muted">Inspection Fee</span>
+                    <span style="color:#059669; font-weight:700;">Included FREE</span>
+                  </div>
+                  <div style="display:flex; justify-content:space-between; font-size:13px; padding-top:6px; border-top:1px dashed var(--line); font-weight:750;">
+                    <span>Total Estimated</span>
+                    <span id="sidebar-summary-price" style="color:#059669; font-size:15px;">₹{{ service.base_price|floatformat:"0" }}</span>
+                  </div>
+                </div>
+
+                <a id="btn-proceed-book" href="/user/services/book.html?id={{ service.id }}&pkg=Base+Service&amount={{ service.base_price }}" class="btn btn-primary btn-lg" style="width:100%; font-size:15px; font-weight:750; box-shadow:0 4px 14px rgba(91,91,214,0.3);">
+                  Proceed to Book Service →
+                </a>
+
+                <div style="margin-top:20px; display:flex; flex-direction:column; gap:10px; font-size:12px; color:var(--muted);">
+                  <div style="display:flex; align-items:center; gap:8px;">
+                    <span style="color:#10b981;">⚡</span> Doorstep arrival within 60–90 minutes
+                  </div>
+                  <div style="display:flex; align-items:center; gap:8px;">
+                    <span style="color:#3b82f6;">💵</span> Pay after service via UPI, Card, or Cash
+                  </div>
+                  <div style="display:flex; align-items:center; gap:8px;">
+                    <span style="color:#8b5cf6;">🔄</span> Free cancellation before vendor departure
+                  </div>
+                  <div style="display:flex; align-items:center; gap:8px;">
+                    <span style="color:#10b981;">🛡️</span> Covered under Sugu 30-Day Guarantee
+                  </div>
+                </div>
+
+                {% if service.locality %}
+                <div style="margin-top:18px; padding-top:14px; border-top:1px solid var(--line); font-size:11.5px; color:var(--muted); text-align:center;">
+                  📍 Servicing <strong>{{ service.locality }}</strong> & surrounding {{ service.service_radius_km|default:"10" }} km
+                </div>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </main>
+    </div>
+  </div>
+
+  <script>
+    function updateSidebarPackage(select) {
+      const price = select.value;
+      const opt = select.options[select.selectedIndex];
+      const name = opt.getAttribute('data-name');
+      
+      document.getElementById('sidebar-display-price').innerText = '₹' + price;
+      document.getElementById('sidebar-summary-price').innerText = '₹' + price;
+      document.getElementById('sidebar-pkg-name').innerText = name;
+      
+      const bookUrl = "/user/services/book.html?id={{ service.id }}&pkg=" + encodeURIComponent(name) + "&amount=" + encodeURIComponent(price);
+      document.getElementById('btn-proceed-book').setAttribute('href', bookUrl);
+    }
+  </script>
+</body>
+</html>

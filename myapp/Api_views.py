@@ -9,7 +9,7 @@ from django.contrib.auth import authenticate, login
 from django.contrib.auth import get_user_model
 from django.utils import timezone
 from django.db.models import Q
-from .models import UserProfile, VendorProfile, Category, Location, OTPVerification, AuthToken, Job, QuickService, VendorKYC, CustomerAddress, ServiceBooking
+from .models import UserProfile, VendorProfile, Category, Location, OTPVerification, AuthToken, Job, QuickService, VendorKYC, CustomerAddress, ServiceBooking, GlobalSettings, Message
 User = get_user_model()
 
 
@@ -3226,11 +3226,15 @@ def vendor_jobs_api(request):
         return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
 
 @csrf_exempt
-def vendor_services_api(request):
+def vendor_services_api(request, service_id=None):
     """
     API for Vendor Services (Catalog)
-    URL: /api/vendor/services/
-    Method: GET (list), POST (create)
+    URL: /api/vendor/services/ and /api/vendor/services/<int:service_id>/
+    Methods:
+      - GET: list vendor services (or single service detail)
+      - POST: create service OR action (edit_service, toggle_status, delete_service)
+      - PUT / PATCH: edit service
+      - DELETE: delete service
     Header: Authorization: Bearer <token>
     """
     user, err = _get_user_from_bearer_token(request)
@@ -3246,53 +3250,206 @@ def vendor_services_api(request):
         'tax_mode': gs.get_qs_tax_mode() if gs else 'commission_only',
     }
 
-    if request.method == 'GET':
-        services = QuickService.objects.filter(vendor=user).select_related('category').order_by('-created_at')
-        services_list = []
-        for s in services:
-            cat_name = _resolve_category_name(s.category, s.title)
-            img_url = _get_category_or_service_image(cat_name, title=s.title, image_field=s.image, image_url_str=s.image_url, request=request)
-            pkgs = s.service_packages or []
-            v_payout = float(s.base_price)
-            if pkgs and isinstance(pkgs, list) and len(pkgs) > 0 and isinstance(pkgs[0], dict):
-                v_payout = float(pkgs[0].get('vendor_payout', s.base_price))
+    def serialize_service(s):
+        cat_name = _resolve_category_name(s.category, s.title)
+        img_url = _get_category_or_service_image(cat_name, title=s.title, image_field=s.image, image_url_str=s.image_url, request=request)
+        pkgs = s.service_packages or []
+        v_payout = float(s.base_price)
+        if pkgs and isinstance(pkgs, list) and len(pkgs) > 0 and isinstance(pkgs[0], dict):
+            v_payout = float(pkgs[0].get('vendor_payout', s.base_price))
 
-            services_list.append({
-                'id': s.id,
-                'title': s.title,
-                'description': s.description or '',
-                'category': cat_name,
-                'category_id': s.category.id if s.category else None,
-                'base_price': str(s.base_price),
-                'vendor_payout': str(v_payout),
-                'service_packages': pkgs,
-                'inclusions': s.inclusions or [],
-                'exclusions': s.exclusions or [],
-                'status': s.status,
-                'image_url': img_url,
-                'created_at': s.created_at.isoformat()
-            })
+        return {
+            'id': s.id,
+            'title': s.title,
+            'description': s.description or '',
+            'category': cat_name,
+            'category_id': s.category.id if s.category else None,
+            'base_price': str(s.base_price),
+            'vendor_payout': str(v_payout),
+            'service_packages': pkgs,
+            'inclusions': s.inclusions or [],
+            'exclusions': s.exclusions or [],
+            'status': s.status,
+            'locality': s.locality or '',
+            'service_radius_km': float(s.service_radius_km) if s.service_radius_km else 10.0,
+            'image_url': img_url,
+            'created_at': s.created_at.isoformat()
+        }
+
+    # 1. GET Method
+    if request.method == 'GET':
+        if service_id:
+            s = QuickService.objects.filter(id=service_id, vendor=user).select_related('category').first()
+            if not s:
+                return JsonResponse({'status': 'error', 'message': 'Service not found.'}, status=404)
+            return JsonResponse({'status': 'success', 'service': serialize_service(s), 'platform_config': platform_config}, status=200)
+
+        services = QuickService.objects.filter(vendor=user).select_related('category').order_by('-created_at')
         return JsonResponse({
             'status': 'success',
-            'services': services_list,
+            'services': [serialize_service(s) for s in services],
             'platform_config': platform_config
         }, status=200)
 
-    elif request.method == 'POST':
-        try:
+    # 2. DELETE Method
+    if request.method == 'DELETE':
+        target_id = service_id or request.GET.get('service_id')
+        if not target_id:
             data = _parse_api_request(request)
+            target_id = data.get('service_id') or data.get('id')
+        if not target_id:
+            return JsonResponse({'status': 'error', 'message': 'service_id is required.'}, status=400)
+        
+        srv = QuickService.objects.filter(id=target_id, vendor=user).first()
+        if not srv:
+            return JsonResponse({'status': 'error', 'message': 'Service not found.'}, status=404)
+        srv.delete()
+        return JsonResponse({'status': 'success', 'message': 'Service deleted successfully.'}, status=200)
+
+    # 3. POST / PUT / PATCH Methods
+    if request.method in ['POST', 'PUT', 'PATCH']:
+        data = _parse_api_request(request)
+        action = data.get('action', '').strip().lower()
+
+        # Handle Action: delete_service
+        if action in ['delete_service', 'delete']:
+            target_id = service_id or data.get('service_id') or data.get('id')
+            if not target_id:
+                return JsonResponse({'status': 'error', 'message': 'service_id is required.'}, status=400)
+            srv = QuickService.objects.filter(id=target_id, vendor=user).first()
+            if not srv:
+                return JsonResponse({'status': 'error', 'message': 'Service not found.'}, status=404)
+            srv.delete()
+            return JsonResponse({'status': 'success', 'message': 'Service deleted successfully.'}, status=200)
+
+        # Handle Action: toggle_status
+        if action in ['toggle_status', 'status', 'update_status']:
+            target_id = service_id or data.get('service_id') or data.get('id')
+            new_status = data.get('status', '').strip().lower()
+            if not target_id:
+                return JsonResponse({'status': 'error', 'message': 'service_id is required.'}, status=400)
+            if new_status not in ['active', 'paused', 'draft']:
+                return JsonResponse({'status': 'error', 'message': 'Invalid status. Choose active, paused, or draft.'}, status=400)
+            
+            srv = QuickService.objects.filter(id=target_id, vendor=user).first()
+            if not srv:
+                return JsonResponse({'status': 'error', 'message': 'Service not found.'}, status=404)
+            srv.status = new_status
+            srv.save(update_fields=['status'])
+            return JsonResponse({
+                'status': 'success',
+                'message': f"Service '{srv.title}' status updated to {new_status}.",
+                'service_id': srv.id,
+                'new_status': srv.status
+            }, status=200)
+
+        # Helper to parse JSON fields safely
+        def parse_json_field(field_name):
+            val = data.get(field_name, '')
+            if isinstance(val, str) and val.strip():
+                try:
+                    return json.loads(val)
+                except Exception:
+                    return []
+            elif isinstance(val, list):
+                return val
+            return []
+
+        # Determine if this is an Edit or Create
+        is_edit = (request.method in ['PUT', 'PATCH']) or (action in ['edit_service', 'edit', 'update']) or (service_id is not None) or (data.get('service_id') and str(data.get('service_id')).isdigit())
+        edit_id = service_id or data.get('service_id') or data.get('id')
+
+        if is_edit and edit_id:
+            qs_obj = QuickService.objects.filter(id=edit_id, vendor=user).first()
+            if not qs_obj:
+                return JsonResponse({'status': 'error', 'message': 'Service not found or unauthorized.'}, status=404)
+            
+            title = data.get('title', qs_obj.title).strip()
+            if not title:
+                title = qs_obj.title
+            
+            category_id = data.get('category_id') or data.get('category')
+            if category_id:
+                try:
+                    qs_obj.category = Category.objects.get(id=category_id)
+                except Category.DoesNotExist:
+                    try:
+                        qs_obj.category = Category.objects.filter(name__iexact=str(category_id).strip()).first()
+                    except Exception:
+                        pass
+            
+            new_status = data.get('status', qs_obj.status).strip().lower()
+            if new_status in ['active', 'paused', 'draft']:
+                qs_obj.status = new_status
+            
+            if 'description' in data:
+                qs_obj.description = data.get('description', '').strip()
+            if 'locality' in data:
+                qs_obj.locality = data.get('locality', '').strip()
+            if 'service_radius_km' in data:
+                try:
+                    qs_obj.service_radius_km = float(data.get('service_radius_km'))
+                except (ValueError, TypeError):
+                    pass
+
+            # Packages
+            service_packages = parse_json_field('packages') or parse_json_field('service_packages')
+            if service_packages and isinstance(service_packages, list):
+                updated_packages = []
+                for p in service_packages:
+                    if isinstance(p, dict) and p.get('name'):
+                        raw_p = p.get('price') or p.get('vendor_payout', 0.0)
+                        try:
+                            raw_p = float(raw_p)
+                        except (ValueError, TypeError):
+                            raw_p = 0.0
+                        calc = gs.calculate_qs_customer_price(raw_p) if gs else {'customer_price': round(raw_p), 'vendor_payout': raw_p, 'commission': 0, 'total_tax': 0}
+                        updated_packages.append({
+                            'name': str(p.get('name', 'Package')).strip(),
+                            'price': calc['customer_price'],
+                            'vendor_payout': calc['vendor_payout'],
+                            'commission': calc.get('commission', 0),
+                            'tax': calc.get('total_tax', 0),
+                            'desc': str(p.get('desc', p.get('description', ''))).strip()
+                        })
+                if updated_packages:
+                    qs_obj.service_packages = updated_packages
+                    qs_obj.base_price = min(p['price'] for p in updated_packages)
+
+            # Inclusions / Exclusions
+            if 'inclusions' in data:
+                qs_obj.inclusions = parse_json_field('inclusions')
+            if 'exclusions' in data:
+                qs_obj.exclusions = parse_json_field('exclusions')
+
+            # Image
+            if 'image' in request.FILES:
+                qs_obj.image = request.FILES['image']
+            image_preset = data.get('image_preset') or data.get('image_url')
+            if image_preset:
+                qs_obj.image_url = image_preset
+
+            qs_obj.title = title
+            qs_obj.save()
+
+            return JsonResponse({
+                'status': 'success',
+                'message': 'Service updated successfully.',
+                'service': serialize_service(qs_obj)
+            }, status=200)
+
+        # Otherwise CREATE NEW SERVICE
+        try:
             title = data.get('title', '').strip()
             if not title:
                 return JsonResponse({'status': 'error', 'message': 'Title is required.'}, status=400)
             
-            # Extract price (handling both 'price' and 'base_price')
             price_val = data.get('price') or data.get('base_price', 0.0)
             try:
                 base_price = float(price_val)
             except (ValueError, TypeError):
                 base_price = 0.0
-            
-            # Optional category
+
             category_id = data.get('category_id') or data.get('category')
             category = None
             if category_id:
@@ -3304,40 +3461,27 @@ def vendor_services_api(request):
                     except Exception:
                         pass
 
-            # Packages, Inclusions, Exclusions (parse from JSON strings if present)
-            import json
-            def parse_json_field(field_name):
-                val = data.get(field_name, '')
-                if isinstance(val, str) and val.strip():
-                    try:
-                        return json.loads(val)
-                    except json.JSONDecodeError:
-                        return []
-                elif isinstance(val, list):
-                    return val
-                return []
-
-            service_packages = parse_json_field('packages')
+            service_packages = parse_json_field('packages') or parse_json_field('service_packages')
             inclusions = parse_json_field('inclusions')
             exclusions = parse_json_field('exclusions')
 
-            # Process packages with backend markup (cut % + GST)
             updated_packages = []
             if service_packages and isinstance(service_packages, list):
                 for p in service_packages:
                     if isinstance(p, dict) and p.get('name'):
+                        raw_p = p.get('price') or p.get('vendor_payout', base_price)
                         try:
-                            raw_p = float(p.get('price', base_price))
+                            raw_p = float(raw_p)
                         except (ValueError, TypeError):
                             raw_p = base_price
                         calc = gs.calculate_qs_customer_price(raw_p) if gs else {'customer_price': round(raw_p), 'vendor_payout': raw_p, 'commission': 0, 'total_tax': 0}
                         updated_packages.append({
                             'name': str(p.get('name', 'Standard Package')).strip(),
-                            'price': calc['customer_price'],        # Customer listed price
-                            'vendor_payout': calc['vendor_payout'],  # Vendor net payout
+                            'price': calc['customer_price'],
+                            'vendor_payout': calc['vendor_payout'],
                             'commission': calc.get('commission', 0),
                             'tax': calc.get('total_tax', 0),
-                            'desc': str(p.get('desc', '')).strip()
+                            'desc': str(p.get('desc', p.get('description', ''))).strip()
                         })
 
             if not updated_packages:
@@ -3351,8 +3495,19 @@ def vendor_services_api(request):
                     'desc': data.get('description', '')
                 }]
 
-            # Set starting listed base price from lowest customer package price
             final_customer_price = min(p['price'] for p in updated_packages)
+            status_val = data.get('status', 'active').strip().lower()
+            if status_val not in ['active', 'paused', 'draft']:
+                status_val = 'active'
+            
+            radius_val = 10.0
+            try:
+                if data.get('service_radius_km'):
+                    radius_val = float(data.get('service_radius_km'))
+            except (ValueError, TypeError):
+                radius_val = 10.0
+
+            image_url_val = data.get('image_preset') or data.get('image_url') or None
 
             qs = QuickService.objects.create(
                 vendor=user,
@@ -3360,13 +3515,15 @@ def vendor_services_api(request):
                 category=category,
                 base_price=final_customer_price,
                 description=data.get('description', ''),
+                locality=data.get('locality', '').strip(),
+                service_radius_km=radius_val,
                 service_packages=updated_packages,
                 inclusions=inclusions,
                 exclusions=exclusions,
-                status='active'
+                status=status_val,
+                image_url=image_url_val
             )
             
-            # Handle Image Upload
             if 'image' in request.FILES:
                 qs.image = request.FILES['image']
                 qs.save()
@@ -3375,12 +3532,11 @@ def vendor_services_api(request):
                 'status': 'success',
                 'message': 'Service published successfully with automatic markup.',
                 'service_id': qs.id,
-                'customer_price': final_customer_price,
-                'vendor_payout': updated_packages[0]['vendor_payout']
+                'service': serialize_service(qs)
             }, status=201)
         except Exception as e:
             return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
-    
+
     return JsonResponse({'status': 'error', 'message': 'Method not allowed.'}, status=405)
 
 @csrf_exempt
@@ -3570,16 +3726,46 @@ def vendor_bookings_api(request):
         bookings = ServiceBooking.objects.filter(vendor=user).select_related('customer', 'quick_service').order_by('-created_at')
         bookings_list = []
         for b in bookings:
+            # Parse GPS coordinates from service_address if present
+            lat, lng = None, None
+            clean_addr = b.service_address or ''
+            if b.service_address:
+                m = re.search(r'\[GPS:\s*([-\d.]+),\s*([-\d.]+)', b.service_address)
+                if m:
+                    lat, lng = m.group(1), m.group(2)
+                clean_addr = re.sub(r'\[GPS:[^\]]+\]', '', b.service_address).strip()
+            
+            # Map tracking URL
+            if lat and lng:
+                map_url = f"https://www.google.com/maps/search/?api=1&query={lat},{lng}"
+            elif clean_addr:
+                map_url = f"https://www.google.com/maps/search/?api=1&query={clean_addr.replace(' ', '+')}"
+            else:
+                map_url = ""
+
+            cust_phone = ''
+            if hasattr(b.customer, 'user_profile') and b.customer.user_profile:
+                cust_phone = b.customer.user_profile.phone_number or ''
+            if not cust_phone and hasattr(b.customer, 'phone_number'):
+                cust_phone = b.customer.phone_number or ''
+
             bookings_list.append({
                 'id': b.id,
                 'service_title': b.quick_service.title if b.quick_service else 'Unknown Service',
+                'customer_id': b.customer.id,
                 'customer_name': b.customer.get_full_name() or b.customer.username,
-                'customer_phone': getattr(b.customer.user_profile, 'phone_number', '') if hasattr(b.customer, 'user_profile') else '',
+                'customer_email': b.customer.email or '',
+                'customer_phone': cust_phone,
                 'package_name': b.package_name,
                 'total_amount': str(b.total_amount),
+                'total_price': str(b.total_amount),
                 'scheduled_date': str(b.scheduled_date),
                 'scheduled_time': str(b.scheduled_time) if b.scheduled_time else '',
                 'service_address': b.service_address,
+                'clean_address': clean_addr,
+                'latitude': lat,
+                'longitude': lng,
+                'map_url': map_url,
                 'status': b.status,
                 'created_at': b.created_at.isoformat()
             })
@@ -4205,3 +4391,409 @@ def handle_bid_action_api(request):
         bid.status = 'rejected'
         bid.save()
         return JsonResponse({'status': 'success', 'message': 'Bid rejected successfully.'})
+
+
+# =====================================================================
+# CHAT & MESSAGING APIS (BEARER TOKEN PROTECTED)
+# =====================================================================
+
+@csrf_exempt
+def chat_conversations_api(request):
+    """
+    API to retrieve list of active chat conversations for authenticated user.
+    URL: /api/chat/conversations/
+    Method: GET
+    Header: Authorization: Bearer <token>
+    """
+    if request.method != 'GET':
+        return JsonResponse({'status': 'error', 'message': 'Method not allowed. Use GET.'}, status=405)
+
+    user, err = _get_user_from_bearer_token(request)
+    if err:
+        return JsonResponse({'status': 'error', 'message': err}, status=401)
+
+    try:
+        # Find all distinct user IDs that have exchanged messages with this user
+        sent_to = set(Message.objects.filter(sender=user).values_list('receiver_id', flat=True))
+        received_from = set(Message.objects.filter(receiver=user).values_list('sender_id', flat=True))
+        partner_ids = sent_to.union(received_from)
+
+        # If user is a vendor, also include customers who have booked with them
+        if user.role == 'VENDOR':
+            customer_ids = set(ServiceBooking.objects.filter(vendor=user).values_list('customer_id', flat=True))
+            partner_ids = partner_ids.union(customer_ids)
+        elif user.role == 'CUSTOMER':
+            vendor_ids = set(ServiceBooking.objects.filter(customer=user).values_list('vendor_id', flat=True))
+            partner_ids = partner_ids.union(vendor_ids)
+
+        conversations = []
+        for pid in partner_ids:
+            if not pid or pid == user.id:
+                continue
+            partner = User.objects.filter(id=pid, is_active=True).first()
+            if not partner:
+                continue
+
+            # Most recent message between user and partner
+            last_msg = Message.objects.filter(
+                (Q(sender=user, receiver=partner) | Q(sender=partner, receiver=user))
+            ).order_by('-created_at').first()
+
+            # Unread count (messages sent by partner to current user that are unread)
+            unread_count = Message.objects.filter(
+                sender=partner, receiver=user, is_read=False
+            ).count()
+
+            # Avatar and Phone
+            avatar_url = ""
+            phone = ""
+            if partner.role == 'VENDOR' and hasattr(partner, 'vendor_profile') and partner.vendor_profile:
+                if partner.vendor_profile.profile_image:
+                    avatar_url = _build_absolute_image_url(request, partner.vendor_profile.profile_image)
+                phone = partner.vendor_profile.mobile or ''
+            elif hasattr(partner, 'user_profile') and partner.user_profile:
+                if partner.user_profile.profile_image:
+                    avatar_url = _build_absolute_image_url(request, partner.user_profile.profile_image)
+                phone = partner.user_profile.phone_number or ''
+
+            display_name = partner.get_full_name() or partner.username
+            if partner.role == 'VENDOR' and hasattr(partner, 'vendor_profile') and partner.vendor_profile and partner.vendor_profile.company_name:
+                display_name = partner.vendor_profile.company_name
+
+            # Service or booking title if applicable
+            job_title = ""
+            if last_msg and last_msg.quick_service:
+                job_title = last_msg.quick_service.title
+            elif last_msg and last_msg.job:
+                job_title = last_msg.job.title
+            else:
+                # Check recent booking
+                recent_booking = ServiceBooking.objects.filter(
+                    (Q(vendor=user, customer=partner) | Q(vendor=partner, customer=user))
+                ).select_related('quick_service').order_by('-created_at').first()
+                if recent_booking and recent_booking.quick_service:
+                    job_title = recent_booking.quick_service.title
+
+            last_message_text = last_msg.content if last_msg else "Tap to start conversation"
+            last_message_time = last_msg.created_at.strftime('%I:%M %p').lstrip('0') if last_msg else ""
+            last_message_iso = last_msg.created_at.isoformat() if last_msg else ""
+            sort_time = last_msg.created_at if last_msg else partner.date_joined
+
+            conversations.append({
+                'user_id': partner.id,
+                'name': display_name,
+                'phone': phone,
+                'avatar': avatar_url,
+                'role': partner.role,
+                'last_message': last_message_text,
+                'last_message_time': last_message_time,
+                'last_message_iso': last_message_iso,
+                'unread_count': unread_count,
+                'job_title': job_title,
+                '_sort_time': sort_time
+            })
+
+        # Sort by latest message / interaction
+        conversations.sort(key=lambda x: x['_sort_time'], reverse=True)
+        for c in conversations:
+            c.pop('_sort_time', None)
+
+        return JsonResponse({'status': 'success', 'conversations': conversations}, status=200)
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+
+@csrf_exempt
+def chat_messages_api(request, other_user_id):
+    """
+    API to fetch message history between authenticated user and other_user_id.
+    Also automatically marks incoming messages from other_user_id as read.
+    URL: /api/chat/messages/<other_user_id>/
+    Method: GET
+    Header: Authorization: Bearer <token>
+    """
+    if request.method != 'GET':
+        return JsonResponse({'status': 'error', 'message': 'Method not allowed. Use GET.'}, status=405)
+
+    user, err = _get_user_from_bearer_token(request)
+    if err:
+        return JsonResponse({'status': 'error', 'message': err}, status=401)
+
+    try:
+        partner = User.objects.filter(id=other_user_id).first()
+        if not partner:
+            return JsonResponse({'status': 'error', 'message': 'User not found.'}, status=404)
+
+        # Mark unread messages from other_user to current user as read
+        Message.objects.filter(sender=partner, receiver=user, is_read=False).update(is_read=True)
+
+        # Retrieve message history
+        messages_qs = Message.objects.filter(
+            (Q(sender=user, receiver=partner) | Q(sender=partner, receiver=user))
+        ).select_related('sender', 'receiver', 'quick_service', 'job').order_by('created_at')
+
+        messages_list = []
+        for m in messages_qs:
+            is_me = (m.sender_id == user.id)
+            messages_list.append({
+                'id': m.id,
+                'sender_id': m.sender_id,
+                'sender_name': m.sender.get_full_name() or m.sender.username,
+                'receiver_id': m.receiver_id,
+                'is_me': is_me,
+                'content': m.content,
+                'is_read': m.is_read,
+                'created_at': m.created_at.isoformat(),
+                'time_formatted': m.created_at.strftime('%I:%M %p').lstrip('0'),
+                'quick_service_id': m.quick_service_id,
+                'job_id': m.job_id
+            })
+
+        # Partner profile info
+        partner_avatar = ""
+        partner_phone = ""
+        if partner.role == 'VENDOR' and hasattr(partner, 'vendor_profile') and partner.vendor_profile:
+            if partner.vendor_profile.profile_image:
+                partner_avatar = _build_absolute_image_url(request, partner.vendor_profile.profile_image)
+            partner_phone = partner.vendor_profile.mobile or ''
+        elif hasattr(partner, 'user_profile') and partner.user_profile:
+            if partner.user_profile.profile_image:
+                partner_avatar = _build_absolute_image_url(request, partner.user_profile.profile_image)
+            partner_phone = partner.user_profile.phone_number or ''
+
+        partner_name = partner.get_full_name() or partner.username
+        if partner.role == 'VENDOR' and hasattr(partner, 'vendor_profile') and partner.vendor_profile and partner.vendor_profile.company_name:
+            partner_name = partner.vendor_profile.company_name
+
+        # Associated service / job info if any
+        service_title = ""
+        recent_booking = ServiceBooking.objects.filter(
+            (Q(vendor=user, customer=partner) | Q(vendor=partner, customer=user))
+        ).select_related('quick_service').order_by('-created_at').first()
+        if recent_booking and recent_booking.quick_service:
+            service_title = recent_booking.quick_service.title
+
+        return JsonResponse({
+            'status': 'success',
+            'partner': {
+                'id': partner.id,
+                'name': partner_name,
+                'phone': partner_phone,
+                'avatar': partner_avatar,
+                'role': partner.role,
+                'service_title': service_title,
+            },
+            'messages': messages_list
+        }, status=200)
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+
+@csrf_exempt
+@require_POST
+def chat_send_message_api(request):
+    """
+    API to send a chat message to another user.
+    URL: /api/chat/send/
+    Method: POST
+    Header: Authorization: Bearer <token>
+    Body: {
+        "receiver_id": int,
+        "content": str,
+        "quick_service_id": int (optional),
+        "job_id": int (optional)
+    }
+    """
+    user, err = _get_user_from_bearer_token(request)
+    if err:
+        return JsonResponse({'status': 'error', 'message': err}, status=401)
+
+    try:
+        data = _parse_api_request(request)
+        receiver_id = data.get('receiver_id')
+        content = (data.get('content') or data.get('message') or '').strip()
+        quick_service_id = data.get('quick_service_id')
+        job_id = data.get('job_id')
+
+        if not receiver_id:
+            return JsonResponse({'status': 'error', 'message': 'receiver_id is required.'}, status=400)
+
+        try:
+            receiver_id = int(receiver_id)
+        except (ValueError, TypeError):
+            return JsonResponse({'status': 'error', 'message': 'Invalid receiver_id.'}, status=400)
+
+        if not content:
+            return JsonResponse({'status': 'error', 'message': 'Message content cannot be empty.'}, status=400)
+
+        receiver = User.objects.filter(id=receiver_id).first()
+        if not receiver:
+            return JsonResponse({'status': 'error', 'message': 'Receiver user not found.'}, status=404)
+
+        if receiver.id == user.id:
+            return JsonResponse({'status': 'error', 'message': 'Cannot send message to yourself.'}, status=400)
+
+        qs_obj = None
+        if quick_service_id:
+            try:
+                qs_obj = QuickService.objects.filter(id=int(quick_service_id)).first()
+            except (ValueError, TypeError):
+                pass
+
+        job_obj = None
+        if job_id:
+            try:
+                job_obj = Job.objects.filter(id=int(job_id)).first()
+            except (ValueError, TypeError):
+                pass
+
+        msg = Message.objects.create(
+            sender=user,
+            receiver=receiver,
+            content=content,
+            quick_service=qs_obj,
+            job=job_obj,
+            is_read=False
+        )
+
+        # Broadcast via WebSocket
+        try:
+            from channels.layers import get_channel_layer
+            from asgiref.sync import async_to_sync
+            channel_layer = get_channel_layer()
+            user_ids = sorted([user.id, receiver.id])
+            room_group_name = f'chat_{user_ids[0]}_{user_ids[1]}'
+            async_to_sync(channel_layer.group_send)(
+                room_group_name,
+                {
+                    'type': 'chat_message',
+                    'message': msg.content,
+                    'sender_id': user.id,
+                    'sender_name': user.get_full_name() or user.username,
+                    'time': msg.created_at.strftime("%I:%M %p").lstrip('0')
+                }
+            )
+        except Exception as ws_err:
+            pass # ignore websocket errors, message is saved
+
+        return JsonResponse({
+            'status': 'success',
+            'message': 'Message sent successfully.',
+            'chat_message': {
+                'id': msg.id,
+                'sender_id': user.id,
+                'sender_name': user.get_full_name() or user.username,
+                'receiver_id': receiver.id,
+                'is_me': True,
+                'content': msg.content,
+                'is_read': msg.is_read,
+                'created_at': msg.created_at.isoformat(),
+                'time_formatted': msg.created_at.strftime('%I:%M %p').lstrip('0'),
+                'quick_service_id': msg.quick_service_id,
+                'job_id': msg.job_id
+            }
+        }, status=201)
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+# =====================================================================
+# USER PROFILE APIS (BEARER TOKEN PROTECTED)
+# =====================================================================
+
+@csrf_exempt
+def user_profile_api(request):
+    """
+    API for a User (Customer) to get their profile.
+    URL: /api/user/profile/
+    Method: GET
+    Header: Authorization: Bearer <token>
+    """
+    if request.method != 'GET':
+        return JsonResponse({'status': 'error', 'message': 'Method not allowed'}, status=405)
+
+    user, err = _get_user_from_bearer_token(request)
+    if err:
+        return JsonResponse({'status': 'error', 'message': err}, status=401)
+    
+    try:
+        profile = user.user_profile
+    except Exception:
+        profile = UserProfile.objects.create(user=user)
+
+    profile_img_url = ""
+    if profile.profile_image:
+        profile_img_url = _build_absolute_image_url(request, profile.profile_image)
+
+    return JsonResponse({
+        'status': 'success',
+        'profile': {
+            'first_name': user.first_name,
+            'last_name': user.last_name,
+            'email': user.email,
+            'phone_number': profile.phone_number or '',
+            'city': profile.city or '',
+            'state': profile.state or '',
+            'profile_image': profile_img_url,
+        }
+    })
+
+
+@csrf_exempt
+def user_update_profile_api(request):
+    """
+    API for a User (Customer) to update their profile.
+    URL: /api/user/profile/update/
+    Method: POST (multipart/form-data for image upload)
+    Header: Authorization: Bearer <token>
+    """
+    if request.method not in ['POST', 'PUT']:
+        return JsonResponse({'status': 'error', 'message': 'Method not allowed'}, status=405)
+
+    user, err = _get_user_from_bearer_token(request)
+    if err:
+        return JsonResponse({'status': 'error', 'message': err}, status=401)
+    
+    data = _parse_api_request(request)
+    
+    try:
+        profile = user.user_profile
+    except Exception:
+        profile = UserProfile.objects.create(user=user)
+
+    if 'first_name' in data:
+        user.first_name = data.get('first_name', '').strip()
+    if 'last_name' in data:
+        user.last_name = data.get('last_name', '').strip()
+    if 'email' in data:
+        user.email = data.get('email', '').strip()
+    user.save(update_fields=['first_name', 'last_name', 'email'])
+
+    if 'phone_number' in data:
+        profile.phone_number = data.get('phone_number', '').strip()
+    if 'city' in data:
+        profile.city = data.get('city', '').strip()
+    if 'state' in data:
+        profile.state = data.get('state', '').strip()
+        
+    if 'profile_image' in request.FILES:
+        profile.profile_image = request.FILES['profile_image']
+        
+    profile.save()
+    
+    profile_img_url = ""
+    if profile.profile_image:
+        profile_img_url = _build_absolute_image_url(request, profile.profile_image)
+
+    return JsonResponse({
+        'status': 'success',
+        'message': 'Profile updated successfully',
+        'profile': {
+            'first_name': user.first_name,
+            'last_name': user.last_name,
+            'email': user.email,
+            'phone_number': profile.phone_number or '',
+            'city': profile.city or '',
+            'state': profile.state or '',
+            'profile_image': profile_img_url,
+        }
+    })

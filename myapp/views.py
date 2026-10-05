@@ -3,6 +3,7 @@ from django.contrib.auth import authenticate, login, logout, get_user_model
 from django.contrib import messages
 from django.db.models import Q, Sum, Count, Avg, Prefetch
 import os
+import re
 import mimetypes
 from django.conf import settings
 from django.http import Http404, HttpResponse, JsonResponse
@@ -13,7 +14,7 @@ from .models import (
     QuickServiceCard, FeaturedProjectCard, PackageCard, Testimonial, TrustMetric,
     VendorWallet, WalletTransaction, PayoutRequest, VendorKYC,
     DisputeTicket, DisputeMessage, JobCompletionProof, ServiceReview, ServiceBooking,
-    BidCreditTransaction, BidPlan
+    BidCreditTransaction, BidPlan, CustomerAddress
 )
 
 User = get_user_model()
@@ -2159,20 +2160,94 @@ def dashboard_view(request, path=''):
             return redirect('/vendor/bookings/index.html')
 
         if request.user.is_authenticated:
-            context['my_bookings'] = ServiceBooking.objects.filter(vendor=request.user).select_related('customer', 'quick_service').order_by('-created_at')
+            v_bookings = ServiceBooking.objects.filter(vendor=request.user).select_related('customer', 'quick_service', 'quick_service__category').order_by('-created_at')
+            enhanced_v_bookings = []
+            for b in v_bookings:
+                lat, lng = None, None
+                clean_addr = b.service_address or ''
+                if b.service_address:
+                    m = re.search(r'\[GPS:\s*([-\d.]+),\s*([-\d.]+)', b.service_address)
+                    if m:
+                        lat, lng = m.group(1), m.group(2)
+                    clean_addr = re.sub(r'\[GPS:[^\]]+\]', '', b.service_address).strip()
+                if lat and lng:
+                    map_url = f"https://www.google.com/maps/search/?api=1&query={lat},{lng}"
+                elif clean_addr:
+                    map_url = f"https://www.google.com/maps/search/?api=1&query={clean_addr.replace(' ', '+')}"
+                else:
+                    map_url = ""
+                cust_phone = ''
+                if hasattr(b.customer, 'user_profile') and b.customer.user_profile and b.customer.user_profile.phone_number:
+                    cust_phone = b.customer.user_profile.phone_number
+                elif hasattr(b.customer, 'phone_number'):
+                    cust_phone = b.customer.phone_number or ''
+                b.latitude = lat
+                b.longitude = lng
+                b.clean_address = clean_addr
+                b.map_url = map_url
+                b.customer_phone = cust_phone or '—'
+                enhanced_v_bookings.append(b)
+            context['my_bookings'] = enhanced_v_bookings
     if path in ['user/services/browse', 'user/services/browse.html']:
         context['services'] = QuickService.objects.filter(status='active').select_related('vendor', 'vendor__vendor_profile', 'category', 'location').order_by('-created_at')
         context['categories'] = Category.objects.filter(status='active')
 
+    if path in ['user/services/detail', 'user/services/detail.html']:
+        qs_id = request.GET.get('id') or request.GET.get('service_id')
+        if qs_id:
+            try:
+                service = QuickService.objects.select_related('vendor', 'vendor__vendor_profile', 'category', 'location').get(id=qs_id)
+                context['service'] = service
+                
+                # Fetch published reviews for this service or vendor
+                reviews = ServiceReview.objects.filter(
+                    Q(quick_service=service) | Q(vendor=service.vendor),
+                    status='published'
+                ).select_related('customer').order_by('-created_at')[:8]
+                context['reviews'] = reviews
+                
+                review_count = reviews.count()
+                avg_rating = 4.9
+                if review_count > 0:
+                    total_stars = sum([r.rating for r in reviews])
+                    avg_rating = round(total_stars / review_count, 1)
+                context['avg_rating'] = avg_rating
+                context['review_count'] = review_count
+
+                # Related services in same category
+                context['related_services'] = QuickService.objects.filter(
+                    category=service.category, status='active'
+                ).exclude(id=service.id).select_related('vendor', 'vendor__vendor_profile')[:3]
+            except QuickService.DoesNotExist:
+                return redirect('/user/services/browse.html')
+        else:
+            return redirect('/user/services/browse.html')
+
     if path in ['user/services/book', 'user/services/book.html']:
         if request.method == 'POST' and request.user.is_authenticated:
             qs_id = request.POST.get('qs_id')
-            package_name = request.POST.get('package_name', 'Standard')
+            package_name = request.POST.get('package_name', 'Base Service')
             total_amount = request.POST.get('total_amount', 0)
             scheduled_date = request.POST.get('scheduled_date')
-            scheduled_time = request.POST.get('scheduled_time', '')
-            service_address = request.POST.get('service_address')
+            scheduled_time = request.POST.get('scheduled_time', '').strip() or None
             
+            # Combine full structured address and GPS coordinates
+            service_address = request.POST.get('service_address', '').strip()
+            house_no = request.POST.get('house_no', '').strip()
+            street = request.POST.get('street', '').strip()
+            landmark = request.POST.get('landmark', '').strip()
+            city = request.POST.get('city', '').strip()
+            pincode = request.POST.get('pincode', '').strip()
+            lat = request.POST.get('latitude', '').strip()
+            lng = request.POST.get('longitude', '').strip()
+
+            if not service_address and (house_no or street):
+                addr_parts = [p for p in [house_no, street, landmark, city, pincode] if p]
+                service_address = ", ".join(addr_parts)
+
+            if lat and lng and '[GPS:' not in service_address:
+                service_address = f"{service_address} [GPS: {lat}, {lng} | https://maps.google.com/?q={lat},{lng}]".strip()
+
             if qs_id and scheduled_date and service_address:
                 try:
                     qs = QuickService.objects.get(id=qs_id)
@@ -2187,7 +2262,7 @@ def dashboard_view(request, path=''):
                         service_address=service_address,
                         status='pending'
                     )
-                    messages.success(request, "Service booked successfully! Awaiting vendor acceptance.")
+                    messages.success(request, f"Service '{qs.title}' booked successfully! Awaiting vendor acceptance.")
                     return redirect('/user/services/my-bookings.html')
                 except QuickService.DoesNotExist:
                     pass
@@ -2195,15 +2270,58 @@ def dashboard_view(request, path=''):
         qs_id = request.GET.get('id') or request.GET.get('service_id')
         if qs_id:
             try:
-                context['service'] = QuickService.objects.select_related('vendor').get(id=qs_id)
-                context['selected_pkg'] = request.GET.get('pkg', 'Standard Service')
-                context['selected_amount'] = request.GET.get('amount')
+                service = QuickService.objects.select_related('vendor', 'vendor__vendor_profile', 'category', 'location').get(id=qs_id)
+                context['service'] = service
+                context['selected_pkg'] = request.GET.get('pkg', 'Base Service')
+                context['selected_amount'] = request.GET.get('amount', str(service.base_price))
+                if request.user.is_authenticated:
+                    context['user_addresses'] = CustomerAddress.objects.filter(user=request.user)
             except QuickService.DoesNotExist:
-                return redirect('/services/browse')
+                return redirect('/user/services/browse.html')
+        else:
+            return redirect('/user/services/browse.html')
 
     if path in ['user/services/my-bookings', 'user/services/my-bookings.html']:
         if request.user.is_authenticated:
-            context['my_bookings'] = ServiceBooking.objects.filter(customer=request.user).select_related('vendor', 'quick_service').order_by('-created_at')
+            c_bookings = ServiceBooking.objects.filter(customer=request.user).select_related(
+                'vendor', 'vendor__vendor_profile', 'quick_service', 'quick_service__category'
+            ).order_by('-created_at')
+            enhanced_c_bookings = []
+            for b in c_bookings:
+                lat, lng = None, None
+                clean_addr = b.service_address or ''
+                if b.service_address:
+                    m = re.search(r'\[GPS:\s*([-\d.]+),\s*([-\d.]+)', b.service_address)
+                    if m:
+                        lat, lng = m.group(1), m.group(2)
+                    clean_addr = re.sub(r'\[GPS:[^\]]+\]', '', b.service_address).strip()
+                if lat and lng:
+                    map_url = f"https://www.google.com/maps/search/?api=1&query={lat},{lng}"
+                elif clean_addr:
+                    map_url = f"https://www.google.com/maps/search/?api=1&query={clean_addr.replace(' ', '+')}"
+                else:
+                    map_url = ""
+
+                v_phone = ''
+                if hasattr(b.vendor, 'user_profile') and b.vendor.user_profile and b.vendor.user_profile.phone_number:
+                    v_phone = b.vendor.user_profile.phone_number
+                elif hasattr(b.vendor, 'vendor_profile') and b.vendor.vendor_profile:
+                    v_phone = getattr(b.vendor.vendor_profile, 'phone_number', '') or getattr(b.vendor.vendor_profile, 'emergency_contact', '')
+                if not v_phone and hasattr(b.vendor, 'phone_number'):
+                    v_phone = b.vendor.phone_number
+
+                v_company = ''
+                if hasattr(b.vendor, 'vendor_profile') and b.vendor.vendor_profile:
+                    v_company = b.vendor.vendor_profile.company_name or ''
+
+                b.latitude = lat
+                b.longitude = lng
+                b.clean_address = clean_addr
+                b.map_url = map_url
+                b.vendor_phone = v_phone or '—'
+                b.vendor_company = v_company or b.vendor.get_full_name() or b.vendor.username
+                enhanced_c_bookings.append(b)
+            context['my_bookings'] = enhanced_c_bookings
 
     if 'master/locations' in path:
         admin_state, is_area_admin, available_states, co_admins = get_admin_state_context(request)
