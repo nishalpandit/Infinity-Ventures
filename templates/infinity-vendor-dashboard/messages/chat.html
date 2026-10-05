@@ -101,7 +101,12 @@
     // Background Polling Fallback (sync every 2.5s)
     async function syncMessages() {
         try {
-            const res = await fetch('/api/chat/messages/' + vendorId + '/');
+            const res = await fetch('/api/chat/messages/' + vendorId + '/?t=' + Date.now(), {
+                headers: {
+                    'Cache-Control': 'no-cache',
+                    'Pragma': 'no-cache'
+                }
+            });
             if (res.ok) {
                 const data = await res.json();
                 if (data.status === 'success' && Array.isArray(data.messages)) {

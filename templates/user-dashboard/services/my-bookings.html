@@ -189,6 +189,13 @@
                         style="font-weight:700; gap:5px; padding:6px 12px;">
                         <span>👁️</span> View
                       </button>
+                      {% if booking.status == 'completed' %}
+                        {% if booking.user_review %}
+                        <div class="tiny" style="margin-top:6px; font-weight:700; color:#b45309;">★ {{ booking.user_review.rating }}/5 Reviewed</div>
+                        {% else %}
+                        <a href="/user/reviews/create.html?booking_id={{ booking.id }}" class="btn btn-primary btn-sm" style="margin-top:6px; padding:6px 12px; background:#d97706; border-color:#d97706; font-weight:700;">★ Rate &amp; Review</a>
+                        {% endif %}
+                      {% endif %}
                     </td>
                   </tr>
                 {% empty %}

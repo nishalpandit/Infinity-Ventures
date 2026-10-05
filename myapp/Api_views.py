@@ -14,7 +14,11 @@ from django.contrib.auth import get_user_model
 from django.utils import timezone
 from django.db import transaction
 from django.db.models import Q
-from .models import UserProfile, VendorProfile, Category, Location, OTPVerification, AuthToken, Job, QuickService, VendorKYC, CustomerAddress, ServiceBooking, GlobalSettings, Message, Bid, BidPlan, BidCreditTransaction, Subscription, VendorWallet, WalletTransaction, PlatformRevenueLedger
+from .models import UserProfile, VendorProfile, Category, Location, OTPVerification, AuthToken, Job, QuickService, VendorKYC, CustomerAddress, ServiceBooking, GlobalSettings, Message, Bid, BidPlan, BidCreditTransaction, Subscription, VendorWallet, WalletTransaction, PlatformRevenueLedger, ServiceReview
+from .review_services import (
+    ReviewError, UNLOCKED_BOOKING_STATUSES, booking_contact_unlocked,
+    mask_customer_name, submit_booking_review, vendor_review_summary,
+)
 User = get_user_model()
 
 
@@ -2156,8 +2160,10 @@ def _serialize_quick_service(request, qs, vendor_profile=None, reviews_avg=None,
             'location': vendor_profile.location if vendor_profile else '',
             'vendor_type': vendor_profile.vendor_type if vendor_profile else 'vendor',
             'about': vendor_profile.about if vendor_profile and vendor_profile.about else '',
+            'is_online': vendor_profile.is_online if vendor_profile else True,
         },
         'created_at': qs.created_at.strftime("%Y-%m-%d %H:%M:%S"),
+        'is_available': qs.status == 'active' and (vendor_profile.is_online if vendor_profile else True),
     }
 
 
@@ -2791,6 +2797,7 @@ def _serialize_vendor_profile_data(user, request=None):
         'available_bids': vp.available_bids if vp.available_bids is not None else 5,
         'kyc_status': kyc_status,
         'registered_date': vp.registered_date.strftime("%Y-%m-%d %H:%M:%S") if vp.registered_date else '',
+        'is_online': vp.is_online,
         'role': 'VENDOR'
     }
 
@@ -2942,6 +2949,45 @@ def vendor_edit_profile_api(request):
 
     vp, _ = VendorProfile.objects.get_or_create(user=user)
     return _handle_vendor_profile_update(request, user, vp)
+
+
+@csrf_exempt
+@require_POST
+def vendor_toggle_online_api(request):
+    """
+    API for Vendor to toggle their online status.
+    URL: /api/vendor/toggle-online/
+    Method: POST
+    Payload: {"is_online": true/false}
+    """
+    user, err = _get_user_from_bearer_token(request)
+    if err:
+        return JsonResponse({'status': 'error', 'message': err}, status=401)
+        
+    if user.role != 'VENDOR':
+        return JsonResponse({'status': 'error', 'message': 'Only vendors can toggle online status.'}, status=403)
+        
+    data = _parse_api_request(request)
+    is_online = data.get('is_online')
+    if is_online is None:
+        return JsonResponse({'status': 'error', 'message': 'is_online parameter is required.'}, status=400)
+        
+    vp, _ = VendorProfile.objects.get_or_create(user=user)
+    
+    # Handle both boolean and string versions of true/false
+    if isinstance(is_online, str):
+        is_online = is_online.lower() in ('true', '1', 'yes')
+    else:
+        is_online = bool(is_online)
+        
+    vp.is_online = is_online
+    vp.save(update_fields=['is_online'])
+    
+    return JsonResponse({
+        'status': 'success',
+        'is_online': vp.is_online,
+        'message': 'Status updated successfully'
+    })
 
 
 # =====================================================================
@@ -3733,50 +3779,61 @@ def vendor_bookings_api(request):
         return JsonResponse({'status': 'error', 'message': err}, status=401)
     
     try:
-        bookings = ServiceBooking.objects.filter(vendor=user).select_related('customer', 'quick_service').order_by('-created_at')
+        bookings = ServiceBooking.objects.filter(vendor=user).select_related('customer', 'quick_service', 'review').order_by('-created_at')
         bookings_list = []
         for b in bookings:
-            # Parse GPS coordinates from service_address if present
-            lat, lng = None, None
-            clean_addr = b.service_address or ''
-            if b.service_address:
-                m = re.search(r'\[GPS:\s*([-\d.]+),\s*([-\d.]+)', b.service_address)
-                if m:
-                    lat, lng = m.group(1), m.group(2)
-                clean_addr = re.sub(r'\[GPS:[^\]]+\]', '', b.service_address).strip()
-            
-            # Map tracking URL
-            if lat and lng:
-                map_url = f"https://www.google.com/maps/search/?api=1&query={lat},{lng}"
-            elif clean_addr:
-                map_url = f"https://www.google.com/maps/search/?api=1&query={clean_addr.replace(' ', '+')}"
-            else:
-                map_url = ""
+            # PRIVACY: customer identity & location are revealed only after the vendor accepts.
+            unlocked = booking_contact_unlocked(b)
 
+            lat, lng = None, None
+            clean_addr = ''
+            map_url = ''
             cust_phone = ''
-            if hasattr(b.customer, 'user_profile') and b.customer.user_profile:
-                cust_phone = b.customer.user_profile.phone_number or ''
-            if not cust_phone and hasattr(b.customer, 'phone_number'):
-                cust_phone = b.customer.phone_number or ''
+            full_address = ''
+            if unlocked:
+                full_address = b.service_address or ''
+                clean_addr = full_address
+                if full_address:
+                    m = re.search(r'\[GPS:\s*([-\d.]+),\s*([-\d.]+)', full_address)
+                    if m:
+                        lat, lng = m.group(1), m.group(2)
+                    clean_addr = re.sub(r'\[GPS:[^\]]+\]', '', full_address).strip()
+
+                # Map tracking URL
+                if lat and lng:
+                    map_url = f"https://www.google.com/maps/search/?api=1&query={lat},{lng}"
+                elif clean_addr:
+                    map_url = f"https://www.google.com/maps/search/?api=1&query={clean_addr.replace(' ', '+')}"
+
+                if hasattr(b.customer, 'user_profile') and b.customer.user_profile:
+                    cust_phone = b.customer.user_profile.phone_number or ''
+                if not cust_phone and hasattr(b.customer, 'phone_number'):
+                    cust_phone = b.customer.phone_number or ''
+
+            review = getattr(b, 'review', None)
 
             bookings_list.append({
                 'id': b.id,
                 'service_title': b.quick_service.title if b.quick_service else 'Unknown Service',
-                'customer_id': b.customer.id,
-                'customer_name': b.customer.get_full_name() or b.customer.username,
-                'customer_email': b.customer.email or '',
+                'details_locked': not unlocked,
+                'locked_message': '' if unlocked else 'Customer details and location are shared after you accept this booking.',
+                'customer_id': b.customer.id if unlocked else None,
+                'customer_name': (b.customer.get_full_name() or b.customer.username) if unlocked else 'Customer',
+                'customer_email': (b.customer.email or '') if unlocked else '',
                 'customer_phone': cust_phone,
                 'package_name': b.package_name,
                 'total_amount': str(b.total_amount),
                 'total_price': str(b.total_amount),
                 'scheduled_date': str(b.scheduled_date),
                 'scheduled_time': str(b.scheduled_time) if b.scheduled_time else '',
-                'service_address': b.service_address,
+                'service_address': full_address,
                 'clean_address': clean_addr,
                 'latitude': lat,
                 'longitude': lng,
                 'map_url': map_url,
                 'status': b.status,
+                'review_rating': review.rating if review else None,
+                'review_comment': review.comment if review else '',
                 'created_at': b.created_at.isoformat()
             })
         return JsonResponse({'status': 'success', 'bookings': bookings_list}, status=200)
@@ -3801,16 +3858,206 @@ def vendor_booking_status_api(request, booking_id):
         booking = ServiceBooking.objects.get(id=booking_id, vendor=user)
         data = _parse_api_request(request)
         new_status = data.get('status')
-        if new_status in dict(ServiceBooking.STATUS_CHOICES).keys():
-            booking.status = new_status
-            booking.save()
-            return JsonResponse({'status': 'success', 'message': f'Booking status updated to {new_status}.'}, status=200)
-        else:
+        if new_status not in dict(ServiceBooking.STATUS_CHOICES).keys():
             return JsonResponse({'status': 'error', 'message': 'Invalid status.'}, status=400)
+
+        if new_status == booking.status:
+            return JsonResponse({'status': 'success', 'message': f'Booking is already {new_status}.'}, status=200)
+
+        # 'completed' is only reachable through billing / payment confirmation so that
+        # payment, wallet settlement and customer reviews can never be skipped.
+        if new_status == 'completed':
+            return JsonResponse({
+                'status': 'error',
+                'message': 'Complete the job from the billing screen to collect payment.'
+            }, status=400)
+
+        allowed_transitions = {
+            'pending': ('accepted', 'cancelled'),
+            'accepted': ('cancelled',),
+        }
+        if new_status not in allowed_transitions.get(booking.status, ()):
+            return JsonResponse({
+                'status': 'error',
+                'message': f'A {booking.status} booking cannot be changed to {new_status}.'
+            }, status=400)
+
+        booking.status = new_status
+        booking.save()
+        return JsonResponse({'status': 'success', 'message': f'Booking status updated to {new_status}.'}, status=200)
     except ServiceBooking.DoesNotExist:
         return JsonResponse({'status': 'error', 'message': 'Booking not found.'}, status=404)
     except Exception as e:
         return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+
+# =====================================================================
+# REVIEWS & RATINGS
+# =====================================================================
+
+def _review_service_title(r):
+    if r.booking and r.booking.quick_service:
+        return r.booking.quick_service.title
+    if r.quick_service:
+        return r.quick_service.title
+    if r.job:
+        return r.job.title
+    return ''
+
+
+@csrf_exempt
+def vendor_reviews_api(request):
+    """
+    API for the vendor's "My Reviews" screen.
+    URL: /api/vendor/reviews/
+    Method: GET
+    Header: Authorization: Bearer <token>
+    Query: ?rating=1..5 (optional filter), ?limit=50&offset=0
+    Customer names are masked (e.g. "Rahul P.").
+    """
+    if request.method != 'GET':
+        return JsonResponse({'status': 'error', 'message': 'Method not allowed. Use GET.'}, status=405)
+
+    user, err = _get_user_from_bearer_token(request)
+    if err:
+        return JsonResponse({'status': 'error', 'message': err}, status=401)
+
+    try:
+        qs = ServiceReview.objects.filter(vendor=user, status='published').select_related(
+            'customer', 'booking', 'booking__quick_service', 'quick_service', 'job'
+        ).order_by('-created_at')
+
+        rating_filter = (request.GET.get('rating') or '').strip()
+        if rating_filter.isdigit() and 1 <= int(rating_filter) <= 5:
+            qs = qs.filter(rating=int(rating_filter))
+
+        try:
+            limit = max(1, min(int(request.GET.get('limit', 50)), 100))
+            offset = max(0, int(request.GET.get('offset', 0)))
+        except (ValueError, TypeError):
+            limit, offset = 50, 0
+
+        total_filtered = qs.count()
+        reviews = []
+        for r in qs[offset:offset + limit]:
+            reviews.append({
+                'id': r.id,
+                'booking_id': r.booking_id,
+                'customer_name': mask_customer_name(r.customer),
+                'rating': r.rating,
+                'title': r.review_title or '',
+                'comment': r.comment or '',
+                'image_url': _build_absolute_image_url(request, r.review_image) if r.review_image else '',
+                'service_title': _review_service_title(r),
+                'created_at': r.created_at.isoformat(),
+                'time_ago': _format_time_ago(r.created_at),
+            })
+
+        summary = vendor_review_summary(user)
+        return JsonResponse({
+            'status': 'success',
+            'summary': summary,
+            'count': total_filtered,
+            'reviews': reviews,
+        }, status=200)
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+
+@csrf_exempt
+@require_POST
+def user_submit_review_api(request):
+    """
+    Customer submits (or updates) a review for a COMPLETED booking.
+    URL: /api/user/reviews/submit/
+    Method: POST (JSON or multipart)
+    Header: Authorization: Bearer <token>
+    Body: booking_id, rating (1-5), comment (optional), title (optional), image (optional file)
+    """
+    user, err = _get_user_from_bearer_token(request)
+    if err:
+        return JsonResponse({'status': 'error', 'message': err}, status=401)
+
+    try:
+        data = _parse_api_request(request)
+        review, created = submit_booking_review(
+            customer=user,
+            booking_id=data.get('booking_id'),
+            rating=data.get('rating'),
+            comment=data.get('comment') or data.get('review') or '',
+            title=data.get('title') or data.get('review_title') or '',
+            image=request.FILES.get('image') or request.FILES.get('review_image'),
+        )
+        return JsonResponse({
+            'status': 'success',
+            'message': 'Thank you! Your review has been submitted.' if created else 'Your review has been updated.',
+            'review': {
+                'id': review.id,
+                'booking_id': review.booking_id,
+                'rating': review.rating,
+                'title': review.review_title or '',
+                'comment': review.comment or '',
+                'created_at': review.created_at.isoformat(),
+            },
+        }, status=201 if created else 200)
+    except ReviewError as e:
+        return JsonResponse({'status': 'error', 'message': e.message}, status=e.status)
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+
+@csrf_exempt
+def user_pending_reviews_api(request):
+    """
+    Completed bookings of the customer that still need a rating & review.
+    URL: /api/user/reviews/pending/
+    Method: GET
+    Header: Authorization: Bearer <token>
+    """
+    if request.method != 'GET':
+        return JsonResponse({'status': 'error', 'message': 'Method not allowed. Use GET.'}, status=405)
+
+    user, err = _get_user_from_bearer_token(request)
+    if err:
+        return JsonResponse({'status': 'error', 'message': err}, status=401)
+
+    try:
+        pending = ServiceBooking.objects.filter(
+            customer=user, status='completed', review__isnull=True
+        ).select_related('vendor', 'vendor__vendor_profile', 'quick_service').order_by('-completed_at', '-created_at')
+
+        items = []
+        for b in pending:
+            vendor_name = b.vendor.get_full_name() or b.vendor.username
+            vp = getattr(b.vendor, 'vendor_profile', None)
+            if vp and vp.company_name:
+                vendor_name = vp.company_name
+            items.append({
+                'booking_id': b.id,
+                'service_title': b.quick_service.title if b.quick_service else b.package_name,
+                'vendor_id': b.vendor_id,
+                'vendor_name': vendor_name,
+                'total_amount': str(b.total_amount),
+                'completed_at': b.completed_at.isoformat() if b.completed_at else None,
+            })
+        return JsonResponse({'status': 'success', 'count': len(items), 'pending_reviews': items}, status=200)
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+
+def _vendor_can_see_customer(vendor, customer):
+    """
+    A vendor may see a customer's contact details only once a booking with that
+    customer is accepted/completed, or a job of theirs was awarded to the vendor.
+    Non-vendor/customer pairs are unaffected.
+    """
+    if vendor.role != 'VENDOR' or customer.role != 'CUSTOMER':
+        return True
+    if ServiceBooking.objects.filter(vendor=vendor, customer=customer, status__in=UNLOCKED_BOOKING_STATUSES).exists():
+        return True
+    if Job.objects.filter(user=customer, assigned_vendor=vendor).exists():
+        return True
+    return Bid.objects.filter(job__user=customer, vendor=vendor, status__in=['selected', 'completed']).exists()
 
 
 @csrf_exempt
@@ -4251,7 +4498,14 @@ def book_service_api(request):
         }, status=400)
         
     try:
-        qs = QuickService.objects.get(id=qs_id)
+        qs = QuickService.objects.select_related('vendor', 'vendor__vendor_profile').get(id=qs_id)
+        
+        if hasattr(qs.vendor, 'vendor_profile') and not qs.vendor.vendor_profile.is_online:
+            return JsonResponse({
+                'status': 'error',
+                'message': 'This vendor is currently offline and not accepting bookings.'
+            }, status=400)
+            
         booking = ServiceBooking.objects.create(
             customer=user,
             vendor=qs.vendor,
@@ -4430,7 +4684,8 @@ def chat_conversations_api(request):
 
         # If user is a vendor, also include customers who have booked with them
         if user.role == 'VENDOR':
-            customer_ids = set(ServiceBooking.objects.filter(vendor=user).values_list('customer_id', flat=True))
+            # Only customers whose booking the vendor has accepted (or completed) are listed.
+            customer_ids = set(ServiceBooking.objects.filter(vendor=user, status__in=UNLOCKED_BOOKING_STATUSES).values_list('customer_id', flat=True))
             partner_ids = partner_ids.union(customer_ids)
         elif user.role == 'CUSTOMER':
             vendor_ids = set(ServiceBooking.objects.filter(customer=user).values_list('vendor_id', flat=True))
@@ -4465,6 +4720,9 @@ def chat_conversations_api(request):
                 if partner.user_profile.profile_image:
                     avatar_url = _build_absolute_image_url(request, partner.user_profile.profile_image)
                 phone = partner.user_profile.phone_number or ''
+
+            if not _vendor_can_see_customer(user, partner):
+                phone = ''
 
             display_name = partner.get_full_name() or partner.username
             if partner.role == 'VENDOR' and hasattr(partner, 'vendor_profile') and partner.vendor_profile and partner.vendor_profile.company_name:
@@ -4513,7 +4771,10 @@ def chat_conversations_api(request):
         return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
 
 
+from django.views.decorators.cache import never_cache
+
 @csrf_exempt
+@never_cache
 def chat_messages_api(request, other_user_id):
     """
     API to fetch message history between authenticated user and other_user_id.
@@ -4570,6 +4831,9 @@ def chat_messages_api(request, other_user_id):
             if partner.user_profile.profile_image:
                 partner_avatar = _build_absolute_image_url(request, partner.user_profile.profile_image)
             partner_phone = partner.user_profile.phone_number or ''
+
+        if not _vendor_can_see_customer(user, partner):
+            partner_phone = ''
 
         partner_name = partner.get_full_name() or partner.username
         if partner.role == 'VENDOR' and hasattr(partner, 'vendor_profile') and partner.vendor_profile and partner.vendor_profile.company_name:

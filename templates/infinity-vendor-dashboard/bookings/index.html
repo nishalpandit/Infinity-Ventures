@@ -113,15 +113,20 @@
                 </thead>
                 <tbody data-rows>
                 {% for booking in my_bookings %}
-                  <tr data-row data-search="{{ booking.id }} {{ booking.customer.get_full_name }} {{ booking.customer.username }} {{ booking.quick_service.title|default:'' }}">
+                  <tr data-row data-search="{{ booking.id }} {% if not booking.contact_locked %}{{ booking.customer.get_full_name }} {{ booking.customer.username }}{% endif %} {{ booking.quick_service.title|default:'' }}">
                     <td><strong>#{{ booking.id }}</strong></td>
                     <td>
                       <strong style="color:#0f172a; font-size:13.5px;">{{ booking.quick_service.title|default:"Quick Service" }}</strong><br>
                       <span class="tiny muted">{{ booking.package_name }}</span>
                     </td>
                     <td>
+                      {% if booking.contact_locked %}
+                      <strong>Customer</strong><br>
+                      <span class="tiny muted">🔒 Details shared after you accept</span>
+                      {% else %}
                       <strong>{{ booking.customer.get_full_name|default:booking.customer.username }}</strong><br>
                       <span class="tiny muted">📞 {{ booking.customer_phone }}</span>
+                      {% endif %}
                     </td>
                     <td>
                       {{ booking.scheduled_date|date:"d M Y" }}<br>
@@ -141,15 +146,15 @@
                           data-time="{{ booking.scheduled_time|default:'Flexible' }}"
                           data-status="{{ booking.status }}"
                           data-status-display="{{ booking.get_status_display }}"
-                          data-customer-name="{{ booking.customer.get_full_name|default:booking.customer.username }}"
-                          data-customer-phone="{{ booking.customer_phone }}"
-                          data-customer-email="{{ booking.customer.email|default:'' }}"
-                          data-customer-id="{{ booking.customer.id }}"
-                          data-address="{{ booking.service_address }}"
-                          data-clean-address="{{ booking.clean_address }}"
-                          data-lat="{{ booking.latitude|default:'' }}"
-                          data-lng="{{ booking.longitude|default:'' }}"
-                          data-map-url="{{ booking.map_url }}"
+                          data-customer-name="{% if booking.contact_locked %}Customer{% else %}{{ booking.customer.get_full_name|default:booking.customer.username }}{% endif %}"
+                          data-customer-phone="{% if not booking.contact_locked %}{{ booking.customer_phone }}{% endif %}"
+                          data-customer-email="{% if not booking.contact_locked %}{{ booking.customer.email|default:'' }}{% endif %}"
+                          data-customer-id="{% if not booking.contact_locked %}{{ booking.customer.id }}{% endif %}"
+                          data-address="{% if not booking.contact_locked %}{{ booking.service_address }}{% endif %}"
+                          data-clean-address="{% if not booking.contact_locked %}{{ booking.clean_address }}{% endif %}"
+                          data-lat="{% if not booking.contact_locked %}{{ booking.latitude|default:'' }}{% endif %}"
+                          data-lng="{% if not booking.contact_locked %}{{ booking.longitude|default:'' }}{% endif %}"
+                          data-map-url="{% if not booking.contact_locked %}{{ booking.map_url }}{% endif %}"
                           style="font-weight:700; padding:5px 10px;">
                           👁️ View
                         </button>
@@ -668,7 +673,7 @@
       }
 
       // Address & Map Tracking
-      document.getElementById('modal-service-address').innerText = cleanAddr;
+      document.getElementById('modal-service-address').innerText = cleanAddr || 'Address is shared after you accept this booking';
       const gpsBadge = document.getElementById('modal-gps-badge');
       const coordsText = document.getElementById('modal-coords-text');
 

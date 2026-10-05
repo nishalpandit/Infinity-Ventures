@@ -330,9 +330,15 @@
                     <div style="font-size:20px; font-weight:800; color:#059669; margin-bottom:12px;">
                       ₹{{ service.base_price|floatformat:"0" }}
                     </div>
+                    {% if service.vendor.vendor_profile.is_online %}
                     <a href="/user/services/book.html?id={{ service.id }}&pkg=Base+Service&amount={{ service.base_price }}" class="btn btn-primary btn-sm" style="width:100%;">
                       Book This Tier →
                     </a>
+                    {% else %}
+                    <button class="btn btn-secondary btn-sm" style="width:100%; cursor:not-allowed; opacity:0.7;" disabled>
+                      Vendor Offline
+                    </button>
+                    {% endif %}
                   </div>
                 </div>
 
@@ -351,9 +357,15 @@
                       <div style="font-size:20px; font-weight:800; color:#059669; margin-bottom:12px;">
                         ₹{{ pkg.price }}
                       </div>
+                      {% if service.vendor.vendor_profile.is_online %}
                       <a href="/user/services/book.html?id={{ service.id }}&pkg={{ pkg.name|urlencode }}&amount={{ pkg.price }}" class="btn btn-secondary btn-sm" style="width:100%;">
                         Book This Tier →
                       </a>
+                      {% else %}
+                      <button class="btn btn-secondary btn-sm" style="width:100%; cursor:not-allowed; opacity:0.7;" disabled>
+                        Vendor Offline
+                      </button>
+                      {% endif %}
                     </div>
                   </div>
                   {% endfor %}
@@ -545,9 +557,18 @@
                   </div>
                 </div>
 
+                {% if service.vendor.vendor_profile.is_online %}
                 <a id="btn-proceed-book" href="/user/services/book.html?id={{ service.id }}&pkg=Base+Service&amount={{ service.base_price }}" class="btn btn-primary btn-lg" style="width:100%; font-size:15px; font-weight:750; box-shadow:0 4px 14px rgba(91,91,214,0.3);">
                   Proceed to Book Service →
                 </a>
+                {% else %}
+                <button class="btn btn-secondary btn-lg" style="width:100%; font-size:15px; font-weight:750; cursor:not-allowed; opacity:0.7;" disabled>
+                  Vendor Currently Offline
+                </button>
+                <div style="text-align:center; font-size:11.5px; color:#ef4444; margin-top:8px; font-weight:600;">
+                  This vendor is not accepting new bookings right now.
+                </div>
+                {% endif %}
 
                 <div style="margin-top:20px; display:flex; flex-direction:column; gap:10px; font-size:12px; color:var(--muted);">
                   <div style="display:flex; align-items:center; gap:8px;">

@@ -17,6 +17,8 @@ from .models import (
     BidCreditTransaction, BidPlan, CustomerAddress
 )
 
+from .review_services import submit_booking_review, ReviewError
+
 User = get_user_model()
 
 import json
@@ -534,11 +536,33 @@ def dashboard_view(request, path=''):
             vendor_id = request.POST.get('vendor_id')
             booking_key = request.POST.get('booking_id') or request.POST.get('related_booking') or request.POST.get('related_item')
 
+            target_booking_id = None
             if booking_key:
-                if str(booking_key).startswith('job:'):
-                    job_id = str(booking_key).split(':')[1]
-                elif str(booking_key).startswith('qs:'):
-                    qs_id = str(booking_key).split(':')[1]
+                _bk = str(booking_key)
+                if _bk.startswith('job:'):
+                    job_id = _bk.split(':')[1]
+                elif _bk.startswith('booking:') or _bk.startswith('qs:'):
+                    target_booking_id = _bk.split(':')[1]
+                elif _bk.isdigit():
+                    target_booking_id = _bk
+            # Legacy links pass the booking id as quick_service_id
+            if not target_booking_id and qs_id and not job_id:
+                target_booking_id = qs_id
+
+            if target_booking_id:
+                try:
+                    _review, _created = submit_booking_review(
+                        customer=request.user,
+                        booking_id=target_booking_id,
+                        rating=rating_val,
+                        comment=comment,
+                        title=review_title,
+                        image=review_image,
+                    )
+                    messages.success(request, 'Thank you! Your review has been submitted.' if _created else 'Your review has been updated.')
+                except ReviewError as e:
+                    messages.error(request, e.message)
+                return redirect('/user/reviews/index.html')
 
             target_job = Job.objects.filter(id=job_id).first() if job_id else None
             target_qs = QuickService.objects.filter(id=qs_id).first() if qs_id else None
@@ -1550,7 +1574,7 @@ def dashboard_view(request, path=''):
 
         elif 'reviews/create' in path or path in ['user/reviews/create']:
             cand_jobs = Job.objects.filter(user=request.user, status__in=['selected', 'completed']).select_related('category', 'assigned_vendor', 'assigned_vendor__vendor_profile').order_by('-created_at')
-            cand_qs = ServiceBooking.objects.filter(customer=request.user, status__in=['selected', 'completed']).select_related('category').order_by('-created_at')
+            cand_qs = ServiceBooking.objects.filter(customer=request.user, status='completed').select_related('vendor', 'vendor__vendor_profile', 'quick_service', 'quick_service__category').order_by('-created_at')
 
             valid_cand_jobs = []
             for j in cand_jobs:
@@ -1566,17 +1590,15 @@ def dashboard_view(request, path=''):
 
             valid_cand_qs = []
             for q in cand_qs:
-                sel = Bid.objects.filter(quick_service=q, status__in=['selected', 'completed']).first()
-                if sel:
-                    q.review_vendor = sel.vendor
-                    q.has_reviewed = ServiceReview.objects.filter(customer=request.user, quick_service=q).exists()
-                    valid_cand_qs.append(q)
+                q.review_vendor = q.vendor
+                q.has_reviewed = ServiceReview.objects.filter(booking=q).exists()
+                valid_cand_qs.append(q)
 
             context['candidate_jobs'] = valid_cand_jobs
             context['candidate_quick_services'] = valid_cand_qs
 
             preselected_job_id = request.GET.get('job_id')
-            preselected_qs_id = request.GET.get('quick_service_id')
+            preselected_qs_id = request.GET.get('booking_id') or request.GET.get('quick_service_id')
             preselected_vendor_id = request.GET.get('vendor_id')
 
             target_job = None
@@ -1592,11 +1614,9 @@ def dashboard_view(request, path=''):
                         if sel:
                             target_vendor = sel.vendor
             elif preselected_qs_id:
-                target_qs = ServiceBooking.objects.filter(id=preselected_qs_id, customer=request.user).first()
+                target_qs = ServiceBooking.objects.filter(id=preselected_qs_id, customer=request.user, status='completed').select_related('vendor', 'vendor__vendor_profile', 'quick_service', 'quick_service__category').first()
                 if target_qs:
-                    sel = Bid.objects.filter(quick_service=target_qs, status__in=['selected', 'completed']).first()
-                    if sel:
-                        target_vendor = sel.vendor
+                    target_vendor = target_qs.vendor
 
             if not target_vendor and preselected_vendor_id:
                 target_vendor = User.objects.filter(id=preselected_vendor_id).first()
@@ -2147,6 +2167,13 @@ def dashboard_view(request, path=''):
                     cust_phone = b.customer.user_profile.phone_number
                 elif hasattr(b.customer, 'phone_number'):
                     cust_phone = b.customer.phone_number or ''
+                # PRIVACY: hide customer identity & location until the vendor accepts
+                b.contact_locked = b.status not in ('accepted', 'completed')
+                if b.contact_locked:
+                    lat = lng = None
+                    clean_addr = ''
+                    map_url = ''
+                    cust_phone = ''
                 b.latitude = lat
                 b.longitude = lng
                 b.clean_address = clean_addr
@@ -2216,7 +2243,11 @@ def dashboard_view(request, path=''):
 
             if qs_id and scheduled_date and service_address:
                 try:
-                    qs = QuickService.objects.get(id=qs_id)
+                    qs = QuickService.objects.select_related('vendor', 'vendor__vendor_profile').get(id=qs_id)
+                    if hasattr(qs.vendor, 'vendor_profile') and not qs.vendor.vendor_profile.is_online:
+                        messages.error(request, "This vendor is currently offline and not accepting bookings.")
+                        return redirect(f'/user/services/detail.html?id={qs_id}')
+                        
                     ServiceBooking.objects.create(
                         customer=request.user,
                         vendor=qs.vendor,
@@ -2250,7 +2281,7 @@ def dashboard_view(request, path=''):
     if path in ['user/services/my-bookings', 'user/services/my-bookings.html']:
         if request.user.is_authenticated:
             c_bookings = ServiceBooking.objects.filter(customer=request.user).select_related(
-                'vendor', 'vendor__vendor_profile', 'quick_service', 'quick_service__category'
+                'vendor', 'vendor__vendor_profile', 'quick_service', 'quick_service__category', 'review'
             ).order_by('-created_at')
             enhanced_c_bookings = []
             for b in c_bookings:
@@ -2286,6 +2317,7 @@ def dashboard_view(request, path=''):
                 b.map_url = map_url
                 b.vendor_phone = v_phone or '—'
                 b.vendor_company = v_company or b.vendor.get_full_name() or b.vendor.username
+                b.user_review = getattr(b, 'review', None)
                 enhanced_c_bookings.append(b)
             context['my_bookings'] = enhanced_c_bookings
 

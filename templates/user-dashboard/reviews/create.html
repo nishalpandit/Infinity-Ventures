@@ -73,9 +73,8 @@
 
                   {% elif preselected_qs %}
                   <div class="field full">
-                    <label>Selected Quick Service</label>
-                    <input type="hidden" name="quick_service_id" value="{{ preselected_qs.id }}">
-                    <input type="hidden" name="booking_id" value="qs:{{ preselected_qs.id }}">
+                    <label>Selected Booking</label>
+                    <input type="hidden" name="booking_id" value="booking:{{ preselected_qs.id }}">
                     {% if preselected_vendor %}
                     <input type="hidden" name="vendor_id" value="{{ preselected_vendor.id }}">
                     {% endif %}
@@ -83,8 +82,8 @@
                     <div class="booking-card-preview">
                       <div style="display:flex; justify-content:space-between; align-items:center;">
                         <div>
-                          <strong style="font-size:15px; color:#111827;">{{ preselected_qs.title }}</strong>
-                          <div class="small muted">Service ID: QS-{{ preselected_qs.id|stringformat:"04d" }} · {{ preselected_qs.category.name|default:"General" }}</div>
+                          <strong style="font-size:15px; color:#111827;">{{ preselected_qs.quick_service.title|default:preselected_qs.package_name }}</strong>
+                          <div class="small muted">Booking #{{ preselected_qs.id }} · {{ preselected_qs.quick_service.category.name|default:"General" }}</div>
                         </div>
                         <span class="badge badge-success">Completed</span>
                       </div>
@@ -119,8 +118,8 @@
                       {% if candidate_quick_services %}
                       <optgroup label="Quick Services">
                         {% for q in candidate_quick_services %}
-                        <option value="qs:{{ q.id }}" data-vendor="{{ q.review_vendor.vendor_profile.company_name|default:q.review_vendor.get_full_name|default:q.review_vendor.username }}" data-vendor-cat="{{ q.review_vendor.vendor_profile.category|default:'Technician' }}" data-vendor-init="{{ q.review_vendor.first_name|slice:':2'|upper|default:'VN' }}" data-reviewed="{% if q.has_reviewed %}1{% else %}0{% endif %}">
-                          QS-{{ q.id|stringformat:"04d" }}: {{ q.title }} ({{ q.review_vendor.vendor_profile.company_name|default:q.review_vendor.username }}){% if q.has_reviewed %} [Already Reviewed]{% endif %}
+                        <option value="booking:{{ q.id }}" data-vendor="{{ q.review_vendor.vendor_profile.company_name|default:q.review_vendor.get_full_name|default:q.review_vendor.username }}" data-vendor-cat="{{ q.review_vendor.vendor_profile.category|default:'Technician' }}" data-vendor-init="{{ q.review_vendor.first_name|slice:':2'|upper|default:'VN' }}" data-reviewed="{% if q.has_reviewed %}1{% else %}0{% endif %}">
+                          Booking #{{ q.id }}: {{ q.quick_service.title|default:q.package_name }} ({{ q.review_vendor.vendor_profile.company_name|default:q.review_vendor.username }}){% if q.has_reviewed %} [Already Reviewed]{% endif %}
                         </option>
                         {% endfor %}
                       </optgroup>

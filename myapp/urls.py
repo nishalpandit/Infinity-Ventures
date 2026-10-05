@@ -232,6 +232,8 @@ urlpatterns = [
     path('api/vendor/profile/edit', Api_views.vendor_edit_profile_api),
     path('api/vendor/profile/update/', Api_views.vendor_edit_profile_api, name='vendor_update_profile_api'),
     path('api/vendor/profile/update', Api_views.vendor_edit_profile_api),
+    path('api/vendor/toggle-online/', Api_views.vendor_toggle_online_api, name='vendor_toggle_online_api'),
+    path('api/vendor/toggle-online', Api_views.vendor_toggle_online_api),
 
     # Vendor Dashboard & Jobs APIs (Bearer Token Protected)
     path('api/vendor/dashboard/', Api_views.vendor_dashboard_api, name='vendor_dashboard_api'),
@@ -247,6 +249,12 @@ urlpatterns = [
     path('api/vendor/bookings/', Api_views.vendor_bookings_api, name='vendor_bookings_api'),
     path('api/vendor/bookings', Api_views.vendor_bookings_api),
     path('api/vendor/bookings/<int:booking_id>/status/', Api_views.vendor_booking_status_api, name='vendor_booking_status_api'),
+    path('api/vendor/reviews/', Api_views.vendor_reviews_api, name='vendor_reviews_api'),
+    path('api/vendor/reviews', Api_views.vendor_reviews_api),
+    path('api/user/reviews/submit/', Api_views.user_submit_review_api, name='user_submit_review_api'),
+    path('api/user/reviews/submit', Api_views.user_submit_review_api),
+    path('api/user/reviews/pending/', Api_views.user_pending_reviews_api, name='user_pending_reviews_api'),
+    path('api/user/reviews/pending', Api_views.user_pending_reviews_api),
     path('api/vendor/send-quotation/', Api_views.vendor_send_quotation_api, name='vendor_send_quotation_api'),
     path('api/vendor/send-quotation', Api_views.vendor_send_quotation_api),
     path('api/vendor/bids/', Api_views.vendor_bids_api, name='vendor_bids_api'),

@@ -41,6 +41,7 @@ class VendorProfile(models.Model):
     rating = models.DecimalField(max_digits=3, decimal_places=1, default=0.0)
     available_bids = models.IntegerField(default=5)
     registered_date = models.DateTimeField(default=timezone.now)
+    is_online = models.BooleanField(default=True, help_text="Is vendor currently accepting bookings?")
 
     def __str__(self):
         return self.company_name or self.user.username
@@ -475,6 +476,7 @@ class ServiceReview(models.Model):
 
     job = models.ForeignKey(Job, on_delete=models.SET_NULL, null=True, blank=True, related_name='reviews')
     quick_service = models.ForeignKey(QuickService, on_delete=models.SET_NULL, null=True, blank=True, related_name='reviews')
+    booking = models.OneToOneField(ServiceBooking, on_delete=models.SET_NULL, null=True, blank=True, related_name='review')
     customer = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='written_reviews')
     vendor = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='received_reviews')
     rating = models.PositiveSmallIntegerField(default=5)  # 1 to 5
