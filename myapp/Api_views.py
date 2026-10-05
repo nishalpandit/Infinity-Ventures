@@ -1869,13 +1869,8 @@ def user_post_job_api(request):
             city=city,
             state=state,
             location=location_obj,
-<<<<<<< HEAD
-            latitude=lat_val,
-            longitude=lon_val,
-=======
             latitude=latitude,
             longitude=longitude,
->>>>>>> ebe5a3a3f09b13c8970f3480143d6b7f04c29216
             address=address,
             pincode=pincode,
             contact_name=contact_name,
