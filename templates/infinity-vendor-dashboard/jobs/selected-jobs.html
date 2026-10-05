@@ -46,7 +46,7 @@
                 {% for b in selected_bids %}
                 <tr>
                   <td>
-                    <strong>{{ b.job.title|default:b.quick_service.title }}</strong>
+                    <strong>{% if b.job %}{{ b.job.title }}{% else %}{{ b.quick_service.title }}{% endif %}</strong>
                     <div class="small muted">
                       {% if b.job %}
                       JOB-{{ b.job.id|stringformat:"04d" }} · {{ b.job.category.name|default:"General" }}
@@ -78,11 +78,11 @@
                   <td>
                     <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
                       {% if b.status == 'selected' %}
-                      <button class="btn btn-primary btn-sm" type="button" onclick="openSubmitProofModal('{{ b.job.id|default:"" }}', '{{ b.quick_service.id|default:"" }}', '{{ b.job.title|default:b.quick_service.title|escapejs }}', '{{ b.job.user.get_full_name|default:b.quick_service.user.get_full_name|default:b.job.user.username|default:b.quick_service.user.username|escapejs }}')" style="background:#059669; border-color:#059669;">
+                      <button class="btn btn-primary btn-sm" type="button" onclick="openSubmitProofModal('{% if b.job %}{{ b.job.id }}{% endif %}', '{% if not b.job %}{{ b.quick_service.id }}{% endif %}', '{% if b.job %}{{ b.job.title|escapejs }}{% else %}{{ b.quick_service.title|escapejs }}{% endif %}', '{% if b.job %}{{ b.job.user.get_full_name|default:b.job.user.username|escapejs }}{% else %}{{ b.quick_service.user.get_full_name|default:b.quick_service.user.username|escapejs }}{% endif %}')" style="background:#059669; border-color:#059669;">
                         <span data-icon="check"></span> Complete &amp; Proof
                       </button>
                       {% elif b.status == 'completed' %}
-                        {% if b.job.completion_proof %}
+                        {% if b.job and b.job.completion_proof %}
                         <button class="btn btn-secondary btn-sm" type="button" onclick="viewProofModal('{{ b.job.title|escapejs }}', '{{ b.job.completion_proof.work_summary|escapejs }}', '{{ b.job.completion_proof.photo_1.url }}', '{% if b.job.completion_proof.photo_2 %}{{ b.job.completion_proof.photo_2.url }}{% endif %}', '{{ b.job.completion_proof.completed_at|date:"d M Y, h:i A" }}')">
                           View Proof
                         </button>
