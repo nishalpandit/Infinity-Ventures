@@ -2,6 +2,7 @@ import json
 import re
 import random
 from datetime import timedelta
+from decimal import Decimal
 from django.http import JsonResponse
 from django.views.decorators.http import require_POST
 from django.views.decorators.csrf import csrf_exempt
@@ -9,7 +10,7 @@ from django.contrib.auth import authenticate, login
 from django.contrib.auth import get_user_model
 from django.utils import timezone
 from django.db.models import Q
-from .models import UserProfile, VendorProfile, Category, Location, OTPVerification, AuthToken, Job, QuickService, VendorKYC, CustomerAddress, ServiceBooking, GlobalSettings, Message
+from .models import UserProfile, VendorProfile, Category, Location, OTPVerification, AuthToken, Job, QuickService, VendorKYC, CustomerAddress, ServiceBooking, GlobalSettings, Message, Bid, BidPlan, BidCreditTransaction, Subscription, VendorWallet, WalletTransaction
 User = get_user_model()
 
 
@@ -4605,4 +4606,879 @@ def chat_send_message_api(request):
         }, status=201)
     except Exception as e:
         return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+
+# =====================================================================
+# DYNAMIC BID SYSTEM APIS (DEDICATED ENDPOINTS)
+# =====================================================================
+
+@csrf_exempt
+def bids_create_api(request):
+    """
+    Dedicated API to create and submit a dynamic quotation / bid.
+    URL: /api/bids/create/ or /api/bids/submit/
+    Method: POST
+    Header: Authorization: Bearer <token>
+    Body:
+        job_id (int, optional)
+        quick_service_id (int, optional)
+        amount (float/Decimal, required)
+        estimated_time (str, optional)
+        proposal / message (str, optional)
+        attachment (file, optional)
+    """
+    if request.method != 'POST':
+        return JsonResponse({'status': 'error', 'message': 'Method not allowed. Use POST.'}, status=405)
+
+    user, err = _get_user_from_bearer_token(request)
+    if err:
+        return JsonResponse({'status': 'error', 'message': err}, status=401)
+
+    if user.role != 'VENDOR' and not user.is_superuser:
+        return JsonResponse({'status': 'error', 'message': 'Only registered vendors can submit bids.'}, status=403)
+
+    try:
+        data = _parse_api_request(request)
+        job_id = data.get('job_id') or request.POST.get('job_id')
+        quick_service_id = data.get('quick_service_id') or request.POST.get('quick_service_id')
+        amount_raw = data.get('amount') or request.POST.get('amount')
+
+        if not amount_raw:
+            return JsonResponse({'status': 'error', 'message': "Field 'amount' is required."}, status=400)
+
+        try:
+            amount_float = float(amount_raw)
+            if amount_float <= 0:
+                raise ValueError()
+        except (ValueError, TypeError):
+            return JsonResponse({'status': 'error', 'message': 'Please provide a valid bid amount greater than 0.'}, status=400)
+
+        estimated_time = (data.get('estimated_time') or request.POST.get('estimated_time') or 'Within 2 hours').strip()
+        proposal = (data.get('proposal') or data.get('message') or request.POST.get('proposal') or request.POST.get('message') or '').strip()
+        attachment = request.FILES.get('attachment')
+
+        vp = getattr(user, 'vendor_profile', None)
+        if not vp:
+            vp, _ = VendorProfile.objects.get_or_create(user=user)
+
+        # Dynamic Credit Verification
+        available_credits = vp.available_bids if vp.available_bids is not None else 0
+        if available_credits <= 0:
+            return JsonResponse({
+                'status': 'error',
+                'error_code': 'INSUFFICIENT_CREDITS',
+                'message': 'Insufficient bid credits! You have 0 credits remaining. Please recharge your bid credits.',
+                'remaining_credits': 0,
+                'recharge_url': '/api/credits/plans/'
+            }, status=403)
+
+        # Dynamic GlobalSettings calculations
+        gs = GlobalSettings.objects.first()
+        comm_pct = Decimal(str(gs.platform_commission_percent if gs and gs.platform_commission_percent is not None else '10.00'))
+        cgst_pct = Decimal(str(gs.cgst_percent if gs and gs.cgst_percent is not None else '9.00'))
+        sgst_pct = Decimal(str(gs.sgst_percent if gs and gs.sgst_percent is not None else '9.00'))
+        flat_fee = Decimal(str(gs.platform_flat_fee if gs and gs.platform_flat_fee is not None else '0.00'))
+        tax_mode = gs.tax_calculation_mode if gs and gs.tax_calculation_mode else 'commission_only'
+
+        vendor_base = Decimal(str(amount_float)).quantize(Decimal('0.01'))
+        comm_amount = ((vendor_base * comm_pct) / Decimal('100.00') + flat_fee).quantize(Decimal('0.01'))
+
+        if tax_mode == 'commission_only':
+            cgst_amount = ((comm_amount * cgst_pct) / Decimal('100.00')).quantize(Decimal('0.01'))
+            sgst_amount = ((comm_amount * sgst_pct) / Decimal('100.00')).quantize(Decimal('0.01'))
+        else:
+            taxable_base = vendor_base + comm_amount
+            cgst_amount = ((taxable_base * cgst_pct) / Decimal('100.00')).quantize(Decimal('0.01'))
+            sgst_amount = ((taxable_base * sgst_pct) / Decimal('100.00')).quantize(Decimal('0.01'))
+
+        total_customer = (vendor_base + comm_amount + cgst_amount + sgst_amount).quantize(Decimal('0.01'))
+
+        job = None
+        qs = None
+        if job_id:
+            try:
+                job = Job.objects.get(id=int(job_id))
+            except (Job.DoesNotExist, ValueError):
+                return JsonResponse({'status': 'error', 'message': f'Job #{job_id} not found.'}, status=404)
+
+            if job.status not in ['open', 'Open']:
+                return JsonResponse({'status': 'error', 'message': f'This job is currently {job.status} and not accepting bids.'}, status=400)
+
+            if job.max_bids and job.bids.count() >= job.max_bids:
+                return JsonResponse({'status': 'error', 'message': f'Job #{job_id} has reached its maximum limit of {job.max_bids} bids.'}, status=400)
+
+            if job.min_bid_amount and amount_float < float(job.min_bid_amount):
+                return JsonResponse({'status': 'error', 'message': f'Minimum quotation allowed is ₹{int(job.min_bid_amount):,}.'}, status=400)
+
+            if job.max_bid_amount and amount_float > float(job.max_bid_amount):
+                return JsonResponse({'status': 'error', 'message': f'Maximum quotation allowed is ₹{int(job.max_bid_amount):,}.'}, status=400)
+
+            if Bid.objects.filter(job=job, vendor=user).exclude(status='withdrawn').exists():
+                return JsonResponse({'status': 'error', 'message': 'You have already submitted an active bid for this job.'}, status=400)
+
+        elif quick_service_id:
+            try:
+                qs = QuickService.objects.get(id=int(quick_service_id))
+            except (QuickService.DoesNotExist, ValueError):
+                return JsonResponse({'status': 'error', 'message': f'QuickService #{quick_service_id} not found.'}, status=404)
+
+            if Bid.objects.filter(quick_service=qs, vendor=user).exclude(status='withdrawn').exists():
+                return JsonResponse({'status': 'error', 'message': 'You have already submitted an active bid for this service request.'}, status=400)
+        else:
+            return JsonResponse({'status': 'error', 'message': 'Either job_id or quick_service_id is required.'}, status=400)
+
+        # Create Bid record
+        bid = Bid.objects.create(
+            vendor=user,
+            job=job,
+            quick_service=qs,
+            amount=total_customer,
+            vendor_base_amount=vendor_base,
+            commission_percent_applied=comm_pct,
+            commission_amount=comm_amount,
+            cgst_percent_applied=cgst_pct,
+            cgst_amount=cgst_amount,
+            sgst_percent_applied=sgst_pct,
+            sgst_amount=sgst_amount,
+            flat_fee_amount=flat_fee,
+            total_customer_amount=total_customer,
+            estimated_time=estimated_time,
+            proposal=proposal,
+            message=proposal,
+            attachment=attachment,
+            status='submitted'
+        )
+
+        # Deduct 1 credit & log transaction
+        vp.available_bids = max(0, available_credits - 1)
+        vp.save(update_fields=['available_bids'])
+
+        if job:
+            job.bids_count = job.bids.count()
+            job.save(update_fields=['bids_count'])
+
+        target_title = job.title if job else (qs.title if qs else 'Service')
+        BidCreditTransaction.objects.create(
+            vendor=user,
+            transaction_type='used',
+            credits=-1,
+            description=f"Quotation placed on {target_title}",
+            related_job=job
+        )
+
+        return JsonResponse({
+            'status': 'success',
+            'message': f'Bid submitted successfully! 1 credit deducted ({vp.available_bids} remaining).',
+            'bid_id': bid.id,
+            'remaining_credits': vp.available_bids,
+            'vendor_payout': float(vendor_base),
+            'customer_total': float(total_customer),
+            'bid': _serialize_bid_detail(bid, request=request)
+        }, status=201)
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+
+@csrf_exempt
+def bids_list_api(request):
+    """
+    Dedicated API to list all bids submitted by the authenticated vendor with dynamic stats.
+    URL: /api/bids/ or /api/bids/my-bids/
+    Method: GET
+    Header: Authorization: Bearer <token>
+    Query: status=pending|accepted|rejected|withdrawn|all, search=...
+    """
+    if request.method != 'GET':
+        return JsonResponse({'status': 'error', 'message': 'Method not allowed. Use GET.'}, status=405)
+
+    user, err = _get_user_from_bearer_token(request)
+    if err:
+        return JsonResponse({'status': 'error', 'message': err}, status=401)
+
+    try:
+        all_user_bids = Bid.objects.filter(vendor=user).select_related(
+            'job', 'job__category', 'job__user', 'quick_service', 'quick_service__category'
+        ).order_by('-created_at')
+
+        # Dynamic Stats
+        total_bids = all_user_bids.count()
+        pending_bids = all_user_bids.filter(status='submitted').count()
+        accepted_bids = all_user_bids.filter(status='selected').count()
+        rejected_bids = all_user_bids.filter(status__in=['rejected', 'withdrawn']).count()
+        potential_earnings = sum(float(b.vendor_base_amount or b.amount) for b in all_user_bids.filter(status__in=['submitted', 'selected']))
+
+        vp = getattr(user, 'vendor_profile', None)
+        remaining_credits = vp.available_bids if vp else 0
+
+        # Filter by status
+        bids_qs = all_user_bids
+        status_filter = request.GET.get('status', '').strip().lower()
+        if status_filter and status_filter != 'all':
+            if status_filter in ['accepted', 'selected']:
+                bids_qs = bids_qs.filter(status='selected')
+            elif status_filter in ['pending', 'submitted']:
+                bids_qs = bids_qs.filter(status='submitted')
+            elif status_filter == 'rejected':
+                bids_qs = bids_qs.filter(status='rejected')
+            elif status_filter == 'withdrawn':
+                bids_qs = bids_qs.filter(status='withdrawn')
+
+        # Filter by search
+        search = request.GET.get('search', '').strip().lower()
+        if search:
+            bids_qs = bids_qs.filter(
+                Q(job__title__icontains=search) |
+                Q(quick_service__title__icontains=search) |
+                Q(proposal__icontains=search)
+            )
+
+        serialized_bids = [_serialize_bid_detail(b, request=request) for b in bids_qs]
+
+        return JsonResponse({
+            'status': 'success',
+            'stats': {
+                'total_bids': total_bids,
+                'pending_bids': pending_bids,
+                'accepted_bids': accepted_bids,
+                'rejected_bids': rejected_bids,
+                'potential_earnings': potential_earnings,
+                'remaining_credits': remaining_credits,
+            },
+            'count': len(serialized_bids),
+            'bids': serialized_bids
+        }, status=200)
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+
+@csrf_exempt
+def bid_detail_api(request, bid_id):
+    """
+    Dedicated API to fetch detailed information of a single bid.
+    URL: /api/bids/<bid_id>/
+    Method: GET
+    Header: Authorization: Bearer <token>
+    """
+    if request.method != 'GET':
+        return JsonResponse({'status': 'error', 'message': 'Method not allowed. Use GET.'}, status=405)
+
+    user, err = _get_user_from_bearer_token(request)
+    if err:
+        return JsonResponse({'status': 'error', 'message': err}, status=401)
+
+    try:
+        # Accessible if user is the bidding vendor, or the customer who posted the job, or admin
+        bid = Bid.objects.select_related(
+            'job', 'job__category', 'job__user', 'quick_service', 'quick_service__category', 'vendor', 'vendor__vendor_profile'
+        ).get(id=bid_id)
+
+        is_owner_vendor = (bid.vendor_id == user.id)
+        is_job_customer = (bid.job and bid.job.user_id == user.id)
+        if not (is_owner_vendor or is_job_customer or user.is_superuser):
+            return JsonResponse({'status': 'error', 'message': 'Unauthorized to view this bid.'}, status=403)
+
+        return JsonResponse({
+            'status': 'success',
+            'bid': _serialize_bid_detail(bid, request=request)
+        }, status=200)
+    except Bid.DoesNotExist:
+        return JsonResponse({'status': 'error', 'message': f'Bid #{bid_id} not found.'}, status=404)
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+
+@csrf_exempt
+@require_POST
+def bid_withdraw_api(request, bid_id):
+    """
+    Dedicated API for a vendor to withdraw a submitted bid and receive 1 credit refund.
+    URL: /api/bids/<bid_id>/withdraw/
+    Method: POST
+    Header: Authorization: Bearer <token>
+    """
+    user, err = _get_user_from_bearer_token(request)
+    if err:
+        return JsonResponse({'status': 'error', 'message': err}, status=401)
+
+    try:
+        bid = Bid.objects.select_related('job', 'quick_service').get(id=bid_id, vendor=user)
+        if bid.status != 'submitted':
+            return JsonResponse({
+                'status': 'error',
+                'message': f"Cannot withdraw bid #{bid_id} because its current status is '{bid.status}'."
+            }, status=400)
+
+        bid.status = 'withdrawn'
+        bid.save(update_fields=['status'])
+
+        # Refund 1 credit to vendor
+        vp = getattr(user, 'vendor_profile', None)
+        if not vp:
+            vp, _ = VendorProfile.objects.get_or_create(user=user)
+
+        vp.available_bids = (vp.available_bids or 0) + 1
+        vp.save(update_fields=['available_bids'])
+
+        target_title = bid.job.title if bid.job else (bid.quick_service.title if bid.quick_service else 'Service')
+        BidCreditTransaction.objects.create(
+            vendor=user,
+            transaction_type='refund',
+            credits=1,
+            description=f"Refund for withdrawn quotation #{bid.id} on {target_title}",
+            related_job=bid.job
+        )
+
+        return JsonResponse({
+            'status': 'success',
+            'message': f'Bid #{bid_id} withdrawn successfully. 1 credit has been refunded to your account.',
+            'remaining_credits': vp.available_bids
+        }, status=200)
+    except Bid.DoesNotExist:
+        return JsonResponse({'status': 'error', 'message': f'Bid #{bid_id} not found or unauthorized.'}, status=404)
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+
+@csrf_exempt
+def job_bids_api(request, job_id):
+    """
+    Dedicated API for job poster (Customer) to view all bids on their job.
+    URL: /api/bids/job/<job_id>/
+    Method: GET
+    Header: Authorization: Bearer <token>
+    """
+    if request.method != 'GET':
+        return JsonResponse({'status': 'error', 'message': 'Method not allowed. Use GET.'}, status=405)
+
+    user, err = _get_user_from_bearer_token(request)
+    if err:
+        return JsonResponse({'status': 'error', 'message': err}, status=401)
+
+    try:
+        job = Job.objects.get(id=job_id)
+        if job.user_id != user.id and not user.is_superuser:
+            return JsonResponse({'status': 'error', 'message': 'Unauthorized to view bids for this job.'}, status=403)
+
+        bids = Bid.objects.filter(job=job).select_related('vendor', 'vendor__vendor_profile').order_by('-created_at')
+        bids_data = []
+        for b in bids:
+            vp = getattr(b.vendor, 'vendor_profile', None)
+            profile_img_url = ""
+            if vp and vp.profile_image:
+                profile_img_url = _build_absolute_image_url(request, vp.profile_image)
+
+            bids_data.append({
+                'bid_id': b.id,
+                'vendor_id': b.vendor.id,
+                'vendor_name': b.vendor.get_full_name() or b.vendor.username,
+                'vendor_company': vp.company_name if vp else '',
+                'vendor_rating': float(vp.rating) if vp and vp.rating else 0.0,
+                'profile_image': profile_img_url,
+                'amount': float(b.amount),
+                'vendor_payout': float(b.vendor_base_amount or b.amount),
+                'estimated_time': b.estimated_time or 'Standard delivery',
+                'proposal': b.proposal or b.message or '',
+                'status': b.status,
+                'created_at': b.created_at.strftime('%Y-%m-%d %H:%M:%S'),
+            })
+
+        return JsonResponse({
+            'status': 'success',
+            'job_id': job.id,
+            'job_title': job.title,
+            'job_status': job.status,
+            'count': len(bids_data),
+            'bids': bids_data
+        }, status=200)
+    except Job.DoesNotExist:
+        return JsonResponse({'status': 'error', 'message': f'Job #{job_id} not found.'}, status=404)
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+
+@csrf_exempt
+@require_POST
+def bid_action_api(request, bid_id):
+    """
+    Dedicated API for job poster (Customer) to accept or reject a specific bid.
+    URL: /api/bids/<bid_id>/action/
+    Method: POST
+    Header: Authorization: Bearer <token>
+    Payload: { 'action': 'accept' | 'reject' }
+    """
+    user, err = _get_user_from_bearer_token(request)
+    if err:
+        return JsonResponse({'status': 'error', 'message': err}, status=401)
+
+    try:
+        data = _parse_api_request(request)
+        action = (data.get('action') or '').strip().lower()
+        if action not in ['accept', 'reject']:
+            return JsonResponse({'status': 'error', 'message': "Field 'action' must be 'accept' or 'reject'."}, status=400)
+
+        bid = Bid.objects.select_related('job', 'job__user').get(id=bid_id)
+        if not bid.job or (bid.job.user_id != user.id and not user.is_superuser):
+            return JsonResponse({'status': 'error', 'message': 'Unauthorized or job not associated with this bid.'}, status=403)
+
+        job = bid.job
+        if action == 'accept':
+            if job.status in ['selected', 'Selected', 'completed', 'Completed']:
+                return JsonResponse({'status': 'error', 'message': f'Job is already {job.status}.'}, status=400)
+
+            bid.status = 'selected'
+            bid.save(update_fields=['status'])
+
+            job.status = 'selected'
+            job.assigned_vendor = bid.vendor
+            job.save(update_fields=['status', 'assigned_vendor'])
+
+            # Reject other pending bids on this job
+            Bid.objects.filter(job=job).exclude(id=bid.id).filter(status='submitted').update(status='rejected')
+
+            return JsonResponse({
+                'status': 'success',
+                'message': f'Bid #{bid.id} accepted. Vendor has been assigned to job #{job.id}.',
+                'job_status': 'selected',
+                'assigned_vendor': bid.vendor.get_full_name() or bid.vendor.username
+            }, status=200)
+
+        elif action == 'reject':
+            bid.status = 'rejected'
+            bid.save(update_fields=['status'])
+            return JsonResponse({'status': 'success', 'message': f'Bid #{bid.id} has been rejected.'}, status=200)
+
+    except Bid.DoesNotExist:
+        return JsonResponse({'status': 'error', 'message': f'Bid #{bid_id} not found.'}, status=404)
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+
+# =====================================================================
+# DYNAMIC CREDIT SYSTEM APIS (DEDICATED ENDPOINTS)
+# =====================================================================
+
+@csrf_exempt
+def credit_balance_api(request):
+    """
+    Dedicated API to fetch real-time bid credit balance and statistics for authenticated vendor.
+    URL: /api/credits/balance/
+    Method: GET
+    Header: Authorization: Bearer <token>
+    """
+    if request.method != 'GET':
+        return JsonResponse({'status': 'error', 'message': 'Method not allowed. Use GET.'}, status=405)
+
+    user, err = _get_user_from_bearer_token(request)
+    if err:
+        return JsonResponse({'status': 'error', 'message': err}, status=401)
+
+    try:
+        vp = getattr(user, 'vendor_profile', None)
+        if not vp:
+            vp, _ = VendorProfile.objects.get_or_create(user=user)
+
+        txns = BidCreditTransaction.objects.filter(vendor=user)
+        total_purchased = sum(t.credits for t in txns.filter(transaction_type='purchased'))
+        total_used = abs(sum(t.credits for t in txns.filter(transaction_type='used')))
+        total_refunded = sum(t.credits for t in txns.filter(transaction_type='refund'))
+        total_bonus = sum(t.credits for t in txns.filter(transaction_type='bonus'))
+
+        last_txn = txns.order_by('-created_at').first()
+        last_txn_data = None
+        if last_txn:
+            last_txn_data = {
+                'id': last_txn.id,
+                'type': last_txn.transaction_type,
+                'credits': last_txn.credits,
+                'description': last_txn.description,
+                'date': last_txn.created_at.strftime('%d %b %Y, %I:%M %p')
+            }
+
+        curr_credits = vp.available_bids if vp.available_bids is not None else 0
+
+        return JsonResponse({
+            'status': 'success',
+            'vendor_id': user.id,
+            'vendor_code': vp.vendor_code or f"VEN{user.id:03d}",
+            'available_credits': curr_credits,
+            'can_bid': curr_credits > 0,
+            'stats': {
+                'total_purchased': total_purchased,
+                'total_used': total_used,
+                'total_refunded': total_refunded,
+                'total_bonus': total_bonus,
+            },
+            'last_transaction': last_txn_data
+        }, status=200)
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+
+@csrf_exempt
+def credit_plans_api(request):
+    """
+    Dedicated API to fetch dynamic credit plans / packages available for purchase.
+    URL: /api/credits/plans/ or /api/credits/packages/
+    Method: GET
+    """
+    if request.method != 'GET':
+        return JsonResponse({'status': 'error', 'message': 'Method not allowed. Use GET.'}, status=405)
+
+    try:
+        # Load from database BidPlan
+        db_plans = BidPlan.objects.filter(is_active=True).order_by('order', 'price')
+        plans_list = []
+
+        if db_plans.exists():
+            for p in db_plans:
+                orig_price = float(p.original_price) if p.original_price else None
+                cur_price = float(p.price)
+                discount_pct = round(((orig_price - cur_price) / orig_price) * 100) if (orig_price and orig_price > cur_price) else 0
+
+                plans_list.append({
+                    'id': p.id,
+                    'package_id': str(p.id),
+                    'name': p.name,
+                    'tagline': p.tagline or f"{p.credits} Bids Pack",
+                    'credits': p.credits,
+                    'price': cur_price,
+                    'original_price': orig_price,
+                    'discount_percent': discount_pct,
+                    'cost_per_credit': float(p.cost_per_bid),
+                    'is_popular': p.is_popular,
+                    'features': [
+                        f"{p.credits} Bid Credits",
+                        "Credits never expire",
+                        "Use on any open customer job",
+                        "Instant account activation"
+                    ]
+                })
+        else:
+            # Dynamic fallback standard plans
+            plans_list = [
+                {
+                    'id': 1,
+                    'package_id': 'starter',
+                    'name': 'Starter Pack',
+                    'tagline': '5 bids for ₹100',
+                    'credits': 5,
+                    'price': 100.0,
+                    'original_price': 150.0,
+                    'discount_percent': 33,
+                    'cost_per_credit': 20.0,
+                    'is_popular': False,
+                    'features': ['5 Bid Credits', 'Credits never expire', 'Use on any open job', 'Instant activation']
+                },
+                {
+                    'id': 2,
+                    'package_id': 'value',
+                    'name': 'Value Pack',
+                    'tagline': '10 bids for ₹200',
+                    'credits': 10,
+                    'price': 200.0,
+                    'original_price': 300.0,
+                    'discount_percent': 33,
+                    'cost_per_credit': 20.0,
+                    'is_popular': True,
+                    'features': ['10 Bid Credits', 'Credits never expire', 'Best value for active pros', 'Instant activation']
+                },
+                {
+                    'id': 3,
+                    'package_id': 'pro',
+                    'name': 'Pro Contractor Pack',
+                    'tagline': '30 bids for ₹500',
+                    'credits': 30,
+                    'price': 500.0,
+                    'original_price': 750.0,
+                    'discount_percent': 33,
+                    'cost_per_credit': 16.67,
+                    'is_popular': False,
+                    'features': ['30 Bid Credits', 'Credits never expire', 'Lowest price per bid', 'Priority placement badge']
+                }
+            ]
+
+        return JsonResponse({
+            'status': 'success',
+            'count': len(plans_list),
+            'plans': plans_list
+        }, status=200)
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+
+@csrf_exempt
+@require_POST
+def credit_purchase_api(request):
+    """
+    Dedicated API to dynamically purchase a credit plan or package.
+    URL: /api/credits/purchase/ or /api/vendor/bid-credits/purchase/
+    Method: POST
+    Header: Authorization: Bearer <token>
+    Payload: {
+        "plan_id": int | str,
+        "payment_method": str (optional, default "UPI"),
+        "transaction_id": str (optional),
+        "credits": int (optional fallback),
+        "amount": float (optional fallback)
+    }
+    """
+    user, err = _get_user_from_bearer_token(request)
+    if err:
+        return JsonResponse({'status': 'error', 'message': err}, status=401)
+
+    if user.role != 'VENDOR' and not user.is_superuser:
+        return JsonResponse({'status': 'error', 'message': 'Only registered vendors can purchase bid credits.'}, status=403)
+
+    try:
+        data = _parse_api_request(request)
+        plan_id = data.get('plan_id') or data.get('package_id')
+        payment_method = data.get('payment_method') or 'UPI'
+        txn_ref = data.get('transaction_id') or f"PAY_{random.randint(100000, 999999)}"
+
+        credits_to_add = None
+        price_charged = None
+        plan_name = "Custom Credits Package"
+
+        # 1. Try finding from BidPlan table
+        if plan_id:
+            try:
+                p = BidPlan.objects.filter(id=int(plan_id)).first()
+                if p:
+                    credits_to_add = p.credits
+                    price_charged = float(p.price)
+                    plan_name = p.name
+            except (ValueError, TypeError):
+                key = str(plan_id).lower().strip()
+                if key == 'starter':
+                    credits_to_add, price_charged, plan_name = 5, 100.0, "Starter Pack"
+                elif key == 'value':
+                    credits_to_add, price_charged, plan_name = 10, 200.0, "Value Pack"
+                elif key == 'pro':
+                    credits_to_add, price_charged, plan_name = 30, 500.0, "Pro Contractor Pack"
+
+        # 2. Fallback to direct credits and amount in payload
+        if credits_to_add is None:
+            raw_c = data.get('credits')
+            raw_a = data.get('amount')
+            if raw_c and raw_a:
+                credits_to_add = int(raw_c)
+                price_charged = float(raw_a)
+                plan_name = f"{credits_to_add} Credits Top-up"
+
+        if not credits_to_add or credits_to_add <= 0:
+            return JsonResponse({'status': 'error', 'message': 'Valid plan_id or credits count is required.'}, status=400)
+
+        price_charged = price_charged or float(credits_to_add * 20.0)
+
+        # Log Subscription
+        sub = Subscription.objects.create(
+            vendor=user,
+            package_name=f"{plan_name} ({credits_to_add} Credits)",
+            amount=Decimal(str(price_charged)).quantize(Decimal('0.01')),
+            credits_added=credits_to_add,
+            status='success'
+        )
+
+        # Update Vendor Profile credits
+        vp = getattr(user, 'vendor_profile', None)
+        if not vp:
+            vp, _ = VendorProfile.objects.get_or_create(user=user)
+
+        current_val = vp.available_bids if vp.available_bids is not None else 0
+        new_val = current_val + credits_to_add
+        vp.available_bids = new_val
+        vp.save(update_fields=['available_bids'])
+
+        # Record BidCreditTransaction
+        txn = BidCreditTransaction.objects.create(
+            vendor=user,
+            transaction_type='purchased',
+            credits=credits_to_add,
+            description=f"Purchased {plan_name} via {payment_method} ({txn_ref})",
+            related_subscription=sub
+        )
+
+        return JsonResponse({
+            'status': 'success',
+            'message': f'Payment of ₹{int(price_charged):,} successful! {credits_to_add} bid credits added to your account instantly.',
+            'credits_added': credits_to_add,
+            'remaining_credits': new_val,
+            'amount_paid': price_charged,
+            'transaction_id': txn.id,
+            'subscription_id': sub.id
+        }, status=200)
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+
+@csrf_exempt
+def credit_transactions_api(request):
+    """
+    Dedicated API to fetch transaction history of credits for authenticated vendor.
+    URL: /api/credits/transactions/ or /api/credits/history/
+    Method: GET
+    Header: Authorization: Bearer <token>
+    Query: type=all|purchased|used|refund|bonus, limit=50
+    """
+    if request.method != 'GET':
+        return JsonResponse({'status': 'error', 'message': 'Method not allowed. Use GET.'}, status=405)
+
+    user, err = _get_user_from_bearer_token(request)
+    if err:
+        return JsonResponse({'status': 'error', 'message': err}, status=401)
+
+    try:
+        txns_qs = BidCreditTransaction.objects.filter(vendor=user).select_related('related_job', 'related_subscription').order_by('-created_at')
+
+        type_filter = request.GET.get('type', '').strip().lower()
+        if type_filter and type_filter != 'all':
+            txns_qs = txns_qs.filter(transaction_type=type_filter)
+
+        try:
+            limit = int(request.GET.get('limit', 50))
+        except (ValueError, TypeError):
+            limit = 50
+
+        txns_qs = txns_qs[:limit]
+
+        transactions_data = []
+        for t in txns_qs:
+            transactions_data.append({
+                'id': t.id,
+                'transaction_type': t.transaction_type,
+                'type_label': t.get_transaction_type_display(),
+                'credits': t.credits,
+                'is_addition': t.credits > 0,
+                'description': t.description,
+                'related_job_id': t.related_job_id,
+                'related_job_title': t.related_job.title if t.related_job else None,
+                'created_at': t.created_at.isoformat(),
+                'formatted_date': t.created_at.strftime('%d %b %Y, %I:%M %p')
+            })
+
+        vp = getattr(user, 'vendor_profile', None)
+        curr_balance = vp.available_bids if vp else 0
+
+        return JsonResponse({
+            'status': 'success',
+            'current_balance': curr_balance,
+            'count': len(transactions_data),
+            'transactions': transactions_data
+        }, status=200)
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+
+@csrf_exempt
+@require_POST
+def credit_claim_bonus_api(request):
+    """
+    Dedicated API to claim initial registration / welcome bonus credits.
+    URL: /api/credits/claim-bonus/
+    Method: POST
+    Header: Authorization: Bearer <token>
+    """
+    user, err = _get_user_from_bearer_token(request)
+    if err:
+        return JsonResponse({'status': 'error', 'message': err}, status=401)
+
+    try:
+        already_claimed = BidCreditTransaction.objects.filter(vendor=user, transaction_type='bonus').exists()
+        if already_claimed:
+            return JsonResponse({
+                'status': 'error',
+                'message': 'Welcome bonus credits have already been claimed on this account.'
+            }, status=400)
+
+        gs = GlobalSettings.objects.first()
+        bonus_credits = gs.free_starter_bids if (gs and gs.free_starter_bids) else 5
+
+        vp = getattr(user, 'vendor_profile', None)
+        if not vp:
+            vp, _ = VendorProfile.objects.get_or_create(user=user)
+
+        vp.available_bids = (vp.available_bids or 0) + bonus_credits
+        vp.save(update_fields=['available_bids'])
+
+        txn = BidCreditTransaction.objects.create(
+            vendor=user,
+            transaction_type='bonus',
+            credits=bonus_credits,
+            description="Welcome bonus credits on registration"
+        )
+
+        return JsonResponse({
+            'status': 'success',
+            'message': f'Congratulations! {bonus_credits} free starter bid credits have been credited to your account.',
+            'credits_claimed': bonus_credits,
+            'remaining_credits': vp.available_bids,
+            'transaction_id': txn.id
+        }, status=200)
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+
+@csrf_exempt
+def credit_summary_api(request):
+    """
+    Dedicated API to fetch comprehensive credit summary, stats, and top-up recommendations.
+    URL: /api/credits/summary/
+    Method: GET
+    Header: Authorization: Bearer <token>
+    """
+    if request.method != 'GET':
+        return JsonResponse({'status': 'error', 'message': 'Method not allowed. Use GET.'}, status=405)
+
+    user, err = _get_user_from_bearer_token(request)
+    if err:
+        return JsonResponse({'status': 'error', 'message': err}, status=401)
+
+    try:
+        vp = getattr(user, 'vendor_profile', None)
+        if not vp:
+            vp, _ = VendorProfile.objects.get_or_create(user=user)
+
+        txns = BidCreditTransaction.objects.filter(vendor=user).order_by('-created_at')
+
+        recent_txns = []
+        for t in txns[:5]:
+            recent_txns.append({
+                'id': t.id,
+                'type': t.transaction_type,
+                'credits': t.credits,
+                'is_addition': t.credits > 0,
+                'description': t.description,
+                'date': t.created_at.strftime('%d %b %Y, %I:%M %p')
+            })
+
+        balance = vp.available_bids if vp.available_bids is not None else 0
+        total_purchased = sum(t.credits for t in txns.filter(transaction_type='purchased'))
+        total_used = abs(sum(t.credits for t in txns.filter(transaction_type='used')))
+
+        db_plans = BidPlan.objects.filter(is_active=True).order_by('order', 'price')
+        plans = []
+        for p in db_plans:
+            plans.append({
+                'id': p.id,
+                'name': p.name,
+                'credits': p.credits,
+                'price': float(p.price),
+                'cost_per_credit': float(p.cost_per_bid),
+                'is_popular': p.is_popular
+            })
+
+        return JsonResponse({
+            'status': 'success',
+            'balance': balance,
+            'can_bid': balance > 0,
+            'stats': {
+                'total_purchased': total_purchased,
+                'total_used': total_used,
+            },
+            'recent_transactions': recent_txns,
+            'available_plans': plans
+        }, status=200)
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
 
