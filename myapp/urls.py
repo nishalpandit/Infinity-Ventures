@@ -268,7 +268,13 @@ urlpatterns = [
     path('api/vendors/<int:vendor_id>/profile/', Api_views.vendor_public_profile_api, name='vendor_public_profile_api'),
     path('api/vendors/<int:vendor_id>/profile', Api_views.vendor_public_profile_api),
     path('api/categories/with-services/', Api_views.categories_with_services_api, name='categories_with_services_api'),
-    path('api/categories/with-services', Api_views.categories_with_services_api),
+    # Chat & Messaging APIs (Bearer Token Protected)
+    path('api/chat/conversations/', Api_views.chat_conversations_api, name='chat_conversations_api'),
+    path('api/chat/conversations', Api_views.chat_conversations_api),
+    path('api/chat/messages/<int:other_user_id>/', Api_views.chat_messages_api, name='chat_messages_api'),
+    path('api/chat/messages/<int:other_user_id>', Api_views.chat_messages_api),
+    path('api/chat/send/', Api_views.chat_send_message_api, name='chat_send_message_api'),
+    path('api/chat/send', Api_views.chat_send_message_api),
 
     path('api/admin/kyc/<int:kyc_id>/approve/', views.approve_kyc_view, name='approve_kyc_view'),
     path('api/admin/kyc/<int:kyc_id>/reject/', views.reject_kyc_view, name='reject_kyc_view'),

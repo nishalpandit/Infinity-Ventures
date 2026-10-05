@@ -9,7 +9,7 @@ from django.contrib.auth import authenticate, login
 from django.contrib.auth import get_user_model
 from django.utils import timezone
 from django.db.models import Q
-from .models import UserProfile, VendorProfile, Category, Location, OTPVerification, AuthToken, Job, QuickService, VendorKYC, CustomerAddress, ServiceBooking, GlobalSettings
+from .models import UserProfile, VendorProfile, Category, Location, OTPVerification, AuthToken, Job, QuickService, VendorKYC, CustomerAddress, ServiceBooking, GlobalSettings, Message
 User = get_user_model()
 
 
@@ -4321,3 +4321,288 @@ def handle_bid_action_api(request):
         bid.status = 'rejected'
         bid.save()
         return JsonResponse({'status': 'success', 'message': 'Bid rejected successfully.'})
+
+
+# =====================================================================
+# CHAT & MESSAGING APIS (BEARER TOKEN PROTECTED)
+# =====================================================================
+
+@csrf_exempt
+def chat_conversations_api(request):
+    """
+    API to retrieve list of active chat conversations for authenticated user.
+    URL: /api/chat/conversations/
+    Method: GET
+    Header: Authorization: Bearer <token>
+    """
+    if request.method != 'GET':
+        return JsonResponse({'status': 'error', 'message': 'Method not allowed. Use GET.'}, status=405)
+
+    user, err = _get_user_from_bearer_token(request)
+    if err:
+        return JsonResponse({'status': 'error', 'message': err}, status=401)
+
+    try:
+        # Find all distinct user IDs that have exchanged messages with this user
+        sent_to = set(Message.objects.filter(sender=user).values_list('receiver_id', flat=True))
+        received_from = set(Message.objects.filter(receiver=user).values_list('sender_id', flat=True))
+        partner_ids = sent_to.union(received_from)
+
+        # If user is a vendor, also include customers who have booked with them
+        if user.role == 'VENDOR':
+            customer_ids = set(ServiceBooking.objects.filter(vendor=user).values_list('customer_id', flat=True))
+            partner_ids = partner_ids.union(customer_ids)
+        elif user.role == 'CUSTOMER':
+            vendor_ids = set(ServiceBooking.objects.filter(customer=user).values_list('vendor_id', flat=True))
+            partner_ids = partner_ids.union(vendor_ids)
+
+        conversations = []
+        for pid in partner_ids:
+            if not pid or pid == user.id:
+                continue
+            partner = User.objects.filter(id=pid, is_active=True).first()
+            if not partner:
+                continue
+
+            # Most recent message between user and partner
+            last_msg = Message.objects.filter(
+                (Q(sender=user, receiver=partner) | Q(sender=partner, receiver=user))
+            ).order_by('-created_at').first()
+
+            # Unread count (messages sent by partner to current user that are unread)
+            unread_count = Message.objects.filter(
+                sender=partner, receiver=user, is_read=False
+            ).count()
+
+            # Avatar and Phone
+            avatar_url = ""
+            phone = ""
+            if partner.role == 'VENDOR' and hasattr(partner, 'vendor_profile') and partner.vendor_profile:
+                if partner.vendor_profile.profile_image:
+                    avatar_url = _build_absolute_image_url(request, partner.vendor_profile.profile_image)
+                phone = partner.vendor_profile.mobile or ''
+            elif hasattr(partner, 'user_profile') and partner.user_profile:
+                if partner.user_profile.profile_image:
+                    avatar_url = _build_absolute_image_url(request, partner.user_profile.profile_image)
+                phone = partner.user_profile.phone_number or ''
+
+            display_name = partner.get_full_name() or partner.username
+            if partner.role == 'VENDOR' and hasattr(partner, 'vendor_profile') and partner.vendor_profile and partner.vendor_profile.company_name:
+                display_name = partner.vendor_profile.company_name
+
+            # Service or booking title if applicable
+            job_title = ""
+            if last_msg and last_msg.quick_service:
+                job_title = last_msg.quick_service.title
+            elif last_msg and last_msg.job:
+                job_title = last_msg.job.title
+            else:
+                # Check recent booking
+                recent_booking = ServiceBooking.objects.filter(
+                    (Q(vendor=user, customer=partner) | Q(vendor=partner, customer=user))
+                ).select_related('quick_service').order_by('-created_at').first()
+                if recent_booking and recent_booking.quick_service:
+                    job_title = recent_booking.quick_service.title
+
+            last_message_text = last_msg.content if last_msg else "Tap to start conversation"
+            last_message_time = last_msg.created_at.strftime('%I:%M %p').lstrip('0') if last_msg else ""
+            last_message_iso = last_msg.created_at.isoformat() if last_msg else ""
+            sort_time = last_msg.created_at if last_msg else partner.date_joined
+
+            conversations.append({
+                'user_id': partner.id,
+                'name': display_name,
+                'phone': phone,
+                'avatar': avatar_url,
+                'role': partner.role,
+                'last_message': last_message_text,
+                'last_message_time': last_message_time,
+                'last_message_iso': last_message_iso,
+                'unread_count': unread_count,
+                'job_title': job_title,
+                '_sort_time': sort_time
+            })
+
+        # Sort by latest message / interaction
+        conversations.sort(key=lambda x: x['_sort_time'], reverse=True)
+        for c in conversations:
+            c.pop('_sort_time', None)
+
+        return JsonResponse({'status': 'success', 'conversations': conversations}, status=200)
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+
+@csrf_exempt
+def chat_messages_api(request, other_user_id):
+    """
+    API to fetch message history between authenticated user and other_user_id.
+    Also automatically marks incoming messages from other_user_id as read.
+    URL: /api/chat/messages/<other_user_id>/
+    Method: GET
+    Header: Authorization: Bearer <token>
+    """
+    if request.method != 'GET':
+        return JsonResponse({'status': 'error', 'message': 'Method not allowed. Use GET.'}, status=405)
+
+    user, err = _get_user_from_bearer_token(request)
+    if err:
+        return JsonResponse({'status': 'error', 'message': err}, status=401)
+
+    try:
+        partner = User.objects.filter(id=other_user_id).first()
+        if not partner:
+            return JsonResponse({'status': 'error', 'message': 'User not found.'}, status=404)
+
+        # Mark unread messages from other_user to current user as read
+        Message.objects.filter(sender=partner, receiver=user, is_read=False).update(is_read=True)
+
+        # Retrieve message history
+        messages_qs = Message.objects.filter(
+            (Q(sender=user, receiver=partner) | Q(sender=partner, receiver=user))
+        ).select_related('sender', 'receiver', 'quick_service', 'job').order_by('created_at')
+
+        messages_list = []
+        for m in messages_qs:
+            is_me = (m.sender_id == user.id)
+            messages_list.append({
+                'id': m.id,
+                'sender_id': m.sender_id,
+                'sender_name': m.sender.get_full_name() or m.sender.username,
+                'receiver_id': m.receiver_id,
+                'is_me': is_me,
+                'content': m.content,
+                'is_read': m.is_read,
+                'created_at': m.created_at.isoformat(),
+                'time_formatted': m.created_at.strftime('%I:%M %p').lstrip('0'),
+                'quick_service_id': m.quick_service_id,
+                'job_id': m.job_id
+            })
+
+        # Partner profile info
+        partner_avatar = ""
+        partner_phone = ""
+        if partner.role == 'VENDOR' and hasattr(partner, 'vendor_profile') and partner.vendor_profile:
+            if partner.vendor_profile.profile_image:
+                partner_avatar = _build_absolute_image_url(request, partner.vendor_profile.profile_image)
+            partner_phone = partner.vendor_profile.mobile or ''
+        elif hasattr(partner, 'user_profile') and partner.user_profile:
+            if partner.user_profile.profile_image:
+                partner_avatar = _build_absolute_image_url(request, partner.user_profile.profile_image)
+            partner_phone = partner.user_profile.phone_number or ''
+
+        partner_name = partner.get_full_name() or partner.username
+        if partner.role == 'VENDOR' and hasattr(partner, 'vendor_profile') and partner.vendor_profile and partner.vendor_profile.company_name:
+            partner_name = partner.vendor_profile.company_name
+
+        # Associated service / job info if any
+        service_title = ""
+        recent_booking = ServiceBooking.objects.filter(
+            (Q(vendor=user, customer=partner) | Q(vendor=partner, customer=user))
+        ).select_related('quick_service').order_by('-created_at').first()
+        if recent_booking and recent_booking.quick_service:
+            service_title = recent_booking.quick_service.title
+
+        return JsonResponse({
+            'status': 'success',
+            'partner': {
+                'id': partner.id,
+                'name': partner_name,
+                'phone': partner_phone,
+                'avatar': partner_avatar,
+                'role': partner.role,
+                'service_title': service_title,
+            },
+            'messages': messages_list
+        }, status=200)
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+
+@csrf_exempt
+@require_POST
+def chat_send_message_api(request):
+    """
+    API to send a chat message to another user.
+    URL: /api/chat/send/
+    Method: POST
+    Header: Authorization: Bearer <token>
+    Body: {
+        "receiver_id": int,
+        "content": str,
+        "quick_service_id": int (optional),
+        "job_id": int (optional)
+    }
+    """
+    user, err = _get_user_from_bearer_token(request)
+    if err:
+        return JsonResponse({'status': 'error', 'message': err}, status=401)
+
+    try:
+        data = _parse_api_request(request)
+        receiver_id = data.get('receiver_id')
+        content = (data.get('content') or data.get('message') or '').strip()
+        quick_service_id = data.get('quick_service_id')
+        job_id = data.get('job_id')
+
+        if not receiver_id:
+            return JsonResponse({'status': 'error', 'message': 'receiver_id is required.'}, status=400)
+
+        try:
+            receiver_id = int(receiver_id)
+        except (ValueError, TypeError):
+            return JsonResponse({'status': 'error', 'message': 'Invalid receiver_id.'}, status=400)
+
+        if not content:
+            return JsonResponse({'status': 'error', 'message': 'Message content cannot be empty.'}, status=400)
+
+        receiver = User.objects.filter(id=receiver_id).first()
+        if not receiver:
+            return JsonResponse({'status': 'error', 'message': 'Receiver user not found.'}, status=404)
+
+        if receiver.id == user.id:
+            return JsonResponse({'status': 'error', 'message': 'Cannot send message to yourself.'}, status=400)
+
+        qs_obj = None
+        if quick_service_id:
+            try:
+                qs_obj = QuickService.objects.filter(id=int(quick_service_id)).first()
+            except (ValueError, TypeError):
+                pass
+
+        job_obj = None
+        if job_id:
+            try:
+                job_obj = Job.objects.filter(id=int(job_id)).first()
+            except (ValueError, TypeError):
+                pass
+
+        msg = Message.objects.create(
+            sender=user,
+            receiver=receiver,
+            content=content,
+            quick_service=qs_obj,
+            job=job_obj,
+            is_read=False
+        )
+
+        return JsonResponse({
+            'status': 'success',
+            'message': 'Message sent successfully.',
+            'chat_message': {
+                'id': msg.id,
+                'sender_id': user.id,
+                'sender_name': user.get_full_name() or user.username,
+                'receiver_id': receiver.id,
+                'is_me': True,
+                'content': msg.content,
+                'is_read': msg.is_read,
+                'created_at': msg.created_at.isoformat(),
+                'time_formatted': msg.created_at.strftime('%I:%M %p').lstrip('0'),
+                'quick_service_id': msg.quick_service_id,
+                'job_id': msg.job_id
+            }
+        }, status=201)
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
