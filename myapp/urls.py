@@ -176,6 +176,8 @@ urlpatterns = [
     path('api/user/address/get', Api_views.get_customer_addresses_api),
     path('api/user/address/delete/', Api_views.delete_customer_address_api, name='delete_customer_address_api'),
     path('api/user/address/delete', Api_views.delete_customer_address_api),
+    path('api/user/address/update/', Api_views.update_customer_address_api, name='update_customer_address_api'),
+    path('api/user/address/update', Api_views.update_customer_address_api),
 
     # Service Booking API
     path('api/user/services/book/', Api_views.book_service_api, name='book_service_api'),
@@ -187,7 +189,9 @@ urlpatterns = [
     
     # Bids APIs (User Side)
     path('api/user/jobs/<int:job_id>/bids/', Api_views.get_job_bids_api, name='get_job_bids_api'),
+    path('api/user/jobs/<int:job_id>/bids', Api_views.get_job_bids_api),
     path('api/user/bids/action/', Api_views.handle_bid_action_api, name='handle_bid_action_api'),
+    path('api/user/bids/action', Api_views.handle_bid_action_api),
 
 
 

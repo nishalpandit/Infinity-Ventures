@@ -1708,16 +1708,21 @@ def vendor_otp_login_api(request):
 
 
 @csrf_exempt
-@require_POST
 def user_post_job_api(request):
     """
     API for Posting a Long-Term Job by a User/Customer.
-    Requires Bearer Token:
-        Header: Authorization: Bearer <token>
+    Requires Bearer Token (for POST).
     URL: /api/user/post-job/ or /api/user/jobs/create/
-    Method: POST
+    Method: GET (to fetch categories for dropdown) | POST (to submit job)
     """
     try:
+        if request.method == 'GET':
+            categories = list(Category.objects.filter(status='active').values('id', 'name', 'service_type'))
+            return JsonResponse({'status': 'success', 'categories': categories}, status=200)
+
+        if request.method != 'POST':
+            return JsonResponse({'status': 'error', 'message': 'Method not allowed'}, status=405)
+
         # 1. Authenticate via Bearer token
         user, error_msg = _get_user_from_bearer_token(request)
         if not user:
@@ -2582,6 +2587,71 @@ def delete_customer_address_api(request):
         
     addr.delete()
     return JsonResponse({'status': 'success', 'message': 'Address deleted'})
+
+@csrf_exempt
+def update_customer_address_api(request):
+    """
+    API to update an existing customer address.
+    URL: /api/user/address/update/
+    Method: POST
+    Headers: Authorization: Bearer <token>
+    Params:
+      - address_id (required)
+      - title, address_line_1, address_line_2, city, state, pincode,
+        latitude, longitude, is_default (all optional – only provided fields are updated)
+    """
+    if request.method != 'POST':
+        return JsonResponse({'status': 'error', 'message': 'Method not allowed'}, status=405)
+
+    user = _authenticate_api_user(request)
+    if not user:
+        return JsonResponse({'status': 'error', 'message': 'Unauthorized'}, status=401)
+
+    data = _parse_api_request(request)
+    address_id = data.get('address_id')
+
+    if not address_id:
+        return JsonResponse({'status': 'error', 'message': 'address_id is required'}, status=400)
+
+    addr = CustomerAddress.objects.filter(id=address_id, user=user).first()
+    if not addr:
+        return JsonResponse({'status': 'error', 'message': 'Address not found'}, status=404)
+
+    # Update only the fields that were provided
+    updatable_fields = ['title', 'address_line_1', 'address_line_2', 'city', 'state', 'pincode']
+    for field in updatable_fields:
+        if field in data:
+            setattr(addr, field, data[field])
+
+    if 'latitude' in data:
+        addr.latitude = data['latitude'] if data['latitude'] else None
+    if 'longitude' in data:
+        addr.longitude = data['longitude'] if data['longitude'] else None
+
+    if 'is_default' in data:
+        is_default = str(data['is_default']).lower() == 'true'
+        if is_default and not addr.is_default:
+            CustomerAddress.objects.filter(user=user).update(is_default=False)
+        addr.is_default = is_default
+
+    addr.save()
+
+    return JsonResponse({
+        'status': 'success',
+        'message': 'Address updated',
+        'address': {
+            'id': addr.id,
+            'title': addr.title,
+            'address_line_1': addr.address_line_1,
+            'address_line_2': addr.address_line_2,
+            'city': addr.city,
+            'state': addr.state,
+            'pincode': addr.pincode,
+            'latitude': float(addr.latitude) if addr.latitude else None,
+            'longitude': float(addr.longitude) if addr.longitude else None,
+            'is_default': addr.is_default
+        }
+    })
 
 @csrf_exempt
 def top_professionals_api(request):
