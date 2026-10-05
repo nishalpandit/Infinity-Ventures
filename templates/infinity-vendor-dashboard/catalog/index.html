@@ -627,6 +627,107 @@
       align-items: center;
       justify-content: space-between;
     }
+
+    /* Status Quick Badges & Selectors */
+    .status-quick-badge {
+      appearance: none;
+      -webkit-appearance: none;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 4px 10px;
+      border-radius: 20px;
+      cursor: pointer;
+      outline: none;
+      transition: all 0.2s;
+      border: 1.5px solid transparent;
+      line-height: 1.3;
+    }
+    .status-quick-badge.status-active {
+      background: #ecfdf5;
+      color: #065f46;
+      border-color: #a7f3d0;
+    }
+    .status-quick-badge.status-paused {
+      background: #fef3c7;
+      color: #92400e;
+      border-color: #fde68a;
+    }
+    .status-quick-badge.status-draft {
+      background: #f1f5f9;
+      color: #475569;
+      border-color: #cbd5e1;
+    }
+    .status-quick-badge:hover {
+      box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+      filter: brightness(0.97);
+    }
+
+    .status-option-card {
+      border: 1.5px solid #e2e8f0;
+      border-radius: 10px;
+      padding: 10px 12px;
+      cursor: pointer;
+      background: #fff;
+      transition: all 0.15s;
+      display: block;
+    }
+    .status-option-card:hover {
+      border-color: #cbd5e1;
+      background: #f8fafc;
+    }
+    .status-option-card.active {
+      border-color: #0f8a7c;
+      background: #f0fdfa;
+      box-shadow: 0 0 0 1px #0f8a7c;
+    }
+
+    /* Modal Backdrop & Custom Sizing */
+    .modal-backdrop-custom {
+      position: fixed;
+      inset: 0;
+      background: rgba(8, 15, 28, 0.65);
+      backdrop-filter: blur(3px);
+      z-index: 1000;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .modal-backdrop-custom.open {
+      display: flex;
+    }
+    .modal-dialog-large {
+      background: #fff;
+      border-radius: 16px;
+      box-shadow: 0 25px 60px rgba(0,0,0,0.25);
+      width: min(860px, 96vw);
+      max-height: 92vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      animation: modalIn .18s ease;
+    }
+    .modal-dialog-large .modal-header {
+      padding: 18px 24px;
+      border-bottom: 1px solid #e2e8f0;
+      background: #f8fafc;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .modal-dialog-large .modal-body-scrollable {
+      padding: 24px;
+      overflow-y: auto;
+      max-height: calc(92vh - 140px);
+    }
+    .modal-dialog-large .modal-footer {
+      padding: 14px 24px;
+      border-top: 1px solid #e2e8f0;
+      background: #f8fafc;
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+    }
   </style>
 </head>
 <body data-page="catalog" data-title="My Services" data-root="../">
@@ -729,6 +830,46 @@
                     <div class="field" style="margin:0 0 14px;">
                       <label>Subtitle / Tagline</label>
                       <input type="text" name="description" id="formDescription" class="input" placeholder="e.g. Professional switchboard repair service by verified experts." oninput="updateLivePreview()">
+                    </div>
+
+                    <!-- Listing Status -->
+                    <div class="field" style="margin:0 0 14px;">
+                      <label style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                        <span style="font-weight:700;">Listing Status <span class="required">*</span></span>
+                        <span style="font-size:11px; color:#64748b; font-weight:normal;">Active = immediately bookable by customers</span>
+                      </label>
+                      <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:10px;">
+                        <label class="status-option-card active" onclick="selectCreateStatus(this, 'active')">
+                          <input type="radio" name="status" value="active" checked style="display:none;">
+                          <div style="display:flex; align-items:center; gap:8px;">
+                            <span style="width:10px; height:10px; border-radius:50%; background:#10b981; display:inline-block; flex-shrink:0;"></span>
+                            <div>
+                              <div style="font-weight:700; font-size:12.5px; color:#0f172a;">Active</div>
+                              <div style="font-size:10.5px; color:#64748b;">Live for bookings</div>
+                            </div>
+                          </div>
+                        </label>
+                        <label class="status-option-card" onclick="selectCreateStatus(this, 'paused')">
+                          <input type="radio" name="status" value="paused" style="display:none;">
+                          <div style="display:flex; align-items:center; gap:8px;">
+                            <span style="width:10px; height:10px; border-radius:50%; background:#f59e0b; display:inline-block; flex-shrink:0;"></span>
+                            <div>
+                              <div style="font-weight:700; font-size:12.5px; color:#0f172a;">Paused</div>
+                              <div style="font-size:10.5px; color:#64748b;">Temporarily paused</div>
+                            </div>
+                          </div>
+                        </label>
+                        <label class="status-option-card" onclick="selectCreateStatus(this, 'draft')">
+                          <input type="radio" name="status" value="draft" style="display:none;">
+                          <div style="display:flex; align-items:center; gap:8px;">
+                            <span style="width:10px; height:10px; border-radius:50%; background:#94a3b8; display:inline-block; flex-shrink:0;"></span>
+                            <div>
+                              <div style="font-weight:700; font-size:12.5px; color:#0f172a;">Draft</div>
+                              <div style="font-size:10.5px; color:#64748b;">Staged/Draft</div>
+                            </div>
+                          </div>
+                        </label>
+                      </div>
                     </div>
 
                     <!-- Locality & Service Radius -->
@@ -1132,15 +1273,31 @@
                   {% endif %}
                   <span class="scc-badge-cat">{{ srv.category.name|default:"General" }}</span>
                   <span class="scc-badge-loc">
-                    <i class="fa-solid fa-location-dot"></i> {{ srv.locality|default:"Ranchi" }} · 10 km live
+                    <i class="fa-solid fa-location-dot"></i> {{ srv.locality|default:"Ranchi" }} · {{ srv.service_radius_km|default:10|floatformat:"0" }} km live
                   </span>
+                  {% if srv.status == 'active' %}
+                    <span style="position:absolute; top:10px; right:10px; background:rgba(16,185,129,0.92); color:#fff; font-size:10.5px; font-weight:700; padding:2px 8px; border-radius:6px; backdrop-filter:blur(4px);"><i class="fa-solid fa-circle-check"></i> Live</span>
+                  {% elif srv.status == 'paused' %}
+                    <span style="position:absolute; top:10px; right:10px; background:rgba(245,158,11,0.92); color:#fff; font-size:10.5px; font-weight:700; padding:2px 8px; border-radius:6px; backdrop-filter:blur(4px);"><i class="fa-solid fa-circle-pause"></i> Paused</span>
+                  {% else %}
+                    <span style="position:absolute; top:10px; right:10px; background:rgba(100,116,139,0.92); color:#fff; font-size:10.5px; font-weight:700; padding:2px 8px; border-radius:6px; backdrop-filter:blur(4px);"><i class="fa-solid fa-file-pen"></i> Draft</span>
+                  {% endif %}
                 </div>
 
                 <!-- Body Content -->
                 <div class="scc-body">
-                  <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:6px;">
-                    <h3 class="scc-title">{{ srv.title }}</h3>
-                    <span class="badge badge-{{ srv.status }}" style="font-size:11px;">{{ srv.get_status_display }}</span>
+                  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; gap:8px;">
+                    <h3 class="scc-title" style="margin:0;">{{ srv.title }}</h3>
+                    <form method="POST" action="{% url 'dashboard' 'vendor/catalog/index.html' %}" style="margin:0; flex-shrink:0;">
+                      {% csrf_token %}
+                      <input type="hidden" name="action" value="toggle_status">
+                      <input type="hidden" name="service_id" value="{{ srv.id }}">
+                      <select name="status" class="status-quick-badge status-{{ srv.status }}" onchange="this.form.submit()" title="Click to change status">
+                        <option value="active" {% if srv.status == 'active' %}selected{% endif %}>🟢 Active</option>
+                        <option value="paused" {% if srv.status == 'paused' %}selected{% endif %}>🟡 Paused</option>
+                        <option value="draft" {% if srv.status == 'draft' %}selected{% endif %}>⚪ Draft</option>
+                      </select>
+                    </form>
                   </div>
 
                   <p class="scc-desc">{{ srv.description|default:"Professional home service by certified partners." }}</p>
@@ -1171,6 +1328,10 @@
                     </div>
 
                     <div style="display:flex; gap:8px; align-items:center;">
+                      <button type="button" class="btn btn-primary btn-sm" onclick="openEditModal({{ srv.id }})" style="font-size:12px; font-weight:700;">
+                        <i class="fa-solid fa-pen-to-square"></i> Edit
+                      </button>
+
                       <a href="/services/browse?category={{ srv.category.id }}" target="_blank" class="btn btn-secondary btn-sm" style="font-size:12px; font-weight:700;">
                         <i class="fa-solid fa-arrow-up-right-from-square"></i> Customer View
                       </a>
@@ -1179,7 +1340,7 @@
                         {% csrf_token %}
                         <input type="hidden" name="action" value="delete_service">
                         <input type="hidden" name="service_id" value="{{ srv.id }}">
-                        <button type="submit" class="btn btn-danger btn-sm" style="font-size:12px;">
+                        <button type="submit" class="btn btn-danger btn-sm" style="font-size:12px;" title="Delete Service">
                           <i class="fa-solid fa-trash"></i>
                         </button>
                       </form>
@@ -1210,6 +1371,226 @@
       </main>
     </div>
   </div>
+
+  <!-- ============================================== -->
+  <!-- EDIT QUICK SERVICE MODAL                       -->
+  <!-- ============================================== -->
+  <div id="edit-service-modal" class="modal-backdrop-custom" role="dialog" aria-modal="true">
+    <div class="modal-dialog-large">
+      <div class="modal-header">
+        <div>
+          <div style="display:flex; align-items:center; gap:8px;">
+            <span style="background:#0f8a7c; color:#fff; font-size:11px; font-weight:800; padding:3px 8px; border-radius:6px; text-transform:uppercase;">Editor</span>
+            <h3 style="font-size:17px; font-weight:800; color:#0f172a; margin:0;" id="editModalHeading">Edit Quick Service</h3>
+          </div>
+          <p class="muted" style="margin:4px 0 0; font-size:12.5px;">Update title, status, package options, guarantee checklist, and delivery radius.</p>
+        </div>
+        <button type="button" class="icon-btn" onclick="closeEditModal()" title="Close">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <form method="POST" action="{% url 'dashboard' 'vendor/catalog/index.html' %}" id="editServiceForm" enctype="multipart/form-data">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="edit_service">
+        <input type="hidden" name="service_id" id="editServiceId">
+        <input type="hidden" name="packages_json" id="editPackagesJson">
+        <input type="hidden" name="inclusions_json" id="editInclusionsJson">
+        <input type="hidden" name="exclusions_json" id="editExclusionsJson">
+
+        <div class="modal-body-scrollable">
+
+          <!-- Section 1: Basic Information -->
+          <div class="builder-step-card" style="margin-bottom:16px;">
+            <div class="builder-step-head">
+              <div class="step-badge">1</div>
+              <div>
+                <h4 class="step-title">Basic Information</h4>
+                <p class="step-subtitle">Service identity and customer-facing title</p>
+              </div>
+            </div>
+
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-bottom:14px;">
+              <div class="field" style="margin:0;">
+                <label>Category <span class="required">*</span></label>
+                <select name="category_id" id="editCategory" class="select" required>
+                  <option value="">Select Category</option>
+                  {% for cat in categories %}
+                    <option value="{{ cat.id }}">{{ cat.name }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+
+              <div class="field" style="margin:0;">
+                <label>Service Title <span class="required">*</span></label>
+                <input type="text" name="title" id="editTitle" class="input" placeholder="e.g. Switchboard Repair" required autocomplete="off">
+              </div>
+            </div>
+
+            <!-- Short Description -->
+            <div class="field" style="margin:0 0 14px;">
+              <label>Subtitle / Tagline</label>
+              <input type="text" name="description" id="editDescription" class="input" placeholder="e.g. Professional switchboard repair service by verified experts.">
+            </div>
+
+            <!-- Status Selector -->
+            <div class="field" style="margin:0 0 14px;">
+              <label style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                <span style="font-weight:700;">Listing Status <span class="required">*</span></span>
+                <span style="font-size:11px; color:#64748b; font-weight:normal;">Change visibility on customer platform</span>
+              </label>
+              <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:10px;">
+                <label class="status-option-card active" id="editStatusCard_active" onclick="selectEditStatus('active')">
+                  <input type="radio" name="status" id="editStatusRadio_active" value="active" checked style="display:none;">
+                  <div style="display:flex; align-items:center; gap:8px;">
+                    <span style="width:10px; height:10px; border-radius:50%; background:#10b981; display:inline-block; flex-shrink:0;"></span>
+                    <div>
+                      <div style="font-weight:700; font-size:12.5px; color:#0f172a;">Active</div>
+                      <div style="font-size:10.5px; color:#64748b;">Live for bookings</div>
+                    </div>
+                  </div>
+                </label>
+                <label class="status-option-card" id="editStatusCard_paused" onclick="selectEditStatus('paused')">
+                  <input type="radio" name="status" id="editStatusRadio_paused" value="paused" style="display:none;">
+                  <div style="display:flex; align-items:center; gap:8px;">
+                    <span style="width:10px; height:10px; border-radius:50%; background:#f59e0b; display:inline-block; flex-shrink:0;"></span>
+                    <div>
+                      <div style="font-weight:700; font-size:12.5px; color:#0f172a;">Paused</div>
+                      <div style="font-size:10.5px; color:#64748b;">Temporarily paused</div>
+                    </div>
+                  </div>
+                </label>
+                <label class="status-option-card" id="editStatusCard_draft" onclick="selectEditStatus('draft')">
+                  <input type="radio" name="status" id="editStatusRadio_draft" value="draft" style="display:none;">
+                  <div style="display:flex; align-items:center; gap:8px;">
+                    <span style="width:10px; height:10px; border-radius:50%; background:#94a3b8; display:inline-block; flex-shrink:0;"></span>
+                    <div>
+                      <div style="font-weight:700; font-size:12.5px; color:#0f172a;">Draft</div>
+                      <div style="font-size:10.5px; color:#64748b;">Staged/Draft</div>
+                    </div>
+                  </div>
+                </label>
+              </div>
+            </div>
+
+            <!-- Locality & Service Radius -->
+            <div style="display:grid; grid-template-columns:2fr 1fr; gap:14px; margin:0;">
+              <div class="field" style="margin:0;">
+                <label>Locality / Service Area</label>
+                <input type="text" name="locality" id="editLocality" class="input" placeholder="e.g. Lalpur, Ranchi">
+              </div>
+              <div class="field" style="margin:0;">
+                <label>Service Radius (km)</label>
+                <input type="number" name="service_radius_km" id="editRadius" class="input" min="1" max="100">
+              </div>
+            </div>
+          </div>
+
+          <!-- Section 2: Cover Media -->
+          <div class="builder-step-card" style="margin-bottom:16px;">
+            <div class="builder-step-head">
+              <div class="step-badge">2</div>
+              <div>
+                <h4 class="step-title">Service Cover Photo</h4>
+                <p class="step-subtitle">Current cover image or upload new photo</p>
+              </div>
+            </div>
+
+            <div style="display:flex; gap:16px; align-items:center; margin-bottom:12px;">
+              <div style="width:120px; height:80px; border-radius:8px; overflow:hidden; border:1px solid #e2e8f0; background:#f1f5f9; flex-shrink:0;">
+                <img id="editCoverPreview" src="" alt="Cover" style="width:100%; height:100%; object-fit:cover;">
+              </div>
+              <div style="flex:1;">
+                <label style="font-size:12px; font-weight:700; color:#334155; margin-bottom:4px; display:block;">Upload New Photo:</label>
+                <input type="file" name="image" id="editImageFile" accept="image/*" class="input" style="padding:6px 10px; font-size:12px;" onchange="previewEditUploadedImage(this)">
+                <span style="font-size:11px; color:#64748b; margin-top:3px; display:block;">JPG, PNG, WebP up to 5MB</span>
+              </div>
+            </div>
+
+            <div>
+              <label style="font-size:12px; font-weight:700; color:#334155; margin-bottom:6px; display:block;">Or choose preset photo:</label>
+              <div class="img-preset-grid" id="editPresetGrid">
+                <div class="img-preset-item" onclick="selectEditPreset(this, 'https://images.unsplash.com/photo-1621905251189-08b45d6a269e?w=600&auto=format&fit=crop&q=80')">
+                  <img src="https://images.unsplash.com/photo-1621905251189-08b45d6a269e?w=200&auto=format&fit=crop&q=80" alt="Electrician">
+                  <span class="img-preset-label">Electrician</span>
+                </div>
+                <div class="img-preset-item" onclick="selectEditPreset(this, 'https://images.unsplash.com/photo-1585704032915-c3400ca199e7?w=600&auto=format&fit=crop&q=80')">
+                  <img src="https://images.unsplash.com/photo-1585704032915-c3400ca199e7?w=200&auto=format&fit=crop&q=80" alt="Plumbing">
+                  <span class="img-preset-label">Plumbing</span>
+                </div>
+                <div class="img-preset-item" onclick="selectEditPreset(this, 'https://images.unsplash.com/photo-1581578731548-c64695cc6952?w=600&auto=format&fit=crop&q=80')">
+                  <img src="https://images.unsplash.com/photo-1581578731548-c64695cc6952?w=200&auto=format&fit=crop&q=80" alt="Cleaning">
+                  <span class="img-preset-label">Cleaning</span>
+                </div>
+                <div class="img-preset-item" onclick="selectEditPreset(this, 'https://images.unsplash.com/photo-1585771724684-38269d6639fd?w=600&auto=format&fit=crop&q=80')">
+                  <img src="https://images.unsplash.com/photo-1585771724684-38269d6639fd?w=200&auto=format&fit=crop&q=80" alt="AC Service">
+                  <span class="img-preset-label">AC Service</span>
+                </div>
+                <div class="img-preset-item" onclick="selectEditPreset(this, 'https://images.unsplash.com/photo-1507652313519-d4e9174996dd?w=600&auto=format&fit=crop&q=80')">
+                  <img src="https://images.unsplash.com/photo-1507652313519-d4e9174996dd?w=200&auto=format&fit=crop&q=80" alt="Bathroom">
+                  <span class="img-preset-label">Bathroom</span>
+                </div>
+              </div>
+              <input type="hidden" name="image_preset" id="editImagePreset">
+            </div>
+          </div>
+
+          <!-- Section 3: Package Tiers Builder (Single-Price System) -->
+          <div class="builder-step-card" style="margin-bottom:16px;">
+            <div class="builder-step-head" style="justify-content:space-between;">
+              <div style="display:flex; align-items:center; gap:10px;">
+                <div class="step-badge">3</div>
+                <div>
+                  <h4 class="step-title">Package Options Builder</h4>
+                  <p class="step-subtitle">Offer 1 to 4 package tiers with clear scopes & payout prices.</p>
+                </div>
+              </div>
+              <button type="button" class="btn btn-secondary btn-sm" onclick="addEditPackageCard()" style="font-size:12px; font-weight:700;">
+                <i class="fa-solid fa-plus"></i> Add Package Tier
+              </button>
+            </div>
+
+            <div class="pkg-repeater-list" id="editPackageCardsList">
+              <!-- Dynamically populated via JS -->
+            </div>
+          </div>
+
+          <!-- Section 4: Inclusions Checklist -->
+          <div class="builder-step-card">
+            <div class="builder-step-head">
+              <div class="step-badge">4</div>
+              <div>
+                <h4 class="step-title">Inclusions & Guarantee Checklist</h4>
+                <p class="step-subtitle">Trust assurances and guarantees shown on service details.</p>
+              </div>
+            </div>
+
+            <div class="inc-chips-wrap" id="editInclusionsContainer">
+              <!-- Dynamically populated via JS -->
+            </div>
+
+            <div style="display:flex; gap:8px; margin-top:10px;">
+              <input type="text" id="editCustomIncInput" class="input" placeholder="Add custom guarantee item..." style="font-size:12.5px;">
+              <button type="button" class="btn btn-secondary" onclick="addEditCustomInclusion()" style="white-space:nowrap; font-size:12px; font-weight:700;">
+                <i class="fa-solid fa-plus"></i> Add
+              </button>
+            </div>
+          </div>
+
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" onclick="closeEditModal()">Cancel</button>
+          <button type="submit" class="btn btn-primary" style="font-weight:700; padding:9px 24px;">
+            <i class="fa-solid fa-check"></i> Save Changes
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Serialized Service Data for Edit Modal Consumption -->
+  <script type="application/json" id="myServicesDataJson">{{ my_services_json|default:'{}'|safe }}</script>
 
   <!-- Interactive JavaScript Engine -->
   <script>
@@ -1807,7 +2188,226 @@
       }, 300);
     }
 
-    // Initial Live Preview Render on Page Load
+    // ==========================================
+    // VENDOR QUICK SERVICE EDIT MODAL LOGIC
+    // ==========================================
+    let editPackages = [];
+    let editInclusions = [];
+
+    function selectCreateStatus(labelEl, statusVal) {
+      document.querySelectorAll('#add-service-form .status-option-card').forEach(c => c.classList.remove('active'));
+      labelEl.classList.add('active');
+      const radio = labelEl.querySelector('input[type="radio"]');
+      if (radio) radio.checked = true;
+    }
+
+    function selectEditStatus(statusVal) {
+      document.querySelectorAll('#edit-service-modal .status-option-card').forEach(c => c.classList.remove('active'));
+      const card = document.getElementById(`editStatusCard_${statusVal}`);
+      if (card) card.classList.add('active');
+      const radio = document.getElementById(`editStatusRadio_${statusVal}`);
+      if (radio) radio.checked = true;
+    }
+
+    function openEditModal(srvId) {
+      const dataEl = document.getElementById('myServicesDataJson');
+      if (!dataEl) return;
+      let services = {};
+      try { services = JSON.parse(dataEl.textContent); } catch(e) {}
+      const srv = services[String(srvId)];
+      if (!srv) {
+        alert("Service details could not be loaded.");
+        return;
+      }
+
+      document.getElementById('editServiceId').value = srv.id;
+      document.getElementById('editModalHeading').textContent = `Edit Quick Service: ${srv.title}`;
+      document.getElementById('editTitle').value = srv.title || '';
+      document.getElementById('editCategory').value = srv.category_id || '';
+      document.getElementById('editDescription').value = srv.description || '';
+      document.getElementById('editLocality').value = srv.locality || '';
+      document.getElementById('editRadius').value = srv.service_radius_km || 10;
+      document.getElementById('editImagePreset').value = srv.image_url || '';
+
+      selectEditStatus(srv.status || 'active');
+
+      const imgPreview = document.getElementById('editCoverPreview');
+      if (srv.image_url) {
+        imgPreview.src = srv.image_url;
+      } else {
+        imgPreview.src = 'https://images.unsplash.com/photo-1621905251189-08b45d6a269e?w=600&auto=format&fit=crop&q=80';
+      }
+
+      // Load packages
+      if (Array.isArray(srv.packages) && srv.packages.length > 0) {
+        editPackages = JSON.parse(JSON.stringify(srv.packages));
+      } else {
+        const basePayout = parseFloat(srv.base_price) || 199;
+        const cp = calcCustomerPrice(basePayout);
+        editPackages = [
+          { name: 'Standard Service', vendor_payout: basePayout, price: cp.customerPrice, desc: srv.description || 'Full professional service.' }
+        ];
+      }
+      renderEditPackages();
+
+      // Load inclusions
+      if (Array.isArray(srv.inclusions) && srv.inclusions.length > 0) {
+        editInclusions = [...srv.inclusions];
+      } else {
+        editInclusions = [
+          "Complete diagnostic inspection of existing fittings & components",
+          "Execution by certified, background-checked professional",
+          "Post-service sanitization and thorough debris cleanup",
+          "30 days Sugu protection warranty on all workmanship"
+        ];
+      }
+      renderEditInclusions();
+
+      const modal = document.getElementById('edit-service-modal');
+      modal.classList.add('open');
+      document.body.style.overflow = 'hidden';
+    }
+
+    function closeEditModal() {
+      const modal = document.getElementById('edit-service-modal');
+      modal.classList.remove('open');
+      document.body.style.overflow = '';
+    }
+
+    function renderEditPackages() {
+      const container = document.getElementById('editPackageCardsList');
+      container.innerHTML = '';
+      editPackages.forEach((pkg, idx) => {
+        const payout = pkg.vendor_payout !== undefined ? pkg.vendor_payout : (pkg.price || 199);
+        const cp = calcCustomerPrice(payout);
+
+        const card = document.createElement('div');
+        card.className = 'pkg-card';
+        card.innerHTML = `
+          <div class="pkg-card-head">
+            <span class="pkg-card-title-tag"><i class="fa-solid fa-box"></i> Package Tier ${idx + 1}</span>
+            ${editPackages.length > 1 ? `<button type="button" class="pkg-del-btn" onclick="removeEditPackageCard(${idx})" title="Remove"><i class="fa-solid fa-trash"></i></button>` : ''}
+          </div>
+          <div class="pkg-grid-inputs">
+            <div>
+              <label style="font-size:11px; font-weight:700; color:#64748b;">Package Name</label>
+              <input type="text" class="input" value="${escapeHtml(pkg.name || '')}" placeholder="Tier Name" required oninput="editPackages[${idx}].name=this.value;">
+            </div>
+            <div>
+              <label style="font-size:11px; font-weight:700; color:#64748b;">Your Base Price (Payout ₹)</label>
+              <input type="number" step="1" min="49" class="input" value="${payout}" placeholder="149" required oninput="handleEditPkgPriceChange(${idx}, this.value)">
+            </div>
+          </div>
+          <div style="margin-top:8px;">
+            <label style="font-size:11px; font-weight:700; color:#64748b;">Scope / Work Description</label>
+            <input type="text" class="input" value="${escapeHtml(pkg.desc || '')}" placeholder="Scope description..." oninput="editPackages[${idx}].desc=this.value;">
+          </div>
+          <div style="margin-top:8px; background:#f0fdf4; border:1px solid #bbf7d0; border-radius:8px; padding:6px 10px; display:flex; justify-content:space-between; align-items:center; font-size:11.5px;">
+            <div>
+              <span style="color:#166534; font-weight:600;">Customer Listed Price:</span>
+              <strong style="color:#059669; font-size:13.5px; margin-left:4px;" id="editPkgCustPrice_${idx}">₹${cp.customerPrice}</strong>
+            </div>
+            <span style="color:#15803d; font-size:10.5px;">(Payout ₹${Math.round(cp.vendorGets)} + Cut ₹${cp.commission} + GST ₹${cp.cgst + cp.sgst})</span>
+          </div>
+        `;
+        container.appendChild(card);
+      });
+    }
+
+    function handleEditPkgPriceChange(idx, val) {
+      const payout = parseFloat(val) || 0;
+      editPackages[idx].vendor_payout = payout;
+      const cp = calcCustomerPrice(payout);
+      editPackages[idx].price = cp.customerPrice;
+      const custEl = document.getElementById(`editPkgCustPrice_${idx}`);
+      if (custEl) custEl.textContent = `₹${cp.customerPrice}`;
+      if (custEl && custEl.parentElement && custEl.parentElement.nextElementSibling) {
+        custEl.parentElement.nextElementSibling.textContent = `(Payout ₹${Math.round(cp.vendorGets)} + Cut ₹${cp.commission} + GST ₹${cp.cgst + cp.sgst})`;
+      }
+    }
+
+    function addEditPackageCard() {
+      if (editPackages.length >= 4) {
+        alert("Maximum 4 package options allowed per service.");
+        return;
+      }
+      const idx = editPackages.length;
+      const p = 199 * (idx + 1);
+      const cp = calcCustomerPrice(p);
+      editPackages.push({
+        name: `Package Tier ${idx + 1}`,
+        vendor_payout: p,
+        price: cp.customerPrice,
+        desc: "Diagnostic verification and quality service."
+      });
+      renderEditPackages();
+    }
+
+    function removeEditPackageCard(idx) {
+      if (editPackages.length > 1) {
+        editPackages.splice(idx, 1);
+        renderEditPackages();
+      }
+    }
+
+    function renderEditInclusions() {
+      const container = document.getElementById('editInclusionsContainer');
+      container.innerHTML = '';
+      editInclusions.forEach((text, idx) => {
+        const item = document.createElement('div');
+        item.className = 'inc-item-checkbox active';
+        item.style.justifyContent = 'space-between';
+        item.innerHTML = `
+          <div style="display:flex; align-items:center; gap:8px; flex:1;">
+            <i class="fa-solid fa-circle-check" style="color:#10b981;"></i>
+            <span style="font-size:12.5px;">${escapeHtml(text)}</span>
+          </div>
+          <button type="button" class="pkg-del-btn" onclick="removeEditInclusion(${idx})" title="Remove"><i class="fa-solid fa-xmark"></i></button>
+        `;
+        container.appendChild(item);
+      });
+    }
+
+    function addEditCustomInclusion() {
+      const input = document.getElementById('editCustomIncInput');
+      const val = input.value.trim();
+      if (!val) return;
+      editInclusions.push(val);
+      input.value = '';
+      renderEditInclusions();
+    }
+
+    function removeEditInclusion(idx) {
+      editInclusions.splice(idx, 1);
+      renderEditInclusions();
+    }
+
+    function selectEditPreset(el, url) {
+      document.querySelectorAll('#editPresetGrid .img-preset-item').forEach(i => i.classList.remove('selected'));
+      el.classList.add('selected');
+      document.getElementById('editImagePreset').value = url;
+      document.getElementById('editCoverPreview').src = url;
+      document.getElementById('editImageFile').value = '';
+    }
+
+    function previewEditUploadedImage(input) {
+      if (input.files && input.files[0]) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+          document.getElementById('editCoverPreview').src = e.target.result;
+          document.getElementById('editImagePreset').value = '';
+          document.querySelectorAll('#editPresetGrid .img-preset-item').forEach(i => i.classList.remove('selected'));
+        };
+        reader.readAsDataURL(input.files[0]);
+      }
+    }
+
+    function escapeHtml(str) {
+      if (!str) return '';
+      return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
+    // Initial Live Preview & Listeners on Page Load
     document.addEventListener('DOMContentLoaded', () => {
       // Populate initial suggestions and inclusions based on current category
       const catSelect = document.getElementById('formCategory');
@@ -1816,6 +2416,20 @@
       populateInclusions(initialCat);
       document.querySelectorAll('#packageCardsList .pkg-card').forEach(updateCardBreakdown);
       updateLivePreview();
+
+      // Submit handler for editServiceForm
+      const editForm = document.getElementById('editServiceForm');
+      if (editForm) {
+        editForm.addEventListener('submit', (e) => {
+          if (!editPackages || editPackages.length === 0) {
+            e.preventDefault();
+            alert("Please include at least one package tier.");
+            return;
+          }
+          document.getElementById('editPackagesJson').value = JSON.stringify(editPackages);
+          document.getElementById('editInclusionsJson').value = JSON.stringify(editInclusions);
+        });
+      }
     });
   </script>
 </body>
