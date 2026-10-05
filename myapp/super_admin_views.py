@@ -1551,29 +1551,148 @@ def super_admin_qs_create(request):
     vendors = CustomUser.objects.filter(role='VENDOR').order_by('username')
     categories = Category.objects.all().order_by('name')
     locations = Location.objects.all().order_by('state', 'city')
+    gs = GlobalSettings.objects.first()
 
     if request.method == 'POST':
         vendor_id = request.POST.get('vendor') or request.POST.get('user')
         title = request.POST.get('title', '').strip()
         cat_id = request.POST.get('category')
         loc_id = request.POST.get('location')
-        base_price = request.POST.get('base_price') or request.POST.get('budget', 0) or 0
         status = request.POST.get('status', 'active')
+        if status not in ['active', 'paused', 'draft']:
+            status = 'active'
         description = request.POST.get('description', '').strip()
+        locality = request.POST.get('locality', '').strip()
+        image_preset = request.POST.get('image_url', '').strip()
 
         vendor = get_object_or_404(CustomUser, pk=vendor_id)
         cat_obj = Category.objects.filter(id=cat_id).first() if cat_id else None
         loc_obj = Location.objects.filter(id=loc_id).first() if loc_id else None
 
-        qs = QuickService.objects.create(
+        radius_val = request.POST.get('service_radius_km', 10.0)
+        try: radius = float(radius_val) if radius_val else 10.0
+        except (ValueError, TypeError): radius = 10.0
+
+        lat_val = request.POST.get('latitude')
+        lon_val = request.POST.get('longitude')
+        try: lat = float(lat_val) if lat_val else None
+        except (ValueError, TypeError): lat = None
+        try: lon = float(lon_val) if lon_val else None
+        except (ValueError, TypeError): lon = None
+
+        # Parse Packages
+        packages_json = request.POST.get('packages_json')
+        service_packages = []
+        if packages_json:
+            try:
+                parsed_pkgs = json.loads(packages_json)
+                if isinstance(parsed_pkgs, list):
+                    for p in parsed_pkgs:
+                        if isinstance(p, dict) and p.get('name'):
+                            p_raw = float(p.get('price', 0))
+                            calc = gs.calculate_qs_customer_price(p_raw) if gs else {'customer_price': round(p_raw), 'vendor_payout': p_raw, 'commission': 0, 'total_tax': 0}
+                            service_packages.append({
+                                'name': str(p.get('name')).strip(),
+                                'price': calc['customer_price'],
+                                'vendor_payout': calc['vendor_payout'],
+                                'commission': calc.get('commission', 0),
+                                'tax': calc.get('total_tax', 0),
+                                'desc': str(p.get('desc', '')).strip()
+                            })
+            except Exception: pass
+
+        if not service_packages:
+            pkg_names = request.POST.getlist('package_name[]')
+            pkg_prices = request.POST.getlist('package_price[]')
+            pkg_descs = request.POST.getlist('package_desc[]')
+            for i, name in enumerate(pkg_names):
+                if not name.strip():
+                    continue
+                try: p_val = float(pkg_prices[i]) if i < len(pkg_prices) else 0.0
+                except (ValueError, TypeError): p_val = 0.0
+                calc = gs.calculate_qs_customer_price(p_val) if gs else {'customer_price': round(p_val), 'vendor_payout': p_val, 'commission': 0, 'total_tax': 0}
+                d_val = pkg_descs[i].strip() if i < len(pkg_descs) else ""
+                service_packages.append({
+                    'name': name.strip(),
+                    'price': calc['customer_price'],
+                    'vendor_payout': calc['vendor_payout'],
+                    'commission': calc.get('commission', 0),
+                    'tax': calc.get('total_tax', 0),
+                    'desc': d_val
+                })
+
+        base_price_val = request.POST.get('base_price', 0)
+        try: default_price = float(base_price_val) if base_price_val else 199.0
+        except: default_price = 199.0
+
+        if not service_packages:
+            calc = gs.calculate_qs_customer_price(default_price) if gs else {'customer_price': round(default_price), 'vendor_payout': default_price, 'commission': 0, 'total_tax': 0}
+            service_packages = [{
+                'name': 'Standard Service',
+                'price': calc['customer_price'],
+                'vendor_payout': calc['vendor_payout'],
+                'commission': calc.get('commission', 0),
+                'tax': calc.get('total_tax', 0),
+                'desc': description or f"Full {title} service by verified professional."
+            }]
+
+        min_price = min(p['price'] for p in service_packages)
+
+        # Inclusions & Exclusions
+        inclusions = [str(x).strip() for x in request.POST.getlist('inclusions[]') if str(x).strip()]
+        if not inclusions:
+            inclusions_json = request.POST.get('inclusions_json')
+            if inclusions_json:
+                try:
+                    p_inc = json.loads(inclusions_json)
+                    if isinstance(p_inc, list):
+                        inclusions = [str(x).strip() for x in p_inc if str(x).strip()]
+                except Exception: pass
+        if not inclusions:
+            inclusions = [
+                "Complete diagnostic inspection of existing fittings & components",
+                "Execution by certified, background-checked professional",
+                "Post-service sanitization and thorough debris cleanup",
+                "30 days Sugu protection warranty on all workmanship"
+            ]
+
+        exclusions = [str(x).strip() for x in request.POST.getlist('exclusions[]') if str(x).strip()]
+        if not exclusions:
+            exclusions_json = request.POST.get('exclusions_json')
+            if exclusions_json:
+                try:
+                    p_exc = json.loads(exclusions_json)
+                    if isinstance(p_exc, list):
+                        exclusions = [str(x).strip() for x in p_exc if str(x).strip()]
+                except Exception: pass
+        if not exclusions:
+            exclusions = [
+                "Major civil masonry, pipe embedding or wall tearing excluded",
+                "Spare parts / extra hardware to be purchased or charged separately"
+            ]
+
+        qs = QuickService(
             vendor=vendor,
             title=title,
             category=cat_obj,
             location=loc_obj,
-            base_price=base_price,
+            base_price=min_price,
+            service_packages=service_packages,
+            inclusions=inclusions,
+            exclusions=exclusions,
+            image_url=image_preset or None,
+            locality=locality,
+            latitude=lat,
+            longitude=lon,
+            service_radius_km=radius,
             status=status,
-            description=description
+            description=description or f"Quality {title} service at your doorstep."
         )
+        image_file = request.FILES.get('image')
+        if image_file:
+            qs.image = image_file
+        qs.save()
+
         django_messages.success(request, f'Quick Service "{qs.title}" created successfully.')
         return redirect('super_admin_quick_services')
 
@@ -1582,39 +1701,174 @@ def super_admin_qs_create(request):
         'vendors': vendors,
         'users': vendors,
         'categories': categories,
-        'locations': locations
+        'locations': locations,
+        'global_settings': gs,
+        'packages_json': json.dumps([]),
+        'inclusions_json': json.dumps([]),
+        'exclusions_json': json.dumps([]),
     })
 
 @sa_required
 def super_admin_qs_edit(request, qs_id):
     qs = get_object_or_404(QuickService, pk=qs_id)
-    categories = Category.objects.all()
+    categories = Category.objects.all().order_by('name')
     locations = Location.objects.all().order_by('state', 'city')
     vendors = CustomUser.objects.filter(role='VENDOR').order_by('username')
+    gs = GlobalSettings.objects.first()
+
     if request.method == 'POST':
-        qs.title = request.POST.get('title', qs.title)
-        qs.status = request.POST.get('status', qs.status)
-        qs.base_price = request.POST.get('base_price') or request.POST.get('budget', qs.base_price)
+        title = request.POST.get('title', '').strip()
+        if title:
+            qs.title = title
+
+        status = request.POST.get('status')
+        if status in ['active', 'paused', 'draft']:
+            qs.status = status
+
         cat_id = request.POST.get('category')
         if cat_id:
-            qs.category = get_object_or_404(Category, pk=cat_id)
+            qs.category = Category.objects.filter(id=cat_id).first()
+
         loc_id = request.POST.get('location')
         if loc_id:
             qs.location = Location.objects.filter(id=loc_id).first()
+
         vendor_id = request.POST.get('vendor') or request.POST.get('user')
         if vendor_id:
-            qs.vendor = get_object_or_404(CustomUser, pk=vendor_id)
-        qs.description = request.POST.get('description', qs.description)
+            qs.vendor = CustomUser.objects.filter(id=vendor_id).first() or qs.vendor
+
+        qs.description = request.POST.get('description', qs.description).strip()
+        qs.locality = request.POST.get('locality', qs.locality or '').strip()
+
+        radius_val = request.POST.get('service_radius_km')
+        if radius_val:
+            try: qs.service_radius_km = float(radius_val)
+            except (ValueError, TypeError): pass
+
+        lat_val = request.POST.get('latitude')
+        if lat_val:
+            try: qs.latitude = float(lat_val)
+            except (ValueError, TypeError): pass
+
+        lon_val = request.POST.get('longitude')
+        if lon_val:
+            try: qs.longitude = float(lon_val)
+            except (ValueError, TypeError): pass
+
+        image_file = request.FILES.get('image')
+        if image_file:
+            qs.image = image_file
+
+        image_url = request.POST.get('image_url')
+        if image_url is not None:
+            qs.image_url = image_url.strip() or None
+
+        # Parse Packages
+        packages_json = request.POST.get('packages_json')
+        service_packages = []
+        if packages_json:
+            try:
+                parsed_pkgs = json.loads(packages_json)
+                if isinstance(parsed_pkgs, list):
+                    for p in parsed_pkgs:
+                        if isinstance(p, dict) and p.get('name'):
+                            p_raw = float(p.get('price', 0))
+                            calc = gs.calculate_qs_customer_price(p_raw) if gs else {'customer_price': round(p_raw), 'vendor_payout': p_raw, 'commission': 0, 'total_tax': 0}
+                            service_packages.append({
+                                'name': str(p.get('name')).strip(),
+                                'price': calc['customer_price'],
+                                'vendor_payout': calc['vendor_payout'],
+                                'commission': calc.get('commission', 0),
+                                'tax': calc.get('total_tax', 0),
+                                'desc': str(p.get('desc', '')).strip()
+                            })
+            except Exception: pass
+
+        if not service_packages:
+            pkg_names = request.POST.getlist('package_name[]')
+            pkg_prices = request.POST.getlist('package_price[]')
+            pkg_descs = request.POST.getlist('package_desc[]')
+            for i, name in enumerate(pkg_names):
+                if not name.strip():
+                    continue
+                try: p_val = float(pkg_prices[i]) if i < len(pkg_prices) else 0.0
+                except (ValueError, TypeError): p_val = 0.0
+                calc = gs.calculate_qs_customer_price(p_val) if gs else {'customer_price': round(p_val), 'vendor_payout': p_val, 'commission': 0, 'total_tax': 0}
+                d_val = pkg_descs[i].strip() if i < len(pkg_descs) else ""
+                service_packages.append({
+                    'name': name.strip(),
+                    'price': calc['customer_price'],
+                    'vendor_payout': calc['vendor_payout'],
+                    'commission': calc.get('commission', 0),
+                    'tax': calc.get('total_tax', 0),
+                    'desc': d_val
+                })
+
+        if service_packages:
+            qs.service_packages = service_packages
+            qs.base_price = min(p['price'] for p in service_packages)
+        else:
+            base_price_val = request.POST.get('base_price')
+            if base_price_val:
+                try:
+                    p_val = float(base_price_val)
+                    calc = gs.calculate_qs_customer_price(p_val) if gs else {'customer_price': round(p_val), 'vendor_payout': p_val, 'commission': 0, 'total_tax': 0}
+                    qs.base_price = calc['customer_price']
+                    if not qs.service_packages:
+                        qs.service_packages = [{
+                            'name': 'Standard Service',
+                            'price': calc['customer_price'],
+                            'vendor_payout': calc['vendor_payout'],
+                            'commission': calc.get('commission', 0),
+                            'tax': calc.get('total_tax', 0),
+                            'desc': qs.description or "Full service by verified expert."
+                        }]
+                except (ValueError, TypeError): pass
+
+        # Inclusions & Exclusions
+        inclusions_json = request.POST.get('inclusions_json')
+        if inclusions_json:
+            try:
+                p_inc = json.loads(inclusions_json)
+                if isinstance(p_inc, list):
+                    qs.inclusions = [str(x).strip() for x in p_inc if str(x).strip()]
+            except Exception: pass
+        else:
+            inc_list = [str(x).strip() for x in request.POST.getlist('inclusions[]') if str(x).strip()]
+            if inc_list:
+                qs.inclusions = inc_list
+
+        exclusions_json = request.POST.get('exclusions_json')
+        if exclusions_json:
+            try:
+                p_exc = json.loads(exclusions_json)
+                if isinstance(p_exc, list):
+                    qs.exclusions = [str(x).strip() for x in p_exc if str(x).strip()]
+            except Exception: pass
+        else:
+            exc_list = [str(x).strip() for x in request.POST.getlist('exclusions[]') if str(x).strip()]
+            if exc_list:
+                qs.exclusions = exc_list
+
         qs.save()
-        django_messages.success(request, f'Quick Service "{qs.title}" updated.')
+        django_messages.success(request, f'Quick Service "{qs.title}" updated successfully.')
         return redirect('super_admin_quick_services')
+
+    packages_json = json.dumps(qs.service_packages or [])
+    inclusions_json = json.dumps(qs.inclusions or [])
+    exclusions_json = json.dumps(qs.exclusions or [])
+
     return render(request, 'superadmin/qs_form.html', {
         'mode': 'edit',
         'qs': qs,
         'categories': categories,
         'locations': locations,
         'vendors': vendors,
-        'users': vendors
+        'users': vendors,
+        'global_settings': gs,
+        'packages_json': packages_json,
+        'inclusions_json': inclusions_json,
+        'exclusions_json': exclusions_json,
     })
 
 @sa_required
