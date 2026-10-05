@@ -317,5 +317,21 @@ urlpatterns = [
     path('api/credits/summary/', Api_views.credit_summary_api, name='credit_summary_api'),
     path('api/credits/summary', Api_views.credit_summary_api),
 
+    # Quick Service Job Completion, Dynamic UPI QR Billing & Revenue Split APIs
+    path('api/quick-services/bookings/<int:booking_id>/generate-bill/', Api_views.generate_booking_bill_api, name='generate_booking_bill_api'),
+    path('api/quick-services/bookings/<int:booking_id>/generate-bill', Api_views.generate_booking_bill_api),
+    path('api/quick-services/bookings/<int:booking_id>/payment-qr/', Api_views.booking_payment_qr_api, name='booking_payment_qr_api'),
+    path('api/quick-services/bookings/<int:booking_id>/payment-qr', Api_views.booking_payment_qr_api),
+    path('api/quick-services/bookings/<int:booking_id>/payment/confirm/', Api_views.confirm_booking_payment_api, name='confirm_booking_payment_api'),
+    path('api/quick-services/bookings/<int:booking_id>/payment/confirm', Api_views.confirm_booking_payment_api),
+    path('api/quick-services/bookings/<int:booking_id>/payment/status/', Api_views.booking_payment_status_api, name='booking_payment_status_api'),
+    path('api/quick-services/bookings/<int:booking_id>/payment/status', Api_views.booking_payment_status_api),
+
+    # Vendor Wallet APIs
+    path('api/vendor/wallet/balance/', Api_views.vendor_wallet_balance_api, name='vendor_wallet_balance_api'),
+    path('api/vendor/wallet/balance', Api_views.vendor_wallet_balance_api),
+    path('api/vendor/wallet/transactions/', Api_views.vendor_wallet_transactions_api, name='vendor_wallet_transactions_api'),
+    path('api/vendor/wallet/transactions', Api_views.vendor_wallet_transactions_api),
+
     re_path(r'^(?P<path>.*)$', views.dashboard_view, name='dashboard'),
 ]

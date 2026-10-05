@@ -162,11 +162,9 @@
                           <button type="submit" name="action" value="cancel" class="btn btn-secondary btn-sm" style="color:red; border-color:red; padding:5px 8px;">Reject</button>
                         </form>
                         {% elif booking.status == 'accepted' %}
-                        <form method="POST" action="{% url 'dashboard' 'vendor/bookings/index.html' %}" style="display:inline;">
-                          {% csrf_token %}
-                          <input type="hidden" name="booking_id" value="{{ booking.id }}">
-                          <button type="submit" name="action" value="complete" class="btn btn-primary btn-sm" style="padding:5px 10px; background:#059669; border-color:#059669;">Mark Complete</button>
-                        </form>
+                        <button type="button" class="btn btn-primary btn-sm" onclick="openCompleteBookingModal('{{ booking.id }}', '{{ booking.total_amount }}', '{{ booking.quick_service.title|default:'Quick Service'|escapejs }}', '{{ booking.customer.get_full_name|default:booking.customer.username|escapejs }}')" style="padding:5px 10px; background:#059669; border-color:#059669; font-weight:700;">
+                          ✓ Complete & Bill
+                        </button>
                         {% endif %}
                       </div>
                     </td>
@@ -286,8 +284,139 @@
             </div>
 
             <!-- Modal Footer -->
-            <div style="padding:16px 24px; border-top:1px solid var(--line); display:flex; justify-content:flex-end; gap:10px; background:#f8fafc; border-radius:0 0 16px 16px;">
+            <div style="padding:16px 24px; border-top:1px solid var(--line); display:flex; justify-content:space-between; align-items:center; gap:10px; background:#f8fafc; border-radius:0 0 16px 16px;">
               <button type="button" class="btn btn-secondary" onclick="closeVendorBookingModal()">Close</button>
+              <button type="button" id="modal-complete-job-btn" class="btn btn-primary" style="background:#059669; border-color:#059669; font-weight:750; display:none;" onclick="triggerCompleteFromDetails()">
+                ✓ Complete Job & Show UPI QR →
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- JOB COMPLETION & DYNAMIC UPI QR PAYMENT MODAL -->
+        <div id="complete-booking-modal-backdrop" class="modal-backdrop-custom" onclick="if(event.target===this) closeCompleteBookingModal()">
+          <div class="modal-card-custom" style="width:min(550px, 100%);">
+            <!-- Modal Header -->
+            <div class="modal-head-custom" style="background:linear-gradient(135deg, #059669 0%, #047857 100%); color:#fff; border-radius:16px 16px 0 0;">
+              <div>
+                <h3 id="complete-modal-title" style="margin:0; font-size:17px; font-weight:800; color:#fff;">Complete Job & Collect Payment</h3>
+                <span id="complete-modal-subtitle" style="font-size:12px; color:#d1fae5;">Generate bill, show UPI QR code, and credit wallet</span>
+              </div>
+              <button type="button" class="btn btn-ghost btn-sm" onclick="closeCompleteBookingModal()" style="font-size:18px; padding:4px 8px; color:#fff;">✕</button>
+            </div>
+
+            <!-- Modal Body -->
+            <div class="modal-body-custom" style="padding:22px;">
+              <!-- View 1: Review & Extras -->
+              <div id="complete-step-inputs">
+                <div style="background:#f8fafc; border-radius:12px; padding:14px 16px; border:1px solid var(--line); margin-bottom:16px;">
+                  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                    <span style="font-size:12px; color:var(--muted); font-weight:600;">Service</span>
+                    <strong id="complete-service-name" style="color:#0f172a; font-size:13.5px;">Quick Service</strong>
+                  </div>
+                  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                    <span style="font-size:12px; color:var(--muted); font-weight:600;">Customer</span>
+                    <strong id="complete-customer-name" style="color:#0f172a; font-size:13.5px;">Customer</strong>
+                  </div>
+                  <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <span style="font-size:12px; color:var(--muted); font-weight:600;">Base Service Charge</span>
+                    <strong id="complete-base-amount" style="color:#059669; font-size:15px;">₹0.00</strong>
+                  </div>
+                </div>
+
+                <div style="margin-bottom:14px;">
+                  <label style="display:block; font-size:12.5px; font-weight:700; color:#334155; margin-bottom:5px;">
+                    Additional Spare Parts / Materials (₹) <span style="font-weight:400; color:var(--muted);">(Optional)</span>
+                  </label>
+                  <input type="number" id="complete-extra-charges" class="input" min="0" placeholder="0.00" value="0" style="width:100%; font-size:14px;" oninput="updateLivePreviewCalculation()">
+                </div>
+
+                <div style="margin-bottom:18px;">
+                  <label style="display:block; font-size:12.5px; font-weight:700; color:#334155; margin-bottom:5px;">
+                    Work Notes <span style="font-weight:400; color:var(--muted);">(Optional)</span>
+                  </label>
+                  <input type="text" id="complete-work-notes" class="input" placeholder="e.g. Completed filter cleaning and wire check" style="width:100%; font-size:13px;">
+                </div>
+
+                <button type="button" id="btn-generate-bill" class="btn btn-primary" onclick="submitGenerateBill()" style="width:100%; padding:12px; font-weight:800; font-size:14px; background:#059669; border-color:#059669;">
+                  Generate Bill & Dynamic QR Code →
+                </button>
+              </div>
+
+              <!-- View 2: QR Code & Payment Screen -->
+              <div id="complete-step-qr" style="display:none; text-align:center;">
+                <!-- QR Code Box -->
+                <div style="display:inline-block; padding:12px; background:#fff; border:2px solid #86efac; border-radius:16px; box-shadow:0 10px 25px rgba(5,150,105,0.12); margin-bottom:14px;">
+                  <img id="completion-qr-image" src="" alt="Dynamic UPI QR Code" style="width:200px; height:200px; display:block; border-radius:8px;">
+                  <div style="font-size:11px; color:#15803d; font-weight:700; margin-top:8px; display:flex; align-items:center; justify-content:center; gap:5px;">
+                    <span>⚡</span> <span>Scan with Any UPI App</span>
+                  </div>
+                </div>
+
+                <!-- Total Amount Banner -->
+                <div style="margin-bottom:14px;">
+                  <span style="font-size:11.5px; text-transform:uppercase; color:var(--muted); font-weight:750; letter-spacing:0.5px; display:block;">Total Customer Amount</span>
+                  <div style="font-size:28px; font-weight:900; color:#059669;" id="qr-display-total">₹0.00</div>
+                  <div style="font-size:12px; color:var(--muted);" id="qr-display-upi-note">Includes service charges, platform fee & taxes</div>
+                </div>
+
+                <!-- Financial Split Breakdown Card -->
+                <div style="background:#f8fafc; border:1px solid var(--line); border-radius:12px; padding:14px; text-align:left; font-size:12.5px; margin-bottom:16px;">
+                  <div style="display:flex; justify-content:space-between; margin-bottom:5px;">
+                    <span class="muted">Service + Extra Charges:</span>
+                    <strong id="breakdown-vendor-base">₹0.00</strong>
+                  </div>
+                  <div style="display:flex; justify-content:space-between; margin-bottom:5px;">
+                    <span class="muted">Platform Commission Cut (10%):</span>
+                    <span id="breakdown-commission" style="color:#d97706; font-weight:600;">₹0.00</span>
+                  </div>
+                  <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
+                    <span class="muted">GST (CGST 9% + SGST 9%):</span>
+                    <span id="breakdown-gst" style="color:#64748b; font-weight:600;">₹0.00</span>
+                  </div>
+                  <div style="border-top:1px dashed #cbd5e1; padding-top:8px; display:flex; justify-content:space-between; align-items:center; background:#ecfdf5; margin:-4px -14px -14px; padding:10px 14px; border-radius:0 0 12px 12px;">
+                    <span style="color:#047857; font-weight:750; display:flex; align-items:center; gap:5px;">
+                      <span>👛</span> Your Net Wallet Credit:
+                    </span>
+                    <strong id="breakdown-wallet-payout" style="color:#047857; font-size:15px; font-weight:800;">₹0.00</strong>
+                  </div>
+                </div>
+
+                <!-- Action Confirmation Buttons -->
+                <div style="display:flex; flex-direction:column; gap:8px;">
+                  <button type="button" id="btn-confirm-upi-payment" class="btn btn-primary" onclick="confirmBookingPayment('upi_qr')" style="width:100%; padding:12px; font-weight:800; background:#059669; border-color:#059669; font-size:14px;">
+                    ✓ Customer Paid via UPI QR
+                  </button>
+                  <button type="button" id="btn-confirm-cash-payment" class="btn btn-secondary" onclick="confirmBookingPayment('cash_collected')" style="width:100%; padding:10px; font-weight:700; font-size:13px; color:#334155;">
+                    💵 Cash Collected Directly
+                  </button>
+                </div>
+              </div>
+
+              <!-- View 3: Success Banner -->
+              <div id="complete-step-success" style="display:none; text-align:center; padding:16px 0;">
+                <div style="width:64px; height:64px; border-radius:50%; background:#dcfce7; color:#15803d; font-size:32px; display:grid; place-items:center; margin:0 auto 14px; border:2px solid #86efac;">
+                  ✓
+                </div>
+                <h3 style="margin:0 0 6px; font-size:18px; font-weight:800; color:#0f172a;">Payment Verified & Job Completed!</h3>
+                <p style="font-size:13px; color:var(--muted); margin:0 0 16px;">The service has been settled successfully.</p>
+
+                <div style="background:#f0fdf4; border:1px solid #bbf7d0; border-radius:12px; padding:14px; margin-bottom:18px; text-align:left;">
+                  <div style="display:flex; justify-content:space-between; margin-bottom:6px;">
+                    <span style="color:#166534; font-weight:700;">Credited to Your Wallet:</span>
+                    <strong id="success-wallet-credit" style="color:#15803d; font-size:16px; font-weight:800;">+₹0.00</strong>
+                  </div>
+                  <div style="display:flex; justify-content:space-between; font-size:12px;">
+                    <span class="muted">Platform Cut & GST Settled:</span>
+                    <span id="success-superadmin-cut" style="color:#64748b; font-weight:600;">₹0.00</span>
+                  </div>
+                </div>
+
+                <button type="button" class="btn btn-primary" onclick="finishAndReloadBookings()" style="width:100%; padding:12px; font-weight:800; background:#059669; border-color:#059669;">
+                  Done & Refresh List
+                </button>
+              </div>
+
             </div>
           </div>
         </div>
@@ -297,6 +426,178 @@
   </div>
 
   <script>
+    let activeCompleteBookingId = null;
+    let activeBaseServicePrice = 0.0;
+    let pollInterval = null;
+
+    function openCompleteBookingModal(bookingId, baseAmount, serviceTitle, customerName) {
+      activeCompleteBookingId = bookingId;
+      activeBaseServicePrice = parseFloat(baseAmount) || 0.0;
+
+      document.getElementById('complete-service-name').innerText = serviceTitle;
+      document.getElementById('complete-customer-name').innerText = customerName;
+      document.getElementById('complete-base-amount').innerText = '₹' + activeBaseServicePrice.toFixed(2);
+      document.getElementById('complete-extra-charges').value = '0';
+      document.getElementById('complete-work-notes').value = '';
+
+      document.getElementById('complete-step-inputs').style.display = 'block';
+      document.getElementById('complete-step-qr').style.display = 'none';
+      document.getElementById('complete-step-success').style.display = 'none';
+
+      document.getElementById('complete-booking-modal-backdrop').classList.add('open');
+    }
+
+    function closeCompleteBookingModal() {
+      if (pollInterval) {
+        clearInterval(pollInterval);
+        pollInterval = null;
+      }
+      document.getElementById('complete-booking-modal-backdrop').classList.remove('open');
+    }
+
+    function updateLivePreviewCalculation() {
+      // Dynamic live client-side estimate
+      const extras = parseFloat(document.getElementById('complete-extra-charges').value) || 0.0;
+      const base = activeBaseServicePrice + extras;
+      const comm = (base * 0.10);
+      const gst = (comm * 0.18);
+      const total = Math.round(base + comm + gst);
+      document.getElementById('complete-base-amount').innerText = '₹' + base.toFixed(2);
+    }
+
+    async function submitGenerateBill() {
+      if (!activeCompleteBookingId) return;
+
+      const extras = parseFloat(document.getElementById('complete-extra-charges').value) || 0.0;
+      const notes = document.getElementById('complete-work-notes').value.trim();
+      const btn = document.getElementById('btn-generate-bill');
+
+      btn.disabled = true;
+      btn.innerText = 'Generating Bill & UPI QR...';
+
+      try {
+        const response = await fetch(`/api/quick-services/bookings/${activeCompleteBookingId}/generate-bill/`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCsrfToken()
+          },
+          body: JSON.stringify({
+            additional_charges: extras,
+            additional_notes: notes
+          })
+        });
+
+        const data = await response.json();
+        if (data.status === 'success') {
+          const fin = data.financials;
+          const pay = data.payment;
+
+          document.getElementById('completion-qr-image').src = pay.qr_data_url;
+          document.getElementById('qr-display-total').innerText = '₹' + fin.total_customer_payable.toFixed(2);
+          document.getElementById('breakdown-vendor-base').innerText = '₹' + (fin.base_service_amount + fin.additional_charges).toFixed(2);
+          document.getElementById('breakdown-commission').innerText = '₹' + fin.platform_commission.toFixed(2);
+          document.getElementById('breakdown-gst').innerText = '₹' + fin.total_tax.toFixed(2);
+          document.getElementById('breakdown-wallet-payout').innerText = '₹' + fin.net_vendor_payout.toFixed(2);
+
+          document.getElementById('complete-step-inputs').style.display = 'none';
+          document.getElementById('complete-step-qr').style.display = 'block';
+
+          // Start live polling for status
+          startPaymentPolling(activeCompleteBookingId);
+        } else {
+          alert(data.message || 'Error generating bill');
+        }
+      } catch (err) {
+        alert('Network error generating bill: ' + err);
+      } finally {
+        btn.disabled = false;
+        btn.innerText = 'Generate Bill & Dynamic QR Code →';
+      }
+    }
+
+    async function confirmBookingPayment(method) {
+      if (!activeCompleteBookingId) return;
+
+      const btnUpi = document.getElementById('btn-confirm-upi-payment');
+      const btnCash = document.getElementById('btn-confirm-cash-payment');
+      btnUpi.disabled = true;
+      btnCash.disabled = true;
+      btnUpi.innerText = 'Verifying & Settling Payment...';
+
+      try {
+        const response = await fetch(`/api/quick-services/bookings/${activeCompleteBookingId}/payment/confirm/`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCsrfToken()
+          },
+          body: JSON.stringify({
+            payment_method: method
+          })
+        });
+
+        const data = await response.json();
+        if (data.status === 'success') {
+          if (pollInterval) clearInterval(pollInterval);
+
+          const settlement = data.settlement;
+          document.getElementById('success-wallet-credit').innerText = '+₹' + settlement.credited_to_wallet.toFixed(2);
+          document.getElementById('success-superadmin-cut').innerText = '₹' + settlement.superadmin_total.toFixed(2);
+
+          document.getElementById('complete-step-qr').style.display = 'none';
+          document.getElementById('complete-step-success').style.display = 'block';
+        } else {
+          alert(data.message || 'Error confirming payment');
+          btnUpi.disabled = false;
+          btnCash.disabled = false;
+          btnUpi.innerText = '✓ Customer Paid via UPI QR';
+        }
+      } catch (err) {
+        alert('Network error confirming payment: ' + err);
+        btnUpi.disabled = false;
+        btnCash.disabled = false;
+        btnUpi.innerText = '✓ Customer Paid via UPI QR';
+      }
+    }
+
+    function startPaymentPolling(bookingId) {
+      if (pollInterval) clearInterval(pollInterval);
+      pollInterval = setInterval(async () => {
+        try {
+          const res = await fetch(`/api/quick-services/bookings/${bookingId}/payment/status/`);
+          const d = await res.json();
+          if (d.status === 'success' && d.is_paid) {
+            clearInterval(pollInterval);
+            document.getElementById('complete-step-qr').style.display = 'none';
+            document.getElementById('complete-step-success').style.display = 'block';
+          }
+        } catch (e) {}
+      }, 3500);
+    }
+
+    function finishAndReloadBookings() {
+      closeCompleteBookingModal();
+      window.location.reload();
+    }
+
+    function getCsrfToken() {
+      const el = document.querySelector('[name=csrfmiddlewaretoken]');
+      return el ? el.value : '';
+    }
+
+    let currentDetailsBooking = {};
+
+    function triggerCompleteFromDetails() {
+      if (!currentDetailsBooking.id) return;
+      const bId = currentDetailsBooking.id;
+      const amt = currentDetailsBooking.amount;
+      const sName = currentDetailsBooking.service;
+      const cName = currentDetailsBooking.customerName;
+      closeVendorBookingModal();
+      openCompleteBookingModal(bId, amt, sName, cName);
+    }
+
     function openVendorBookingModal(btn) {
       const bId = btn.getAttribute('data-id');
       const service = btn.getAttribute('data-service');
@@ -307,6 +608,22 @@
       const status = btn.getAttribute('data-status');
       const statusDisplay = btn.getAttribute('data-status-display');
       const cName = btn.getAttribute('data-customer-name');
+
+      currentDetailsBooking = {
+        id: bId,
+        service: service,
+        amount: amount,
+        customerName: cName
+      };
+
+      const completeBtn = document.getElementById('modal-complete-job-btn');
+      if (completeBtn) {
+        if (status === 'accepted') {
+          completeBtn.style.display = 'inline-flex';
+        } else {
+          completeBtn.style.display = 'none';
+        }
+      }
       const cPhone = btn.getAttribute('data-customer-phone') || '—';
       const cEmail = btn.getAttribute('data-customer-email') || '';
       const cId = btn.getAttribute('data-customer-id');

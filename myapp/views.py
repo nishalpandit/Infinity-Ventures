@@ -2149,12 +2149,62 @@ def dashboard_view(request, path=''):
                     booking = ServiceBooking.objects.get(id=booking_id, vendor=request.user)
                     if action == 'accept':
                         booking.status = 'accepted'
+                        booking.save(update_fields=['status'])
+                        messages.success(request, f"Booking #{booking.id} accepted.")
                     elif action == 'complete':
-                        booking.status = 'completed'
+                        if booking.payment_status != 'paid':
+                            gs = GlobalSettings.objects.first()
+                            base_amt = float(booking.total_amount or 0.0) + float(booking.additional_charges or 0.0)
+                            calc = gs.calculate_qs_customer_price(base_amt) if gs else {'vendor_payout': base_amt, 'commission': 0, 'cgst': 0, 'sgst': 0, 'flat_fee': 0, 'customer_price': base_amt}
+
+                            vendor_payout = Decimal(str(calc['vendor_payout'])).quantize(Decimal('0.01'))
+                            platform_comm = Decimal(str(calc['commission'])).quantize(Decimal('0.01'))
+                            cgst = Decimal(str(calc['cgst'])).quantize(Decimal('0.01'))
+                            sgst = Decimal(str(calc['sgst'])).quantize(Decimal('0.01'))
+                            flat_fee = Decimal(str(calc['flat_fee'])).quantize(Decimal('0.01'))
+                            total_cust = Decimal(str(calc['customer_price'])).quantize(Decimal('0.01'))
+
+                            booking.status = 'completed'
+                            booking.payment_status = 'paid'
+                            booking.payment_method = request.POST.get('payment_method') or 'upi_qr'
+                            booking.completed_at = timezone.now()
+                            booking.save(update_fields=['status', 'payment_status', 'payment_method', 'completed_at'])
+
+                            # Credit Vendor Wallet
+                            vw, _ = VendorWallet.objects.get_or_create(vendor=booking.vendor)
+                            vw.available_balance = (vw.available_balance or Decimal('0.00')) + vendor_payout
+                            vw.total_earned = (vw.total_earned or Decimal('0.00')) + vendor_payout
+                            vw.save(update_fields=['available_balance', 'total_earned', 'updated_at'])
+
+                            WalletTransaction.objects.create(
+                                wallet=vw,
+                                amount=vendor_payout,
+                                transaction_type='credit',
+                                related_quick_service=booking.quick_service,
+                                description=f"Earnings for Booking #{booking.id}: {booking.package_name}"
+                            )
+
+                            PlatformRevenueLedger.objects.create(
+                                related_booking=booking,
+                                related_quick_service=booking.quick_service,
+                                vendor=booking.vendor,
+                                vendor_payout=vendor_payout,
+                                platform_commission=platform_comm,
+                                cgst_collected=cgst,
+                                sgst_collected=sgst,
+                                flat_fee_collected=flat_fee,
+                                total_customer_paid=total_cust,
+                                settled_at=timezone.now()
+                            )
+                            messages.success(request, f"Booking #{booking.id} completed! ₹{float(vendor_payout):,.2f} credited to your wallet.")
+                        else:
+                            booking.status = 'completed'
+                            booking.save(update_fields=['status'])
+                            messages.success(request, f"Booking #{booking.id} marked as completed.")
                     elif action == 'cancel':
                         booking.status = 'cancelled'
-                    booking.save(update_fields=['status'])
-                    messages.success(request, f"Booking status updated to {booking.get_status_display()}.")
+                        booking.save(update_fields=['status'])
+                        messages.success(request, f"Booking #{booking.id} has been declined.")
                 except ServiceBooking.DoesNotExist:
                     pass
             return redirect('/vendor/bookings/index.html')

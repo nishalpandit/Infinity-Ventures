@@ -1,6 +1,9 @@
 import json
 import re
 import random
+import io
+import base64
+import qrcode
 from datetime import timedelta
 from decimal import Decimal
 from django.http import JsonResponse
@@ -9,8 +12,9 @@ from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth import authenticate, login
 from django.contrib.auth import get_user_model
 from django.utils import timezone
+from django.db import transaction
 from django.db.models import Q
-from .models import UserProfile, VendorProfile, Category, Location, OTPVerification, AuthToken, Job, QuickService, VendorKYC, CustomerAddress, ServiceBooking, GlobalSettings, Message, Bid, BidPlan, BidCreditTransaction, Subscription, VendorWallet, WalletTransaction
+from .models import UserProfile, VendorProfile, Category, Location, OTPVerification, AuthToken, Job, QuickService, VendorKYC, CustomerAddress, ServiceBooking, GlobalSettings, Message, Bid, BidPlan, BidCreditTransaction, Subscription, VendorWallet, WalletTransaction, PlatformRevenueLedger
 User = get_user_model()
 
 
@@ -5480,5 +5484,488 @@ def credit_summary_api(request):
         }, status=200)
     except Exception as e:
         return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+
+# =====================================================================
+# DYNAMIC QUICK SERVICE COMPLETION, UPI QR & REVENUE SPLIT APIS
+# =====================================================================
+
+def _generate_upi_qr_base64(upi_string):
+    """
+    Generates a high-contrast base64 encoded PNG data URI for a UPI payment URI.
+    """
+    try:
+        qr = qrcode.QRCode(
+            version=1,
+            error_correction=qrcode.constants.ERROR_CORRECT_M,
+            box_size=10,
+            border=2,
+        )
+        qr.add_data(upi_string)
+        qr.make(fit=True)
+        img = qr.make_image(fill_color="#0f172a", back_color="white")
+        buffered = io.BytesIO()
+        img.save(buffered, format="PNG")
+        img_str = base64.b64encode(buffered.getvalue()).decode("utf-8")
+        return f"data:image/png;base64,{img_str}"
+    except Exception as e:
+        return ""
+
+
+@csrf_exempt
+def generate_booking_bill_api(request, booking_id):
+    """
+    Dedicated API to generate the final completion bill and dynamic UPI QR Code.
+    URL: /api/quick-services/bookings/<booking_id>/generate-bill/
+    Method: POST
+    Header: Authorization: Bearer <token>
+    Payload: {
+        "additional_charges": float (optional, e.g. parts/materials),
+        "additional_notes": str (optional),
+        "discount": float (optional)
+    }
+    """
+    if request.method != 'POST':
+        return JsonResponse({'status': 'error', 'message': 'Method not allowed. Use POST.'}, status=405)
+
+    user, err = _get_user_from_bearer_token(request)
+    if err:
+        return JsonResponse({'status': 'error', 'message': err}, status=401)
+
+    try:
+        booking = ServiceBooking.objects.select_related('customer', 'vendor', 'quick_service').get(id=booking_id)
+
+        # Only assigned vendor or superadmin can complete and bill
+        if booking.vendor_id != user.id and not user.is_superuser:
+            return JsonResponse({'status': 'error', 'message': 'Unauthorized to generate bill for this booking.'}, status=403)
+
+        data = _parse_api_request(request)
+        try:
+            extra_charges = float(data.get('additional_charges') or request.POST.get('additional_charges') or 0.0)
+            if extra_charges < 0:
+                extra_charges = 0.0
+        except (ValueError, TypeError):
+            extra_charges = 0.0
+
+        try:
+            discount = float(data.get('discount') or request.POST.get('discount') or 0.0)
+            if discount < 0:
+                discount = 0.0
+        except (ValueError, TypeError):
+            discount = 0.0
+
+        notes = (data.get('additional_notes') or request.POST.get('additional_notes') or '').strip()
+
+        # Base vendor payout calculation
+        base_service_amount = float(booking.total_amount or (booking.quick_service.base_price if booking.quick_service else 0.0))
+        net_vendor_base = max(0.0, base_service_amount + extra_charges - discount)
+
+        # Dynamic calculations via GlobalSettings
+        gs = GlobalSettings.objects.first()
+        if not gs:
+            gs = GlobalSettings.objects.create()
+
+        financials = gs.calculate_qs_customer_price(net_vendor_base)
+        vendor_payout = financials['vendor_payout']
+        platform_commission = financials['commission']
+        cgst = financials['cgst']
+        sgst = financials['sgst']
+        total_tax = financials['total_tax']
+        flat_fee = financials['flat_fee']
+        total_customer_price = financials['customer_price']
+        superadmin_cut = round(platform_commission + total_tax + flat_fee, 2)
+
+        # Generate unique transaction reference
+        txn_ref = f"TXN_QS_{booking.id}_{random.randint(10000, 99999)}"
+        admin_vpa = getattr(gs, 'admin_upi_id', None) or "sugu.platform@okaxis"
+        payee_name = "Sugu Platform"
+
+        # Standard UPI URI scheme
+        upi_intent = (
+            f"upi://pay?pa={admin_vpa}"
+            f"&pn={payee_name.replace(' ', '%20')}"
+            f"&am={total_customer_price:.2f}"
+            f"&cu=INR"
+            f"&tn=Booking_{booking.id}_Payment"
+            f"&tr={txn_ref}"
+        )
+
+        qr_data_url = _generate_upi_qr_base64(upi_intent)
+
+        # Update booking details
+        booking.additional_charges = Decimal(str(extra_charges)).quantize(Decimal('0.01'))
+        if notes:
+            booking.additional_notes = notes
+        booking.transaction_reference = txn_ref
+        booking.save(update_fields=['additional_charges', 'additional_notes', 'transaction_reference'])
+
+        return JsonResponse({
+            'status': 'success',
+            'booking_id': booking.id,
+            'service_title': booking.quick_service.title if booking.quick_service else booking.package_name,
+            'customer_name': booking.customer.get_full_name() or booking.customer.username,
+            'customer_phone': getattr(booking.customer, 'phone_number', None) or getattr(booking.customer, 'username', ''),
+            'financials': {
+                'base_service_amount': base_service_amount,
+                'additional_charges': extra_charges,
+                'discount': discount,
+                'net_vendor_payout': vendor_payout,
+                'platform_commission': platform_commission,
+                'cgst': cgst,
+                'sgst': sgst,
+                'total_tax': total_tax,
+                'flat_fee': flat_fee,
+                'superadmin_share': superadmin_cut,
+                'total_customer_payable': total_customer_price,
+                'commission_percent': financials['commission_percent'],
+                'cgst_percent': financials['cgst_percent'],
+                'sgst_percent': financials['sgst_percent'],
+            },
+            'payment': {
+                'upi_intent': upi_intent,
+                'qr_data_url': qr_data_url,
+                'transaction_reference': txn_ref,
+                'payee_vpa': admin_vpa,
+                'payee_name': payee_name,
+                'amount': total_customer_price
+            }
+        }, status=200)
+
+    except ServiceBooking.DoesNotExist:
+        return JsonResponse({'status': 'error', 'message': f'Booking #{booking_id} not found.'}, status=404)
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+
+@csrf_exempt
+def booking_payment_qr_api(request, booking_id):
+    """
+    Dedicated API to retrieve the dynamic QR code for a booking.
+    URL: /api/quick-services/bookings/<booking_id>/payment-qr/
+    Method: GET
+    Header: Authorization: Bearer <token>
+    """
+    if request.method != 'GET':
+        return JsonResponse({'status': 'error', 'message': 'Method not allowed. Use GET.'}, status=405)
+
+    user, err = _get_user_from_bearer_token(request)
+    if err:
+        return JsonResponse({'status': 'error', 'message': err}, status=401)
+
+    try:
+        booking = ServiceBooking.objects.select_related('customer', 'vendor', 'quick_service').get(id=booking_id)
+
+        # Accessible by vendor, customer or admin
+        if user.id not in [booking.vendor_id, booking.customer_id] and not user.is_superuser:
+            return JsonResponse({'status': 'error', 'message': 'Unauthorized to view QR code for this booking.'}, status=403)
+
+        gs = GlobalSettings.objects.first()
+        if not gs:
+            gs = GlobalSettings.objects.create()
+
+        base_amount = float(booking.total_amount or 0.0) + float(booking.additional_charges or 0.0)
+        calc = gs.calculate_qs_customer_price(base_amount)
+        total_customer_price = calc['customer_price']
+
+        txn_ref = booking.transaction_reference or f"TXN_QS_{booking.id}_{random.randint(10000, 99999)}"
+        admin_vpa = getattr(gs, 'admin_upi_id', None) or "sugu.platform@okaxis"
+        payee_name = "Sugu Platform"
+
+        upi_intent = (
+            f"upi://pay?pa={admin_vpa}"
+            f"&pn={payee_name.replace(' ', '%20')}"
+            f"&am={total_customer_price:.2f}"
+            f"&cu=INR"
+            f"&tn=Booking_{booking.id}_Payment"
+            f"&tr={txn_ref}"
+        )
+
+        qr_data_url = _generate_upi_qr_base64(upi_intent)
+
+        return JsonResponse({
+            'status': 'success',
+            'booking_id': booking.id,
+            'is_paid': booking.payment_status == 'paid',
+            'payment_status': booking.payment_status,
+            'total_amount': total_customer_price,
+            'upi_intent': upi_intent,
+            'qr_data_url': qr_data_url,
+            'transaction_reference': txn_ref
+        }, status=200)
+
+    except ServiceBooking.DoesNotExist:
+        return JsonResponse({'status': 'error', 'message': f'Booking #{booking_id} not found.'}, status=404)
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+
+@csrf_exempt
+@require_POST
+def confirm_booking_payment_api(request, booking_id):
+    """
+    Dedicated API to verify customer payment, mark service completed,
+    credit net payout to Vendor Wallet, and settle SuperAdmin cut & GST.
+    URL: /api/quick-services/bookings/<booking_id>/payment/confirm/
+    Method: POST
+    Header: Authorization: Bearer <token>
+    Payload: {
+        "payment_method": "upi_qr" | "cash_collected" | "online",
+        "transaction_reference": str (optional),
+        "amount_received": float (optional)
+    }
+    """
+    user, err = _get_user_from_bearer_token(request)
+    if err:
+        return JsonResponse({'status': 'error', 'message': err}, status=401)
+
+    try:
+        data = _parse_api_request(request)
+        payment_method = (data.get('payment_method') or request.POST.get('payment_method') or 'upi_qr').strip().lower()
+        txn_ref = (data.get('transaction_reference') or request.POST.get('transaction_reference') or '').strip()
+
+        with transaction.atomic():
+            booking = ServiceBooking.objects.select_for_update().select_related('customer', 'vendor', 'quick_service').get(id=booking_id)
+
+            if booking.vendor_id != user.id and not user.is_superuser:
+                return JsonResponse({'status': 'error', 'message': 'Unauthorized to confirm payment for this booking.'}, status=403)
+
+            # Idempotency check: if already paid, return current state
+            if booking.payment_status == 'paid' and booking.status == 'completed':
+                vw = VendorWallet.objects.filter(vendor=booking.vendor).first()
+                return JsonResponse({
+                    'status': 'success',
+                    'message': 'This booking has already been completed and paid.',
+                    'already_settled': True,
+                    'booking_id': booking.id,
+                    'booking_status': 'completed',
+                    'payment_status': 'paid',
+                    'wallet_balance': float(vw.available_balance if vw else 0.0)
+                }, status=200)
+
+            gs = GlobalSettings.objects.first()
+            if not gs:
+                gs = GlobalSettings.objects.create()
+
+            base_amount = float(booking.total_amount or 0.0) + float(booking.additional_charges or 0.0)
+            calc = gs.calculate_qs_customer_price(base_amount)
+
+            vendor_payout = Decimal(str(calc['vendor_payout'])).quantize(Decimal('0.01'))
+            platform_comm = Decimal(str(calc['commission'])).quantize(Decimal('0.01'))
+            cgst = Decimal(str(calc['cgst'])).quantize(Decimal('0.01'))
+            sgst = Decimal(str(calc['sgst'])).quantize(Decimal('0.01'))
+            flat_fee = Decimal(str(calc['flat_fee'])).quantize(Decimal('0.01'))
+            total_customer_paid = Decimal(str(calc['customer_price'])).quantize(Decimal('0.01'))
+
+            txn_ref = txn_ref or booking.transaction_reference or f"TXN_QS_{booking.id}_{random.randint(10000, 99999)}"
+
+            # 1. Update Booking
+            booking.status = 'completed'
+            booking.payment_status = 'paid'
+            booking.payment_method = payment_method
+            booking.transaction_reference = txn_ref
+            booking.completed_at = timezone.now()
+            booking.save(update_fields=[
+                'status', 'payment_status', 'payment_method',
+                'transaction_reference', 'completed_at', 'updated_at'
+            ])
+
+            # 2. Credit Vendor Wallet
+            vw, _ = VendorWallet.objects.get_or_create(vendor=booking.vendor)
+            vw.available_balance = (vw.available_balance or Decimal('0.00')) + vendor_payout
+            vw.total_earned = (vw.total_earned or Decimal('0.00')) + vendor_payout
+            vw.save(update_fields=['available_balance', 'total_earned', 'updated_at'])
+
+            # 3. Create Wallet Transaction Log
+            service_name = booking.quick_service.title if booking.quick_service else booking.package_name
+            WalletTransaction.objects.create(
+                wallet=vw,
+                amount=vendor_payout,
+                transaction_type='credit',
+                related_quick_service=booking.quick_service,
+                description=f"Earnings for Booking #{booking.id}: {service_name}"
+            )
+
+            # 4. Record SuperAdmin Platform Revenue Ledger
+            superadmin_revenue = platform_comm + cgst + sgst + flat_fee
+            PlatformRevenueLedger.objects.create(
+                related_booking=booking,
+                related_quick_service=booking.quick_service,
+                vendor=booking.vendor,
+                vendor_payout=vendor_payout,
+                platform_commission=platform_comm,
+                cgst_collected=cgst,
+                sgst_collected=sgst,
+                flat_fee_collected=flat_fee,
+                total_customer_paid=total_customer_paid,
+                settled_at=timezone.now()
+            )
+
+        return JsonResponse({
+            'status': 'success',
+            'message': f'Payment verified! ₹{float(vendor_payout):,.2f} credited to your Vendor Wallet. ₹{float(superadmin_revenue):,.2f} platform fee & GST settled.',
+            'booking_id': booking.id,
+            'booking_status': 'completed',
+            'payment_status': 'paid',
+            'settlement': {
+                'customer_paid': float(total_customer_paid),
+                'credited_to_wallet': float(vendor_payout),
+                'superadmin_commission': float(platform_comm),
+                'cgst': float(cgst),
+                'sgst': float(sgst),
+                'superadmin_total': float(superadmin_revenue)
+            },
+            'wallet': {
+                'new_available_balance': float(vw.available_balance),
+                'total_earned': float(vw.total_earned)
+            }
+        }, status=200)
+
+    except ServiceBooking.DoesNotExist:
+        return JsonResponse({'status': 'error', 'message': f'Booking #{booking_id} not found.'}, status=404)
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+
+@csrf_exempt
+def booking_payment_status_api(request, booking_id):
+    """
+    Dedicated API to poll the real-time payment and completion status of a booking.
+    URL: /api/quick-services/bookings/<booking_id>/payment/status/
+    Method: GET
+    Header: Authorization: Bearer <token>
+    """
+    if request.method != 'GET':
+        return JsonResponse({'status': 'error', 'message': 'Method not allowed. Use GET.'}, status=405)
+
+    user, err = _get_user_from_bearer_token(request)
+    if err:
+        return JsonResponse({'status': 'error', 'message': err}, status=401)
+
+    try:
+        booking = ServiceBooking.objects.select_related('customer', 'vendor').get(id=booking_id)
+
+        if user.id not in [booking.vendor_id, booking.customer_id] and not user.is_superuser:
+            return JsonResponse({'status': 'error', 'message': 'Unauthorized to view payment status.'}, status=403)
+
+        vw = VendorWallet.objects.filter(vendor=booking.vendor).first()
+        wallet_balance = float(vw.available_balance) if vw else 0.0
+
+        return JsonResponse({
+            'status': 'success',
+            'booking_id': booking.id,
+            'booking_status': booking.status,
+            'payment_status': booking.payment_status or 'pending',
+            'is_paid': booking.payment_status == 'paid',
+            'payment_method': booking.payment_method,
+            'transaction_reference': booking.transaction_reference,
+            'completed_at': booking.completed_at.strftime('%Y-%m-%d %H:%M:%S') if booking.completed_at else None,
+            'wallet_balance': wallet_balance
+        }, status=200)
+
+    except ServiceBooking.DoesNotExist:
+        return JsonResponse({'status': 'error', 'message': f'Booking #{booking_id} not found.'}, status=404)
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+
+@csrf_exempt
+def vendor_wallet_balance_api(request):
+    """
+    Dedicated API to fetch real-time vendor wallet balance and financial earnings.
+    URL: /api/vendor/wallet/balance/
+    Method: GET
+    Header: Authorization: Bearer <token>
+    """
+    if request.method != 'GET':
+        return JsonResponse({'status': 'error', 'message': 'Method not allowed. Use GET.'}, status=405)
+
+    user, err = _get_user_from_bearer_token(request)
+    if err:
+        return JsonResponse({'status': 'error', 'message': err}, status=401)
+
+    try:
+        vw, _ = VendorWallet.objects.get_or_create(vendor=user)
+        recent_txns = WalletTransaction.objects.filter(wallet=vw).order_by('-created_at')[:5]
+
+        txns_data = []
+        for t in recent_txns:
+            txns_data.append({
+                'id': t.id,
+                'amount': float(t.amount),
+                'type': t.transaction_type,
+                'is_credit': t.transaction_type == 'credit',
+                'description': t.description,
+                'date': t.created_at.strftime('%d %b %Y, %I:%M %p')
+            })
+
+        return JsonResponse({
+            'status': 'success',
+            'wallet': {
+                'available_balance': float(vw.available_balance or 0.0),
+                'total_earned': float(vw.total_earned or 0.0),
+                'total_withdrawn': float(vw.total_withdrawn or 0.0),
+                'last_updated': vw.updated_at.strftime('%Y-%m-%d %H:%M:%S') if vw.updated_at else None,
+            },
+            'recent_transactions': txns_data
+        }, status=200)
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+
+@csrf_exempt
+def vendor_wallet_transactions_api(request):
+    """
+    Dedicated API to fetch paginated wallet transaction history.
+    URL: /api/vendor/wallet/transactions/
+    Method: GET
+    Header: Authorization: Bearer <token>
+    Query: type=credit|debit|all, limit=50
+    """
+    if request.method != 'GET':
+        return JsonResponse({'status': 'error', 'message': 'Method not allowed. Use GET.'}, status=405)
+
+    user, err = _get_user_from_bearer_token(request)
+    if err:
+        return JsonResponse({'status': 'error', 'message': err}, status=401)
+
+    try:
+        vw, _ = VendorWallet.objects.get_or_create(vendor=user)
+        txns_qs = WalletTransaction.objects.filter(wallet=vw).order_by('-created_at')
+
+        type_filter = request.GET.get('type', '').strip().lower()
+        if type_filter and type_filter != 'all':
+            txns_qs = txns_qs.filter(transaction_type=type_filter)
+
+        try:
+            limit = int(request.GET.get('limit', 50))
+        except (ValueError, TypeError):
+            limit = 50
+
+        txns_qs = txns_qs[:limit]
+
+        transactions_data = []
+        for t in txns_qs:
+            transactions_data.append({
+                'id': t.id,
+                'amount': float(t.amount),
+                'type': t.transaction_type,
+                'type_label': t.get_transaction_type_display(),
+                'is_credit': t.transaction_type == 'credit',
+                'description': t.description,
+                'related_service_id': t.related_quick_service_id,
+                'related_job_id': t.related_job_id,
+                'created_at': t.created_at.isoformat(),
+                'formatted_date': t.created_at.strftime('%d %b %Y, %I:%M %p')
+            })
+
+        return JsonResponse({
+            'status': 'success',
+            'available_balance': float(vw.available_balance or 0.0),
+            'count': len(transactions_data),
+            'transactions': transactions_data
+        }, status=200)
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
 
 
