@@ -61,12 +61,46 @@
       flex-wrap: wrap;
       gap: 14px;
     }
-    .tracking-map-box {
-      background: linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 100%);
-      border: 1.5px solid #86efac;
-      border-radius: 14px;
-      padding: 18px;
+    /* Professional Table Alignment & Styling */
+    .table-responsive {
+      overflow-x: auto;
+      width: 100%;
     }
+    table.table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+    }
+    table.table th {
+      background: #f8fafc;
+      color: #64748b;
+      font-size: 11.5px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      padding: 14px 18px;
+      border-bottom: 2px solid #e2e8f0;
+      text-align: left;
+      white-space: nowrap;
+    }
+    table.table td {
+      padding: 16px 18px;
+      vertical-align: middle;
+      text-align: left;
+      border-bottom: 1px solid #f1f5f9;
+      font-size: 13.5px;
+      color: #1e293b;
+    }
+    table.table tr:hover td {
+      background-color: #f8fafc;
+    }
+    table.table th:nth-child(1), table.table td:nth-child(1) { width: 10%; text-align: left; }
+    table.table th:nth-child(2), table.table td:nth-child(2) { width: 26%; text-align: left; }
+    table.table th:nth-child(3), table.table td:nth-child(3) { width: 20%; text-align: left; }
+    table.table th:nth-child(4), table.table td:nth-child(4) { width: 17%; text-align: left; }
+    table.table th:nth-child(5), table.table td:nth-child(5) { width: 12%; text-align: left; }
+    table.table th:nth-child(6), table.table td:nth-child(6) { width: 9%; text-align: left; }
+    table.table th:nth-child(7), table.table td:nth-child(7) { width: 6%; text-align: center; }
   </style>
 </head>
 <body data-page="bookings" data-title="My Bookings" data-root="../../">
@@ -244,31 +278,13 @@
                 </div>
               </div>
 
-              <!-- LOCATION & LIVE GPS TRACKING (Requirement 1) -->
-              <div class="tracking-map-box">
-                <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:10px; flex-wrap:wrap; gap:8px;">
-                  <div>
-                    <h4 style="font-size:14px; font-weight:750; margin:0 0 2px; color:#14532d; display:flex; align-items:center; gap:6px;">
-                      <span>📍</span> Service Location & Navigation
-                    </h4>
-                    <span id="modal-gps-badge" style="font-size:11px; background:#dcfce7; color:#15803d; font-weight:700; padding:2px 8px; border-radius:12px; border:1px solid #bbf7d0; display:none;">
-                      ✓ Live GPS Coordinates Attached
-                    </span>
-                  </div>
-
-                  <!-- Direct Track Button -->
-                  <a id="modal-tracking-btn" href="#" target="_blank" class="btn btn-primary btn-sm" style="background:#15803d; border-color:#15803d; font-weight:750; box-shadow:0 2px 6px rgba(21,128,61,0.25);">
-                    <span>🗺️</span> View Location & Track →
-                  </a>
-                </div>
-
-                <div style="background:#fff; border-radius:10px; padding:12px; border:1px solid #bbf7d0; margin-bottom:12px;">
-                  <span style="font-size:10.5px; text-transform:uppercase; color:var(--muted); font-weight:700; display:block; margin-bottom:3px;">Service Address</span>
-                  <div id="modal-service-address" style="font-size:13px; color:#1e293b; line-height:1.45; font-weight:600;"></div>
-                </div>
-
-                <div id="modal-coords-info" style="font-size:11.5px; color:#166534; display:flex; align-items:center; gap:6px;">
-                  <span>🎯 Coordinates:</span> <strong id="modal-coords-text">None</strong>
+              <!-- SERVICE ADDRESS -->
+              <div style="background:#f8fafc; border:1px solid var(--line); border-radius:12px; padding:16px;">
+                <h4 style="font-size:13.5px; font-weight:750; margin:0 0 8px; color:#334155; display:flex; align-items:center; gap:6px;">
+                  <span>📍</span> Service Address
+                </h4>
+                <div style="background:#fff; border-radius:10px; padding:12px 14px; border:1px solid var(--line);">
+                  <div id="modal-service-address" style="font-size:13.5px; color:#1e293b; line-height:1.5; font-weight:600;"></div>
                 </div>
               </div>
 
@@ -339,27 +355,8 @@
       const chatBtn = document.getElementById('modal-vendor-chat-btn');
       chatBtn.href = '/user/messages/index.html?vendor_id=' + vId;
 
-      // Address & Map Tracking
+      // Service Address
       document.getElementById('modal-service-address').innerText = cleanAddr;
-      const gpsBadge = document.getElementById('modal-gps-badge');
-      const coordsText = document.getElementById('modal-coords-text');
-
-      if (lat && lng) {
-        gpsBadge.style.display = 'inline-block';
-        coordsText.innerText = lat + ', ' + lng;
-        if (!mapUrl) mapUrl = `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
-      } else {
-        gpsBadge.style.display = 'none';
-        coordsText.innerText = 'Address based navigation';
-        if (!mapUrl && cleanAddr) {
-          mapUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(cleanAddr)}`;
-        }
-      }
-
-      const trackBtn = document.getElementById('modal-tracking-btn');
-      trackBtn.href = mapUrl || '#';
-      if (!mapUrl) trackBtn.style.display = 'none';
-      else trackBtn.style.display = 'inline-flex';
 
       document.getElementById('booking-modal-backdrop').classList.add('open');
     }
