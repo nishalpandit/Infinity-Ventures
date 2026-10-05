@@ -59,10 +59,11 @@ class ChatConsumer(AsyncWebsocketConsumer):
             self.room_group_name,
             {
                 'type': 'chat_message',
-                'message': saved_message.content,
+                'id': saved_message.id if saved_message else 0,
+                'message': saved_message.content if saved_message else message_content,
                 'sender_id': self.user.id,
                 'sender_name': self.user.get_full_name() or self.user.username,
-                'time': saved_message.created_at.strftime("%I:%M %p").lstrip('0')
+                'time': saved_message.created_at.strftime("%I:%M %p").lstrip('0') if saved_message else ''
             }
         )
 
@@ -70,6 +71,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
     async def chat_message(self, event):
         # Send message to WebSocket
         await self.send(text_data=json.dumps({
+            'id': event.get('id', 0),
             'message': event['message'],
             'sender_id': event['sender_id'],
             'sender_name': event.get('sender_name', ''),

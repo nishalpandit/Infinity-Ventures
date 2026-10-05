@@ -4,7 +4,7 @@
 <div class="chat-header"><span class="avatar md teal">{{ chat_user.initials }}</span><div class="vendor-meta"><h3>{{ chat_user.name }}</h3><span>Customer</span></div></div><div class="chat-messages">
 <div class="date-separator"><span>Messages</span></div>
 {% for msg in chat_messages %}
-<div class="message-row {% if msg.sender == request.user %}sent{% endif %}"><div class="message">{{ msg.content }}{% if msg.attachment %}<div class="message-file"><span data-icon="file"></span><span><strong><a href="{{ msg.attachment.url }}" target="_blank">Attachment</a></strong><br></span></div>{% endif %}<div class="message-time">{{ msg.created_at|date:"h:i A" }} {% if msg.sender == request.user and msg.is_read %}· Read ✓✓{% endif %}</div></div></div>
+<div class="message-row {% if msg.sender == request.user %}sent{% endif %}" data-msg-id="{{ msg.id }}"><div class="message">{{ msg.content }}{% if msg.attachment %}<div class="message-file"><span data-icon="file"></span><span><strong><a href="{{ msg.attachment.url }}" target="_blank">Attachment</a></strong><br></span></div>{% endif %}<div class="message-time">{{ msg.created_at|date:"h:i A" }} {% if msg.sender == request.user and msg.is_read %}· Read ✓✓{% endif %}</div></div></div>
 {% empty %}
 <p style="text-align:center; color:var(--text-muted); margin-top:20px;">No messages yet. Send a message to start chatting.</p>
 {% endfor %}
@@ -26,45 +26,104 @@
     const vendorId = {{ chat_user.id }};
     const currentUserId = {{ request.user.id }};
     const wsScheme = window.location.protocol === "https:" ? "wss" : "ws";
-    const chatSocket = new WebSocket(
-        wsScheme + '://' + window.location.host + '/ws/chat/' + vendorId + '/'
-    );
+    let chatSocket = null;
+    let reconnectTimer = null;
 
-    chatSocket.onmessage = function(e) {
-        const data = JSON.parse(e.data);
-        const messagesContainer = document.querySelector('.chat-messages');
-        
-        const noMsg = messagesContainer.querySelector('p');
-        if (noMsg && noMsg.textContent.includes('No messages yet')) {
-            noMsg.remove();
-        }
-        
-        const isSent = data.sender_id === currentUserId;
-        const msgRowClass = isSent ? "message-row sent" : "message-row";
-        
-        const newMsg = `
-            <div class="${msgRowClass}">
-                <div class="message">${data.message}
-                    <div class="message-time">${data.time}</div>
-                </div>
-            </div>
-        `;
-        messagesContainer.insertAdjacentHTML('beforeend', newMsg);
+    const messagesContainer = document.querySelector('.chat-messages');
+    if (messagesContainer) {
         messagesContainer.scrollTop = messagesContainer.scrollHeight;
-    };
+    }
 
-    chatSocket.onclose = function(e) {
-        console.error('Chat socket closed unexpectedly');
-    };
+    const renderedMsgIds = new Set();
+    document.querySelectorAll('.message-row[data-msg-id]').forEach(el => {
+        const mid = parseInt(el.getAttribute('data-msg-id'));
+        if (mid) renderedMsgIds.add(mid);
+    });
+
+    function renderIncomingMessage(id, messageText, senderId, timeStr) {
+        if (id && renderedMsgIds.has(id)) return;
+        if (id) renderedMsgIds.add(id);
+
+        if (messagesContainer) {
+            const noMsg = messagesContainer.querySelector('p');
+            if (noMsg && noMsg.textContent.includes('No messages yet')) {
+                noMsg.remove();
+            }
+            const isSent = (senderId === currentUserId);
+            const msgRowClass = isSent ? "message-row sent" : "message-row";
+            const row = document.createElement('div');
+            row.className = msgRowClass;
+            if (id) row.setAttribute('data-msg-id', id);
+            row.innerHTML = `
+                <div class="message">${messageText}
+                    <div class="message-time">${timeStr}</div>
+                </div>
+            `;
+            messagesContainer.appendChild(row);
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+    }
+
+    function connectWebSocket() {
+        if (chatSocket && (chatSocket.readyState === WebSocket.OPEN || chatSocket.readyState === WebSocket.CONNECTING)) {
+            return;
+        }
+        try {
+            chatSocket = new WebSocket(wsScheme + '://' + window.location.host + '/ws/chat/' + vendorId + '/');
+            chatSocket.onopen = function() {
+                console.log('Vendor Chat WebSocket connected.');
+            };
+            chatSocket.onmessage = function(e) {
+                try {
+                    const data = JSON.parse(e.data);
+                    renderIncomingMessage(data.id, data.message, data.sender_id, data.time);
+                } catch (err) {
+                    console.error('Error parsing WS data:', err);
+                }
+            };
+            chatSocket.onclose = function(e) {
+                console.log('WebSocket closed, attempting reconnect...');
+                clearTimeout(reconnectTimer);
+                reconnectTimer = setTimeout(connectWebSocket, 2000);
+            };
+            chatSocket.onerror = function(err) {
+                try { chatSocket.close(); } catch(e) {}
+            };
+        } catch (err) {
+            console.log("WebSocket init error:", err);
+            clearTimeout(reconnectTimer);
+            reconnectTimer = setTimeout(connectWebSocket, 3000);
+        }
+    }
+
+    connectWebSocket();
+
+    // Background Polling Fallback (sync every 2.5s)
+    async function syncMessages() {
+        try {
+            const res = await fetch('/api/chat/messages/' + vendorId + '/');
+            if (res.ok) {
+                const data = await res.json();
+                if (data.status === 'success' && Array.isArray(data.messages)) {
+                    data.messages.forEach(m => {
+                        renderIncomingMessage(m.id, m.content, m.sender_id, m.time_formatted);
+                    });
+                }
+            }
+        } catch (err) {
+            // silent catch
+        }
+    }
+    setInterval(syncMessages, 2500);
 
     document.querySelector('.chat-compose').addEventListener('submit', function(e) {
         const fileInput = document.getElementById('chat-attach');
         const msgInput = document.querySelector('input[name="content"]');
         
-        if (!fileInput.files.length && msgInput.value.trim() !== '') {
+        if ((!fileInput || !fileInput.files.length) && msgInput && msgInput.value.trim() !== '' && chatSocket && chatSocket.readyState === WebSocket.OPEN) {
             e.preventDefault();
             chatSocket.send(JSON.stringify({
-                'message': msgInput.value
+                'message': msgInput.value.trim()
             }));
             msgInput.value = '';
         }

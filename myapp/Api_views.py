@@ -148,8 +148,13 @@ def _get_user_from_bearer_token(request):
         Authorization: Token <token>
     Fallback:
         Query or Body parameter 'token' / 'bearer_token'
+        Session-authenticated user (from web portal)
     Returns: (user_or_None, error_message_or_None)
     """
+    # Allow session-authenticated requests (e.g. from web dashboard)
+    if hasattr(request, 'user') and request.user and request.user.is_authenticated:
+        return request.user, None
+
     auth_header = request.META.get('HTTP_AUTHORIZATION', '')
     token_key = ''
     if auth_header:
@@ -4660,6 +4665,28 @@ def chat_send_message_api(request):
             job=job_obj,
             is_read=False
         )
+
+        # Broadcast message to Channels WebSocket group so web clients receive it immediately
+        try:
+            from channels.layers import get_channel_layer
+            from asgiref.sync import async_to_sync
+            channel_layer = get_channel_layer()
+            if channel_layer:
+                user_ids = sorted([user.id, receiver.id])
+                room_group_name = f'chat_{user_ids[0]}_{user_ids[1]}'
+                async_to_sync(channel_layer.group_send)(
+                    room_group_name,
+                    {
+                        'type': 'chat_message',
+                        'id': msg.id,
+                        'message': msg.content,
+                        'sender_id': user.id,
+                        'sender_name': user.get_full_name() or user.username,
+                        'time': msg.created_at.strftime("%I:%M %p").lstrip('0')
+                    }
+                )
+        except Exception:
+            pass
 
         return JsonResponse({
             'status': 'success',

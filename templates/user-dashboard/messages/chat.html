@@ -34,7 +34,7 @@
           <div class="chat-messages">
             <div class="date-separator"><span>Messages</span></div>
             {% for msg in chat_messages %}
-            <div class="message-row {% if msg.sender == request.user %}sent{% endif %}">
+            <div class="message-row {% if msg.sender == request.user %}sent{% endif %}" data-msg-id="{{ msg.id }}">
               <div class="message">
                 {{ msg.content }}
                 {% if msg.attachment %}
@@ -68,40 +68,95 @@
             const currentUserId = {{ request.user.id }};
             const wsScheme = window.location.protocol === "https:" ? "wss" : "ws";
             let chatSocket = null;
+            let reconnectTimer = null;
             
             const messagesContainer = document.querySelector('.chat-messages');
             if (messagesContainer) {
               messagesContainer.scrollTop = messagesContainer.scrollHeight;
             }
 
-            try {
-              chatSocket = new WebSocket(wsScheme + '://' + window.location.host + '/ws/chat/' + vendorId + '/');
-              chatSocket.onmessage = function(e) {
-                const data = JSON.parse(e.data);
-                if (messagesContainer) {
-                  const noMsg = messagesContainer.querySelector('p');
-                  if (noMsg && noMsg.textContent.includes('No messages yet')) {
-                    noMsg.remove();
-                  }
-                  const isSent = data.sender_id === currentUserId;
-                  const msgRowClass = isSent ? "message-row sent" : "message-row";
-                  const newMsg = `
-                    <div class="${msgRowClass}">
-                      <div class="message">${data.message}
-                        <div class="message-time">${data.time}</div>
-                      </div>
-                    </div>
-                  `;
-                  messagesContainer.insertAdjacentHTML('beforeend', newMsg);
-                  messagesContainer.scrollTop = messagesContainer.scrollHeight;
+            // Track rendered message IDs for deduplication
+            const renderedMsgIds = new Set();
+            document.querySelectorAll('.message-row[data-msg-id]').forEach(el => {
+              const mid = parseInt(el.getAttribute('data-msg-id'));
+              if (mid) renderedMsgIds.add(mid);
+            });
+
+            function renderIncomingMessage(id, messageText, senderId, timeStr) {
+              if (id && renderedMsgIds.has(id)) return;
+              if (id) renderedMsgIds.add(id);
+
+              if (messagesContainer) {
+                const noMsg = messagesContainer.querySelector('p');
+                if (noMsg && noMsg.textContent.includes('No messages yet')) {
+                  noMsg.remove();
                 }
-              };
-              chatSocket.onclose = function(e) {
-                console.log('WebSocket closed, using HTTP fallback.');
-              };
-            } catch (err) {
-              console.log("WebSocket fallback to HTTP:", err);
+                const isSent = (senderId === currentUserId);
+                const msgRowClass = isSent ? "message-row sent" : "message-row";
+                const row = document.createElement('div');
+                row.className = msgRowClass;
+                if (id) row.setAttribute('data-msg-id', id);
+                row.innerHTML = `
+                  <div class="message">${messageText}
+                    <div class="message-time">${timeStr}</div>
+                  </div>
+                `;
+                messagesContainer.appendChild(row);
+                messagesContainer.scrollTop = messagesContainer.scrollHeight;
+              }
             }
+
+            function connectWebSocket() {
+              if (chatSocket && (chatSocket.readyState === WebSocket.OPEN || chatSocket.readyState === WebSocket.CONNECTING)) {
+                return;
+              }
+              try {
+                chatSocket = new WebSocket(wsScheme + '://' + window.location.host + '/ws/chat/' + vendorId + '/');
+                chatSocket.onopen = function() {
+                  console.log('Chat WebSocket connected.');
+                };
+                chatSocket.onmessage = function(e) {
+                  try {
+                    const data = JSON.parse(e.data);
+                    renderIncomingMessage(data.id, data.message, data.sender_id, data.time);
+                  } catch (err) {
+                    console.error('Error parsing WS data:', err);
+                  }
+                };
+                chatSocket.onclose = function(e) {
+                  console.log('WebSocket closed, scheduling reconnect...');
+                  clearTimeout(reconnectTimer);
+                  reconnectTimer = setTimeout(connectWebSocket, 2000);
+                };
+                chatSocket.onerror = function(err) {
+                  try { chatSocket.close(); } catch(e) {}
+                };
+              } catch (err) {
+                console.log("WebSocket init error:", err);
+                clearTimeout(reconnectTimer);
+                reconnectTimer = setTimeout(connectWebSocket, 3000);
+              }
+            }
+
+            connectWebSocket();
+
+            // Background Polling Fallback (runs every 2.5s to ensure zero missed messages from REST API / mobile app)
+            async function syncMessages() {
+              try {
+                const res = await fetch('/api/chat/messages/' + vendorId + '/');
+                if (res.ok) {
+                  const data = await res.json();
+                  if (data.status === 'success' && Array.isArray(data.messages)) {
+                    data.messages.forEach(m => {
+                      renderIncomingMessage(m.id, m.content, m.sender_id, m.time_formatted);
+                    });
+                  }
+                }
+              } catch (err) {
+                // Background sync silent catch
+              }
+            }
+            setInterval(syncMessages, 2500);
 
             const composeForm = document.querySelector('.chat-compose');
             if (composeForm) {
