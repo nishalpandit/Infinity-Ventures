@@ -217,7 +217,9 @@ body.sidebar-collapsed .app-sidebar { width: var(--sidebar-collapsed); }
 html.sidebar-collapsed .sidebar-logo,
 body.sidebar-collapsed .sidebar-logo { justify-content: center; padding: 0; }
 html.sidebar-collapsed .sidebar-logo .logo-text,
-body.sidebar-collapsed .sidebar-logo .logo-text { opacity: 0; max-width: 0; }
+body.sidebar-collapsed .sidebar-logo .logo-text,
+html.sidebar-collapsed .sidebar-logo .state-label,
+body.sidebar-collapsed .sidebar-logo .state-label { opacity: 0; max-width: 0; padding: 0; overflow: hidden; display: none; }
 
 html.sidebar-collapsed .nav-section-label,
 body.sidebar-collapsed .nav-section-label { opacity: 0; height: 8px; padding: 4px 0; overflow: hidden; }
@@ -352,7 +354,9 @@ body.sidebar-collapsed .sb-flyout { display: block; }
 
   /* Force expanded look inside mobile drawer */
   body.sidebar-collapsed .app-sidebar .sidebar-logo { justify-content: flex-start; padding: 0 18px; }
-  body.sidebar-collapsed .app-sidebar .sidebar-logo .logo-text { opacity: 1; max-width: none; width: auto; }
+  body.sidebar-collapsed .app-sidebar .sidebar-logo .logo-text,
+  body.sidebar-collapsed .app-sidebar .sidebar-logo .state-label { opacity: 1; max-width: none; width: auto; display: block; overflow: visible; padding: 2px 0 0 36px; }
+  body.sidebar-collapsed .app-sidebar .sidebar-logo .logo-text { padding: 0; }
   body.sidebar-collapsed .app-sidebar .nav-section-label { opacity: 1; height: auto; padding: 14px 12px 6px; }
   body.sidebar-collapsed .app-sidebar .snav-link { justify-content: flex-start; padding: 10px 12px; gap: 12px; }
   body.sidebar-collapsed .app-sidebar .snav-link .snav-label,

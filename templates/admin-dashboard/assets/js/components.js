@@ -137,7 +137,7 @@
 
   /* ---------- Sidebar template (pre-computes active/open states with ZERO flash) ---------- */
   function buildSidebar() {
-    var stateLabel = window.ADMIN_STATE ? '<div style="font-size:11px; color:#818cf8; font-weight:600; padding:2px 0 0 36px;"><i class="fa-solid fa-map-pin" style="margin-right:4px;"></i>' + window.ADMIN_STATE + '</div>' : '';
+    var stateLabel = window.ADMIN_STATE ? '<div class="state-label" style="font-size:11px; color:#818cf8; font-weight:600; padding:2px 0 0 36px;"><i class="fa-solid fa-map-pin" style="margin-right:4px;"></i>' + window.ADMIN_STATE + '</div>' : '';
     var html = '';
     html += '<aside class="app-sidebar" id="appSidebar">';
     html += '  <div class="sidebar-logo">';
