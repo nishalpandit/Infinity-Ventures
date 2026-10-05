@@ -698,6 +698,55 @@ class GlobalSettings(models.Model):
             'tax_mode': mode
         }
 
+    def split_qs_final_total(self, final_customer_total):
+        """
+        Splits an all-inclusive customer payment into SuperAdmin cut + taxes and Vendor Wallet payout.
+        Example: Customer pays ₹893:
+          commission = round(893 * (comm_pct / 100), 2)
+          cgst = round(commission * (cgst_pct / 100), 2)
+          sgst = round(commission * (sgst_pct / 100), 2)
+          superadmin_total = commission + cgst + sgst + flat_fee
+          vendor_payout = round(893 - superadmin_total, 2)
+        """
+        try:
+            total = float(final_customer_total or 0.0)
+        except (ValueError, TypeError):
+            total = 0.0
+
+        comm_pct = self.get_qs_commission_percent()
+        cgst_pct = self.get_qs_cgst_percent()
+        sgst_pct = self.get_qs_sgst_percent()
+        flat = self.get_qs_flat_fee()
+        mode = self.get_qs_tax_mode()
+
+        comm = round((total * (comm_pct / 100.0)) + flat, 2)
+        if mode == 'commission_only':
+            cgst = round(comm * (cgst_pct / 100.0), 2)
+            sgst = round(comm * (sgst_pct / 100.0), 2)
+        else:
+            cgst = round(total * (cgst_pct / 100.0), 2)
+            sgst = round(total * (sgst_pct / 100.0), 2)
+
+        total_tax = round(cgst + sgst, 2)
+        superadmin_total = round(comm + total_tax, 2)
+        vendor_payout = round(max(0.0, total - superadmin_total), 2)
+
+        return {
+            'total_customer_payable': total,
+            'customer_price': total,
+            'vendor_payout': vendor_payout,
+            'commission': comm,
+            'cgst': cgst,
+            'sgst': sgst,
+            'total_tax': total_tax,
+            'flat_fee': flat,
+            'superadmin_share': superadmin_total,
+            'commission_percent': comm_pct,
+            'cgst_percent': cgst_pct,
+            'sgst_percent': sgst_pct,
+            'tax_mode': mode,
+        }
+
 
 
 class PlatformRevenueLedger(models.Model):

@@ -456,13 +456,10 @@
     }
 
     function updateLivePreviewCalculation() {
-      // Dynamic live client-side estimate
+      // Dynamic live client-side estimate: total customer bill = base service + approved extras
       const extras = parseFloat(document.getElementById('complete-extra-charges').value) || 0.0;
-      const base = activeBaseServicePrice + extras;
-      const comm = (base * 0.10);
-      const gst = (comm * 0.18);
-      const total = Math.round(base + comm + gst);
-      document.getElementById('complete-base-amount').innerText = '₹' + base.toFixed(2);
+      const totalCustomerBill = activeBaseServicePrice + extras;
+      document.getElementById('complete-base-amount').innerText = '₹' + totalCustomerBill.toFixed(2);
     }
 
     async function submitGenerateBill() {

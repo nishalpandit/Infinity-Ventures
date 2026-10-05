@@ -5556,16 +5556,16 @@ def generate_booking_bill_api(request, booking_id):
 
         notes = (data.get('additional_notes') or request.POST.get('additional_notes') or '').strip()
 
-        # Base vendor payout calculation
+        # Customer total payable bill (inclusive of service and approved extras)
         base_service_amount = float(booking.total_amount or (booking.quick_service.base_price if booking.quick_service else 0.0))
-        net_vendor_base = max(0.0, base_service_amount + extra_charges - discount)
+        final_customer_total = max(0.0, base_service_amount + extra_charges - discount)
 
         # Dynamic calculations via GlobalSettings
         gs = GlobalSettings.objects.first()
         if not gs:
             gs = GlobalSettings.objects.create()
 
-        financials = gs.calculate_qs_customer_price(net_vendor_base)
+        financials = gs.split_qs_final_total(final_customer_total)
         vendor_payout = financials['vendor_payout']
         platform_commission = financials['commission']
         cgst = financials['cgst']
@@ -5573,7 +5573,7 @@ def generate_booking_bill_api(request, booking_id):
         total_tax = financials['total_tax']
         flat_fee = financials['flat_fee']
         total_customer_price = financials['customer_price']
-        superadmin_cut = round(platform_commission + total_tax + flat_fee, 2)
+        superadmin_cut = financials['superadmin_share']
 
         # Generate unique transaction reference
         txn_ref = f"TXN_QS_{booking.id}_{random.randint(10000, 99999)}"
@@ -5664,7 +5664,7 @@ def booking_payment_qr_api(request, booking_id):
             gs = GlobalSettings.objects.create()
 
         base_amount = float(booking.total_amount or 0.0) + float(booking.additional_charges or 0.0)
-        calc = gs.calculate_qs_customer_price(base_amount)
+        calc = gs.split_qs_final_total(base_amount)
         total_customer_price = calc['customer_price']
 
         txn_ref = booking.transaction_reference or f"TXN_QS_{booking.id}_{random.randint(10000, 99999)}"
@@ -5747,7 +5747,7 @@ def confirm_booking_payment_api(request, booking_id):
                 gs = GlobalSettings.objects.create()
 
             base_amount = float(booking.total_amount or 0.0) + float(booking.additional_charges or 0.0)
-            calc = gs.calculate_qs_customer_price(base_amount)
+            calc = gs.split_qs_final_total(base_amount)
 
             vendor_payout = Decimal(str(calc['vendor_payout'])).quantize(Decimal('0.01'))
             platform_comm = Decimal(str(calc['commission'])).quantize(Decimal('0.01'))

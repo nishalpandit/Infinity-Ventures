@@ -2155,7 +2155,7 @@ def dashboard_view(request, path=''):
                         if booking.payment_status != 'paid':
                             gs = GlobalSettings.objects.first()
                             base_amt = float(booking.total_amount or 0.0) + float(booking.additional_charges or 0.0)
-                            calc = gs.calculate_qs_customer_price(base_amt) if gs else {'vendor_payout': base_amt, 'commission': 0, 'cgst': 0, 'sgst': 0, 'flat_fee': 0, 'customer_price': base_amt}
+                            calc = gs.split_qs_final_total(base_amt) if gs else {'vendor_payout': base_amt, 'commission': 0, 'cgst': 0, 'sgst': 0, 'flat_fee': 0, 'customer_price': base_amt}
 
                             vendor_payout = Decimal(str(calc['vendor_payout'])).quantize(Decimal('0.01'))
                             platform_comm = Decimal(str(calc['commission'])).quantize(Decimal('0.01'))
