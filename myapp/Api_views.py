@@ -5889,21 +5889,32 @@ def vendor_wallet_balance_api(request):
 
         txns_data = []
         for t in recent_txns:
+            is_credit = t.transaction_type == 'credit'
+            sign = '+' if is_credit else '-'
             txns_data.append({
-                'id': t.id,
+                'id': f"TX-{t.id:05d}",
+                'raw_id': t.id,
                 'amount': float(t.amount),
+                'amount_formatted': f"{sign}₹{float(t.amount):,.2f}",
+                'title': t.description or ('Earnings Credit' if is_credit else 'Payout Debit'),
                 'type': t.transaction_type,
-                'is_credit': t.transaction_type == 'credit',
+                'type_label': t.get_transaction_type_display(),
+                'is_credit': is_credit,
                 'description': t.description,
-                'date': t.created_at.strftime('%d %b %Y, %I:%M %p')
+                'status': 'Settled',
+                'date': t.created_at.strftime('%d %b %Y, %I:%M %p'),
+                'formatted_date': t.created_at.strftime('%d %b %Y, %I:%M %p')
             })
 
         return JsonResponse({
             'status': 'success',
             'wallet': {
                 'available_balance': float(vw.available_balance or 0.0),
+                'available_balance_formatted': f"₹{float(vw.available_balance or 0.0):,.2f}",
                 'total_earned': float(vw.total_earned or 0.0),
+                'total_earned_formatted': f"₹{float(vw.total_earned or 0.0):,.2f}",
                 'total_withdrawn': float(vw.total_withdrawn or 0.0),
+                'total_withdrawn_formatted': f"₹{float(vw.total_withdrawn or 0.0):,.2f}",
                 'last_updated': vw.updated_at.strftime('%Y-%m-%d %H:%M:%S') if vw.updated_at else None,
             },
             'recent_transactions': txns_data
@@ -5945,17 +5956,24 @@ def vendor_wallet_transactions_api(request):
 
         transactions_data = []
         for t in txns_qs:
+            is_credit = t.transaction_type == 'credit'
+            sign = '+' if is_credit else '-'
             transactions_data.append({
-                'id': t.id,
+                'id': f"TX-{t.id:05d}",
+                'raw_id': t.id,
                 'amount': float(t.amount),
+                'amount_formatted': f"{sign}₹{float(t.amount):,.2f}",
+                'title': t.description or ('Earnings Credit' if is_credit else 'Payout Debit'),
                 'type': t.transaction_type,
                 'type_label': t.get_transaction_type_display(),
-                'is_credit': t.transaction_type == 'credit',
+                'is_credit': is_credit,
                 'description': t.description,
+                'status': 'Settled',
+                'date': t.created_at.strftime('%d %b %Y, %I:%M %p'),
+                'formatted_date': t.created_at.strftime('%d %b %Y, %I:%M %p'),
                 'related_service_id': t.related_quick_service_id,
                 'related_job_id': t.related_job_id,
                 'created_at': t.created_at.isoformat(),
-                'formatted_date': t.created_at.strftime('%d %b %Y, %I:%M %p')
             })
 
         return JsonResponse({
