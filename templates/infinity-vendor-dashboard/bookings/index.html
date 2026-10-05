@@ -246,7 +246,7 @@
                       <span>📞</span> <span id="modal-customer-phone-text">Call Customer</span>
                     </a>
                     <!-- Chat Button -->
-                    <a id="modal-customer-chat-btn" href="/vendor/messages/index.html" class="btn btn-primary btn-sm" style="font-weight:700;">
+                    <a id="modal-customer-chat-btn" href="/vendor/messages/chat.html" class="btn btn-primary btn-sm" style="font-weight:700;">
                       <span>💬</span> Chat Option
                     </a>
                   </div>
@@ -660,7 +660,12 @@
 
       // Chat Button
       const chatBtn = document.getElementById('modal-customer-chat-btn');
-      chatBtn.href = '/vendor/messages/index.html?customer_id=' + cId;
+      if (cId) {
+        chatBtn.style.display = 'inline-flex';
+        chatBtn.href = '/vendor/messages/chat.html?user_id=' + cId;
+      } else {
+        chatBtn.href = '/vendor/messages/index.html';
+      }
 
       // Address & Map Tracking
       document.getElementById('modal-service-address').innerText = cleanAddr;

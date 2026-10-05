@@ -57,6 +57,8 @@
 
           <form class="chat-compose" method="POST" action="chat.html?vendor_id={{ chat_vendor.id }}" enctype="multipart/form-data">
             {% csrf_token %}
+            <input type="file" name="attachment" id="chat-attach" style="display:none;" onchange="alert('File selected! Click Send when ready.')">
+            <button type="button" class="icon-btn" onclick="document.getElementById('chat-attach').click()" aria-label="Attach file"><span data-icon="paperclip"></span></button>
             <input class="input" name="content" placeholder="Write a message to {{ chat_vendor.name }}..." aria-label="Message" required autocomplete="off">
             <button class="btn btn-primary" type="submit"><span data-icon="send"></span> Send</button>
           </form>
@@ -65,25 +67,55 @@
             const vendorId = {{ chat_vendor.id }};
             const currentUserId = {{ request.user.id }};
             const wsScheme = window.location.protocol === "https:" ? "wss" : "ws";
+            let chatSocket = null;
+            
+            const messagesContainer = document.querySelector('.chat-messages');
+            if (messagesContainer) {
+              messagesContainer.scrollTop = messagesContainer.scrollHeight;
+            }
+
             try {
-              const chatSocket = new WebSocket(wsScheme + '://' + window.location.host + '/ws/chat/' + vendorId + '/');
+              chatSocket = new WebSocket(wsScheme + '://' + window.location.host + '/ws/chat/' + vendorId + '/');
               chatSocket.onmessage = function(e) {
                 const data = JSON.parse(e.data);
-                const messagesContainer = document.querySelector('.chat-messages');
-                const isSent = data.sender_id === currentUserId;
-                const msgRowClass = isSent ? "message-row sent" : "message-row";
-                const newMsg = `
-                  <div class="${msgRowClass}">
-                    <div class="message">${data.message}
-                      <div class="message-time">${data.time}</div>
+                if (messagesContainer) {
+                  const noMsg = messagesContainer.querySelector('p');
+                  if (noMsg && noMsg.textContent.includes('No messages yet')) {
+                    noMsg.remove();
+                  }
+                  const isSent = data.sender_id === currentUserId;
+                  const msgRowClass = isSent ? "message-row sent" : "message-row";
+                  const newMsg = `
+                    <div class="${msgRowClass}">
+                      <div class="message">${data.message}
+                        <div class="message-time">${data.time}</div>
+                      </div>
                     </div>
-                  </div>
-                `;
-                messagesContainer.insertAdjacentHTML('beforeend', newMsg);
-                messagesContainer.scrollTop = messagesContainer.scrollHeight;
+                  `;
+                  messagesContainer.insertAdjacentHTML('beforeend', newMsg);
+                  messagesContainer.scrollTop = messagesContainer.scrollHeight;
+                }
+              };
+              chatSocket.onclose = function(e) {
+                console.log('WebSocket closed, using HTTP fallback.');
               };
             } catch (err) {
               console.log("WebSocket fallback to HTTP:", err);
+            }
+
+            const composeForm = document.querySelector('.chat-compose');
+            if (composeForm) {
+              composeForm.addEventListener('submit', function(e) {
+                const fileInput = document.getElementById('chat-attach');
+                const msgInput = composeForm.querySelector('input[name="content"]');
+                if ((!fileInput || !fileInput.files.length) && msgInput && msgInput.value.trim() !== '' && chatSocket && chatSocket.readyState === WebSocket.OPEN) {
+                  e.preventDefault();
+                  chatSocket.send(JSON.stringify({
+                    'message': msgInput.value.trim()
+                  }));
+                  msgInput.value = '';
+                }
+              });
             }
           </script>
           {% else %}

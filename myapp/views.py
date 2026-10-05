@@ -1804,90 +1804,6 @@ def dashboard_view(request, path=''):
         context['pending_payouts_sum'] = PayoutRequest.objects.filter(vendor=request.user, status='pending').aggregate(total=Sum('amount'))['total'] or 0
         context['wallet_balance'] = f"{wallet.available_balance:.2f}"
 
-    if path == 'user/messages/index' or path == 'user/messages':
-        if request.user.is_authenticated:
-            # Get distinct users the current user has chatted with
-            sent_to = Message.objects.filter(sender=request.user).values_list('receiver', flat=True)
-            received_from = Message.objects.filter(receiver=request.user).values_list('sender', flat=True)
-            vendor_ids = set(sent_to) | set(received_from)
-            
-            conversations = []
-            for v_id in vendor_ids:
-                try:
-                    vendor_user = User.objects.get(id=v_id)
-                    latest_message = Message.objects.filter(
-                        Q(sender=request.user, receiver=vendor_user) | 
-                        Q(sender=vendor_user, receiver=request.user)
-                    ).order_by('-created_at').first()
-                    
-                    unread_count = Message.objects.filter(sender=vendor_user, receiver=request.user, is_read=False).count()
-                    
-                    try:
-                        profile = vendor_user.vendor_profile
-                        company_name = profile.company_name or vendor_user.get_full_name() or vendor_user.username
-                    except:
-                        company_name = vendor_user.get_full_name() or vendor_user.username
-                        
-                    conversations.append({
-                        'vendor_id': vendor_user.id,
-                        'name': company_name,
-                        'initials': company_name[:2].upper() if company_name else 'V',
-                        'latest_message': latest_message,
-                        'unread_count': unread_count,
-                    })
-                except User.DoesNotExist:
-                    continue
-                    
-            # Sort conversations by latest message time descending
-            conversations.sort(key=lambda x: x['latest_message'].created_at if x['latest_message'] else timezone.now(), reverse=True)
-            context['conversations'] = conversations
-
-    if path == 'user/messages/chat':
-        vendor_id = request.GET.get('vendor_id')
-        if request.method == 'POST':
-            content = request.POST.get('content')
-            if content and vendor_id:
-                try:
-                    vendor_user = User.objects.get(id=vendor_id)
-                    Message.objects.create(
-                        sender=request.user,
-                        receiver=vendor_user,
-                        content=content
-                    )
-                except User.DoesNotExist:
-                    pass
-            return redirect(f'/user/messages/chat.html?vendor_id={vendor_id}')
-            
-        if vendor_id and request.user.is_authenticated:
-            try:
-                vendor_user = User.objects.get(id=vendor_id)
-                # Mark unread messages as read
-                Message.objects.filter(sender=vendor_user, receiver=request.user, is_read=False).update(is_read=True)
-                
-                chat_msgs = Message.objects.filter(
-                    Q(sender=request.user, receiver=vendor_user) | 
-                    Q(sender=vendor_user, receiver=request.user)
-                ).order_by('created_at')
-                
-                try:
-                    profile = vendor_user.vendor_profile
-                    company_name = profile.company_name or vendor_user.get_full_name() or vendor_user.username
-                    category = profile.category
-                except:
-                    company_name = vendor_user.get_full_name() or vendor_user.username
-                    category = 'General'
-                    
-                context['chat_vendor'] = {
-                    'id': vendor_user.id,
-                    'name': company_name,
-                    'initials': company_name[:2].upper() if company_name else 'V',
-                    'category': category
-                }
-                context['chat_messages'] = chat_msgs
-            except User.DoesNotExist:
-                context['chat_vendor'] = None
-                context['chat_messages'] = []
-
     if path == 'vendor/jobs/available':
         jobs_qs = Job.objects.filter(status='open').select_related('category', 'location', 'user').order_by('-created_at')
         
@@ -2984,38 +2900,44 @@ def dashboard_view(request, path=''):
         else:
             return redirect('/user/jobs/quotations.html' if 'jobs' in path else '/user/quick-services/quotations.html')
             
-    if 'messages/index' in path or 'messages/chat' in path:
+    if 'messages/index' in path or 'messages/chat' in path or path in ['user/messages', 'vendor/messages']:
         u = request.user
         if not u.is_authenticated:
             return redirect('/login/')
             
         is_vendor = 'vendor' in path
+        target_id = request.GET.get('vendor_id') or request.GET.get('user_id') or request.GET.get('customer_id')
+
+        # If accessing index with a target user, redirect directly to active chat window
+        if ('messages/index' in path or path in ['user/messages', 'vendor/messages']) and target_id:
+            param = f'user_id={target_id}' if is_vendor else f'vendor_id={target_id}'
+            chat_path = '/vendor/messages/chat.html' if is_vendor else '/user/messages/chat.html'
+            return redirect(f'{chat_path}?{param}')
         
         # Determine conversations (unique opposite party)
+        conversations_qs = Message.objects.filter(
+            Q(sender=u) | Q(receiver=u)
+        ).values('sender', 'receiver').distinct()
+        
+        contact_ids = set()
+        for c in conversations_qs:
+            if c['sender'] != u.id: contact_ids.add(c['sender'])
+            if c['receiver'] != u.id: contact_ids.add(c['receiver'])
+            
         if is_vendor:
-            # For vendor, conversations are with Users (role='USER')
-            conversations_qs = Message.objects.filter(
-                Q(sender=u) | Q(receiver=u)
-            ).values('sender', 'receiver').distinct()
-            
-            contact_ids = set()
-            for c in conversations_qs:
-                if c['sender'] != u.id: contact_ids.add(c['sender'])
-                if c['receiver'] != u.id: contact_ids.add(c['receiver'])
-                
-            contacts = User.objects.filter(id__in=contact_ids, role='USER')
+            # Also include customers from bookings and bids
+            booking_cust_ids = ServiceBooking.objects.filter(vendor=u, customer__isnull=False).values_list('customer_id', flat=True)
+            contact_ids.update(booking_cust_ids)
+            bid_cust_ids = Bid.objects.filter(vendor=u, job__user__isnull=False).values_list('job__user_id', flat=True)
+            contact_ids.update(bid_cust_ids)
         else:
-            # For user, conversations are with Vendors
-            conversations_qs = Message.objects.filter(
-                Q(sender=u) | Q(receiver=u)
-            ).values('sender', 'receiver').distinct()
+            # Also include vendors from bookings and bids
+            booking_vendor_ids = ServiceBooking.objects.filter(customer=u, vendor__isnull=False).values_list('vendor_id', flat=True)
+            contact_ids.update(booking_vendor_ids)
+            bid_vendor_ids = Bid.objects.filter(job__user=u, vendor__isnull=False).values_list('vendor_id', flat=True)
+            contact_ids.update(bid_vendor_ids)
             
-            contact_ids = set()
-            for c in conversations_qs:
-                if c['sender'] != u.id: contact_ids.add(c['sender'])
-                if c['receiver'] != u.id: contact_ids.add(c['receiver'])
-                
-            contacts = User.objects.filter(id__in=contact_ids, role='VENDOR')
+        contacts = User.objects.filter(id__in=contact_ids).exclude(id=u.id)
             
         conversations_list = []
         for contact in contacts:
@@ -3028,7 +2950,8 @@ def dashboard_view(request, path=''):
             name = contact.get_full_name() or contact.username
             if not is_vendor:
                 try:
-                    name = contact.vendor_profile.company_name or name
+                    if hasattr(contact, 'vendor_profile') and contact.vendor_profile:
+                        name = contact.vendor_profile.company_name or name
                 except Exception:
                     pass
                     
@@ -3042,22 +2965,26 @@ def dashboard_view(request, path=''):
                 'unread_count': unread_count,
             })
             
-        conversations_list.sort(key=lambda x: x['latest_message'].created_at if x['latest_message'] else timezone.now(), reverse=True)
+        conversations_list.sort(key=lambda x: (x['latest_message'] is not None, x['latest_message'].created_at if x['latest_message'] else None), reverse=True)
         context['conversations'] = conversations_list
         
         if 'messages/chat' in path:
-            other_user_id = request.GET.get('vendor_id') or request.GET.get('user_id')
+            other_user_id = request.GET.get('vendor_id') or request.GET.get('user_id') or request.GET.get('customer_id')
             if not other_user_id and conversations_list:
                 other_user_id = conversations_list[0]['id']
                 
             if other_user_id:
-                other_user = User.objects.filter(id=other_user_id).first()
+                try:
+                    other_user = User.objects.filter(id=other_user_id).first()
+                except Exception:
+                    other_user = None
+                    
                 if other_user:
                     # Mark messages as read
                     Message.objects.filter(sender=other_user, receiver=u, is_read=False).update(is_read=True)
                     
                     if request.method == 'POST':
-                        content = request.POST.get('content')
+                        content = request.POST.get('content', '').strip()
                         attachment = request.FILES.get('attachment')
                         if content or attachment:
                             msg = Message.objects.create(
@@ -3067,26 +2994,29 @@ def dashboard_view(request, path=''):
                                 attachment=attachment
                             )
                             
-                            from channels.layers import get_channel_layer
-                            from asgiref.sync import async_to_sync
-                            channel_layer = get_channel_layer()
-                            user_ids = sorted([u.id, other_user.id])
-                            room_group_name = f'chat_{user_ids[0]}_{user_ids[1]}'
-                            
-                            # Build text display for attachment if any
-                            extra = f' <br><a href="{msg.attachment.url}" target="_blank">Attachment</a>' if attachment else ''
-                            
-                            async_to_sync(channel_layer.group_send)(
-                                room_group_name,
-                                {
-                                    'type': 'chat_message',
-                                    'message': msg.content + extra,
-                                    'sender_id': u.id,
-                                    'sender_name': u.get_full_name() or u.username,
-                                    'time': msg.created_at.strftime("%I:%M %p").lstrip('0')
-                                }
-                            )
-                            
+                            try:
+                                from channels.layers import get_channel_layer
+                                from asgiref.sync import async_to_sync
+                                channel_layer = get_channel_layer()
+                                user_ids = sorted([u.id, other_user.id])
+                                room_group_name = f'chat_{user_ids[0]}_{user_ids[1]}'
+                                
+                                # Build text display for attachment if any
+                                extra = f' <br><a href="{msg.attachment.url}" target="_blank">Attachment</a>' if attachment else ''
+                                
+                                async_to_sync(channel_layer.group_send)(
+                                    room_group_name,
+                                    {
+                                        'type': 'chat_message',
+                                        'message': (msg.content or '') + extra,
+                                        'sender_id': u.id,
+                                        'sender_name': u.get_full_name() or u.username,
+                                        'time': msg.created_at.strftime("%I:%M %p").lstrip('0')
+                                    }
+                                )
+                            except Exception:
+                                pass
+                                
                             # Redirect to prevent duplicate submission
                             param = '?vendor_id=' + str(other_user.id) if not is_vendor else '?user_id=' + str(other_user.id)
                             return redirect('/' + path + '.html' + param)
@@ -3097,11 +3027,12 @@ def dashboard_view(request, path=''):
                     context['chat_messages'] = chat_messages
                     
                     name = other_user.get_full_name() or other_user.username
-                    category = 'User'
+                    category = 'Service Partner' if not is_vendor else 'Customer'
                     if not is_vendor:
                         try:
-                            name = other_user.vendor_profile.company_name or name
-                            category = other_user.vendor_profile.category
+                            if hasattr(other_user, 'vendor_profile') and other_user.vendor_profile:
+                                name = other_user.vendor_profile.company_name or name
+                                category = other_user.vendor_profile.category or 'Service Partner'
                         except Exception:
                             category = 'Vendor'
                             
