@@ -2684,7 +2684,7 @@ def dashboard_view(request, path=''):
         admin_state, is_area_admin, available_states, co_admins = get_admin_state_context(request)
         context['admin_state'] = admin_state
         context['is_area_admin'] = is_area_admin
-        quick_services = QuickService.objects.exclude(category__service_type='job').select_related('vendor', 'category', 'location').annotate(vendor_requests_count=Count('bids')).prefetch_related(Prefetch('bids', queryset=Bid.objects.filter(status='selected').select_related('vendor', 'vendor__vendor_profile'), to_attr='selected_bids')).order_by('-created_at')
+        quick_services = QuickService.objects.exclude(category__service_type='job').select_related('vendor', 'category', 'location').annotate(vendor_requests_count=Count('legacy_bids')).prefetch_related(Prefetch('legacy_bids', queryset=Bid.objects.filter(status='selected').select_related('vendor', 'vendor__vendor_profile'), to_attr='selected_bids')).order_by('-created_at')
         if admin_state:
             quick_services = quick_services.filter(get_in_state_qs_filter(admin_state))
         
@@ -2720,7 +2720,7 @@ def dashboard_view(request, path=''):
                 'category': qs.category.name if getattr(qs, 'category', None) else 'Uncategorized',
                 'location': f"{qs.location.city}, {qs.location.state}" if getattr(qs, 'location', None) else (admin_state or 'Unknown'),
                 'locality': qs.locality or '',
-                'budget': float(qs.budget) if qs.budget else 0,
+                'budget': float(qs.base_price) if getattr(qs, 'base_price', None) else 0,
                 'vendorRequests': getattr(qs, 'vendor_requests_count', 0),
                 'selectedVendor': selected_vendor_name,
                 'status': qs.status,
