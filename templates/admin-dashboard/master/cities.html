@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>{% if is_area_admin %}Cities ({{ admin_state }}) - Sugu Admin{% else %}Locations Master - Sugu Admin{% endif %}</title>
+  <title>{% if is_area_admin %}Cities ({{ admin_state }}) - Sugu Admin{% else %}Cities Master - Sugu Admin{% endif %}</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
@@ -24,11 +24,11 @@
             <h4 class="m-0 fw-bold text-dark">Cities &middot; {{ admin_state }}</h4>
             <small class="text-muted">Manage active operational cities within your assigned territory ({{ admin_state }}).</small>
           {% else %}
-            <h4 class="m-0 fw-bold text-dark">Locations Master</h4>
-            <small class="text-muted">Manage operational cities and states across all platform territories.</small>
+            <h4 class="m-0 fw-bold text-dark">Cities Master</h4>
+            <small class="text-muted">Manage operational cities across all platform territories.</small>
           {% endif %}
         </div>
-        <button class="btn btn-primary" onclick="openAddModal()"><i class="fa-solid fa-plus"></i> {% if is_area_admin %}Add City{% else %}Add Location{% endif %}</button>
+        <button class="btn btn-primary" onclick="openAddModal()"><i class="fa-solid fa-plus"></i> {% if is_area_admin %}Add City{% else %}Add City{% endif %}</button>
       </div>
 
       <div class="card">
@@ -70,7 +70,7 @@
                   </td>
                 </tr>
                 {% empty %}
-                <tr><td colspan="6" class="text-center py-4 text-muted">No locations found.</td></tr>
+                <tr><td colspan="6" class="text-center py-4 text-muted">No cities found.</td></tr>
                 {% endfor %}
               </tbody>
             </table>
@@ -87,7 +87,7 @@
         <form id="locationForm" method="POST" action="/api/manage-location/">
           {% csrf_token %}
           <div class="modal-header">
-            <h5 class="modal-title" id="locationModalLabel">{% if is_area_admin %}Add City in {{ admin_state }}{% else %}Add Location{% endif %}</h5>
+            <h5 class="modal-title" id="locationModalLabel">{% if is_area_admin %}Add City in {{ admin_state }}{% else %}Add City{% endif %}</h5>
             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
           </div>
           <div class="modal-body">
@@ -134,7 +134,7 @@
           </div>
           <div class="modal-footer">
             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-            <button type="submit" class="btn btn-primary" id="locSubmitBtn">{% if is_area_admin %}Save City{% else %}Save Location{% endif %}</button>
+            <button type="submit" class="btn btn-primary" id="locSubmitBtn">{% if is_area_admin %}Save City{% else %}Save City{% endif %}</button>
           </div>
         </form>
       </div>
@@ -159,7 +159,7 @@
       'use strict';
       AdminComponents.renderBreadcrumb([
         { label: 'Master', href: '#' },
-        { label: window.IS_AREA_ADMIN ? 'Cities' : 'Locations' }
+        { label: 'Cities' }
       ]);
     })();
 
@@ -197,7 +197,7 @@
     function openAddModal() {
       document.getElementById('locationForm').reset();
       document.getElementById('locId').value = '';
-      document.getElementById('locationModalLabel').textContent = window.IS_AREA_ADMIN ? ('Add City in ' + (window.ADMIN_STATE || 'Territory')) : 'Add Location';
+      document.getElementById('locationModalLabel').textContent = window.IS_AREA_ADMIN ? ('Add City in ' + (window.ADMIN_STATE || 'Territory')) : 'Add City';
       const input = document.getElementById('locStateInput');
       const select = document.getElementById('locStateSelect');
       const btn = document.getElementById('toggleStateBtn');
@@ -216,7 +216,7 @@
       document.getElementById('locId').value = id;
       document.getElementById('locCity').value = city;
       document.getElementById('locStatus').value = status;
-      document.getElementById('locationModalLabel').textContent = window.IS_AREA_ADMIN ? 'Edit City' : 'Edit Location';
+      document.getElementById('locationModalLabel').textContent = window.IS_AREA_ADMIN ? 'Edit City' : 'Edit City';
 
       const select = document.getElementById('locStateSelect');
       const input = document.getElementById('locStateInput');

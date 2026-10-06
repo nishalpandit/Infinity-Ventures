@@ -6348,3 +6348,150 @@ def vendor_wallet_transactions_api(request):
 
 
 
+
+
+@csrf_exempt
+def add_subcategory_api(request):
+    if not request.user.is_authenticated or not request.user.is_superuser:
+        return JsonResponse({'success': False, 'error': 'Unauthorized'})
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            cat_id = data.get('category_id')
+            name = data.get('name')
+            status = data.get('status', 'active')
+            if not cat_id or not name:
+                return JsonResponse({'success': False, 'error': 'Category ID and Name are required'})
+            
+            category = Category.objects.get(id=cat_id)
+            subcat = SubCategory.objects.create(category=category, name=name, status=status)
+            return JsonResponse({'success': True, 'subcategory': {'id': subcat.id, 'name': subcat.name, 'status': subcat.status}})
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)})
+    return JsonResponse({'success': False, 'error': 'Invalid method'})
+
+@csrf_exempt
+def update_subcategory_api(request):
+    if not request.user.is_authenticated or not request.user.is_superuser:
+        return JsonResponse({'success': False, 'error': 'Unauthorized'})
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            subcat_id = data.get('id')
+            if not subcat_id:
+                return JsonResponse({'success': False, 'error': 'ID is required'})
+            
+            subcat = SubCategory.objects.get(id=subcat_id)
+            if 'name' in data: subcat.name = data['name']
+            if 'status' in data: subcat.status = data['status']
+            subcat.save()
+            return JsonResponse({'success': True, 'subcategory': {'id': subcat.id, 'name': subcat.name, 'status': subcat.status}})
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)})
+    return JsonResponse({'success': False, 'error': 'Invalid method'})
+
+@csrf_exempt
+def delete_subcategory_api(request):
+    if not request.user.is_authenticated or not request.user.is_superuser:
+        return JsonResponse({'success': False, 'error': 'Unauthorized'})
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            subcat_id = data.get('id')
+            SubCategory.objects.filter(id=subcat_id).delete()
+            return JsonResponse({'success': True})
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)})
+    return JsonResponse({'success': False, 'error': 'Invalid method'})
+
+@csrf_exempt
+def add_category_field_api(request):
+    if not request.user.is_authenticated or not request.user.is_superuser:
+        return JsonResponse({'success': False, 'error': 'Unauthorized'})
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            cat_id = data.get('category_id')
+            name = data.get('name')
+            field_type = data.get('field_type', 'text')
+            options = data.get('options', '')
+            is_required = data.get('is_required', True)
+            
+            if not cat_id or not name:
+                return JsonResponse({'success': False, 'error': 'Category ID and Name are required'})
+            
+            category = Category.objects.get(id=cat_id)
+            field = CategoryField.objects.create(
+                category=category, name=name, field_type=field_type,
+                options=options, is_required=is_required
+            )
+            return JsonResponse({'success': True, 'field': {
+                'id': field.id, 'name': field.name, 'field_type': field.field_type,
+                'options': field.options, 'is_required': field.is_required
+            }})
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)})
+    return JsonResponse({'success': False, 'error': 'Invalid method'})
+
+@csrf_exempt
+def update_category_field_api(request):
+    if not request.user.is_authenticated or not request.user.is_superuser:
+        return JsonResponse({'success': False, 'error': 'Unauthorized'})
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            field_id = data.get('id')
+            if not field_id:
+                return JsonResponse({'success': False, 'error': 'ID is required'})
+            
+            field = CategoryField.objects.get(id=field_id)
+            if 'name' in data: field.name = data['name']
+            if 'field_type' in data: field.field_type = data['field_type']
+            if 'options' in data: field.options = data['options']
+            if 'is_required' in data: field.is_required = data['is_required']
+            field.save()
+            return JsonResponse({'success': True, 'field': {
+                'id': field.id, 'name': field.name, 'field_type': field.field_type,
+                'options': field.options, 'is_required': field.is_required
+            }})
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)})
+    return JsonResponse({'success': False, 'error': 'Invalid method'})
+
+@csrf_exempt
+def delete_category_field_api(request):
+    if not request.user.is_authenticated or not request.user.is_superuser:
+        return JsonResponse({'success': False, 'error': 'Unauthorized'})
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            field_id = data.get('id')
+            CategoryField.objects.filter(id=field_id).delete()
+            return JsonResponse({'success': True})
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)})
+    return JsonResponse({'success': False, 'error': 'Invalid method'})
+
+@csrf_exempt
+def category_details_api(request, category_id):
+    if not request.user.is_authenticated or not request.user.is_superuser:
+        return JsonResponse({'success': False, 'error': 'Unauthorized'})
+    try:
+        category = Category.objects.get(id=category_id)
+        subcats = list(category.subcategories.values('id', 'name', 'status'))
+        fields = list(category.fields.values('id', 'name', 'field_type', 'options', 'is_required'))
+        return JsonResponse({
+            'success': True,
+            'category': {
+                'id': category.id,
+                'name': category.name,
+                'service_type': category.service_type,
+                'status': category.status
+            },
+            'subcategories': subcats,
+            'fields': fields
+        })
+    except Category.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Category not found'})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})

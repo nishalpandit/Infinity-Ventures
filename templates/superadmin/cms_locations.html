@@ -1,0 +1,106 @@
+{% extends 'superadmin/base.html' %}
+{% block title %}Locations{% endblock %}
+{% block header_title %}Service Locations{% endblock %}
+{% block content %}
+<div style="margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 14px;">
+  <div>
+    <h3 style="font-size: 18px; font-weight: 700; color: var(--text-main); margin: 0 0 4px;">
+      <i class="fa-solid fa-map" style="color: var(--accent); margin-right: 8px;"></i>Service States
+    </h3>
+  </div>
+  <a href="{% url 'super_admin_state_create' %}" class="btn btn-primary">
+    <i class="fa-solid fa-plus"></i> Add State
+  </a>
+</div>
+
+<div class="card" style="padding: 0; overflow: hidden; margin-bottom: 30px;">
+  <div class="table-container" style="border: none; border-radius: 0; box-shadow: none;">
+    <table>
+      <thead>
+        <tr>
+          <th>State Name</th>
+          <th>Mapped Cities</th>
+          <th>Status</th>
+          <th>Created</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for st in states %}
+        <tr>
+          <td><strong>{{ st.name }}</strong></td>
+          <td>
+            <span class="badge" style="background: rgba(99, 102, 241, 0.1); color: var(--accent); font-weight: 700;">
+              {{ st.cities_count|default:"0" }} Cities
+            </span>
+          </td>
+          <td><span class="badge {% if st.status == 'active' %}active{% else %}inactive{% endif %}">{{ st.get_status_display }}</span></td>
+          <td style="color: var(--text-muted);">{{ st.created_at|date:"M d, Y" }}</td>
+          <td>
+            <div style="display: flex; gap: 8px;">
+              <a href="{% url 'super_admin_state_edit' st.id %}" class="btn btn-outline btn-sm">
+                <i class="fa-solid fa-pen-to-square"></i> Edit
+              </a>
+              <a href="{% url 'super_admin_state_delete' st.id %}" class="btn btn-outline btn-sm" style="border-color: rgba(239,68,68,0.3); color: var(--danger);" onclick="return confirm('Delete state?');">
+                <i class="fa-solid fa-trash"></i>
+              </a>
+            </div>
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="5" style="text-align: center; padding: 36px; color: var(--text-muted);">No states created yet.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div style="margin-bottom: 16px; margin-top: 36px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 14px;">
+  <div>
+    <h3 style="font-size: 18px; font-weight: 700; color: var(--text-main); margin: 0 0 4px;">
+      <i class="fa-solid fa-city" style="color: var(--accent); margin-right: 8px;"></i>Service Cities
+    </h3>
+  </div>
+  <a href="{% url 'super_admin_location_create' %}" class="btn btn-primary">
+    <i class="fa-solid fa-plus"></i> Add City
+  </a>
+</div>
+
+<div class="card" style="padding: 0; overflow: hidden;">
+  <div class="table-container" style="border: none; border-radius: 0; box-shadow: none;">
+    <table>
+      <thead>
+        <tr>
+          <th>City</th>
+          <th>State</th>
+          <th>Status</th>
+          <th>Created</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for loc in locations %}
+        <tr>
+          <td><strong>{{ loc.city }}</strong></td>
+          <td>{{ loc.state }}</td>
+          <td><span class="badge {% if loc.status == 'active' %}active{% else %}inactive{% endif %}">{{ loc.get_status_display }}</span></td>
+          <td style="color: var(--text-muted);">{{ loc.created_at|date:"M d, Y" }}</td>
+          <td>
+            <div style="display: flex; gap: 8px;">
+              <a href="{% url 'super_admin_location_edit' loc.id %}" class="btn btn-outline btn-sm">
+                <i class="fa-solid fa-pen-to-square"></i> Edit
+              </a>
+              <a href="{% url 'super_admin_location_delete' loc.id %}" class="btn btn-outline btn-sm" style="border-color: rgba(239,68,68,0.3); color: var(--danger);" onclick="return confirm('Delete city {{ loc }}?');">
+                <i class="fa-solid fa-trash"></i>
+              </a>
+            </div>
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="5" style="text-align: center; padding: 40px; color: var(--text-muted);">No cities found.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

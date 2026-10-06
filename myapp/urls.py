@@ -72,10 +72,15 @@ urlpatterns = [
     path('super-admin/payouts/<int:payout_id>/reject/', super_admin_views.super_admin_payout_reject, name='super_admin_payout_reject'),
     
     # CMS: Categories + Locations
-    path('super-admin/cms/', super_admin_views.super_admin_cms, name='super_admin_cms'),
+    path('super-admin/categories/', super_admin_views.super_admin_categories, name='super_admin_categories'),
+    path('super-admin/locations/', super_admin_views.super_admin_locations, name='super_admin_locations'),
     path('super-admin/cms/category/create/', super_admin_views.super_admin_category_create, name='super_admin_category_create'),
     path('super-admin/cms/category/<int:cat_id>/edit/', super_admin_views.super_admin_category_edit, name='super_admin_category_edit'),
     path('super-admin/cms/category/<int:cat_id>/delete/', super_admin_views.super_admin_category_delete, name='super_admin_category_delete'),
+    path('super-admin/subcategory/create/', super_admin_views.super_admin_subcategory_create, name='super_admin_subcategory_create'),
+    path('super-admin/subcategory/<int:sub_id>/edit/', super_admin_views.super_admin_subcategory_edit, name='super_admin_subcategory_edit'),
+    path('super-admin/subcategory/<int:sub_id>/delete/', super_admin_views.super_admin_subcategory_delete, name='super_admin_subcategory_delete'),
+
     # States CRUD
     path('super-admin/cms/state/create/', super_admin_views.super_admin_state_create, name='super_admin_state_create'),
     path('super-admin/cms/state/<int:state_id>/edit/', super_admin_views.super_admin_state_edit, name='super_admin_state_edit'),

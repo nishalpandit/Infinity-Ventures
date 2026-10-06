@@ -1,5 +1,5 @@
 API for Check Phone Number (Vendor)
-url : (http://192.168.1.55:800/api/auth/check-phone/)
+url : (http://192.168.1.52:8000/api/auth/check-phone/)
 method : POST
 params :-
 mobile:9123456780
@@ -22,7 +22,7 @@ response :-
 
 
 API for Send OTP (Vendor)
-url : (http://192.168.1.55:800/api/auth/send-otp/)
+url : (http://192.168.1.52:8000/api/auth/send-otp/)
 method : POST
 params :-
 mobile:9123456780
@@ -40,7 +40,7 @@ response :-
 
 
 API for Verify OTP (Vendor)
-url : (http://192.168.1.55:800/api/auth/verify-otp/)
+url : (http://192.168.1.52:8000/api/auth/verify-otp/)
 method : POST
 params :-
 mobile:9123456780
@@ -56,7 +56,7 @@ response :-
 
 
 API for Vendor Signup with OTP
-url : (http://192.168.1.55:800/api/vendor/otp-signup/)
+url : (http://192.168.1.52:8000/api/vendor/otp-signup/)
 method : POST
 params :-
 name:Rajesh Sharma
@@ -105,7 +105,7 @@ response :-
 "gender": "Male",
 "id_proof": "123456789012",
 "about": "Description",
-"profile_image": "http://192.168.1.55:800/media/vendor_profiles/image.jpg",
+"profile_image": "http://192.168.1.52:8000/media/vendor_profiles/image.jpg",
 
 "role": "VENDOR"
 }
@@ -113,7 +113,7 @@ response :-
 
 
 API for Vendor Signup with Password
-url : (http://192.168.1.55:8000/api/vendor/signup/)
+url : (http://192.168.1.52:8000/api/vendor/signup/)
 method : POST
 params :-
 name:Rajesh Sharma
@@ -176,7 +176,7 @@ response :-
 "gender": "Male",
 "id_proof": "123456789012",
 "about": "Description",
-"profile_image": "http://192.168.1.55:800/media/vendor_profiles/image.jpg",
+"profile_image": "http://192.168.1.52:8000/media/vendor_profiles/image.jpg",
 
 "role": "VENDOR"
 }
@@ -184,7 +184,7 @@ response :-
 
 
 API for Vendor Login with OTP
-url : (http://192.168.1.55:800/api/vendor/otp-login/)
+url : (http://192.168.1.52:8000/api/vendor/otp-login/)
 method : POST
 params :-
 mobile:9123456780
@@ -214,7 +214,7 @@ response :-
 "gender": "Male",
 "id_proof": "Aadhar/PAN",
 "about": "Description",
-"profile_image": "http://192.168.1.55:800/media/vendor_profiles/image.jpg",
+"profile_image": "http://192.168.1.52:8000/media/vendor_profiles/image.jpg",
 
 "role": "VENDOR"
 }
@@ -222,7 +222,7 @@ response :-
 
 
 API for Vendor Login with Password
-url : (http://192.168.1.55:800/api/vendor/login/)
+url : (http://192.168.1.52:8000/api/vendor/login/)
 method : POST
 params :-
 username:info@reliablepower.com
@@ -252,7 +252,7 @@ response :-
 "gender": "Male",
 "id_proof": "Aadhar/PAN",
 "about": "Description",
-"profile_image": "http://192.168.1.55:800/media/vendor_profiles/image.jpg",
+"profile_image": "http://192.168.1.52:8000/media/vendor_profiles/image.jpg",
 
 "role": "VENDOR"
 }
@@ -260,7 +260,7 @@ response :-
 
 
 API for Get Categories
-url : (http://192.168.1.55:800/api/categories/)
+url : (http://192.168.1.52:8000/api/categories/)
 method : GET
 response :-
 {
@@ -276,7 +276,7 @@ response :-
 
 
 API for Get Locations (States and Cities)
-url : (http://192.168.1.55:800/api/locations/)
+url : (http://192.168.1.52:8000/api/locations/)
 method : GET
 response :-
 {
@@ -293,7 +293,7 @@ response :-
 
 
 API for Get States
-url : (http://192.168.1.55:800/api/states/)
+url : (http://192.168.1.52:8000/api/states/)
 method : GET
 response :-
 {
@@ -310,7 +310,7 @@ response :-
 
 
 API for Get Cities
-url : (http://192.168.1.55:800/api/cities/?state=Gujarat)
+url : (http://192.168.1.52:8000/api/cities/?state=Gujarat)
 method : GET
 params :-
 state:Gujarat (Optional query parameter)
@@ -333,7 +333,7 @@ response :-
 
 
 API for Get Vendor Types
-url : (http://192.168.1.55:800/api/vendor-types/)
+url : (http://192.168.1.52:8000/api/vendor-types/)
 method : GET
 response :-
 {

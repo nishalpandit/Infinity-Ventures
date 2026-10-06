@@ -1,0 +1,39 @@
+{% extends 'superadmin/base.html' %}
+{% block title %}{% if mode == 'create' %}Add SubCategory{% else %}Edit SubCategory{% endif %}{% endblock %}
+{% block header_title %}{% if mode == 'create' %}Add SubCategory{% else %}Edit SubCategory{% endif %}{% endblock %}
+
+{% block content %}
+<div class="card" style="max-width: 600px; margin: 0 auto; padding: 30px;">
+  <form method="POST">
+    {% csrf_token %}
+    
+    <div style="margin-bottom: 20px;">
+      <label style="display: block; font-size: 13px; font-weight: 600; color: var(--text-main); margin-bottom: 8px;">Parent Category</label>
+      <select name="category" required style="width: 100%; padding: 12px; border: 1px solid rgba(0,0,0,0.1); border-radius: 8px; font-family: inherit; font-size: 14px; background: var(--bg-light);">
+        <option value="">-- Select Category --</option>
+        {% for c in categories %}
+        <option value="{{ c.id }}" {% if mode == 'edit' and subcat.category_id == c.id %}selected{% endif %}>{{ c.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div style="margin-bottom: 20px;">
+      <label style="display: block; font-size: 13px; font-weight: 600; color: var(--text-main); margin-bottom: 8px;">SubCategory Name</label>
+      <input type="text" name="name" required value="{% if mode == 'edit' %}{{ subcat.name }}{% endif %}" style="width: 100%; padding: 12px; border: 1px solid rgba(0,0,0,0.1); border-radius: 8px; font-family: inherit; font-size: 14px;" placeholder="e.g. Sofa Cleaning">
+    </div>
+
+    <div style="margin-bottom: 30px;">
+      <label style="display: block; font-size: 13px; font-weight: 600; color: var(--text-main); margin-bottom: 8px;">Status</label>
+      <select name="status" style="width: 100%; padding: 12px; border: 1px solid rgba(0,0,0,0.1); border-radius: 8px; font-family: inherit; font-size: 14px; background: var(--bg-light);">
+        <option value="active" {% if mode == 'edit' and subcat.status == 'active' %}selected{% endif %}>Active</option>
+        <option value="inactive" {% if mode == 'edit' and subcat.status == 'inactive' %}selected{% endif %}>Inactive</option>
+      </select>
+    </div>
+
+    <div style="display: flex; gap: 12px; justify-content: flex-end;">
+      <a href="{% url 'super_admin_categories' %}" class="btn btn-outline" style="border-color: rgba(0,0,0,0.1); color: var(--text-muted);">Cancel</a>
+      <button type="submit" class="btn btn-primary">{% if mode == 'create' %}Create SubCategory{% else %}Save Changes{% endif %}</button>
+    </div>
+  </form>
+</div>
+{% endblock %}

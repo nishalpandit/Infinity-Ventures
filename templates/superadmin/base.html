@@ -612,9 +612,13 @@
         <i class="fa-solid fa-id-card"></i>
         <span>KYC Approvals</span>
       </a>
-      <a href="{% url 'super_admin_cms' %}" class="nav-item {% if '/cms/' in request.path and 'landing' not in request.path %}active{% endif %}">
-        <i class="fa-solid fa-layer-group"></i>
-        <span>Categories &amp; Cities</span>
+      <a href="{% url 'super_admin_categories' %}" class="nav-item {% if '/categories/' in request.path %}active{% endif %}">
+        <i class="fa-solid fa-shapes"></i>
+        <span>Categories</span>
+      </a>
+      <a href="{% url 'super_admin_locations' %}" class="nav-item {% if '/locations/' in request.path %}active{% endif %}">
+        <i class="fa-solid fa-map-location-dot"></i>
+        <span>Locations</span>
       </a>
       
       <div class="nav-section">Operations</div>

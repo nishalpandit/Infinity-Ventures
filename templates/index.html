@@ -1,762 +1,2047 @@
 {% load static %}
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
+
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>{{ branding.site_title|default:"Sugu" }} — Home services at your doorstep</title>
-<meta name="description" content="Book verified professionals for plumbing, electrical, AC repair, cleaning, painting and more. Transparent pricing, quality guarantee.">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
-<!-- Urban Company Core Scripts -->
-<script src="{% static 'js/location_picker.js' %}"></script>
-<script src="{% static 'js/category_modal.js' %}"></script>
-<script src="{% static 'js/cart_store.js' %}"></script>
-<style>
-*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-html{scroll-behavior:smooth}
-body{
-  font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
-  background:#F5F5F7;
-  color:#1a1a1a;
-  -webkit-font-smoothing:antialiased;
-  -moz-osx-font-smoothing:grayscale;
-  line-height:1.5;
-}
-a{text-decoration:none;color:inherit}
-ul,ol{list-style:none}
-img{display:block;max-width:100%}
-button,input{font:inherit;border:none;outline:none;background:none}
-button{cursor:pointer}
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ branding.site_title|default:"Sugu Services" }} — Home services, sorted</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link
+    href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Manrope:wght@400;500;600;700;800&display=swap"
+    rel="stylesheet">
+  <style>
+    :root {
+      --n: #0a1a3c;
+      --n2: #10285a;
+      --n3: #1b3d80;
+      --t1: #f0f3fa;
+      --t2: #dfe6f4;
+      --mute: #5a6a8a;
+      --w: #fff
+    }
 
-/* ===== HEADER ===== */
-.header{
-  position:sticky;top:0;z-index:100;
-  background:#fff;
-  border-bottom:1px solid #eee;
-  height:64px;
-}
-.header-inner{
-  max-width:1280px;margin:0 auto;padding:0 40px;
-  display:flex;align-items:center;height:100%;gap:32px;
-}
-.logo{display:flex;align-items:center;gap:10px;flex-shrink:0}
-.logo-icon{
-  width:32px;height:32px;background:#1a1a1a;border-radius:8px;
-  display:grid;place-items:center;color:#fff;font-weight:800;font-size:12px;
-}
-.logo-text{font-size:16px;font-weight:700;color:#1a1a1a;white-space:nowrap}
+    * {
+      box-sizing: border-box
+    }
 
-.header-search{
-  flex:1;max-width:420px;position:relative;
-}
-.header-search input{
-  width:100%;height:40px;padding:0 16px 0 42px;
-  border:1px solid #ddd;border-radius:10px;
-  font-size:14px;color:#1a1a1a;background:#f8f8f8;
-  transition:all .2s;
-}
-.header-search input:focus{border-color:#1a1a1a;background:#fff}
-.header-search input::placeholder{color:#999}
-.header-search i{
-  position:absolute;left:14px;top:50%;transform:translateY(-50%);
-  color:#999;font-size:14px;
-}
+    html {
+      scroll-behavior: smooth
+    }
 
-.header-right{display:flex;align-items:center;gap:16px;margin-left:auto}
-.header-btn{
-  display:flex;align-items:center;justify-content:center;
-  width:38px;height:38px;border-radius:50%;background:#f5f5f5;
-  color:#555;font-size:16px;transition:background .2s;
-}
-.header-btn:hover{background:#eee}
-.header-login{
-  font-size:14px;font-weight:600;color:#555;padding:8px 16px;
-  border-radius:8px;transition:all .2s;
-}
-.header-login:hover{background:#f5f5f5;color:#1a1a1a}
+    body {
+      margin: 0;
+      font-family: Manrope, system-ui, sans-serif;
+      color: var(--n);
+      background: var(--w);
+      line-height: 1.6
+    }
 
-/* ===== HERO ===== */
-.hero{
-  max-width:1280px;margin:0 auto;padding:60px 40px 80px;
-  display:grid;grid-template-columns:1fr 1fr;gap:60px;align-items:start;
-}
-.hero-title{
-  font-size:42px;font-weight:700;line-height:1.15;letter-spacing:-0.03em;
-  color:#1a1a1a;margin-bottom:32px;
-}
+    h1,
+    h2,
+    h3 {
+      font-family: "Bricolage Grotesque", sans-serif;
+      margin: 0;
+      letter-spacing: -.03em;
+      font-weight: 800;
+      line-height: 1.05
+    }
 
-/* Category box */
-.cat-box{
-  background:#fff;border-radius:16px;padding:28px;
-  border:1px solid #e8e8e8;
-}
-.cat-grid{
-  display:grid;grid-template-columns:repeat(4,1fr);gap:16px;
-}
-.cat-tile{
-  display:flex;flex-direction:column;align-items:center;gap:10px;
-  padding:16px 8px;border-radius:14px;background:#f3f4f6;
-  cursor:pointer;transition:all .2s;text-align:center;
-}
-.cat-tile:hover{background:#e9eaec;transform:translateY(-2px)}
-.cat-tile-icon{
-  width:52px;height:52px;border-radius:14px;
-  display:grid;place-items:center;font-size:24px;color:#444;
-  background:#e4e5e7;
-}
-.cat-tile-name{font-size:12px;font-weight:600;color:#444;line-height:1.3}
+    button,
+    input,
+    textarea {
+      font: inherit;
+      color: inherit
+    }
 
-/* Trust metrics */
-.trust-row{
-  display:flex;align-items:center;gap:32px;margin-top:28px;padding-top:20px;
-  border-top:1px solid #eee;
-}
-.trust-item{display:flex;align-items:center;gap:10px}
-.trust-item i{font-size:20px;color:#999}
-.trust-val{font-size:20px;font-weight:700;color:#1a1a1a}
-.trust-label{font-size:13px;color:#888}
+    button {
+      cursor: pointer
+    }
 
-/* Hero media */
-.hero-media{
-  display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;
-  gap:8px;
-}
-.hero-media img{
-  width:100%;height:100%;object-fit:cover;border-radius:16px;
-  aspect-ratio:4/3;
-}
+    a {
+      color: inherit;
+      text-decoration: none
+    }
 
-/* ===== SECTIONS ===== */
-.section{max-width:1280px;margin:0 auto;padding:0 40px 80px}
-.section-title{
-  font-size:28px;font-weight:700;color:#1a1a1a;letter-spacing:-0.02em;
-  margin-bottom:8px;
-}
-.section-subtitle{font-size:14px;color:#888;margin-bottom:32px}
-.section-header{
-  display:flex;align-items:center;justify-content:space-between;
-  margin-bottom:32px;
-}
-.see-all{
-  font-size:14px;font-weight:600;color:#1a1a1a;
-  padding:8px 20px;border:1px solid #ddd;border-radius:20px;
-  transition:all .2s;
-}
-.see-all:hover{background:#1a1a1a;color:#fff;border-color:#1a1a1a}
+    :focus-visible {
+      outline: 3px solid #8fb0ff;
+      outline-offset: 3px
+    }
 
-/* Service cards — UC style */
-.svc-grid{
-  display:grid;grid-template-columns:repeat(4,1fr);gap:24px;
-}
-.svc-card{cursor:pointer;transition:transform .2s}
-.svc-card:hover{transform:translateY(-4px)}
-.svc-card-img{
-  width:100%;aspect-ratio:1/1;border-radius:14px;overflow:hidden;
-  background:#e8e8e8;margin-bottom:12px;
-}
-.svc-card-img img{width:100%;height:100%;object-fit:cover}
-.svc-card-title{
-  font-size:15px;font-weight:600;color:#1a1a1a;line-height:1.35;
-  margin-bottom:4px;
-}
-.svc-card-rating{
-  display:flex;align-items:center;gap:4px;font-size:13px;color:#555;
-  margin-bottom:4px;
-}
-.svc-card-rating i{color:#1a1a1a;font-size:11px}
-.svc-card-rating .eta{color:#0d9e6c;font-weight:600}
-.svc-card-price{font-size:14px;color:#1a1a1a;font-weight:600}
-.svc-card-price .old{
-  text-decoration:line-through;color:#aaa;font-weight:400;margin-left:6px;
-  font-size:13px;
-}
-.svc-card-vendor{font-size:12px;color:#888;margin-top:2px}
+    .wrap {
+      width: min(1200px, calc(100% - 40px));
+      margin: auto
+    }
 
-/* Category filter tabs */
-.category-tabs-container{
-  margin-bottom:24px;overflow-x:auto;padding-bottom:6px;
-  -webkit-overflow-scrolling:touch;scrollbar-width:none;
-}
-.category-tabs-container::-webkit-scrollbar{display:none}
-.category-tabs{display:inline-flex;gap:8px;min-width:max-content}
-.cat-pill{
-  display:inline-flex;align-items:center;gap:8px;padding:9px 18px;
-  background:#f3f4f6;color:#4b5563;border-radius:9999px;
-  font-size:13.5px;font-weight:600;border:1px solid #e5e7eb;
-  cursor:pointer;transition:all .2s ease;white-space:nowrap;user-select:none;
-}
-.cat-pill i{font-size:12.5px;color:#6b7280;transition:color .2s}
-.cat-pill:hover{background:#e5e7eb;color:#111827;border-color:#d1d5db}
-.cat-pill:hover i{color:#111827}
-.cat-pill.active{
-  background:#111827;color:#ffffff;border-color:#111827;
-  box-shadow:0 4px 12px rgba(17,24,39,0.15);
-}
-.cat-pill.active i{color:#a78bfa}
+    .btn {
+      border: 0;
+      border-radius: 999px;
+      padding: 14px 26px;
+      font-weight: 700;
+      background: var(--n);
+      color: #fff;
+      transition: .2s;
+      display: inline-block
+    }
 
-/* ===== BANNER ===== */
-.promo-banner{
-  max-width:1280px;margin:0 auto 80px;padding:0 40px;
-}
-.promo-inner{
-  background:#fff;border-radius:20px;overflow:hidden;
-  display:grid;grid-template-columns:1fr 1fr;min-height:300px;
-  border:1px solid #e8e8e8;
-}
-.promo-copy{
-  padding:60px 48px;display:flex;flex-direction:column;justify-content:center;
-}
-.promo-copy h2{
-  font-size:36px;font-weight:700;color:#1a1a1a;line-height:1.2;
-  letter-spacing:-0.02em;margin-bottom:12px;
-}
-.promo-copy p{font-size:16px;color:#666;margin-bottom:24px}
-.promo-copy .cta{
-  display:inline-flex;align-items:center;gap:8px;
-  background:#1a1a1a;color:#fff;padding:14px 28px;border-radius:12px;
-  font-size:15px;font-weight:600;transition:all .2s;width:fit-content;
-}
-.promo-copy .cta:hover{background:#333;transform:translateY(-1px)}
-.promo-img{position:relative}
-.promo-img img{width:100%;height:100%;object-fit:cover}
+    .btn:hover {
+      background: var(--n3)
+    }
 
-/* ===== FOOTER ===== */
-.footer{
-  background:#fff;border-top:1px solid #eee;padding:60px 0 32px;
-}
-.footer-inner{max-width:1280px;margin:0 auto;padding:0 40px}
-.footer-grid{
-  display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:48px;
-  margin-bottom:40px;
-}
-.footer-brand .logo{margin-bottom:16px}
-.footer-brand p{font-size:13px;color:#888;line-height:1.7;max-width:280px}
-.footer-col h4{
-  font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;
-  color:#999;margin-bottom:16px;
-}
-.footer-col ul{display:grid;gap:10px}
-.footer-col a{font-size:14px;color:#555;transition:color .2s}
-.footer-col a:hover{color:#1a1a1a}
-.footer-copy{
-  padding-top:24px;border-top:1px solid #eee;
-  font-size:12px;color:#aaa;text-align:center;
-}
+    .btn.w {
+      background: #fff;
+      color: var(--n)
+    }
 
-/* ===== RESPONSIVE ===== */
-@media(max-width:1024px){
-  .hero{grid-template-columns:1fr;gap:40px;padding:40px 24px 60px}
-  .hero-media{display:none}
-  .cat-grid{grid-template-columns:repeat(4,1fr)}
-  .svc-grid{grid-template-columns:repeat(3,1fr)}
-  .promo-inner{grid-template-columns:1fr}
-  .promo-img{display:none}
-  .footer-grid{grid-template-columns:1fr 1fr}
-}
-@media(max-width:768px){
-  .header-inner{padding:0 16px;gap:12px}
-  .header-search{max-width:none}
-  .hero{padding:32px 16px 48px}
-  .hero-title{font-size:32px}
-  .cat-grid{grid-template-columns:repeat(2,1fr);gap:10px}
-  .section{padding:0 16px 48px}
-  .svc-grid{grid-template-columns:repeat(2,1fr);gap:16px}
-  .footer-grid{grid-template-columns:1fr}
-  .trust-row{flex-direction:column;align-items:flex-start;gap:16px}
-}
-@media(max-width:480px){
-  .cat-grid{grid-template-columns:repeat(2,1fr)}
-  .svc-grid{grid-template-columns:1fr 1fr;gap:12px}
-  .svc-card-title{font-size:13px}
-}
+    .btn.w:hover {
+      background: var(--t2)
+    }
 
-/* Login modal overlay */
-.login-modal{
-  display:none;position:fixed;inset:0;z-index:200;
-  background:rgba(0,0,0,.5);place-items:center;
-}
-.login-modal.active{display:grid}
-.login-box{
-  background:#fff;border-radius:20px;padding:40px;
-  width:min(420px,90vw);max-height:90vh;overflow-y:auto;
-}
-.login-box h2{font-size:24px;font-weight:700;margin-bottom:8px;color:#1a1a1a}
-.login-box p{font-size:14px;color:#888;margin-bottom:24px}
-.form-group{margin-bottom:16px}
-.form-group label{display:block;font-size:13px;font-weight:600;color:#555;margin-bottom:6px}
-.form-group input{
-  width:100%;height:44px;padding:0 14px;border:1px solid #ddd;
-  border-radius:10px;font-size:14px;transition:border-color .2s;
-}
-.form-group input:focus{border-color:#1a1a1a}
-.form-submit{
-  width:100%;height:48px;background:#1a1a1a;color:#fff;border-radius:12px;
-  font-size:15px;font-weight:600;margin-top:8px;transition:background .2s;
-}
-.form-submit:hover{background:#333}
-.login-box .alt{
-  text-align:center;margin-top:16px;font-size:13px;color:#888;
-}
-.login-box .alt a{color:#1a1a1a;font-weight:600}
-.login-close{
-  float:right;font-size:20px;color:#aaa;cursor:pointer;padding:4px;
-}
-.login-close:hover{color:#1a1a1a}
+    .btn.o {
+      background: transparent;
+      color: #fff;
+      box-shadow: inset 0 0 0 1.5px #ffffff66
+    }
 
-/* CSRF */
-.csrf-slot{display:none}
-</style>
+    .btn.o:hover {
+      background: #ffffff1a
+    }
+
+    .btn.s {
+      background: var(--t1);
+      color: var(--n)
+    }
+
+    .btn.s:hover {
+      background: var(--t2)
+    }
+
+    /* hero */
+    .hero {
+      background: url('{% static "images/hero.jpg" %}') center/cover;
+      color: #fff;
+      position: relative;
+      overflow: hidden
+    }
+    .hero::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: rgba(16, 32, 64, 0.75);
+      z-index: 0;
+    }
+    .hero > * {
+      position: relative;
+      z-index: 1;
+    }
+
+    header {
+      position: relative;
+      z-index: 3
+    }
+
+    .nav {
+      display: flex;
+      align-items: center;
+      gap: 30px;
+      height: 84px
+    }
+
+    .logo {
+      font: 800 28px "Bricolage Grotesque";
+      display: flex;
+      align-items: center;
+      gap: 10px
+    }
+
+    .logo i {
+      width: 38px;
+      height: 38px;
+      border-radius: 12px;
+      background: #fff;
+      color: var(--n);
+      display: grid;
+      place-items: center;
+      font-style: normal;
+      font-size: 21px
+    }
+
+    .nav .sp {
+      flex: 1
+    }
+
+    .nav a.l {
+      font-size: 14px;
+      font-weight: 600;
+      color: #c3d0ee
+    }
+
+    .nav a.l:hover {
+      color: #fff
+    }
+
+    .hg {
+      display: grid;
+      grid-template-columns: 1.15fr .85fr;
+      gap: 40px;
+      align-items: end;
+      padding: 40px 0 0;
+      position: relative;
+      z-index: 2
+    }
+
+    .hero h1 {
+      font-size: clamp(46px, 7.4vw, 98px);
+      line-height: .95
+    }
+
+    .hero h1 span {
+      display: block;
+      color: #8fb0ff
+    }
+
+    .lead {
+      font-size: 19px;
+      color: #b8c7e8;
+      max-width: 520px;
+      margin: 24px 0 30px
+    }
+
+    .sbar {
+      display: flex;
+      gap: 6px;
+      background: #fff;
+      border-radius: 999px;
+      padding: 7px;
+      max-width: 600px;
+      color: var(--n)
+    }
+
+    .sbar input {
+      border: 0;
+      outline: 0;
+      background: none;
+      padding: 0 18px;
+      min-width: 0
+    }
+
+    .sbar input#hs {
+      flex: 1
+    }
+
+    .sbar .loc {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 0 14px;
+      background: var(--t1);
+      border-radius: 999px;
+      font-weight: 700;
+      font-size: 14px;
+      white-space: nowrap
+    }
+
+    .tags {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin: 20px 0 52px;
+      color: #9db0d8;
+      font-size: 14px;
+      align-items: center
+    }
+
+    .tags button {
+      background: #ffffff14;
+      border: 0;
+      color: #fff;
+      border-radius: 999px;
+      padding: 7px 15px;
+      font-size: 13px;
+      font-weight: 600
+    }
+
+    .tags button:hover {
+      background: #ffffff2e
+    }
+
+    .stage {
+      position: relative;
+      height: 560px;
+      display: flex;
+      justify-content: center;
+      align-items: flex-end
+    }
+
+    .arch {
+      width: 400px;
+      height: 520px;
+      background: linear-gradient(180deg, #e6edfb, #bccbee);
+      border-radius: 200px 200px 0 0;
+      position: relative;
+      display: flex;
+      justify-content: center;
+      align-items: flex-end;
+      overflow: hidden
+    }
+
+    .arch:before {
+      content: "";
+      position: absolute;
+      width: 300px;
+      height: 300px;
+      border-radius: 50%;
+      background: #ffffff80;
+      top: 60px
+    }
+
+    .phone {
+      width: 250px;
+      height: 440px;
+      background: #fff;
+      border-radius: 34px 34px 0 0;
+      position: relative;
+      box-shadow: 0 0 0 8px var(--n), 0 30px 60px -20px #0a1a3c99;
+      padding: 22px 16px;
+      color: var(--n)
+    }
+
+    .phone h4 {
+      margin: 0 0 12px;
+      font: 800 17px "Bricolage Grotesque"
+    }
+
+    .pl {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      background: var(--t1);
+      border-radius: 14px;
+      padding: 10px;
+      margin-bottom: 8px;
+      font-size: 13px;
+      font-weight: 700
+    }
+
+    .pl.on {
+      background: var(--n);
+      color: #fff
+    }
+
+    .pl span {
+      font-size: 20px
+    }
+
+    .pl em {
+      margin-left: auto;
+      font-style: normal;
+      font-size: 12px
+    }
+
+    .pmap {
+      height: 84px;
+      border-radius: 14px;
+      background: repeating-linear-gradient(45deg, #dfe6f4 0 8px, #eaf0fb 8px 16px);
+      margin: 12px 0;
+      display: grid;
+      place-items: center;
+      font-size: 12px;
+      font-weight: 700
+    }
+
+    .pbtn {
+      background: var(--n);
+      color: #fff;
+      text-align: center;
+      border-radius: 14px;
+      padding: 12px;
+      font-weight: 700;
+      font-size: 13px
+    }
+
+    .fl {
+      position: absolute;
+      background: #fff;
+      color: var(--n);
+      border-radius: 16px;
+      padding: 12px 16px;
+      font-size: 13px;
+      font-weight: 700;
+      box-shadow: 0 20px 40px -15px #000a;
+      display: flex;
+      gap: 10px;
+      align-items: center
+    }
+
+    .fl small {
+      display: block;
+      font-weight: 500;
+      color: var(--mute)
+    }
+
+    .f1 {
+      left: -20px;
+      top: 140px
+    }
+
+    .f2 {
+      right: -30px;
+      top: 300px;
+      background: var(--n3);
+      color: #fff
+    }
+
+    .f2 small {
+      color: #c3d0ee
+    }
+
+    .fl .dot {
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      background: var(--n);
+      color: #fff;
+      display: grid;
+      place-items: center;
+      font-size: 15px
+    }
+
+    .f2 .dot {
+      background: #fff;
+      color: var(--n)
+    }
+
+    /* marquee */
+    .mq {
+      background: #fff;
+      overflow: hidden;
+      padding: 22px 0;
+      white-space: nowrap
+    }
+
+    .mq div {
+      display: inline-block;
+      animation: mq 40s linear infinite;
+      font: 800 22px "Bricolage Grotesque";
+      color: var(--n)
+    }
+
+    .mq span {
+      margin: 0 26px
+    }
+
+    .mq span:nth-child(even) {
+      color: #8fb0ff
+    }
+
+    @keyframes mq {
+      to {
+        transform: translateX(-50%)
+      }
+    }
+
+    /* sections */
+    .blk {
+      padding: 100px 0
+    }
+
+    .tint {
+      background: var(--t1)
+    }
+
+    .dark {
+      background: url('{% static "images/project.jpg" %}') center/cover fixed;
+      color: #fff;
+      position: relative;
+    }
+    .dark::before { content: ''; position: absolute; inset: 0; background: rgba(20, 30, 50, 0.85); z-index: 0; }
+    .dark > * { position: relative; z-index: 1; }
+
+    .head {
+      display: flex;
+      justify-content: space-between;
+      align-items: end;
+      gap: 20px;
+      flex-wrap: wrap;
+      margin-bottom: 40px
+    }
+
+    .head h2 {
+      font-size: clamp(34px, 4.8vw, 60px);
+      max-width: 720px
+    }
+
+    .head p {
+      color: var(--mute);
+      max-width: 420px;
+      margin: 0
+    }
+
+    .dark .head p {
+      color: #b8c7e8
+    }
+
+    /* two ways */
+    .ways {
+      display: grid;
+      grid-template-columns: 1fr 1fr
+    }
+
+    .way {
+      padding: 70px 6vw;
+      min-height: 430px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 30px
+    }
+
+    .way.a {
+      background: url('{% static "images/hero.jpg" %}') center/cover;
+      position: relative;
+    }
+    .way.a::before { content: ''; position: absolute; inset: 0; background: rgba(255,255,255,0.85); z-index: 0; }
+    .way.a > * { position: relative; z-index: 1; }
+
+    .way.b {
+      background: url('{% static "images/quick_services.jpg" %}') center/cover;
+      color: #fff;
+      position: relative;
+    }
+    .way.b::before { content: ''; position: absolute; inset: 0; background: rgba(16, 32, 64, 0.7); z-index: 0; }
+    .way.b > * { position: relative; z-index: 1; }
+
+    .way h2 {
+      font-size: clamp(36px, 4.4vw, 58px)
+    }
+
+    .way p {
+      max-width: 420px;
+      margin: 14px 0 0;
+      color: var(--mute)
+    }
+
+    .b p {
+      color: #c8d5f2
+    }
+
+    .way ul {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px
+    }
+
+    .way li {
+      padding: 8px 16px;
+      border-radius: 999px;
+      background: #fff;
+      font-weight: 600;
+      font-size: 14px
+    }
+
+    .b li {
+      background: #ffffff1f;
+      color: #fff
+    }
+
+    /* quick */
+    .picks {
+      display: flex;
+      gap: 26px;
+      flex-wrap: wrap;
+      margin-bottom: 34px
+    }
+
+    .pick {
+      background: none;
+      border: 0;
+      text-align: center;
+      font-weight: 700;
+      font-size: 14px;
+      width: 92px
+    }
+
+    .pick span {
+      display: grid;
+      place-items: center;
+      width: 84px;
+      height: 84px;
+      margin: 0 auto 10px;
+      border-radius: 50%;
+      background: #ffffff;
+      box-shadow: 0 4px 12px rgba(10, 26, 60, 0.05), inset 0 2px 4px rgba(255, 255, 255, 0.5);
+      border: 1px solid #eef2fa;
+      font-size: 34px;
+      transition: .3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .pick:hover span,
+    .pick.on span {
+      background: #ffffff;
+      box-shadow: 0 8px 24px rgba(10, 26, 60, 0.12), inset 0 2px 4px rgba(255, 255, 255, 0.5);
+      transform: translateY(-4px) scale(1.02);
+      border-color: #d1dcf5;
+    }
+
+    .chips {
+      display: flex;
+      gap: 8px;
+      overflow-x: auto;
+      padding-bottom: 8px;
+      margin-bottom: 30px
+    }
+
+    .chip {
+      white-space: nowrap;
+      border: 0;
+      background: var(--t1);
+      border-radius: 999px;
+      padding: 10px 20px;
+      font-weight: 700;
+      font-size: 14px
+    }
+
+    .chip.on {
+      background: var(--n);
+      color: #fff
+    }
+
+    .tiles {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 30px 22px
+    }
+
+    .svc {
+      display: flex;
+      flex-direction: column
+    }
+
+    .svc .img {
+      aspect-ratio: 4/3;
+      border-radius: 22px;
+      background: linear-gradient(135deg, var(--n2), var(--n3)) center/cover;
+      display: grid;
+      place-items: center;
+      font-size: 58px;
+      position: relative;
+      overflow: hidden;
+      transition: .3s
+    }
+
+    .svc:hover .img {
+      border-radius: 60px 22px 60px 22px
+    }
+
+    .rt {
+      position: absolute;
+      left: 12px;
+      top: 12px;
+      background: #fff;
+      color: var(--n);
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 800;
+      padding: 4px 11px
+    }
+
+    .svc h3 {
+      font: 700 18px Manrope;
+      letter-spacing: 0;
+      margin: 14px 0 2px
+    }
+
+    .svc small {
+      color: var(--mute)
+    }
+
+    .svc .row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 10px
+    }
+
+    .svc .row b {
+      font: 800 22px "Bricolage Grotesque"
+    }
+
+    .svc .row .btn {
+      padding: 9px 20px;
+      font-size: 13px
+    }
+
+    .empty {
+      grid-column: 1/-1;
+      background: var(--t1);
+      border-radius: 22px;
+      padding: 40px;
+      text-align: center;
+      color: var(--mute)
+    }
+
+    /* category index */
+    .idx {
+      display: grid;
+      gap: 10px
+    }
+
+    .ix {
+      display: flex;
+      align-items: center;
+      gap: 24px;
+      background: rgba(255, 255, 255, .07);
+      border: 0;
+      border-radius: 999px;
+      padding: 18px 34px;
+      text-align: left;
+      color: #fff;
+      transition: .25s;
+      width: 100%
+    }
+
+    .ix h3 {
+      font-size: clamp(26px, 3.6vw, 46px);
+      flex: 1
+    }
+
+    .ix span {
+      color: #b8c7e8;
+      font-size: 14px;
+      max-width: 300px
+    }
+
+    .ix i {
+      font-style: normal;
+      width: 46px;
+      height: 46px;
+      border-radius: 50%;
+      background: #fff;
+      color: var(--n);
+      display: grid;
+      place-items: center;
+      font-size: 20px;
+      flex: none;
+      transition: .25s
+    }
+
+    .ix:hover {
+      background: #fff;
+      color: var(--n)
+    }
+
+    .ix:hover span {
+      color: var(--mute)
+    }
+
+    .ix:hover i {
+      background: var(--n);
+      color: #fff;
+      transform: rotate(-45deg)
+    }
+
+    /* wizard */
+    .wiz {
+      background: #fff;
+      color: var(--n);
+      border-radius: 34px;
+      display: grid;
+      grid-template-columns: 290px 1fr;
+      overflow: hidden;
+      margin-top: 50px
+    }
+
+    .side {
+      background: var(--n3);
+      color: #fff;
+      padding: 36px 30px;
+      position: relative;
+      overflow: hidden
+    }
+
+    .side:after {
+      content: "";
+      position: absolute;
+      width: 300px;
+      height: 300px;
+      border-radius: 50%;
+      background: #ffffff10;
+      right: -140px;
+      bottom: -120px
+    }
+
+    .side h3 {
+      font-size: 28px
+    }
+
+    .side p {
+      color: #c8d5f2;
+      font-size: 14px;
+      margin: 8px 0 28px
+    }
+
+    .stp {
+      display: flex;
+      gap: 14px;
+      align-items: center;
+      padding: 11px 0;
+      opacity: .55;
+      font-weight: 700;
+      font-size: 15px
+    }
+
+    .stp span {
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      box-shadow: inset 0 0 0 2px #fff8;
+      display: grid;
+      place-items: center;
+      font-size: 13px;
+      flex: none
+    }
+
+    .stp.on {
+      opacity: 1
+    }
+
+    .stp.on span {
+      background: #fff;
+      color: var(--n)
+    }
+
+    .stp.done {
+      opacity: 1
+    }
+
+    .stp.done span {
+      background: var(--n);
+      box-shadow: none
+    }
+
+    .main {
+      padding: 38px;
+      min-height: 460px;
+      display: flex;
+      flex-direction: column
+    }
+
+    .main h3 {
+      font-size: 32px
+    }
+
+    .main .sub {
+      color: var(--mute);
+      margin: 8px 0 24px
+    }
+
+    .pane {
+      display: none;
+      flex: 1
+    }
+
+    .pane.on {
+      display: block
+    }
+
+    .opts {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(155px, 1fr));
+      gap: 12px
+    }
+
+    .opt {
+      border: 1px solid #e2e8f0;
+      background: #ffffff;
+      border-radius: 16px;
+      padding: 24px 20px;
+      text-align: left;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      font-weight: 700;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      color: #1e293b;
+    }
+
+    .opt:hover {
+      background: #f8fafc;
+      transform: translateY(-4px);
+      box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+      border-color: #cbd5e1;
+    }
+
+    .opt.sel {
+      border-color: var(--p);
+      background: #eff6ff;
+      box-shadow: 0 0 0 2px var(--p);
+      color: var(--p);
+    }
+
+    .opt em {
+      font-style: normal;
+      display: block;
+      font-size: 36px;
+      margin-bottom: 16px;
+      line-height: 1;
+    }
+
+    .field {
+      display: grid;
+      gap: 6px;
+      margin-bottom: 14px
+    }
+
+    .field label {
+      font-weight: 700;
+      font-size: 14px
+    }
+
+    input[type=text],
+    input[type=tel],
+    input[type=number],
+    textarea {
+      width: 100%;
+      border: 0;
+      border-radius: 16px;
+      padding: 15px 16px;
+      background: var(--t1)
+    }
+
+    input:focus,
+    textarea:focus {
+      outline: 2px solid var(--n)
+    }
+
+    .money {
+      display: flex;
+      align-items: center;
+      background: var(--t1);
+      border-radius: 22px;
+      padding: 0 24px
+    }
+
+    .money span {
+      font: 800 38px "Bricolage Grotesque"
+    }
+
+    .money input {
+      background: none;
+      font: 800 40px "Bricolage Grotesque";
+      padding: 18px 12px;
+      outline: 0 !important
+    }
+
+    .pre {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-top: 14px
+    }
+
+    .two {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px
+    }
+
+    .sum {
+      background: var(--t1);
+      border-radius: 16px;
+      padding: 16px;
+      font-size: 14px
+    }
+
+    .nav2 {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 26px
+    }
+
+    .loc2 {
+      background: none;
+      border: 0;
+      color: var(--n3);
+      font-weight: 800;
+      padding: 0;
+      text-align: left
+    }
+
+    /* how */
+    .tog {
+      display: inline-flex;
+      background: var(--t1);
+      border-radius: 999px;
+      padding: 5px;
+      margin-bottom: 46px
+    }
+
+    .tog button {
+      border: 0;
+      background: none;
+      border-radius: 999px;
+      padding: 11px 24px;
+      font-weight: 700
+    }
+
+    .tog button.on {
+      background: var(--n);
+      color: #fff
+    }
+
+    .flow {
+      display: none;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 24px;
+      position: relative
+    }
+
+    .flow.on {
+      display: grid
+    }
+
+    .flow:before {
+      content: "";
+      position: absolute;
+      left: 8%;
+      right: 8%;
+      top: 35px;
+      height: 2px;
+      background: var(--t2)
+    }
+
+    .fs {
+      position: relative;
+      text-align: center
+    }
+
+    .fs b {
+      width: 72px;
+      height: 72px;
+      border-radius: 50%;
+      background: var(--n);
+      color: #fff;
+      display: grid;
+      place-items: center;
+      margin: 0 auto 18px;
+      font: 800 26px "Bricolage Grotesque"
+    }
+
+    .fs h3 {
+      font: 800 18px Manrope;
+      letter-spacing: 0;
+      margin-bottom: 6px
+    }
+
+    .fs p {
+      margin: 0;
+      color: var(--mute);
+      font-size: 14px
+    }
+
+    /* trust */
+    .split {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 70px;
+      align-items: center
+    }
+
+    .split h2 {
+      font-size: clamp(34px, 4.6vw, 56px);
+      margin-bottom: 20px
+    }
+
+    .split>div>p {
+      color: #b8c7e8;
+      margin: 0 0 28px;
+      max-width: 480px
+    }
+
+    .chk {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      display: grid;
+      gap: 18px
+    }
+
+    .chk li {
+      display: flex;
+      gap: 16px
+    }
+
+    .chk i {
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      background: #fff;
+      color: var(--n);
+      display: grid;
+      place-items: center;
+      font-style: normal;
+      font-weight: 800;
+      font-size: 14px;
+      flex: none
+    }
+
+    .chk b {
+      display: block;
+      font-size: 17px
+    }
+
+    .chk span {
+      color: #b8c7e8;
+      font-size: 14px
+    }
+
+    .seal {
+      aspect-ratio: 1;
+      max-width: 460px;
+      margin: auto;
+      border-radius: 50%;
+      background: radial-gradient(circle, var(--n3), var(--n2));
+      display: grid;
+      place-items: center;
+      position: relative;
+      box-shadow: 0 0 0 40px #ffffff0d, 0 0 0 90px #ffffff07
+    }
+
+    .seal svg {
+      width: 46%
+    }
+
+    .seal .fl {
+      font-size: 13px
+    }
+
+    .seal .a1 {
+      left: -10%;
+      top: 12%
+    }
+
+    .seal .a2 {
+      right: -12%;
+      bottom: 14%
+    }
+
+    /* stats */
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 30px;
+      text-align: center
+    }
+
+    .stats b {
+      display: block;
+      font: 800 clamp(44px, 6vw, 80px) "Bricolage Grotesque";
+      letter-spacing: -.04em;
+      line-height: 1
+    }
+
+    .stats span {
+      color: var(--mute);
+      font-weight: 600
+    }
+
+    /* quotes */
+    .qs {
+      display: grid;
+      grid-template-columns: 1.3fr 1fr;
+      gap: 50px
+    }
+
+    .q big {
+      display: block;
+      font: 700 clamp(26px, 3.2vw, 40px)/1.2 "Bricolage Grotesque";
+      letter-spacing: -.02em
+    }
+
+    .q p {
+      margin: 0 0 14px;
+      color: #dbe4f8;
+      font-size: 17px
+    }
+
+    .q .w {
+      margin-top: 22px;
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      font-weight: 700
+    }
+
+    .av {
+      width: 46px;
+      height: 46px;
+      border-radius: 50%;
+      background: #fff;
+      color: var(--n);
+      display: grid;
+      place-items: center;
+      font-weight: 800
+    }
+
+    .q small {
+      display: block;
+      color: #9db0d8;
+      font-weight: 500
+    }
+
+    .qr {
+      display: grid;
+      gap: 34px;
+      align-content: center
+    }
+
+    /* cities + faq */
+    .city {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px
+    }
+
+    .city span {
+      background: var(--t1);
+      padding: 12px 24px;
+      border-radius: 999px;
+      font-weight: 700
+    }
+
+    .city span:first-child {
+      background: var(--n);
+      color: #fff
+    }
+
+    .faq {
+      display: grid;
+      gap: 10px;
+      max-width: 860px
+    }
+
+    details {
+      background: var(--t1);
+      border-radius: 22px;
+      padding: 6px 26px
+    }
+
+    summary {
+      cursor: pointer;
+      font-weight: 800;
+      font-size: 17px;
+      padding: 16px 0;
+      list-style: none;
+      display: flex;
+      justify-content: space-between;
+      gap: 14px
+    }
+
+    summary::-webkit-details-marker {
+      display: none
+    }
+
+    summary:after {
+      content: "+";
+      font-size: 24px;
+      line-height: 1
+    }
+
+    details[open] summary:after {
+      content: "–"
+    }
+
+    details p {
+      margin: 0 0 18px;
+      color: var(--mute)
+    }
+
+    .cta {
+      background: url('{% static "images/cta.jpg" %}') center/cover;
+      color: #fff;
+      border-radius: 40px;
+      padding: 70px 6vw;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 30px;
+      flex-wrap: wrap;
+      position: relative;
+      overflow: hidden;
+      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    }
+
+    .cta::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(135deg, rgba(30, 58, 138, 0.95) 0%, rgba(15, 23, 42, 0.85) 100%);
+      z-index: 0;
+    }
+
+    .cta > * {
+      position: relative;
+      z-index: 1;
+    }
+
+    .cta h2 {
+      font-size: clamp(34px, 4.6vw, 58px);
+      max-width: 640px
+    }
+
+    .cta p {
+      color: #c8d5f2;
+      margin: 14px 0 0;
+      max-width: 460px
+    }
+
+    footer {
+      background: var(--n);
+      color: #9db0d8;
+      padding: 70px 0 30px;
+      font-size: 14px
+    }
+
+    .fg {
+      display: grid;
+      grid-template-columns: 1.6fr 1fr 1fr 1fr;
+      gap: 40px
+    }
+
+    footer h4 {
+      color: #fff;
+      margin: 0 0 14px;
+      font-size: 15px
+    }
+
+    footer a {
+      display: block;
+      margin: 8px 0
+    }
+
+    footer a:hover {
+      color: #fff
+    }
+
+    .fb {
+      margin-top: 50px;
+      display: flex;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 10px;
+      font-size: 13px
+    }
+
+    /* modal */
+    .modal {
+      position: fixed;
+      inset: 0;
+      background: #0a1a3ccc;
+      display: none;
+      place-items: center;
+      padding: 16px;
+      z-index: 90;
+      backdrop-filter: blur(4px)
+    }
+
+    .modal.show {
+      display: grid
+    }
+
+    .card {
+      background: #fff;
+      border-radius: 30px;
+      padding: 30px;
+      width: min(480px, 100%);
+      max-height: 92vh;
+      overflow: auto;
+      animation: pop .2s
+    }
+
+    @keyframes pop {
+      from {
+        transform: scale(.96);
+        opacity: 0
+      }
+    }
+
+    .card .top {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 18px
+    }
+
+    .card h3 {
+      font-size: 28px
+    }
+
+    .x {
+      border: 0;
+      background: var(--t1);
+      width: 38px;
+      height: 38px;
+      border-radius: 50%;
+      font-size: 18px
+    }
+
+    .slots {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px
+    }
+
+    .slots .opt {
+      padding: 12px;
+      text-align: center;
+      border-radius: 16px
+    }
+
+    .slots small {
+      display: block;
+      font-weight: 500;
+      font-size: 12px;
+      opacity: .7
+    }
+
+    .toast {
+      position: fixed;
+      left: 50%;
+      bottom: 24px;
+      transform: translateX(-50%);
+      background: var(--n);
+      color: #fff;
+      padding: 14px 22px;
+      border-radius: 999px;
+      display: none;
+      z-index: 99;
+      max-width: 92vw;
+      box-shadow: 0 20px 40px -10px #0a1a3c88
+    }
+
+    .toast.show {
+      display: block
+    }
+
+    @media(max-width:980px) {
+
+      .hg,
+      .split,
+      .qs,
+      .ways {
+        grid-template-columns: 1fr
+      }
+
+      .stage {
+        height: auto;
+        margin-top: 20px
+      }
+
+      .tiles {
+        grid-template-columns: repeat(2, 1fr)
+      }
+
+      .stats,
+      .flow.on,
+      .fg {
+        grid-template-columns: repeat(2, 1fr)
+      }
+
+      .flow:before {
+        display: none
+      }
+
+      .wiz {
+        grid-template-columns: 1fr
+      }
+
+      .side {
+        padding: 20px
+      }
+
+      .side p,
+      .stp b {
+        display: none
+      }
+
+      .steps {
+        display: flex;
+        gap: 14px
+      }
+
+      .stp {
+        padding: 0
+      }
+
+      .side h3 {
+        margin-bottom: 12px
+      }
+
+      .ix span {
+        display: none
+      }
+
+      .blk {
+        padding: 70px 0
+      }
+    }
+
+    @media(max-width:640px) {
+      .nav a.l {
+        display: none
+      }
+
+      .arch {
+        width: 100%;
+        max-width: 340px;
+        height: 440px
+      }
+
+      .phone {
+        width: 210px;
+        height: 380px
+      }
+
+      .f1 {
+        left: 0
+      }
+
+      .f2 {
+        right: 0
+      }
+
+      .two {
+        grid-template-columns: 1fr
+      }
+
+      .main {
+        padding: 22px
+      }
+
+      .tiles {
+        gap: 22px 12px
+      }
+
+      .sbar .loc {
+        display: none
+      }
+
+      .ix {
+        padding: 14px 18px
+      }
+
+      .stats {
+        gap: 20px
+      }
+    }
+
+    @media(prefers-reduced-motion:reduce) {
+      * {
+        animation: none !important;
+        transition: none !important
+      }
+
+      html {
+        scroll-behavior: auto
+      }
+    }
+  </style>
+  <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
 </head>
+
 <body>
-
-<!-- ===== HEADER ===== -->
-<header class="header">
-  <div class="header-inner">
-    <a href="/" class="logo">
-      {% if branding.logo %}
-      <img src="{{ branding.logo.url }}" alt="Logo" style="width:32px;height:32px;border-radius:8px;object-fit:contain">
-      {% else %}
-      <div class="logo-icon">S</div>
-      {% endif %}
-      <span class="logo-text">{{ branding.site_title|default:"Sugu" }}</span>
-    </a>
-    
-    <!-- UC Live Location Picker -->
-    <button class="uc-location-trigger" id="headerLocationBtn" style="display:flex; align-items:center; gap:8px; padding:7px 14px; background:#f4f4f6; border:1px solid #e2e2e6; border-radius:10px; cursor:pointer; max-width:240px; text-align:left; transition:all 0.2s;" title="Select delivery location">
-      <i class="fa-solid fa-location-dot" style="color:#7c3aed; font-size:13px; flex-shrink:0;"></i>
-      <span class="uc-location-display" style="font-size:13px; font-weight:600; color:#1a1a1a; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">Bengaluru, Karnataka</span>
-      <i class="fa-solid fa-chevron-down" style="color:#888; font-size:10px; flex-shrink:0; margin-left:auto;"></i>
-    </button>
-    
-    <div class="header-search">
-      <i class="fa-solid fa-magnifying-glass"></i>
-      <input type="text" id="globalSearch" placeholder="Search for 'AC repair', 'Plumbing'..." autocomplete="off">
-    </div>
-    
-    <div class="header-right">
-      <!-- Cart Icon Trigger -->
-      <a href="/services/browse" class="header-btn" id="headerCartBtn" title="View Cart" style="position:relative;">
-        <i class="fa-solid fa-cart-shopping" style="font-size:15px;"></i>
-        <span id="headerCartBadge" style="display:none; position:absolute; top:-4px; right:-4px; background:#7c3aed; color:#fff; font-size:10px; font-weight:700; width:18px; height:18px; border-radius:50%; align-items:center; justify-content:center;">0</span>
-      </a>
-
-      {% if user.is_authenticated %}
-        <a href="{% if user.role == 'VENDOR' %}/vendor/dashboard{% elif user.role == 'ADMIN' %}/admin-dashboard{% else %}/user/dashboard{% endif %}" class="header-btn" title="Dashboard">
-          <i class="fa-solid fa-grid-2"></i>
-        </a>
-        <a href="/logout/" class="header-login">Logout</a>
-      {% else %}
-        <a href="/register/vendor/" class="header-partner-btn" style="border: 1.5px solid #c7d2fe; background: #eef2ff; color: #4f46e5; font-weight: 700; font-size: 13px; padding: 7px 14px; border-radius: 8px; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; transition: all 0.2s ease;">
-          <i class="fa-solid fa-briefcase"></i> <span>Partner with us</span>
-        </a>
-        <a href="/login/" class="header-login">Login</a>
-        <a href="/register/user/" class="header-login" style="background:#1a1a1a;color:#fff;border-radius:8px">Register</a>
-      {% endif %}
+  <div class="hero">
+    <header>
+      <nav class="wrap nav">
+        <a class="logo" href="/"><i>→</i>sugu</a><span class="sp"></span>
+        <a class="l" href="#quick">Quick services</a><a class="l" href="#project">Post a requirement</a><a class="l"
+          href="#faq">Help</a>
+        {% if user.is_authenticated %}
+        <a class="l"
+          href="{% if user.role == 'VENDOR' %}/vendor/dashboard{% elif user.role == 'ADMIN' %}/admin-dashboard{% else %}/user/dashboard{% endif %}">Dashboard</a>
+        <a class="btn o" href="/logout/">Log out</a>
+        {% else %}
+        <a class="l" href="/login/">Log in</a><a class="btn w" href="/register/vendor/">Become a vendor</a>
+        {% endif %}
+      </nav>
+    </header>
+    <div class="wrap hg">
+      <div>
+        <h1>Your home, <span>handled.</span></h1>
+        <p class="lead">Book a haircut, massage or repair at your door in minutes. Planning a renovation? Post your
+          budget and let trusted vendors come to you.</p>
+        <div class="sbar"><input id="hs" placeholder="Search haircut, massage, AC repair"
+            aria-label="Search services"><span class="loc">📍 Ranchi</span><button class="btn"
+            onclick="heroSearch()">Search</button></div>
+        <div class="tags"><span>Popular:</span><button onclick="quickTag('hair')">Haircut</button><button
+            onclick="quickTag('massage')">Massage</button><button onclick="quickTag('clean')">Deep
+            cleaning</button><button onclick="pickCat('Home Renovation')">Renovation</button></div>
+      </div>
+      <div class="stage" aria-hidden="true">
+        <div class="arch">
+          <div class="phone">
+            <h4>Book a service</h4>
+            <div class="pl on"><span>💇</span>Haircut + beard<em>₹349</em></div>
+            <div class="pl"><span>💆</span>Head massage<em>₹299</em></div>
+            <div class="pl"><span>🪒</span>Clean shave<em>₹149</em></div>
+            <div class="pmap">📍 Your location</div>
+            <div class="pbtn">Confirm booking</div>
+          </div>
+        </div>
+        <div class="fl f1"><span class="dot">✓</span>
+          <div>Vendor verified<small>Amit K. ★ 4.9</small></div>
+        </div>
+        <div class="fl f2"><span class="dot">₹</span>
+          <div>3 offers received<small>2 BHK renovation</small></div>
+        </div>
+      </div>
     </div>
   </div>
-</header>
 
-{% if request.user.is_authenticated and service_not_available %}
-<div id="service-unavailable-alert-banner" style="background: linear-gradient(90deg, #fff1f2, #ffe4e6); border-bottom: 1.5px solid #fda4af; padding: 14px 24px; text-align: center; color: #9f1239; font-size: 14px; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 12px; box-shadow: 0 2px 8px rgba(225,29,72,0.06);">
-  <span style="font-size: 18px;">⚠️</span>
-  <span><strong>Service not available at your location</strong>: We are not yet operational in <strong>{{ user_city|default:"your location" }}</strong>. We are expanding to new cities soon!</span>
-  <a href="/user/profile/edit.html" style="background: #fff; border: 1px solid #fda4af; padding: 4px 12px; border-radius: 6px; color: #9f1239; text-decoration: none; font-size: 12.5px; font-weight: 700; margin-left: 8px;">Update City</a>
-</div>
-{% endif %}
+  <div class="mq" aria-hidden="true">
+    <div>
+      <span>Haircut</span><span>✦</span><span>Massage</span><span>✦</span><span>Deep
+        cleaning</span><span>✦</span><span>Electrician</span><span>✦</span><span>Painting</span><span>✦</span><span>Pest
+        control</span><span>✦</span><span>Home renovation</span><span>✦</span><span>AC repair</span><span>✦</span>
+      <span>Haircut</span><span>✦</span><span>Massage</span><span>✦</span><span>Deep
+        cleaning</span><span>✦</span><span>Electrician</span><span>✦</span><span>Painting</span><span>✦</span><span>Pest
+        control</span><span>✦</span><span>Home renovation</span><span>✦</span><span>AC repair</span><span>✦</span>
+    </div>
+  </div>
 
-<!-- ===== HERO ===== -->
-<section class="hero">
-  <div class="hero-left">
-    <h1 class="hero-title">Home services at your doorstep</h1>
-    
-    <div class="cat-box">
-      <div class="cat-grid">
-        {% for cat in categories %}
-        <a href="/services/browse?category={{ cat.id }}" class="cat-tile" onclick="jumpToCategory('{{ cat.id }}', event)">
-          <div class="cat-tile-icon">
-            {% if cat.name == "Plumbing" %}
-              <i class="fa-solid fa-wrench"></i>
-            {% elif cat.name == "Electrical" %}
-              <i class="fa-solid fa-bolt"></i>
-            {% elif "AC" in cat.name or "Appliance" in cat.name %}
-              <i class="fa-solid fa-snowflake"></i>
-            {% elif cat.name == "Cleaning" %}
-              <i class="fa-solid fa-spray-can-sparkles"></i>
-            {% elif cat.name == "Painting" %}
-              <i class="fa-solid fa-paint-roller"></i>
-            {% elif cat.name == "Carpentry" %}
-              <i class="fa-solid fa-hammer"></i>
-            {% elif "Pest" in cat.name %}
-              <i class="fa-solid fa-bug-slash"></i>
-            {% elif "Renovation" in cat.name %}
-              <i class="fa-solid fa-trowel-bricks"></i>
-            {% else %}
-              <i class="fa-solid fa-screwdriver-wrench"></i>
-            {% endif %}
+  <div class="ways">
+    <div class="way a" data-aos="fade-right">
+      <div>
+        <h2>Need it today?</h2>
+        <p>Quick services with fixed prices. Pick a vendor, share your location, and they come to you.</p>
+      </div>
+      <ul>
+        <li>Haircut</li>
+        <li>Shaving</li>
+        <li>Massage</li>
+        <li>Facial</li>
+        <li>Cleaning</li>
+        <li>Repairs</li>
+      </ul><a class="btn" href="#quick" style="align-self:flex-start">Book a quick service</a>
+    </div>
+    <div class="way b" data-aos="fade-left">
+      <div>
+        <h2>Planning something big?</h2>
+        <p>Post your requirement with a budget. Vendors near you send offers and you choose the best one.</p>
+      </div>
+      <ul>
+        <li>1 / 2 / 3 BHK renovation</li>
+        <li>Villa work</li>
+        <li>Painting</li>
+        <li>Electrical</li>
+        <li>Pest control</li>
+      </ul><a class="btn w" href="#project" style="align-self:flex-start">Post a requirement</a>
+    </div>
+  </div>
+
+  <section class="blk" data-aos="fade-up" id="quick">
+    <div class="wrap">
+      <div class="head" style="display:flex; justify-content:space-between; align-items:flex-end;">
+        <div>
+          <h2>Book a quick service</h2>
+          <p>Fixed prices, verified vendors, and a slot that suits you. Choose below.</p>
+        </div>
+        {% if user.is_authenticated %}
+        <button class="btn s" onclick="filt('', 'All', 999); this.style.display='none';">View all</button>
+        {% else %}
+        <a class="btn s" href="/login/">View all</a>
+        {% endif %}
+      </div>
+      <div class="picks" id="picks">
+        <button class="pick" data-q="hair"><span>💇</span>Haircut</button><button class="pick"
+          data-q="shav"><span>🪒</span>Shaving</button>
+        <button class="pick" data-q="massage"><span>💆</span>Massage</button><button class="pick"
+          data-q="facial"><span>🧖</span>Facial</button>
+        <button class="pick" data-q="repair"><span>🛠️</span>Repairs</button><button class="pick"
+          data-q="clean"><span>🧽</span>Cleaning</button>
+      </div>
+      <div class="chips" id="chips"><button class="chip on" data-f="All">All</button>{% for cat in categories %}<button
+          class="chip" data-f="{{ cat.name }}">{{ cat.name }}</button>{% endfor %}</div>
+      <div class="tiles" id="grid">
+        {% for service in landing_services|default:top_services %}
+        <article class="svc" data-aos="zoom-in" data-aos-delay="100" data-cat="{{ service.category.name|default:'' }}">
+          <div class="img" {% if service.image %}style="background: url('{{ service.image.url }}') center/cover no-repeat, linear-gradient(135deg, var(--n2), var(--n3));" {% elif service.image_url %}style="background: url('{{ service.image_url }}') center/cover no-repeat, linear-gradient(135deg, var(--n2), var(--n3));" {% endif %}>{% if not service.image and not service.image_url %}✂️{% endif %}<span class="rt">★</span></div>
+          <h3>{{ service.title }}</h3><small>{{ service.duration|default:"45 min" }} · at your home</small>
+          <div class="row"><span><b>₹{{ service.base_price|floatformat:"0" }}</b> <small>onwards</small></span><button
+              class="btn" onclick="openBook('{{ service.title|escapejs }}','₹{{ service.base_price|floatformat:"0" }}')">Book</button></div>
+        </article>
+        {% empty %}<div class="empty">No services listed yet. Check back soon, or post a requirement below.</div>{% endfor %}
+      </div>
+    </div>
+  </section>
+
+  <section class="blk dark" id="project">
+    <div class="wrap">
+      <div class="head">
+        <h2>Big job? Tell us what you need.</h2>
+        <p>Pick a category to begin. Four steps: category, type of work, budget, location.</p>
+      </div>
+      <div class="idx" id="idx"></div>
+      <div class="wiz" id="wiz">
+        <aside class="side">
+          <h3>Your project</h3>
+          <p>Takes about a minute. Vendors reply with offers.</p>
+          <div class="steps" id="steps">
+            <div class="stp"><span>1</span><b>Category</b></div>
+            <div class="stp"><span>2</span><b>Type of work</b></div>
+            <div class="stp"><span>3</span><b>Budget</b></div>
+            <div class="stp"><span>4</span><b>Location</b></div>
           </div>
-          <span class="cat-tile-name">{{ cat.name }}</span>
-        </a>
+        </aside>
+        <div class="main">
+          <div class="pane" data-p="0">
+            <h3>What do you need done?</h3>
+            <p class="sub">Choose a category.</p>
+            <div class="opts" id="cats"></div>
+          </div>
+          <div class="pane" data-p="1">
+            <h3 id="t1">Type of work</h3>
+            <p class="sub">Choose the one that fits best.</p>
+            <div class="opts" id="subs"></div>
+          </div>
+          <div class="pane" data-p="2">
+            <h3>What is your budget?</h3>
+            <p class="sub">Enter what you are ready to pay. Vendors quote around it.</p>
+            <div class="money"><span>₹</span><input type="number" id="budget" min="0" inputmode="numeric"
+                placeholder="250000"></div>
+            <div class="pre" id="pre"></div>
+          </div>
+          <div class="pane" data-p="3">
+            <h3>Where is the work?</h3>
+            <p class="sub">Vendors near this address will be notified.</p>
+            <div class="field"><label for="addr">Address</label><textarea id="addr" rows="2"
+                placeholder="House no, street, area, city"></textarea><button class="loc2" type="button"
+                onclick="useLoc('addr')">Use my current location</button></div>
+            <div class="two">
+              <div class="field"><label for="ph">Mobile number</label><input type="tel" id="ph"
+                  placeholder="10-digit number"></div>
+              <div class="field"><label for="when">When to start</label><input type="text" id="when"
+                  placeholder="e.g. Next month"></div>
+            </div>
+            <div class="sum" id="sum"></div>
+          </div>
+          <div class="nav2"><button class="btn s" id="back" onclick="go(-1)">Back</button><button class="btn" id="next"
+              onclick="go(1)">Continue</button></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="blk" data-aos="fade-up">
+    <div class="wrap">
+      <div class="head">
+        <h2>How Sugu works</h2>
+        <p>Two simple ways to get things done at home.</p>
+      </div>
+      <div class="tog" id="tog"><button class="on" data-t="f1">Quick service</button><button data-t="f2">Post a
+          requirement</button></div>
+      <div class="flow on" id="f1">
+        <div class="fs"><b>1</b>
+          <h3>Choose a service</h3>
+          <p>Browse haircuts, massage, cleaning and more.</p>
+        </div>
+        <div class="fs"><b>2</b>
+          <h3>Pick a vendor and slot</h3>
+          <p>See ratings and prices, then choose a time.</p>
+        </div>
+        <div class="fs"><b>3</b>
+          <h3>Share your location</h3>
+          <p>Type your address or pin it on the map.</p>
+        </div>
+        <div class="fs"><b>4</b>
+          <h3>Relax at home</h3>
+          <p>Your vendor arrives. Pay after the service.</p>
+        </div>
+      </div>
+      <div class="flow" id="f2">
+        <div class="fs"><b>1</b>
+          <h3>Select category</h3>
+          <p>Renovation, painting, electrical and more.</p>
+        </div>
+        <div class="fs"><b>2</b>
+          <h3>Choose type of work</h3>
+          <p>1 BHK, 2 BHK, 3 BHK or a villa.</p>
+        </div>
+        <div class="fs"><b>3</b>
+          <h3>Set budget and location</h3>
+          <p>Tell vendors what you can spend and where.</p>
+        </div>
+        <div class="fs"><b>4</b>
+          <h3>Compare offers</h3>
+          <p>Pick the vendor that suits you best.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="blk dark">
+    <div class="wrap split">
+      <div>
+        <h2>Every vendor is checked before they reach you.</h2>
+        <p>We verify identity and skills, and keep rating every job, so you always know who is at your door.</p>
+        <ul class="chk">
+          <li><i>→</i>
+            <div><b>ID and address verified</b><span>Government ID checked for every vendor.</span></div>
+          </li>
+          <li><i>→</i>
+            <div><b>Skills assessed</b><span>Vendors are reviewed for the work they offer.</span></div>
+          </li>
+          <li><i>→</i>
+            <div><b>Real ratings</b><span>Only customers who booked can leave a review.</span></div>
+          </li>
+          <li><i>→</i>
+            <div><b>Support when you need it</b><span>Something wrong? Our team helps you sort it out.</span></div>
+          </li>
+        </ul>
+      </div>
+      <div class="seal" aria-hidden="true"><svg viewBox="0 0 100 120" fill="none">
+          <path d="M50 6 12 20v34c0 28 16 48 38 60 22-12 38-32 38-60V20L50 6Z" fill="#fff" />
+          <path d="m32 58 13 13 24-26" stroke="#0a1a3c" stroke-width="9" stroke-linecap="round"
+            stroke-linejoin="round" />
+        </svg>
+        <div class="fl a1"><span class="dot">★</span>
+          <div>4.9 rating<small>312 jobs</small></div>
+        </div>
+        <div class="fl a2"><span class="dot">✓</span>
+          <div>Background checked<small>Verified</small></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="blk" data-aos="fade-up">
+    <div class="wrap">
+      <div class="stats">
+        <div><b>50K+</b><span>Services booked</span></div>
+        <div><b>1,200+</b><span>Verified vendors</span></div>
+        <div><b>4.8★</b><span>Average rating</span></div>
+        <div><b>30 min</b><span>Typical arrival</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="blk dark">
+    <div class="wrap">
+      <div class="head" data-aos="fade-down">
+        <h2>People who already sorted it.</h2>
+      </div>
+      <div class="qs">
+        <div class="q" data-aos="fade-right">
+          <div style="color: #ffb400; font-size: 24px; margin-bottom: 16px; letter-spacing: 2px;">★ ★ ★ ★ ★</div>
+          <big>"I posted my 2 BHK renovation in the evening and had three offers by morning. Chose one and
+            the work started that week. Extremely professional!"</big>
+          <div class="w">
+            <img class="av" src="{% static 'images/avatar.jpg' %}" alt="Priya Sinha" style="object-fit: cover; border: 2px solid #fff;">
+            <div>Priya Sinha<small>Home renovation, Ranchi</small></div>
+          </div>
+        </div>
+        <div class="qr" data-aos="fade-left" data-aos-delay="200">
+          <div class="q">
+            <div style="color: #ffb400; font-size: 18px; margin-bottom: 8px;">★ ★ ★ ★ ★</div>
+            <p>"Haircut and beard trim at home before a function. On time and very neat. Highly recommend the grooming services."</p>
+            <div class="w">
+              <img class="av" src="{% static 'images/avatar.jpg' %}" alt="Rahul Kumar" style="object-fit: cover; border: 2px solid #fff;">
+              <div>Rahul Kumar<small>Quick service</small></div>
+            </div>
+          </div>
+          <div class="q">
+            <div style="color: #ffb400; font-size: 18px; margin-bottom: 8px;">★ ★ ★ ★ ★</div>
+            <p>"The pest control team was professional and the price matched what was shown. Will use Infinity Ventures again."</p>
+            <div class="w">
+              <img class="av" src="{% static 'images/avatar.jpg' %}" alt="Anita Mahto" style="object-fit: cover; border: 2px solid #fff;">
+              <div>Anita Mahto<small>Pest control</small></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="blk" data-aos="fade-up">
+    <div class="wrap">
+      <div class="head">
+        <h2>Now serving your state.</h2>
+        <p>We are constantly expanding our footprint. Not listed? Post a requirement and tell us where you are.</p>
+      </div>
+      <div class="city">
+        {% regroup locations by state as state_list %}
+        {% for s in state_list %}
+        <span>{{ s.grouper }}</span>
         {% endfor %}
       </div>
     </div>
-    
-    <div class="trust-row">
-      <div class="trust-item">
-        <i class="fa-regular fa-star"></i>
-        <div>
-          <div class="trust-val">4.8</div>
-          <div class="trust-label">Service Rating</div>
-        </div>
+  </section>
+
+  <section class="blk tint" id="faq">
+    <div class="wrap">
+      <div class="head">
+        <h2>Questions, answered.</h2>
       </div>
-      <div class="trust-item">
-        <i class="fa-regular fa-user"></i>
-        <div>
-          <div class="trust-val">50K+</div>
-          <div class="trust-label">Happy Customers</div>
-        </div>
+      <div class="faq">
+        <details>
+          <summary>How do I book a quick service?</summary>
+          <p>Choose a service, pick a time slot, share your location and confirm. Your vendor arrives at the slot you
+            chose.</p>
+        </details>
+        <details>
+          <summary>How does posting a requirement work?</summary>
+          <p>Select a category and type of work, enter your budget and location, and submit. Vendors near you send
+            offers and you pick one.</p>
+        </details>
+        <details>
+          <summary>Are the prices fixed?</summary>
+          <p>Quick services show a fixed starting price. For big projects, vendors quote based on your budget and the
+            scope of work.</p>
+        </details>
+        <details>
+          <summary>Are vendors verified?</summary>
+          <p>Yes. Every vendor goes through ID and skill checks before taking jobs on Sugu.</p>
+        </details>
+        <details>
+          <summary>Can I cancel or reschedule?</summary>
+          <p>Yes. You can change your booking from your dashboard before the vendor is on the way.</p>
+        </details>
       </div>
     </div>
-  </div>
-  
-  <div class="hero-media">
-    <img src="https://images.unsplash.com/photo-1621905251189-08b45d6a269e?w=500&auto=format&fit=crop&q=80" alt="Plumbing service">
-    <img src="https://images.unsplash.com/photo-1585771724684-38269d6639fd?w=500&auto=format&fit=crop&q=80" alt="AC repair service">
-    <img src="https://images.unsplash.com/photo-1562259949-e8e7689d7828?w=500&auto=format&fit=crop&q=80" alt="Painting service">
-    <img src="https://images.unsplash.com/photo-1504148455328-c376907d081c?w=500&auto=format&fit=crop&q=80" alt="Carpentry service">
-  </div>
-</section>
+  </section>
 
-<!-- ===== SERVICES NEAR YOU / BY CATEGORY ===== -->
-<div class="section" id="servicesSection" style="padding-top:24px; padding-bottom:48px;">
-  <div class="section-header" style="align-items:flex-end; margin-bottom:20px;">
-    <div>
-      <h2 class="section-title" style="margin-bottom:6px;">Services near you</h2>
-      <p style="font-size:13px; color:#6b7280; margin:0;" id="servicesSectionSubtitle">
-        Showing verified professionals in your area
-      </p>
+  <section class="blk" data-aos="fade-up">
+    <div class="wrap">
+      <div class="cta">
+        <div>
+          <h2>Own a service business? Grow with Sugu.</h2>
+          <p>Take quick bookings, bid on projects near you and build your ratings.</p>
+        </div><a class="btn w" href="/register/vendor/">Become a vendor</a>
+      </div>
     </div>
-    <a href="/services/browse" class="see-all" id="exploreAllLink" style="font-size:14px; font-weight:600; color:#1a1a1a; display:inline-flex; align-items:center; gap:6px;">
-      <span id="exploreAllText">See all in catalog</span> <i class="fa-solid fa-arrow-right" style="font-size:12px;"></i>
-    </a>
-  </div>
+  </section>
 
-  <!-- Interactive Category Tabs Bar -->
-  <div class="category-tabs-container">
-    <div class="category-tabs">
-      <button type="button" class="cat-pill active" data-cat="all" onclick="selectLandingCategory('all', this, '/services/browse')">
-        <i class="fa-solid fa-sparkles"></i> All Services
-      </button>
+  <footer>
+    <div class="wrap">
+      <div class="fg">
+        <div><a class="logo" href="/" style="color:#fff"><i>→</i>sugu</a>
+          <p style="max-width:300px;margin-top:14px">Home services, sorted. Quick bookings and big projects, all in one
+            place.</p>
+        </div>
+        <div>
+          <h4>Customers</h4><a href="#quick">Quick services</a><a href="#project">Post a requirement</a><a
+            href="/user/dashboard">My bookings</a>
+        </div>
+        <div>
+          <h4>Vendors</h4><a href="/register/vendor/">Join as a vendor</a><a href="/login/">Vendor login</a><a
+            href="#faq">Vendor help</a>
+        </div>
+        <div>
+          <h4>Company</h4><a href="#">About Sugu</a><a href="#faq">Help centre</a><a href="#">Terms and privacy</a>
+        </div>
+      </div>
+      <div class="fb" style="align-items: center;">
+        <span>Copyright &copy; 2026 <a href="https://www.brightcodess.com/" target="_blank" style="color: #3b82f6; text-decoration: none; font-weight: 600; display: inline;">Brightcode Software Services Pvt.Ltd.</a> All rights reserved.</span>
+        <span>Designed By - <a href="https://www.brightcodess.com/" target="_blank" style="text-decoration: none; display: inline;"><b style="color: #1e3a8a; font-size: 1.1em;">Bright</b><b style="color: #e11d48; font-size: 1.1em;">code</b></a></span>
+      </div>
+    </div>
+  </footer>
+
+  <div class="modal" id="bm">
+    <div class="card">
+      <div class="top">
+        <div>
+          <h3 id="bt">Book service</h3><small id="bp" style="color:var(--mute)"></small>
+        </div><button class="x" onclick="shut('bm')" aria-label="Close">Ã—</button>
+      </div>
+      <div class="field"><label>Time slot</label>
+        <div class="slots" id="slots"><button class="opt sel" type="button">Now<small>Within 1
+              hr</small></button><button class="opt" type="button">Today<small>Evening</small></button><button
+            class="opt" type="button">Tomorrow<small>Morning</small></button></div>
+      </div>
+      <div class="field"><label for="baddr">Your location</label><textarea id="baddr" rows="2"
+          placeholder="Where should the vendor come?"></textarea><button class="loc2" type="button"
+          onclick="useLoc('baddr')">Use my current location</button></div>
+      <div class="field"><label for="bph">Mobile number</label><input type="tel" id="bph" placeholder="10-digit number">
+      </div>
+      <button class="btn" style="width:100%" onclick="confirmBook()">Confirm booking</button>
+    </div>
+  </div>
+  <div class="toast" id="toast" role="status"></div>
+  <form style="display:none">{% csrf_token %}</form>
+
+  <script>
+    const $ = s => document.querySelector(s), $$ = s => [...document.querySelectorAll(s)];
+    function filt(q, cat, limit=4) { let n = 0; $$('#grid .svc').forEach(c => { const match = (!q || c.innerText.toLowerCase().includes(q)) && (!cat || cat === 'All' || c.dataset.cat === cat); if (match && n < limit) { c.style.display = ''; n++ } else { c.style.display = 'none' } }); return n }
+    filt('', 'All');
+    $$('.chip[data-f]').forEach(c => c.onclick = () => { $$('#chips .chip').forEach(x => x.classList.remove('on')); c.classList.add('on'); $$('.pick').forEach(x => x.classList.remove('on')); filt('', c.dataset.f) });
+    function quickTag(q) { $('#quick').scrollIntoView({ behavior: 'smooth' }); if (filt(q) === 0) toast('No vendors for that yet. Try another service or post a requirement.') }
+    $$('.pick').forEach(p => p.onclick = () => { const on = p.classList.contains('on'); $$('.pick').forEach(x => x.classList.remove('on')); if (!on) p.classList.add('on'); const q = on ? '' : p.dataset.q; if (filt(q) === 0 && q) toast('No vendors for that yet. Try another service or post a requirement.') });
+    function heroSearch() { const q = $('#hs').value.toLowerCase().trim(); const n = filt(q); $('#quick').scrollIntoView({ behavior: 'smooth' }); if (q && !n) toast('No match yet. Try a category or post a requirement.') }
+    $('#hs').addEventListener('keydown', e => { if (e.key === 'Enter') heroSearch() });
+    $$('#tog button').forEach(b => b.onclick = () => { $$('#tog button').forEach(x => x.classList.toggle('on', x === b)); $$('.flow').forEach(f => f.classList.toggle('on', f.id === b.dataset.t)) });
+    function openBook(t, p) { $('#bt').textContent = t; $('#bp').textContent = 'Starting at ' + p; $('#bm').classList.add('show') }
+    function shut(id) { document.getElementById(id).classList.remove('show') }
+    $$('#slots .opt').forEach(b => b.onclick = () => { $$('#slots .opt').forEach(x => x.classList.remove('sel')); b.classList.add('sel') });
+    function confirmBook() {
+      const a = $('#baddr').value.trim(), p = $('#bph').value.trim(); if (!a || p.length < 10) return toast('Add your location and a 10-digit mobile number.');
+      /* TODO: POST service, slot, address, phone to your booking endpoint (csrf token is in the hidden form) */
+      shut('bm'); toast('Booking confirmed. A vendor will contact you shortly.')
+    }
+    $$('.modal').forEach(m => m.onclick = e => { if (e.target === m) m.classList.remove('show') });
+    function toast(m) { const t = $('#toast'); t.textContent = m; t.classList.add('show'); clearTimeout(window._t); window._t = setTimeout(() => t.classList.remove('show'), 3200) }
+    function useLoc(id) { if (!navigator.geolocation) return toast('Location is not available on this device.'); navigator.geolocation.getCurrentPosition(p => { document.getElementById(id).value = 'Pinned location: ' + p.coords.latitude.toFixed(5) + ', ' + p.coords.longitude.toFixed(5); upd() }, () => toast('Could not get location. Type your address instead.')) }
+    const DATA = {
       {% for cat in categories %}
-      <button type="button" class="cat-pill" data-cat="{{ cat.id }}" onclick="selectLandingCategory('{{ cat.id }}', this, '/services/browse?category={{ cat.id }}')">
-        {% if cat.name == "Plumbing" %}
-          <i class="fa-solid fa-wrench"></i>
-        {% elif cat.name == "Electrical" %}
-          <i class="fa-solid fa-bolt"></i>
-        {% elif "AC" in cat.name or "Appliance" in cat.name %}
-          <i class="fa-solid fa-snowflake"></i>
-        {% elif cat.name == "Cleaning" %}
-          <i class="fa-solid fa-spray-can-sparkles"></i>
-        {% elif cat.name == "Painting" %}
-          <i class="fa-solid fa-paint-roller"></i>
-        {% elif cat.name == "Carpentry" %}
-          <i class="fa-solid fa-hammer"></i>
-        {% elif "Pest" in cat.name %}
-          <i class="fa-solid fa-bug-slash"></i>
-        {% elif "Renovation" in cat.name %}
-          <i class="fa-solid fa-trowel-bricks"></i>
-        {% else %}
-          <i class="fa-solid fa-screwdriver-wrench"></i>
-        {% endif %}
-        {{ cat.name }}
-      </button>
+      {% if cat.service_type == "BIDDING" %}
+      '{{ cat.name|escapejs }}': {
+        e: '{% if "Electric" in cat.name %}⚡{% elif "Renovation" in cat.name %}🏗️{% elif "Kitchen" in cat.name %}🍳{% elif "Paint" in cat.name %}🎨{% else %}✨{% endif %}',
+        d: '{% for sub in cat.subcategories.all %}{{ sub.name|escapejs }}{% if not forloop.last %}, {% endif %}{% endfor %}',
+        s: [
+          {% for sub in cat.subcategories.all %}
+          ['{{ sub.name|escapejs }}', '👉']{% if not forloop.last %},{% endif %}
+          {% endfor %}
+        ],
+        b: [5000, 25000, 80000]
+      },
+      {% endif %}
       {% endfor %}
-    </div>
-  </div>
-
-  <!-- Compact Services Grid -->
-  <div class="svc-grid" id="landingServicesGrid">
-    {% for service in landing_services|default:top_services %}
-    <a href="/services/browse?category={{ service.category_id }}" class="svc-card"
-       data-service-id="{{ service.id }}"
-       data-category-id="{{ service.category_id }}"
-       data-lat="{{ service.latitude|default:'' }}"
-       data-lon="{{ service.longitude|default:'' }}"
-       data-radius="{{ service.service_radius_km|default:15.0 }}"
-       data-locality="{{ service.locality|default:'Available' }}">
-      <div class="svc-card-img">
-        {% if service.image %}
-          <img src="{{ service.image.url }}" alt="{{ service.title }}" loading="lazy">
-        {% elif service.image_url %}
-          <img src="{{ service.image_url }}" alt="{{ service.title }}" loading="lazy">
-        {% else %}
-          <img src="https://images.unsplash.com/photo-1581578731548-c64695cc6952?w=400&auto=format&fit=crop&q=60" alt="{{ service.title }}" loading="lazy">
-        {% endif %}
-      </div>
-      <div class="svc-card-title">{{ service.title }}</div>
-      <div class="svc-card-rating">
-        <i class="fa-solid fa-star"></i> 4.8
-        <span style="color:#ccc;margin:0 4px">·</span>
-        <span class="eta svc-card-dist"><i class="fa-solid fa-location-dot" style="font-size:10px"></i> <span class="dist-val">Available</span></span>
-      </div>
-      <div class="svc-card-price">₹{{ service.base_price|floatformat:"0" }}</div>
-      <div class="svc-card-vendor">by {{ service.vendor.vendor_profile.company_name|default:service.vendor.get_full_name|default:service.vendor.username }} · {{ service.locality|default:"Available" }}</div>
-    </a>
-    {% endfor %}
-  </div>
-
-  <!-- Empty state for category when no services in range -->
-  <div id="landingEmptyServices" style="display:none; text-align:center; padding:44px 20px; background:#f9fafb; border-radius:16px; border:1px dashed #e5e7eb; margin-top:8px;">
-    <div style="font-size:32px; color:#9ca3af; margin-bottom:12px;">
-      <i class="fa-solid fa-magnifying-glass-location"></i>
-    </div>
-    <h3 style="font-size:15px; font-weight:600; color:#1f2937; margin-bottom:6px;">No services nearby for this category</h3>
-    <p style="font-size:13px; color:#6b7280; max-width:420px; margin:0 auto 16px;">
-      We couldn't find verified professionals in this category within 10 km of your selected location.
-    </p>
-    <a href="/services/browse" id="emptyBrowseBtn" style="display:inline-flex; align-items:center; gap:8px; padding:10px 20px; background:#111827; color:#fff; border-radius:10px; font-size:13px; font-weight:600; text-decoration:none;">
-      Browse all services in catalog <i class="fa-solid fa-arrow-right" style="font-size:11px;"></i>
-    </a>
-  </div>
-</div>
-
-<!-- ===== PROMO BANNER ===== -->
-<div class="promo-banner">
-  <div class="promo-inner">
-    <div class="promo-copy">
-      <h2>Quality service, guaranteed</h2>
-      <p>Book verified professionals at transparent prices. From plumbing to painting — we've got your home covered.</p>
-      <a href="/services/browse" class="cta">
-        Explore services <i class="fa-solid fa-arrow-right"></i>
-      </a>
-    </div>
-    <div class="promo-img">
-      <img src="https://images.unsplash.com/photo-1584622650111-993a426fbf0a?w=700&auto=format&fit=crop&q=80" alt="Home cleaning">
-    </div>
-  </div>
-</div>
-
-<!-- ===== FOOTER ===== -->
-<footer class="footer">
-  <div class="footer-inner">
-    <div class="footer-grid">
-      <div class="footer-brand">
-        <div class="logo" style="margin-bottom:16px">
-          {% if branding.logo %}
-          <img src="{{ branding.logo.url }}" alt="Logo" style="width:32px;height:32px;border-radius:8px;object-fit:contain">
-          {% else %}
-          <div class="logo-icon">S</div>
-          {% endif %}
-          <span class="logo-text">{{ branding.site_title|default:"Sugu" }}</span>
-        </div>
-        <p>Book verified professionals for all your home service needs. Transparent pricing, quality guarantee.</p>
-      </div>
-      <div class="footer-col">
-        <h4>Company</h4>
-        <ul>
-          <li><a href="#">About us</a></li>
-          <li><a href="#">Terms & conditions</a></li>
-          <li><a href="#">Privacy policy</a></li>
-        </ul>
-      </div>
-      <div class="footer-col">
-        <h4>For customers</h4>
-        <ul>
-          <li><a href="/services/browse">Browse services</a></li>
-          <li><a href="/register/user/">Register</a></li>
-          <li><a href="/login/">Login</a></li>
-        </ul>
-      </div>
-      <div class="footer-col">
-        <h4>For professionals</h4>
-        <ul>
-          <li><a href="/register/vendor/">Register as vendor</a></li>
-          <li><a href="/login/">Vendor login</a></li>
-        </ul>
-      </div>
-    </div>
-    <div class="footer-copy" style="display:flex; justify-content:flex-end; align-items:center; padding-top:20px; border-top:1px solid rgba(255,255,255,0.1); font-size:12.5px; color:#9ca3af;">
-      <div style="display:flex; align-items:center; gap:8px;">
-        <span style="color:#9ca3af;">Designed by</span>
-        <a href="https://www.brightcodess.com/" target="_blank" rel="noopener noreferrer" style="background:#ffffff; padding:3px 8px; border-radius:4px; display:inline-flex; align-items:center; text-decoration:none;">
-          <img src="/static/assets/images/brightcode.png" alt="Brightcode" style="height:16px; vertical-align:middle;" onerror="this.style.display='none'; this.nextElementSibling.style.display='inline';"><span style="display:none; color:#007bff; font-weight:600;">Brightcode</span>
-        </a>
-      </div>
-    </div>
-  </div>
-</footer>
-
-<script>
-if (window.SuguCart) {
-  SuguCart.subscribe(function() {
-    var summary = SuguCart.getCartSummary();
-    var badge = document.getElementById('headerCartBadge');
-    if (badge) {
-      if (summary.count > 0) {
-        badge.textContent = summary.count;
-        badge.style.display = 'flex';
-      } else {
-        badge.style.display = 'none';
-      }
+    };
+    let step = 0, S = { cat: '', sub: '' }; const inr = n => '₹' + Number(n).toLocaleString('en-IN');
+    $('#idx').innerHTML = Object.keys(DATA).map(k => `<button class="ix" type="button" onclick="pickCat('${k}')"><h3>${k}</h3><span>${DATA[k].d}</span><i>→</i></button>`).join('');
+    $('#cats').innerHTML = Object.keys(DATA).map(k => `<button class="opt" type="button" data-k="${k}"><em>${DATA[k].e}</em>${k}</button>`).join('');
+    $$('#cats .opt').forEach(b => b.onclick = () => pickCat(b.dataset.k, true));
+    function pickCat(k, stay) { S.cat = k; S.sub = ''; $('#budget').value = ''; $$('#cats .opt').forEach(x => x.classList.toggle('sel', x.dataset.k === k)); buildSubs(); step = 1; upd(); if (!stay) $('#wiz').scrollIntoView({ behavior: 'smooth', block: 'center' }) }
+    function buildSubs() {
+      const d = DATA[S.cat]; $('#t1').textContent = S.cat + ': what type of work?';
+      $('#subs').innerHTML = d.s.map(([n, i]) => `<button class="opt" type="button" data-n="${n}"><em>${i}</em>${n}</button>`).join('');
+      $$('#subs .opt').forEach(b => b.onclick = () => { S.sub = b.dataset.n; $$('#subs .opt').forEach(x => x.classList.toggle('sel', x === b)); go(1) });
+      $('#pre').innerHTML = d.b.map(v => `<button class="chip" type="button" data-v="${v}">${inr(v)}</button>`).join('');
+      $$('#pre .chip').forEach(c => c.onclick = () => { $('#budget').value = c.dataset.v; upd() })
     }
-  });
-}
-
-// 10 KM Radius Card Distance Engine & Category Filtering for Homepage
-function initHomepageLocationFiltering() {
-  function calculateHaversineKm(lat1, lon1, lat2, lon2) {
-    var R = 6371;
-    var dLat = (lat2 - lat1) * Math.PI / 180;
-    var dLon = (lon2 - lon1) * Math.PI / 180;
-    var a = Math.sin(dLat/2) * Math.sin(dLat/2) +
-            Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
-            Math.sin(dLon/2) * Math.sin(dLon/2);
-    var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-    return Math.round((R * c) * 10) / 10;
-  }
-
-  var currentSelectedCat = 'all';
-
-  window.selectLandingCategory = function(catId, btn, browseUrl) {
-    currentSelectedCat = String(catId);
-    document.querySelectorAll('.cat-pill').forEach(function(p) { p.classList.remove('active'); });
-    if (btn) btn.classList.add('active');
-
-    var exploreLink = document.getElementById('exploreAllLink');
-    var exploreText = document.getElementById('exploreAllText');
-    var emptyBtn = document.getElementById('emptyBrowseBtn');
-
-    if (exploreLink) exploreLink.href = browseUrl || '/services/browse';
-    if (emptyBtn) emptyBtn.href = browseUrl || '/services/browse';
-    if (exploreText) {
-      if (currentSelectedCat === 'all') {
-        exploreText.textContent = 'See all in catalog';
-      } else {
-        var catName = btn ? btn.textContent.trim() : 'category';
-        exploreText.textContent = 'See all ' + catName;
-      }
+    function go(d) {
+      if (d > 0) { if (step === 0 && !S.cat) return toast('Choose a category first.'); if (step === 1 && !S.sub) return toast('Choose the type of work.'); if (step === 2 && !(+$('#budget').value > 0)) return toast('Enter your budget.'); if (step === 3) return submit() }
+      step = Math.max(0, Math.min(3, step + d)); upd()
     }
-
-    var activeLoc = window.SuguLocation ? window.SuguLocation.getLocation() : null;
-    if (!activeLoc) activeLoc = { lat: 12.9716, lon: 77.5946, name: 'Bengaluru, Karnataka' };
-    filterLandingCards(activeLoc);
-  };
-
-  window.jumpToCategory = function(catId, ev) {
-    if (ev) ev.preventDefault();
-    var pill = document.querySelector('.cat-pill[data-cat="' + catId + '"]');
-    if (pill) {
-      pill.click();
-      var sec = document.getElementById('servicesSection');
-      if (sec) sec.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    } else {
-      window.location.href = '/services/browse?category=' + catId;
+    function upd() {
+      $$('.pane').forEach(p => p.classList.toggle('on', +p.dataset.p === step));
+      $$('#steps .stp').forEach((s, i) => { s.classList.toggle('on', i === step); s.classList.toggle('done', i < step); s.firstElementChild.textContent = i < step ? '✓' : i + 1 });
+      $('#back').style.visibility = step ? 'visible' : 'hidden'; $('#next').textContent = step === 3 ? 'Post requirement' : 'Continue'; $('#next').style.display = step === 0 ? 'none' : '';
+      $('#sum').innerHTML = `<b>${S.cat}</b> › <br>Budget: <b>${$('#budget').value ? inr($('#budget').value) : '-'}</b>`
     }
-  };
-
-  function filterLandingCards(locData) {
-    if (!locData) return;
-    var userLat = locData.lat ? parseFloat(locData.lat) : 12.9716;
-    var userLon = locData.lon ? parseFloat(locData.lon) : 77.5946;
-
-    var allCards = document.querySelectorAll('#landingServicesGrid .svc-card');
-    var emptyState = document.getElementById('landingEmptyServices');
-    var maxCardsToShow = 8; // Compact display: maximum 8 cards to eliminate endless scrolling
-
-    // Pass 1: find cards that match category and calculate distances
-    var inRangeMatches = [];
-    var catMatches = [];
-
-    allCards.forEach(function(card) {
-      var sLat = parseFloat(card.getAttribute('data-lat'));
-      var sLon = parseFloat(card.getAttribute('data-lon'));
-      var radius = parseFloat(card.getAttribute('data-radius')) || 15.0;
-      var cardCat = String(card.getAttribute('data-category-id'));
-      var distEl = card.querySelector('.dist-val');
-
-      var matchesCat = (currentSelectedCat === 'all' || cardCat === currentSelectedCat);
-      if (!matchesCat) {
-        card.style.display = 'none';
-        return;
-      }
-
-      var dist = (!isNaN(sLat) && !isNaN(sLon)) ? calculateHaversineKm(userLat, userLon, sLat, sLon) : NaN;
-      var isWithinRange = !isNaN(dist) && dist <= radius;
-
-      if (distEl) {
-        if (!isNaN(dist) && dist <= 50) {
-          distEl.textContent = dist + ' km away';
-        } else {
-          var locality = card.getAttribute('data-locality') || 'Available';
-          distEl.textContent = locality.split(',')[0];
-        }
-      }
-
-      catMatches.push(card);
-      if (isWithinRange) {
-        inRangeMatches.push(card);
-      }
-    });
-
-    var cardsToShow = [];
-    var subtitle = document.getElementById('servicesSectionSubtitle');
-
-    if (inRangeMatches.length > 0) {
-      cardsToShow = inRangeMatches;
-      if (subtitle && locData.name) {
-        subtitle.textContent = 'Showing verified professionals near ' + locData.name.split(',')[0] + ' (within 10 km)';
-      }
-    } else {
-      // Fallback: Show available platform services in this category so the listing is ALWAYS visible!
-      cardsToShow = catMatches;
-      if (subtitle) {
-        if (currentSelectedCat === 'all') {
-          subtitle.textContent = 'Showing verified & newly listed services across our network';
-        } else {
-          subtitle.textContent = 'Showing verified services in this category';
-        }
-      }
+    function submit() {
+      const a = $('#addr').value.trim(), p = $('#ph').value.trim(); if (!a || p.length < 10) return toast('Add your address and a 10-digit mobile number.');
+      const payload = { category: S.cat, work_type: S.sub, budget: +$('#budget').value, address: a, phone: p, start: $('#when').value };
+      /* TODO: POST payload to your Django endpoint with the csrf token from the hidden form */
+      console.log('requirement', payload); toast('Requirement posted. Vendors near you can now send offers.');
+      S = { cat: '', sub: '' }; step = 0; $$('.opt.sel').forEach(x => x.classList.remove('sel'));['budget', 'addr', 'ph', 'when'].forEach(i => $('#' + i).value = ''); upd()
     }
-
-    // Now display up to maxCardsToShow
-    allCards.forEach(function(card) {
-      card.style.display = 'none';
-    });
-
-    var visibleCount = 0;
-    cardsToShow.forEach(function(card) {
-      if (visibleCount < maxCardsToShow) {
-        card.style.display = 'block';
-        visibleCount++;
-      }
-    });
-
-    if (visibleCount === 0) {
-      if (emptyState) emptyState.style.display = 'block';
-    } else {
-      if (emptyState) emptyState.style.display = 'none';
-    }
-  }
-
-  window.addEventListener('suguLocationUpdated', function(e) {
-    if (e.detail) filterLandingCards(e.detail);
-  });
-
-  var activeLoc = window.SuguLocation ? window.SuguLocation.getLocation() : null;
-  if (activeLoc) {
-    filterLandingCards(activeLoc);
-  } else {
-    filterLandingCards({ lat: 12.9716, lon: 77.5946, name: 'Bengaluru, Karnataka' });
-  }
-}
-
-document.addEventListener('DOMContentLoaded', initHomepageLocationFiltering);
-</script>
-
-<!-- Login form (hidden) -->
-<form class="csrf-slot">{% csrf_token %}</form>
-
+    upd();
+  </script>
+  <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+  <script>AOS.init({duration: 800, once: true, offset: 50});</script>
 </body>
+
 </html>

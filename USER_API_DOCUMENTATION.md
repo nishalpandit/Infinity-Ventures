@@ -1,5 +1,5 @@
 API for Check Phone Number (User)
-url : (http://192.168.1.54:8000/api/auth/check-phone/)
+url : (http://192.168.1.52:8000/api/auth/check-phone/)
 method : POST
 params :-
 mobile:9876543210
@@ -21,7 +21,7 @@ response :-
 
 
 API for Send OTP (User)
-url : (http://192.168.1.54:8000/api/auth/send-otp/)
+url : (http://192.168.1.52:8000/api/auth/send-otp/)
 method : POST
 params :-
 mobile:9876543210
@@ -39,7 +39,7 @@ response :-
 
 
 API for Verify OTP (User)
-url : (http://192.168.1.54:8000/api/auth/verify-otp/)
+url : (http://192.168.1.52:8000/api/auth/verify-otp/)
 method : POST
 params :-
 mobile:9876543210
@@ -55,7 +55,7 @@ response :-
 
 
 API for User Signup with OTP
-url : (http://192.168.1.54:8000/api/user/otp-signup/)
+url : (http://192.168.1.52:8000/api/user/otp-signup/)
 method : POST
 params :-
 name:Ananya Sharma
@@ -83,7 +83,7 @@ response :-
 
 
 API for User Signup with Password
-url : (http://192.168.1.54:8000/api/user/signup/)
+url : (http://192.168.1.52:8000/api/user/signup/)
 method : POST
 params :-
 name:Ananya Sharma
@@ -111,7 +111,7 @@ response :-
 
 
 API for User Login with OTP
-url : (http://192.168.1.54:8000/api/user/otp-login/)
+url : (http://192.168.1.52:8000/api/user/otp-login/)
 method : POST
 params :-
 mobile:9876543210
@@ -136,7 +136,7 @@ response :-
 
 
 API for User Login with Password
-url : (http://192.168.1.54:8000/api/user/login/)
+url : (http://192.168.1.52:8000/api/user/login/)
 method : POST
 params :-
 username:ananya@example.com
@@ -161,7 +161,7 @@ response :-
 
 
 API for User Post Job
-url : (http://192.168.1.54:8000/api/user/post-job/)
+url : (http://192.168.1.52:8000/api/user/post-job/)
 method : POST
 headers :-
 Authorization: Bearer <token>
@@ -226,7 +226,7 @@ response :-
 
 
 API for User Post Quick Service
-url : (http://192.168.1.54:8000/api/user/post-quick-service/)
+url : (http://192.168.1.52:8000/api/user/post-quick-service/)
 method : POST
 headers :-
 Authorization: Bearer <token>

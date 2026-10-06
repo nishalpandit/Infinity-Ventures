@@ -128,7 +128,8 @@
     {
       label: 'Master', icon: 'fa-database', children: [
         { label: 'Categories', href: 'master/categories.html' },
-        { label: 'Locations', href: 'master/locations.html' }
+        { label: 'States', href: 'master/states.html' },
+        { label: 'Cities', href: 'master/cities.html' }
       ]
     },
     { label: 'Disputes & Complaints', icon: 'fa-shield-halved', href: 'complaints/index.html' },
@@ -153,12 +154,7 @@
     var menuToRender = MENU.map(function(item) {
       if (item.label === 'Master' && isAreaAdmin) {
         var filteredChildren = (item.children || []).filter(function(child) {
-          return child.href.indexOf('categories') === -1;
-        }).map(function(child) {
-          if (child.href.indexOf('locations') !== -1) {
-            return { label: 'Cities', href: child.href };
-          }
-          return child;
+          return child.href.indexOf('categories') === -1 && child.href.indexOf('states') === -1;
         });
         return {
           label: 'Master',

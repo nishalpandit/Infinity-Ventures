@@ -1,5 +1,5 @@
 API for Vendor Profile
-url : (http://192.168.1.32:8000/api/vendor/profile/)
+url : (http://192.168.1.52:8000/api/vendor/profile/)
 method : GET
 headers :-
 Authorization: Bearer <token>
@@ -28,7 +28,7 @@ response :-
 "gender": "Male",
 "id_proof": "123456789012",
 "about": "Professional electrical contracting and maintenance services.",
-"profile_image": "http://192.168.1.32:8000/media/vendor_profiles/vheadshot_ven_rajesh.jpg",
+"profile_image": "http://192.168.1.52:8000/media/vendor_profiles/vheadshot_ven_rajesh.jpg",
 "rating": 4.9,
 "available_bids": 14,
 "kyc_status": "approved",
@@ -39,7 +39,7 @@ response :-
 
 
 API for Vendor Edit Profile
-url : (http://192.168.1.32:8000/api/vendor/profile/edit/)
+url : (http://192.168.1.52:8000/api/vendor/profile/edit/)
 method : POST
 headers :-
 Authorization: Bearer <token>
@@ -86,7 +86,7 @@ response :-
 "gender": "Male",
 "id_proof": "123456789012",
 "about": "Professional electrical contracting and maintenance services.",
-"profile_image": "http://192.168.1.32:8000/media/vendor_profiles/vheadshot_ven_rajesh.jpg",
+"profile_image": "http://192.168.1.52:8000/media/vendor_profiles/vheadshot_ven_rajesh.jpg",
 "rating": 4.9,
 "available_bids": 14,
 "kyc_status": "approved",
@@ -97,7 +97,7 @@ response :-
 
 
 API for Vendor Dashboard Summary & Dynamic Opportunities
-url : (http://192.168.1.32:8000/api/vendor/dashboard/)
+url : (http://192.168.1.52:8000/api/vendor/dashboard/)
 method : GET
 headers :-
 Authorization: Bearer <token>
@@ -111,7 +111,7 @@ response :-
     "vendor_type": "Electrician",
     "location": "Banjara Hills, Hyderabad",
     "rating": 4.9,
-    "profile_image": "http://192.168.1.32:8000/media/vendor_profiles/profile.jpg"
+    "profile_image": "http://192.168.1.52:8000/media/vendor_profiles/profile.jpg"
   },
   "kyc": {
     "status": "approved",
@@ -179,7 +179,7 @@ response :-
 
 
 API for Browsing All Vendor Jobs
-url : (http://192.168.1.32:8000/api/vendor/jobs/)
+url : (http://192.168.1.52:8000/api/vendor/jobs/)
 method : GET
 headers :-
 Authorization: Bearer <token>

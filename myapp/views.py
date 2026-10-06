@@ -1,4 +1,5 @@
 from django.shortcuts import render, redirect
+from django.views.decorators.cache import never_cache
 from django.contrib.auth import authenticate, login, logout, get_user_model
 from django.contrib import messages
 from django.db.models import Q, Sum, Count, Avg, Prefetch
@@ -3323,6 +3324,9 @@ def dashboard_view(request, path=''):
     except TemplateDoesNotExist:
         raise Http404(f"Template {template_name} not found")
 
+from django.contrib.auth.decorators import login_required
+
+@login_required(login_url='user_login')
 def admin_dashboard(request):
     if request.user.is_authenticated:
         if request.user.role == 'VENDOR':
@@ -3540,6 +3544,7 @@ def public_browse_services(request):
     return render(request, 'browse.html', context)
 
     
+@never_cache
 def home_view(request):
     error = None
     if request.method == 'POST':
@@ -3558,7 +3563,7 @@ def home_view(request):
         else:
             error = 'Invalid username, email, phone number, or password.'
 
-    categories = Category.objects.filter(status='active').order_by('name')
+    categories = Category.objects.filter(status='active').prefetch_related('subcategories').order_by('name')
     locations = Location.objects.filter(status='active').order_by('state', 'city')
     recent_bids = Bid.objects.select_related('vendor', 'vendor__vendor_profile', 'job', 'job__location').order_by('-created_at')[:6]
     
