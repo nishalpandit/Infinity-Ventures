@@ -142,7 +142,7 @@
     html += '<aside class="app-sidebar" id="appSidebar">';
     html += '  <div class="sidebar-logo">';
     html += '    <a href="/admin-dashboard" style="display:flex;align-items:center;gap:12px;text-decoration:none;">';
-    html += '      <span class="logo-mark" style="background:transparent;padding:0;display:flex;align-items:center;justify-content:center;"><img src="/static/assets/images/logo.png" alt="Sugu" style="width:32px;height:32px;border-radius:8px;object-fit:contain;" /></span>';
+    html += '      <span class="logo-mark" style="background:transparent;padding:0;display:flex;align-items:center;justify-content:center;"><img src="/static/images/logo.png" alt="Sugu" style="height:36px;width:auto;object-fit:contain;" /></span>';
     html += '      <div><span class="logo-text">Sugu</span>' + stateLabel + '</div>';
     html += '    </a>';
     html += '  </div>';

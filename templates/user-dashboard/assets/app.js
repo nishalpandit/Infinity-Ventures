@@ -59,7 +59,7 @@
       return `<div class="nav-parent ${navActive(k)?'open':''}">${link}<button class="submenu-toggle" type="button" aria-label="Toggle quotation links">${icon('down')}</button></div><div class="nav-submenu"><a href="${route('quick-services/quotations.html')}">Quotations</a><a href="${route('jobs/compare.html')}">Compare Quotations</a></div>`;
     }).join('');
     sidebarRoot.outerHTML = `<aside class="sidebar" id="sidebar" aria-label="user navigation">
-      <a class="brand" href="${route('dashboard.html')}"><span class="brand-mark" style="background:transparent;box-shadow:none;padding:0;display:flex;align-items:center;justify-content:center;"><img src="/static/assets/images/logo.png" alt="Sugu" style="width:30px;height:30px;border-radius:8px;object-fit:contain;"></span><span class="brand-copy"><strong>Sugu</strong><span>User Portal</span></span></a>
+      <a class="brand" href="${route('dashboard.html')}"><span class="brand-mark" style="background:transparent;box-shadow:none;padding:0;display:flex;align-items:center;justify-content:center;"><img src="/static/images/logo.png" alt="Sugu" style="height:36px;width:auto;object-fit:contain;"></span><span class="brand-copy"><strong>Sugu</strong><span>User Portal</span></span></a>
       <nav class="nav-scroll"><div class="nav-label">Workspace</div>${links}<div class="nav-label">Session</div><a class="nav-link" href="${route('dashboard.html')}" data-confirm="logout" data-tooltip="Logout">${icon('logout')}<span class="nav-text">Logout</span></a></nav>
       <div class="sidebar-bottom"><div class="side-user"><span class="avatar sm dyn-avatar"></span><span class="side-user-copy"><strong class="dyn-name"></strong><span>user account</span></span></div></div>
     </aside>`;

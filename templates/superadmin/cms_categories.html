@@ -32,6 +32,9 @@
           <td style="color: var(--text-muted);">{{ cat.created_at|date:"M d, Y" }}</td>
           <td>
             <div style="display: flex; gap: 8px;">
+              <button type="button" onclick="document.getElementById('subcat-{{ cat.id }}').style.display = document.getElementById('subcat-{{ cat.id }}').style.display === 'none' ? 'table-row' : 'none'" class="btn btn-outline btn-sm">
+                <i class="fa-solid fa-eye"></i> View
+              </button>
               <a href="{% url 'super_admin_category_edit' cat.id %}" class="btn btn-outline btn-sm">
                 <i class="fa-solid fa-pen-to-square"></i> Edit
               </a>
@@ -41,58 +44,50 @@
             </div>
           </td>
         </tr>
+        <tr id="subcat-{{ cat.id }}" style="display: none; background: #f8fafc; border-top: 1px dashed #cbd5e1;">
+          <td colspan="5" style="padding: 16px 24px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+              <h4 style="margin: 0; font-size: 14px; font-weight: 600; color: #475569;">Subcategories for {{ cat.name }}</h4>
+              <a href="{% url 'super_admin_subcategory_create' %}" class="btn btn-outline btn-sm" style="padding: 4px 10px; font-size: 12px;"><i class="fa-solid fa-plus"></i> Add New</a>
+            </div>
+            <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px;">
+              {% for subcat in cat.subcategories.all %}
+              <div style="background: white; border: 1px solid #e2e8f0; border-radius: 6px; padding: 10px; display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                  <strong style="font-size: 13px; color: #1e293b;">{{ subcat.name }}</strong>
+                  <div style="font-size: 11px; color: {% if subcat.status == 'active' %}#10b981{% else %}#ef4444{% endif %};">{{ subcat.get_status_display }}</div>
+                </div>
+                <div style="display: flex; gap: 6px;">
+                  <a href="{% url 'super_admin_subcategory_edit' subcat.id %}" style="color: #64748b;"><i class="fa-solid fa-pen-to-square"></i></a>
+                  <a href="{% url 'super_admin_subcategory_delete' subcat.id %}" style="color: #ef4444;" onclick="return confirm('Delete {{ subcat.name }}?');"><i class="fa-solid fa-trash"></i></a>
+                </div>
+              </div>
+              {% empty %}
+              <div style="color: #64748b; font-size: 13px; font-style: italic;">No subcategories found.</div>
+              {% endfor %}
+            </div>
+          </td>
+        </tr>
         {% empty %}
         <tr><td colspan="5" style="text-align: center; padding: 40px; color: var(--text-muted);">No categories found.</td></tr>
         {% endfor %}
       </tbody>
     </table>
   </div>
-</div>
-
-<div style="margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 14px;">
-  <h3 style="font-size: 18px; font-weight: 700; color: var(--text-main); margin: 0;">
-    <i class="fa-solid fa-code-branch" style="color: var(--accent); margin-right: 8px;"></i>SubCategories
-  </h3>
-  <a href="{% url 'super_admin_subcategory_create' %}" class="btn btn-primary">
-    <i class="fa-solid fa-plus"></i> Add SubCategory
-  </a>
-</div>
-
-<div class="card" style="padding: 0; overflow: hidden;">
-  <div class="table-container" style="border: none; border-radius: 0; box-shadow: none;">
-    <table>
-      <thead>
-        <tr>
-          <th>SubCategory Name</th>
-          <th>Parent Category</th>
-          <th>Status</th>
-          <th>Created</th>
-          <th>Actions</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for subcat in subcategories %}
-        <tr>
-          <td><strong>{{ subcat.name }}</strong></td>
-          <td>{{ subcat.category.name }}</td>
-          <td><span class="badge {% if subcat.status == 'active' %}active{% else %}inactive{% endif %}">{{ subcat.get_status_display }}</span></td>
-          <td style="color: var(--text-muted);">{{ subcat.created_at|date:"M d, Y" }}</td>
-          <td>
-            <div style="display: flex; gap: 8px;">
-              <a href="{% url 'super_admin_subcategory_edit' subcat.id %}" class="btn btn-outline btn-sm">
-                <i class="fa-solid fa-pen-to-square"></i> Edit
-              </a>
-              <a href="{% url 'super_admin_subcategory_delete' subcat.id %}" class="btn btn-outline btn-sm" style="border-color: rgba(239,68,68,0.3); color: var(--danger);" onclick="return confirm('Delete subcategory {{ subcat.name }}?');">
-                <i class="fa-solid fa-trash"></i>
-              </a>
-            </div>
-          </td>
-        </tr>
-        {% empty %}
-        <tr><td colspan="5" style="text-align: center; padding: 40px; color: var(--text-muted);">No sub-categories found.</td></tr>
-        {% endfor %}
-      </tbody>
-    </table>
+  
+  {% if categories.has_other_pages %}
+  <div style="padding: 16px; border-top: 1px solid #f1f5f9; display: flex; justify-content: center;">
+    <div style="display: flex; gap: 8px;">
+      {% if categories.has_previous %}
+      <a href="?cat_page={{ categories.previous_page_number }}" class="btn btn-outline btn-sm">Prev</a>
+      {% endif %}
+      <span class="btn btn-outline btn-sm" style="background: #f1f5f9; cursor: default;">Page {{ categories.number }} of {{ categories.paginator.num_pages }}</span>
+      {% if categories.has_next %}
+      <a href="?cat_page={{ categories.next_page_number }}" class="btn btn-outline btn-sm">Next</a>
+      {% endif %}
+    </div>
   </div>
+  {% endif %}
 </div>
+<!-- Subcategory separate section removed as requested -->
 {% endblock %}

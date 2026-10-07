@@ -10,6 +10,8 @@
   <link
     href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Manrope:wght@400;500;600;700;800&display=swap"
     rel="stylesheet">
+  <link rel="icon" type="image/png" href="{% static 'images/logo.png' %}">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
   <style>
     :root {
       --n: #0a1a3c;
@@ -21,12 +23,21 @@
       --w: #fff
     }
 
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    .spin {
+      display: inline-block;
+      animation: spin 0.8s linear infinite;
+    }
+
     * {
       box-sizing: border-box
     }
 
     html {
-      scroll-behavior: smooth
+      scroll-padding-top: 90px;
+      overflow-x: clip;
     }
 
     body {
@@ -34,7 +45,15 @@
       font-family: Manrope, system-ui, sans-serif;
       color: var(--n);
       background: var(--w);
-      line-height: 1.6
+      line-height: 1.6;
+      overflow-x: clip;
+    }
+
+    /* Hardware-accelerated smooth animations */
+    [data-aos] {
+      will-change: transform, opacity;
+      transform: translateZ(0);
+      backface-visibility: hidden;
     }
 
     h1,
@@ -118,10 +137,10 @@
 
     /* hero */
     .hero {
-      background: url('{% static "images/hero.jpg" %}') center/cover;
+      background: url('{% static "images/hero.jpg" %}') center 25% / cover no-repeat;
       color: #fff;
       position: relative;
-      overflow: hidden
+      overflow: hidden;
     }
     .hero::after {
       content: "";
@@ -136,22 +155,31 @@
     }
 
     header {
-      position: relative;
-      z-index: 3
+      position: sticky;
+      top: 0;
+      z-index: 1000;
+      background: whitesmoke;
+      background: rgba(245, 245, 245, 0.96);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+      box-shadow: 0 2px 14px rgba(0, 0, 0, 0.04);
+      color: var(--n);
+      transition: background 0.2s ease, box-shadow 0.2s ease;
     }
 
     .nav {
       display: flex;
       align-items: center;
-      gap: 30px;
-      height: 84px
+      gap: 28px;
+      height: 84px;
     }
 
     .logo {
       font: 800 28px "Bricolage Grotesque";
       display: flex;
       align-items: center;
-      gap: 10px
+      gap: 10px;
     }
 
     .logo i {
@@ -163,21 +191,91 @@
       display: grid;
       place-items: center;
       font-style: normal;
-      font-size: 21px
+      font-size: 21px;
+    }
+
+    .nav-loc {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: #ffffff;
+      color: var(--n);
+      padding: 8px 16px;
+      border-radius: 999px;
+      border: 1px solid rgba(0, 0, 0, 0.08);
+      cursor: pointer;
+      transition: all 0.2s ease;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+    }
+
+    .nav-loc:hover {
+      background: #f0f3fa;
+      border-color: rgba(0, 0, 0, 0.15);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.07);
+    }
+
+    .nav-loc-icon {
+      color: #2563eb;
+      font-size: 15px;
+      display: inline-flex;
+      align-items: center;
+    }
+
+    .nav-loc-text {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--n);
+      max-width: 180px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .nav-loc-arrow {
+      color: var(--mute);
+      font-size: 12px;
+      display: inline-flex;
+      align-items: center;
     }
 
     .nav .sp {
-      flex: 1
+      flex: 1;
     }
 
     .nav a.l {
-      font-size: 14px;
+      font-size: 14.5px;
       font-weight: 600;
-      color: #c3d0ee
+      color: #334155;
+      transition: color 0.2s ease;
     }
 
     .nav a.l:hover {
-      color: #fff
+      color: var(--n);
+    }
+
+    .nav .btn {
+      padding: 10px 22px;
+      font-size: 14px;
+    }
+
+    .nav .btn.w {
+      background: var(--n);
+      color: #fff;
+      box-shadow: 0 2px 8px rgba(10, 26, 60, 0.15);
+    }
+
+    .nav .btn.w:hover {
+      background: var(--n3);
+      color: #fff;
+    }
+
+    .nav .btn.o {
+      color: var(--n);
+      box-shadow: inset 0 0 0 1.5px rgba(10, 26, 60, 0.22);
+    }
+
+    .nav .btn.o:hover {
+      background: rgba(10, 26, 60, 0.06);
     }
 
     .hg {
@@ -185,7 +283,7 @@
       grid-template-columns: 1.15fr .85fr;
       gap: 40px;
       align-items: end;
-      padding: 40px 0 0;
+      padding: 48px 0 0;
       position: relative;
       z-index: 2
     }
@@ -575,6 +673,7 @@
       box-shadow: 0 4px 12px rgba(10, 26, 60, 0.05), inset 0 2px 4px rgba(255, 255, 255, 0.5);
       border: 1px solid #eef2fa;
       font-size: 34px;
+      color: #0a1a3c;
       transition: .3s cubic-bezier(0.4, 0, 0.2, 1);
     }
     .pick:hover span,
@@ -582,7 +681,8 @@
       background: #ffffff;
       box-shadow: 0 8px 24px rgba(10, 26, 60, 0.12), inset 0 2px 4px rgba(255, 255, 255, 0.5);
       transform: translateY(-4px) scale(1.02);
-      border-color: #d1dcf5;
+      border-color: #2563eb;
+      color: #2563eb;
     }
 
     .chips {
@@ -903,12 +1003,53 @@
     input[type=text],
     input[type=tel],
     input[type=number],
+    input[type=date],
     textarea {
       width: 100%;
       border: 0;
       border-radius: 16px;
       padding: 15px 16px;
-      background: var(--t1)
+      background: var(--t1);
+      font-family: inherit;
+      font-size: 15px;
+      color: var(--n);
+      box-sizing: border-box;
+    }
+
+    input[type=date] {
+      cursor: pointer;
+    }
+
+    input[type=date]::-webkit-calendar-picker-indicator {
+      cursor: pointer;
+      font-size: 18px;
+      filter: invert(0.2) sepia(1) saturate(5) hue-rotate(200deg);
+      opacity: 0.85;
+      padding: 2px;
+      border-radius: 4px;
+      transition: opacity 0.2s;
+    }
+
+    input[type=date]::-webkit-calendar-picker-indicator:hover {
+      opacity: 1;
+    }
+
+    .when-chip {
+      background: var(--t1);
+      border: 1px solid #e2e8f0;
+      border-radius: 999px;
+      padding: 4px 11px;
+      font-size: 11.5px;
+      font-weight: 600;
+      color: var(--n);
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .when-chip:hover {
+      background: var(--n);
+      color: #fff;
+      border-color: var(--n);
     }
 
     input:focus,
@@ -1343,7 +1484,7 @@
       display: none;
       place-items: center;
       padding: 16px;
-      z-index: 90;
+      z-index: 9999;
       backdrop-filter: blur(4px)
     }
 
@@ -1387,6 +1528,48 @@
       font-size: 18px
     }
 
+    .loc-chip {
+      background: #f1f5f9;
+      border: 1px solid #e2e8f0;
+      border-radius: 999px;
+      padding: 6px 14px;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--n);
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .loc-chip:hover {
+      background: var(--n);
+      color: #fff;
+      border-color: var(--n);
+    }
+
+    .loc-result-item {
+      padding: 10px 12px;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background 0.15s ease;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .loc-result-item:hover {
+      background: #f1f5f9;
+    }
+
+    @keyframes spin {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+
+    .spin-anim {
+      display: inline-block;
+      animation: spin 1s linear infinite;
+    }
+
     .slots {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
@@ -1423,6 +1606,35 @@
 
     .toast.show {
       display: block
+    }
+
+    .vendor-ask-card {
+      border: 1.5px solid #cbd5e1;
+      border-radius: 16px;
+      padding: 16px;
+      margin-bottom: 12px;
+      background: #ffffff;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      text-decoration: none;
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+      box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+      box-sizing: border-box;
+    }
+    .vendor-ask-card:hover {
+      border-color: #2563eb;
+      transform: translateY(-2px);
+      box-shadow: 0 10px 24px -6px rgba(37, 99, 235, 0.16) !important;
+    }
+    .vendor-ask-card.highlight {
+      border-color: #93c5fd;
+      background: #f0f7ff;
+    }
+    .vendor-ask-card.highlight:hover {
+      border-color: #2563eb;
+      background: #e0f2fe;
     }
 
     @media(max-width:980px) {
@@ -1489,8 +1701,31 @@
     }
 
     @media(max-width:640px) {
+      .nav {
+        gap: 12px;
+        height: 68px;
+      }
+
+      .logo img {
+        height: 40px !important;
+      }
+
+      .nav-loc {
+        padding: 6px 10px;
+      }
+
+      .nav-loc-text {
+        max-width: 100px;
+        font-size: 13px;
+      }
+
       .nav a.l {
-        display: none
+        display: none;
+      }
+
+      .nav .btn {
+        padding: 8px 14px;
+        font-size: 13px;
       }
 
       .arch {
@@ -1549,52 +1784,65 @@
     }
   </style>
   <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 </head>
 
 <body>
+  <header>
+    <nav class="wrap nav">
+      <a class="logo" href="/"><img src="{% static 'images/logo.png' %}" alt="sugu logo" style="height: 52px; width: auto; object-fit: contain;"></a>
+      
+      <div class="nav-loc" onclick="openLocationModal()">
+        <span class="nav-loc-icon"><i class="bi bi-geo-alt-fill"></i></span>
+        <span class="nav-loc-text" id="navLocText">Set location</span>
+        <span class="nav-loc-arrow"><i class="bi bi-chevron-down"></i></span>
+      </div>
+
+      <span class="sp"></span>
+      <a class="l" href="#quick">Quick services</a><a class="l" href="#project">Post a requirement</a><a class="l"
+        href="#faq">Help</a>
+      {% if user.is_authenticated %}
+      <a class="l"
+        href="{% if user.role == 'VENDOR' %}/vendor/dashboard{% elif user.role == 'ADMIN' %}/admin-dashboard{% else %}/user/dashboard{% endif %}">Dashboard</a>
+      <a class="btn o" href="/logout/">Log out</a>
+      {% else %}
+      <a class="l" href="/login/">Log in</a><a class="btn w" href="/register/vendor/">Become a vendor</a>
+      {% endif %}
+    </nav>
+  </header>
   <div class="hero">
-    <header>
-      <nav class="wrap nav">
-        <a class="logo" href="/"><i>→</i>sugu</a><span class="sp"></span>
-        <a class="l" href="#quick">Quick services</a><a class="l" href="#project">Post a requirement</a><a class="l"
-          href="#faq">Help</a>
-        {% if user.is_authenticated %}
-        <a class="l"
-          href="{% if user.role == 'VENDOR' %}/vendor/dashboard{% elif user.role == 'ADMIN' %}/admin-dashboard{% else %}/user/dashboard{% endif %}">Dashboard</a>
-        <a class="btn o" href="/logout/">Log out</a>
-        {% else %}
-        <a class="l" href="/login/">Log in</a><a class="btn w" href="/register/vendor/">Become a vendor</a>
-        {% endif %}
-      </nav>
-    </header>
     <div class="wrap hg">
       <div>
         <h1>Your home, <span>handled.</span></h1>
         <p class="lead">Book a haircut, massage or repair at your door in minutes. Planning a renovation? Post your
           budget and let trusted vendors come to you.</p>
         <div class="sbar"><input id="hs" placeholder="Search haircut, massage, AC repair"
-            aria-label="Search services"><span class="loc">📍 Ranchi</span><button class="btn"
+            aria-label="Search services"><span class="loc"><i class="bi bi-geo-alt-fill"></i> Ranchi</span><button class="btn"
             onclick="heroSearch()">Search</button></div>
-        <div class="tags"><span>Popular:</span><button onclick="quickTag('hair')">Haircut</button><button
-            onclick="quickTag('massage')">Massage</button><button onclick="quickTag('clean')">Deep
-            cleaning</button><button onclick="pickCat('Home Renovation')">Renovation</button></div>
+        <div class="tags">
+          <span>Popular:</span>
+          {% for cat in categories|slice:":4" %}
+          <button onclick="document.getElementById('quick').scrollIntoView({behavior: 'smooth'}); filterCategory('{{ cat.name|escapejs }}')">{{ cat.name }}</button>
+          {% endfor %}
+        </div>
       </div>
       <div class="stage" aria-hidden="true">
         <div class="arch">
           <div class="phone">
             <h4>Book a service</h4>
-            <div class="pl on"><span>💇</span>Haircut + beard<em>₹349</em></div>
-            <div class="pl"><span>💆</span>Head massage<em>₹299</em></div>
-            <div class="pl"><span>🪒</span>Clean shave<em>₹149</em></div>
-            <div class="pmap">📍 Your location</div>
+            {% for cat in categories|slice:":3" %}
+            <div class="pl {% if forloop.first %}on{% endif %}"><span><i class="bi {{ cat.icon_class }}"></i></span>{{ cat.name }}</div>
+            {% endfor %}
+            <div class="pmap"><i class="bi bi-geo-alt-fill"></i> Your location</div>
             <div class="pbtn">Confirm booking</div>
           </div>
         </div>
-        <div class="fl f1"><span class="dot">✓</span>
+        <div class="fl f1"><span class="dot"><i class="bi bi-check-lg"></i></span>
           <div>Vendor verified<small>Amit K. ★ 4.9</small></div>
         </div>
-        <div class="fl f2"><span class="dot">₹</span>
-          <div>3 offers received<small>2 BHK renovation</small></div>
+        <div class="fl f2"><span class="dot"><i class="bi bi-currency-rupee"></i></span>
+          <div>3 offers received<small>Local Vendors</small></div>
         </div>
       </div>
     </div>
@@ -1602,12 +1850,8 @@
 
   <div class="mq" aria-hidden="true">
     <div>
-      <span>Haircut</span><span>✦</span><span>Massage</span><span>✦</span><span>Deep
-        cleaning</span><span>✦</span><span>Electrician</span><span>✦</span><span>Painting</span><span>✦</span><span>Pest
-        control</span><span>✦</span><span>Home renovation</span><span>✦</span><span>AC repair</span><span>✦</span>
-      <span>Haircut</span><span>✦</span><span>Massage</span><span>✦</span><span>Deep
-        cleaning</span><span>✦</span><span>Electrician</span><span>✦</span><span>Painting</span><span>✦</span><span>Pest
-        control</span><span>✦</span><span>Home renovation</span><span>✦</span><span>AC repair</span><span>✦</span>
+      {% for cat in categories %}<span>{{ cat.name }}</span><span>✦</span>{% endfor %}
+      {% for cat in categories %}<span>{{ cat.name }}</span><span>✦</span>{% endfor %}
     </div>
   </div>
 
@@ -1618,13 +1862,10 @@
         <p>Quick services with fixed prices. Pick a vendor, share your location, and they come to you.</p>
       </div>
       <ul>
-        <li>Haircut</li>
-        <li>Shaving</li>
-        <li>Massage</li>
-        <li>Facial</li>
-        <li>Cleaning</li>
-        <li>Repairs</li>
-      </ul><a class="btn" href="#quick" style="align-self:flex-start">Book a quick service</a>
+        {% for cat in categories|slice:":6" %}
+        <li>{{ cat.name }}</li>
+        {% endfor %}
+      </ul><a class="btn" href="#quick" style="align-self:flex-start">Book a service</a>
     </div>
     <div class="way b" data-aos="fade-left">
       <div>
@@ -1632,18 +1873,16 @@
         <p>Post your requirement with a budget. Vendors near you send offers and you choose the best one.</p>
       </div>
       <ul>
-        <li>1 / 2 / 3 BHK renovation</li>
-        <li>Villa work</li>
-        <li>Painting</li>
-        <li>Electrical</li>
-        <li>Pest control</li>
+        {% for cat in categories|slice:"-5:" %}
+        <li>{{ cat.name }}</li>
+        {% endfor %}
       </ul><a class="btn w" href="#project" style="align-self:flex-start">Post a requirement</a>
     </div>
   </div>
 
-  <section class="blk" data-aos="fade-up" id="quick">
+  <section class="blk" id="quick">
     <div class="wrap">
-      <div class="head" style="display:flex; justify-content:space-between; align-items:flex-end;">
+      <div class="head" data-aos="fade-up" style="display:flex; justify-content:space-between; align-items:flex-end;">
         <div>
           <h2>Book a quick service</h2>
           <p>Fixed prices, verified vendors, and a slot that suits you. Choose below.</p>
@@ -1654,37 +1893,73 @@
         <a class="btn s" href="/login/">View all</a>
         {% endif %}
       </div>
-      <div class="picks" id="picks">
-        <button class="pick" data-q="hair"><span>💇</span>Haircut</button><button class="pick"
-          data-q="shav"><span>🪒</span>Shaving</button>
-        <button class="pick" data-q="massage"><span>💆</span>Massage</button><button class="pick"
-          data-q="facial"><span>🧖</span>Facial</button>
-        <button class="pick" data-q="repair"><span>🛠️</span>Repairs</button><button class="pick"
-          data-q="clean"><span>🧽</span>Cleaning</button>
+      <div class="picks" id="picks" data-aos="fade-up">
+        {% for cat in categories %}
+        <a class="pick" href="/services/browse?category={{ cat.id }}" title="{{ cat.name }}">
+          <span>
+            {% if cat.icon %}
+              <img src="{{ cat.icon.url }}" alt="{{ cat.name }}" style="width:36px; height:36px; object-fit:contain;" />
+            {% else %}
+              <i class="bi {{ cat.icon_class }}"></i>
+            {% endif %}
+          </span>
+          {{ cat.name }}
+        </a>
+        {% empty %}
+        <div class="empty">No categories available.</div>
+        {% endfor %}
       </div>
-      <div class="chips" id="chips"><button class="chip on" data-f="All">All</button>{% for cat in categories %}<button
-          class="chip" data-f="{{ cat.name }}">{{ cat.name }}</button>{% endfor %}</div>
-      <div class="tiles" id="grid">
+
+      <div class="tiles" id="grid" style="margin-top: 40px;">
         {% for service in landing_services|default:top_services %}
-        <article class="svc" data-aos="zoom-in" data-aos-delay="100" data-cat="{{ service.category.name|default:'' }}">
-          <div class="img" {% if service.image %}style="background: url('{{ service.image.url }}') center/cover no-repeat, linear-gradient(135deg, var(--n2), var(--n3));" {% elif service.image_url %}style="background: url('{{ service.image_url }}') center/cover no-repeat, linear-gradient(135deg, var(--n2), var(--n3));" {% endif %}>{% if not service.image and not service.image_url %}✂️{% endif %}<span class="rt">★</span></div>
-          <h3>{{ service.title }}</h3><small>{{ service.duration|default:"45 min" }} · at your home</small>
-          <div class="row"><span><b>₹{{ service.base_price|floatformat:"0" }}</b> <small>onwards</small></span><button
-              class="btn" onclick="openBook('{{ service.title|escapejs }}','₹{{ service.base_price|floatformat:"0" }}')">Book</button></div>
+        <article class="svc" data-aos="zoom-in" data-aos-delay="100" data-cat="{{ service.category.name|default:'' }}" data-lat="{{ service.latitude|default:'' }}" data-lon="{{ service.longitude|default:'' }}" data-radius="{{ service.service_radius_km|default:15 }}">
+          <div class="img" {% if service.image %}style="background: url('{{ service.image.url }}') center/cover no-repeat, linear-gradient(135deg, var(--n2), var(--n3));" {% elif service.image_url %}style="background: url('{{ service.image_url }}') center/cover no-repeat, linear-gradient(135deg, var(--n2), var(--n3));" {% endif %}>{% if not service.image and not service.image_url %}<i class="bi bi-image" style="font-size:24px; opacity:0.5;"></i>{% endif %}<span class="rt">★ 4.8</span></div>
+          <h3>{{ service.title }}</h3>
+          <small><i class="bi bi-shield-check" style="color:#10b981;"></i> Sugu Verified Partner</small>
+          <div class="row">
+            <span><b>₹{{ service.base_price|floatformat:"0" }}</b> <small>onwards</small></span>
+            <a class="btn" href="/services/browse?category={{ service.category.id|default:'' }}#service-{{ service.id }}">View</a>
+          </div>
         </article>
-        {% empty %}<div class="empty">No services listed yet. Check back soon, or post a requirement below.</div>{% endfor %}
+        {% empty %}
+        <div class="empty">No services listed yet. Check back soon.</div>
+        {% endfor %}
       </div>
+      
+      <script>
+        function filterCategory(catName) {
+          const svcs = document.querySelectorAll('.svc');
+          let count = 0;
+          svcs.forEach(s => {
+            if (!catName || s.getAttribute('data-cat') === catName) {
+              s.style.display = 'block';
+              count++;
+            } else {
+              s.style.display = 'none';
+            }
+          });
+          const emptyMsg = document.querySelector('#grid .empty') || document.createElement('div');
+          if (count === 0) {
+            emptyMsg.className = 'empty';
+            emptyMsg.textContent = 'No services found for ' + catName;
+            if (!document.querySelector('#grid .empty')) document.getElementById('grid').appendChild(emptyMsg);
+            emptyMsg.style.display = 'block';
+          } else {
+            emptyMsg.style.display = 'none';
+          }
+        }
+      </script>
     </div>
   </section>
 
   <section class="blk dark" id="project">
     <div class="wrap">
-      <div class="head">
+      <div class="head" data-aos="fade-up">
         <h2>Big job? Tell us what you need.</h2>
         <p>Pick a category to begin. Four steps: category, type of work, budget, location.</p>
       </div>
-      <div class="idx" id="idx"></div>
-      <div class="wiz" id="wiz">
+      <div class="idx" id="idx" data-aos="fade-up"></div>
+      <div class="wiz" id="wiz" data-aos="fade-up">
         <aside class="side">
           <h3>Your project</h3>
           <p>Takes about a minute. Vendors reply with offers.</p>
@@ -1716,14 +1991,40 @@
           <div class="pane" data-p="3">
             <h3>Where is the work?</h3>
             <p class="sub">Vendors near this address will be notified.</p>
-            <div class="field"><label for="addr">Address</label><textarea id="addr" rows="2"
-                placeholder="House no, street, area, city"></textarea><button class="loc2" type="button"
-                onclick="useLoc('addr')">Use my current location</button></div>
+            <div class="field">
+              <label for="addr">Address</label>
+              <textarea id="addr" rows="2" placeholder="House no, street, area, city"></textarea>
+              <input type="hidden" id="job_lat" name="latitude">
+              <input type="hidden" id="job_lon" name="longitude">
+              
+              <div style="display: flex; align-items: center; justify-content: space-between; margin-top: 6px; flex-wrap: wrap; gap: 8px;">
+                <button class="loc2" type="button" onclick="useLoc('addr')" id="btnUseLoc" style="display: inline-flex; align-items: center; gap: 6px; cursor: pointer;">
+                  <i class="bi bi-crosshair" id="locCrosshairIcon"></i> Use my current location
+                </button>
+                <div id="locGpsPill" style="display: none; align-items: center; gap: 6px; font-size: 11.5px; background: #eff6ff; border: 1.5px solid #bfdbfe; padding: 4px 11px; border-radius: 999px; color: #1e40af;">
+                  <span style="width: 7px; height: 7px; border-radius: 50%; background: #22c55e; display: inline-block;"></span>
+                  <span id="locGpsText">Lat: 23.3555, Lon: 85.3609</span>
+                  <a id="locGpsMapsLink" href="#" target="_blank" rel="noopener noreferrer" style="color: #2563eb; font-weight: 700; text-decoration: underline; margin-left: 4px; display: inline-flex; align-items: center; gap: 3px;">
+                    <i class="bi bi-geo-alt-fill"></i> Google Maps ↗
+                  </a>
+                </div>
+              </div>
+            </div>
             <div class="two">
               <div class="field"><label for="ph">Mobile number</label><input type="tel" id="ph"
                   placeholder="10-digit number"></div>
-              <div class="field"><label for="when">When to start</label><input type="text" id="when"
-                  placeholder="e.g. Next month"></div>
+              <div class="field">
+                <label for="when" style="display: flex; justify-content: space-between; align-items: center;">
+                  <span>When to start</span>
+                  <span style="font-size: 11.5px; font-weight: 600; color: #2563eb;"><i class="bi bi-calendar3"></i> Pick date</span>
+                </label>
+                <input type="date" id="when" onclick="if(this.showPicker) this.showPicker()" style="cursor: pointer;">
+                <div class="when-chips" style="display: flex; gap: 6px; margin-top: 6px; flex-wrap: wrap;">
+                  <button type="button" class="when-chip" onclick="setWhenDate(0)">Today</button>
+                  <button type="button" class="when-chip" onclick="setWhenDate(1)">Tomorrow</button>
+                  <button type="button" class="when-chip" onclick="setWhenDate(7)">Next week</button>
+                </div>
+              </div>
             </div>
             <div class="sum" id="sum"></div>
           </div>
@@ -1734,46 +2035,46 @@
     </div>
   </section>
 
-  <section class="blk" data-aos="fade-up">
+  <section class="blk">
     <div class="wrap">
-      <div class="head">
+      <div class="head" data-aos="fade-up">
         <h2>How Sugu works</h2>
         <p>Two simple ways to get things done at home.</p>
       </div>
       <div class="tog" id="tog"><button class="on" data-t="f1">Quick service</button><button data-t="f2">Post a
           requirement</button></div>
       <div class="flow on" id="f1">
-        <div class="fs"><b>1</b>
+        <div class="fs" data-aos="fade-up"><b>1</b>
           <h3>Choose a service</h3>
           <p>Browse haircuts, massage, cleaning and more.</p>
         </div>
-        <div class="fs"><b>2</b>
+        <div class="fs" data-aos="fade-up" data-aos-delay="50"><b>2</b>
           <h3>Pick a vendor and slot</h3>
           <p>See ratings and prices, then choose a time.</p>
         </div>
-        <div class="fs"><b>3</b>
+        <div class="fs" data-aos="fade-up" data-aos-delay="100"><b>3</b>
           <h3>Share your location</h3>
           <p>Type your address or pin it on the map.</p>
         </div>
-        <div class="fs"><b>4</b>
+        <div class="fs" data-aos="fade-up" data-aos-delay="150"><b>4</b>
           <h3>Relax at home</h3>
           <p>Your vendor arrives. Pay after the service.</p>
         </div>
       </div>
       <div class="flow" id="f2">
-        <div class="fs"><b>1</b>
+        <div class="fs" data-aos="fade-up"><b>1</b>
           <h3>Select category</h3>
           <p>Renovation, painting, electrical and more.</p>
         </div>
-        <div class="fs"><b>2</b>
+        <div class="fs" data-aos="fade-up" data-aos-delay="50"><b>2</b>
           <h3>Choose type of work</h3>
           <p>1 BHK, 2 BHK, 3 BHK or a villa.</p>
         </div>
-        <div class="fs"><b>3</b>
+        <div class="fs" data-aos="fade-up" data-aos-delay="100"><b>3</b>
           <h3>Set budget and location</h3>
           <p>Tell vendors what you can spend and where.</p>
         </div>
-        <div class="fs"><b>4</b>
+        <div class="fs" data-aos="fade-up" data-aos-delay="150"><b>4</b>
           <h3>Compare offers</h3>
           <p>Pick the vendor that suits you best.</p>
         </div>
@@ -1783,25 +2084,25 @@
 
   <section class="blk dark">
     <div class="wrap split">
-      <div>
+      <div data-aos="fade-right">
         <h2>Every vendor is checked before they reach you.</h2>
         <p>We verify identity and skills, and keep rating every job, so you always know who is at your door.</p>
         <ul class="chk">
-          <li><i>→</i>
+          <li><i><i class="bi bi-arrow-right"></i></i>
             <div><b>ID and address verified</b><span>Government ID checked for every vendor.</span></div>
           </li>
-          <li><i>→</i>
+          <li><i><i class="bi bi-arrow-right"></i></i>
             <div><b>Skills assessed</b><span>Vendors are reviewed for the work they offer.</span></div>
           </li>
-          <li><i>→</i>
+          <li><i><i class="bi bi-arrow-right"></i></i>
             <div><b>Real ratings</b><span>Only customers who booked can leave a review.</span></div>
           </li>
-          <li><i>→</i>
+          <li><i><i class="bi bi-arrow-right"></i></i>
             <div><b>Support when you need it</b><span>Something wrong? Our team helps you sort it out.</span></div>
           </li>
         </ul>
       </div>
-      <div class="seal" aria-hidden="true"><svg viewBox="0 0 100 120" fill="none">
+      <div class="seal" aria-hidden="true" data-aos="fade-left"><svg viewBox="0 0 100 120" fill="none">
           <path d="M50 6 12 20v34c0 28 16 48 38 60 22-12 38-32 38-60V20L50 6Z" fill="#fff" />
           <path d="m32 58 13 13 24-26" stroke="#0a1a3c" stroke-width="9" stroke-linecap="round"
             stroke-linejoin="round" />
@@ -1816,9 +2117,9 @@
     </div>
   </section>
 
-  <section class="blk" data-aos="fade-up">
+  <section class="blk">
     <div class="wrap">
-      <div class="stats">
+      <div class="stats" data-aos="fade-up">
         <div><b>50K+</b><span>Services booked</span></div>
         <div><b>1,200+</b><span>Verified vendors</span></div>
         <div><b>4.8★</b><span>Average rating</span></div>
@@ -1832,6 +2133,63 @@
       <div class="head" data-aos="fade-down">
         <h2>People who already sorted it.</h2>
       </div>
+      {% if cms_testimonials %}
+      <div class="qs">
+        {% with feat=cms_testimonials|first %}
+        <div class="q" data-aos="fade-right">
+          <div style="color: #ffb400; font-size: 24px; margin-bottom: 16px; letter-spacing: 2px;">
+            {% if feat.rating >= 5 %}★ ★ ★ ★ ★
+            {% elif feat.rating >= 4.5 %}★ ★ ★ ★ ½
+            {% elif feat.rating >= 4 %}★ ★ ★ ★ ☆
+            {% elif feat.rating >= 3 %}★ ★ ★ ☆ ☆
+            {% else %}★ ★ ★ ★ ★{% endif %}
+          </div>
+          <big>"{{ feat.review_text }}"</big>
+          <div class="w">
+            {% if feat.avatar %}
+            <img class="av" src="{{ feat.avatar.url }}" alt="{{ feat.client_name }}" style="object-fit: cover; border: 2px solid #fff;">
+            {% else %}
+            <div class="av" style="border: 2px solid #fff; background: linear-gradient(135deg, #2563eb, #1e3a8a); color: #fff; font-weight: 800; font-size: 15px; display: grid; place-items: center; border-radius: 50%;">
+              {{ feat.client_name|slice:":2"|upper }}
+            </div>
+            {% endif %}
+            <div>
+              {{ feat.client_name }}
+              <small>{{ feat.service_taken|default:feat.client_role_or_company }}</small>
+            </div>
+          </div>
+        </div>
+        {% endwith %}
+
+        <div class="qr" data-aos="fade-left" data-aos-delay="200">
+          {% for item in cms_testimonials|slice:"1:5" %}
+          <div class="q">
+            <div style="color: #ffb400; font-size: 18px; margin-bottom: 8px; letter-spacing: 2px;">
+              {% if item.rating >= 5 %}★ ★ ★ ★ ★
+              {% elif item.rating >= 4.5 %}★ ★ ★ ★ ½
+              {% elif item.rating >= 4 %}★ ★ ★ ★ ☆
+              {% elif item.rating >= 3 %}★ ★ ★ ☆ ☆
+              {% else %}★ ★ ★ ★ ★{% endif %}
+            </div>
+            <p>"{{ item.review_text }}"</p>
+            <div class="w">
+              {% if item.avatar %}
+              <img class="av" src="{{ item.avatar.url }}" alt="{{ item.client_name }}" style="object-fit: cover; border: 2px solid #fff;">
+              {% else %}
+              <div class="av" style="border: 2px solid #fff; background: linear-gradient(135deg, #2563eb, #1e3a8a); color: #fff; font-weight: 800; font-size: 14px; display: grid; place-items: center; border-radius: 50%;">
+                {{ item.client_name|slice:":2"|upper }}
+              </div>
+              {% endif %}
+              <div>
+                {{ item.client_name }}
+                <small>{{ item.service_taken|default:item.client_role_or_company }}</small>
+              </div>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+      {% else %}
       <div class="qs">
         <div class="q" data-aos="fade-right">
           <div style="color: #ffb400; font-size: 24px; margin-bottom: 16px; letter-spacing: 2px;">★ ★ ★ ★ ★</div>
@@ -1861,16 +2219,17 @@
           </div>
         </div>
       </div>
+      {% endif %}
     </div>
   </section>
 
-  <section class="blk" data-aos="fade-up">
+  <section class="blk">
     <div class="wrap">
-      <div class="head">
+      <div class="head" data-aos="fade-up">
         <h2>Now serving your state.</h2>
         <p>We are constantly expanding our footprint. Not listed? Post a requirement and tell us where you are.</p>
       </div>
-      <div class="city">
+      <div class="city" data-aos="fade-up">
         {% regroup locations by state as state_list %}
         {% for s in state_list %}
         <span>{{ s.grouper }}</span>
@@ -1881,10 +2240,10 @@
 
   <section class="blk tint" id="faq">
     <div class="wrap">
-      <div class="head">
+      <div class="head" data-aos="fade-up">
         <h2>Questions, answered.</h2>
       </div>
-      <div class="faq">
+      <div class="faq" data-aos="fade-up">
         <details>
           <summary>How do I book a quick service?</summary>
           <p>Choose a service, pick a time slot, share your location and confirm. Your vendor arrives at the slot you
@@ -1912,9 +2271,9 @@
     </div>
   </section>
 
-  <section class="blk" data-aos="fade-up">
+  <section class="blk">
     <div class="wrap">
-      <div class="cta">
+      <div class="cta" data-aos="fade-up">
         <div>
           <h2>Own a service business? Grow with Sugu.</h2>
           <p>Take quick bookings, bid on projects near you and build your ratings.</p>
@@ -1926,7 +2285,7 @@
   <footer>
     <div class="wrap">
       <div class="fg">
-        <div><a class="logo" href="/" style="color:#fff"><i>→</i>sugu</a>
+        <div><a class="logo" href="/"><img src="{% static 'images/logo.png' %}" alt="sugu logo" style="height: 64px; width: auto; object-fit: contain;"></a>
           <p style="max-width:300px;margin-top:14px">Home services, sorted. Quick bookings and big projects, all in one
             place.</p>
         </div>
@@ -1969,12 +2328,550 @@
       <button class="btn" style="width:100%" onclick="confirmBook()">Confirm booking</button>
     </div>
   </div>
+
+  <!-- Location Modal with Interactive Map -->
+  <div class="modal" id="locModal">
+    <div class="card" style="width: min(500px, 95vw); max-height: 92vh; padding: 22px; border-radius: 20px; display: flex; flex-direction: column;">
+      <div class="top" style="margin-bottom: 12px; align-items: center;">
+        <div>
+          <h3 style="font-size: 20px; font-weight: 800; margin: 0;">Select your location</h3>
+          <p style="font-size: 12px; color: var(--mute); margin: 2px 0 0;">Drag pin on map or search for your exact building</p>
+        </div>
+        <button class="x" onclick="shut('locModal')" aria-label="Close">×</button>
+      </div>
+
+      <!-- Real-time Location Search Input -->
+      <div class="search-box" style="margin-bottom: 8px; position: relative;">
+        <i class="bi bi-search" style="position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--mute);"></i>
+        <input type="text" class="input" id="locSearch" placeholder="Search society, colony, street or landmark..." style="width: 100%; border-radius: 12px; border: 1.5px solid #e2e8f0; padding: 11px 14px 11px 38px; outline: none; box-sizing: border-box; font-size: 14px;" oninput="onSearchLocation(this.value)">
+      </div>
+      <div id="locSearchResults" style="display: none; max-height: 180px; overflow-y: auto; margin-bottom: 10px; border: 1px solid #e2e8f0; border-radius: 12px; padding: 4px; background: #fff; z-index: 10;"></div>
+      
+      <!-- Interactive Leaflet Map Picker -->
+      <div style="position: relative; width: 100%; height: 220px; border-radius: 14px; overflow: hidden; border: 1.5px solid #cbd5e1; box-shadow: inset 0 2px 4px rgba(0,0,0,0.06);">
+        <div id="liveMapPicker" style="width: 100%; height: 100%;"></div>
+        <div style="position: absolute; top: 10px; left: 50%; transform: translateX(-50%); z-index: 999; background: rgba(15, 23, 42, 0.85); color: #fff; padding: 4px 14px; border-radius: 20px; font-size: 11px; font-weight: 700; pointer-events: none; backdrop-filter: blur(4px); box-shadow: 0 2px 8px rgba(0,0,0,0.25); white-space: nowrap;">
+          📍 Tap map or drag pin to exact building
+        </div>
+        <!-- Locate Me Map Button -->
+        <button type="button" onclick="fetchLiveLocation()" title="Detect device GPS" style="position: absolute; bottom: 12px; right: 12px; z-index: 999; width: 38px; height: 38px; border-radius: 10px; background: #fff; border: 1.5px solid #cbd5e1; box-shadow: 0 4px 12px rgba(0,0,0,0.15); display: flex; align-items: center; justify-content: center; cursor: pointer; color: #2563eb; font-size: 18px;">
+          <i class="bi bi-crosshair" id="mapLocateIcon"></i>
+        </button>
+      </div>
+
+      <!-- Insecure Origin GPS Notice (Shown only if browser blocks GPS on HTTP IP) -->
+      <div id="gpsInsecureNotice" style="display: none; margin-top: 10px; padding: 9px 12px; background: #fffbeb; border: 1px solid #fde68a; border-radius: 10px; font-size: 11.5px; color: #92400e; line-height: 1.4;">
+        <i class="bi bi-info-circle-fill" style="margin-right: 4px;"></i> <b>Device GPS tip:</b> Chrome blocks automatic GPS on local IP (<code>192.168.x.x</code>). Open via <b>http://localhost:8000</b> to auto-detect, or tap your exact building on the map above.
+      </div>
+
+      <!-- Selected Live Pin Address Card -->
+      <div id="pinSelectedCard" style="margin-top: 10px; background: #f8fafc; border: 1.5px solid #22c55e; border-radius: 12px; padding: 10px 14px;">
+        <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
+          <div style="flex: 1; min-width: 0;">
+            <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 2px;">
+              <span style="width: 7px; height: 7px; border-radius: 50%; background: #22c55e; display: inline-block;"></span>
+              <span style="font-size: 10px; font-weight: 800; color: #15803d; text-transform: uppercase; letter-spacing: 0.5px;">Pinned Exact Location</span>
+            </div>
+            <div id="pinPrimaryText" style="font-size: 13.5px; font-weight: 800; color: var(--n); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Loading location...</div>
+            <div id="pinSecondaryText" style="font-size: 11px; color: var(--mute); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Tap map or drag pin to adjust</div>
+          </div>
+          <button type="button" class="btn" style="padding: 9px 16px; font-size: 13px; background: #16a34a; color: #fff; font-weight: 700; flex-shrink: 0;" onclick="confirmMapPinLocation()">
+            Confirm &amp; Use
+          </button>
+        </div>
+      </div>
+
+      <!-- Popular Localities Quick Select -->
+      <div style="margin-top: 12px;">
+        <div style="font-size: 11px; font-weight: 700; color: var(--mute); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px;">Quick Jump</div>
+        <div style="display: flex; flex-wrap: wrap; gap: 6px;">
+          <button type="button" class="loc-chip" onclick="jumpToMapLoc(23.3555, 85.3609, 'RIADA Road, Namkum')">Namkum</button>
+          <button type="button" class="loc-chip" onclick="jumpToMapLoc(23.3697, 85.3346, 'Lalpur, Ranchi')">Lalpur</button>
+          <button type="button" class="loc-chip" onclick="jumpToMapLoc(23.3550, 85.3050, 'Harmu Colony, Ranchi')">Harmu</button>
+          <button type="button" class="loc-chip" onclick="jumpToMapLoc(23.3340, 85.3218, 'Doranda, Ranchi')">Doranda</button>
+          <button type="button" class="loc-chip" onclick="jumpToMapLoc(23.3850, 85.3250, 'Morabadi, Ranchi')">Morabadi</button>
+          <button type="button" class="loc-chip" onclick="jumpToMapLoc(23.3950, 85.3500, 'Bariatu, Ranchi')">Bariatu</button>
+          <button type="button" class="loc-chip" onclick="jumpToMapLoc(23.3380, 85.3120, 'Ashok Nagar, Ranchi')">Ashok Nagar</button>
+          <button type="button" class="loc-chip" onclick="jumpToMapLoc(23.3712, 85.3524, 'Kokar, Ranchi')">Kokar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Vendor Requirement Action Modal -->
+  <div class="modal" id="vendorAskModal">
+    <div class="card" style="width: min(480px, 94vw); max-height: 92vh; padding: 26px 24px; border-radius: 24px; display: flex; flex-direction: column; position: relative; box-shadow: 0 25px 50px -12px rgba(10, 26, 60, 0.25);">
+      <div style="display: flex; justify-content: flex-end; margin-bottom: 2px;">
+        <button class="x" onclick="shut('vendorAskModal')" aria-label="Close" style="cursor: pointer; border: 0; background: var(--t1); width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 18px;">&times;</button>
+      </div>
+
+      <div style="text-align: center; margin-bottom: 18px;">
+        <div style="width: 58px; height: 58px; border-radius: 18px; background: linear-gradient(135deg, #eff6ff, #dbeafe); color: #2563eb; display: inline-flex; align-items: center; justify-content: center; font-size: 26px; box-shadow: 0 8px 16px -4px rgba(37, 99, 235, 0.2); margin-bottom: 12px;">
+          <i class="bi bi-patch-check-fill"></i>
+        </div>
+        <h3 style="font-size: 22px; font-weight: 800; color: #0a1a3c; margin: 0 0 6px;">Requirement Submitted!</h3>
+        <p style="font-size: 13.5px; color: var(--mute); margin: 0; line-height: 1.45;">
+          Your project details are saved. Are you an existing partner or joining us today?
+        </p>
+      </div>
+
+      <!-- Quick Requirement Summary Preview -->
+      <div style="background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 14px; padding: 12px 16px; margin-bottom: 18px;">
+        <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 4px;">
+          <span style="font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; color: #64748b;">Project Summary</span>
+          <span id="askReqBudget" style="font-size: 14px; font-weight: 800; color: #16a34a;">₹0</span>
+        </div>
+        <div id="askReqCat" style="font-size: 14px; font-weight: 700; color: #0f172a; margin-bottom: 2px;">Category</div>
+        <div id="askReqAddr" style="font-size: 12px; color: #64748b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Address</div>
+        <div id="askReqGpsRow" style="display: flex; align-items: center; justify-content: space-between; margin-top: 6px; font-size: 11.5px; border-top: 1px dashed #e2e8f0; padding-top: 4px;">
+          <span style="color: #15803d; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;"><span style="width: 6px; height: 6px; border-radius: 50%; background: #22c55e;"></span> GPS Attached: <span id="askReqCoords">23.3555, 85.3609</span></span>
+          <a id="askReqMapsLink" href="#" target="_blank" rel="noopener noreferrer" style="color: #2563eb; font-weight: 700; text-decoration: underline;">Open Google Maps ↗</a>
+        </div>
+      </div>
+
+      <!-- Action Choice 1: Already a vendor? Login -->
+      <a id="askLoginLink" href="/login/" class="vendor-ask-card">
+        <div style="display: flex; align-items: center; gap: 12px; min-width: 0;">
+          <div style="width: 44px; height: 44px; border-radius: 12px; background: #e0e7ff; color: #4338ca; display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0;">
+            <i class="bi bi-box-arrow-in-right"></i>
+          </div>
+          <div style="min-width: 0;">
+            <div style="font-size: 15px; font-weight: 800; color: #0a1a3c;">Already a vendor?</div>
+            <div style="font-size: 12px; color: #64748b; line-height: 1.3;">Sign in to view bids and leads</div>
+          </div>
+        </div>
+        <span class="btn" style="padding: 9px 18px; font-size: 13px; font-weight: 700; border-radius: 10px; white-space: nowrap; flex-shrink: 0; background: #0a1a3c; color: #fff; pointer-events: none;">
+          Login
+        </span>
+      </a>
+
+      <!-- Action Choice 2: New here? Create a vendor account -->
+      <a id="askRegisterLink" href="/register/vendor/" class="vendor-ask-card highlight">
+        <div style="display: flex; align-items: center; gap: 12px; min-width: 0;">
+          <div style="width: 44px; height: 44px; border-radius: 12px; background: #2563eb; color: #ffffff; display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0;">
+            <i class="bi bi-person-plus-fill"></i>
+          </div>
+          <div style="min-width: 0;">
+            <div style="font-size: 15px; font-weight: 800; color: #0a1a3c;">New here?</div>
+            <div style="font-size: 12px; color: #2563eb; font-weight: 600; line-height: 1.3;">Start getting local client jobs</div>
+          </div>
+        </div>
+        <span class="btn" style="padding: 9px 18px; font-size: 13px; font-weight: 700; border-radius: 10px; white-space: nowrap; flex-shrink: 0; background: #2563eb; color: #fff; box-shadow: 0 4px 12px rgba(37,99,235,0.25); pointer-events: none;">
+          Create a vendor account
+        </span>
+      </a>
+
+      <!-- Customer Alternative Option -->
+      <div style="text-align: center; border-top: 1px solid #f1f5f9; padding-top: 14px; font-size: 12.5px; color: #64748b;">
+        Customer posting this job?
+        <a id="askCustomerLoginLink" href="/login/" style="color: #2563eb; font-weight: 700; text-decoration: none; margin-left: 3px;">Sign In</a> or
+        <a id="askCustomerRegLink" href="/register/user/" style="color: #2563eb; font-weight: 700; text-decoration: none; margin-left: 2px;">Create Customer Account</a>
+      </div>
+
+      {% if user.is_authenticated %}
+      <div style="margin-top: 14px; padding-top: 12px; border-top: 1px dashed #e2e8f0; text-align: center;">
+        <a href="{% if user.role == 'VENDOR' %}/vendor/dashboard{% elif user.role == 'ADMIN' %}/admin-dashboard{% else %}/user/dashboard{% endif %}" class="btn" style="width: 100%; padding: 11px; font-size: 13.5px; font-weight: 700; background: #0a1a3c; color: #fff; border-radius: 12px; text-decoration: none; display: block; box-sizing: border-box;">
+          Continue to Your Dashboard ({{ user.username }}) &rarr;
+        </a>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
   <div class="toast" id="toast" role="status"></div>
   <form style="display:none">{% csrf_token %}</form>
 
   <script>
+    function toast(m) {
+      const t = document.getElementById('toast');
+      if (!t) return;
+      t.textContent = m;
+      t.classList.add('show');
+      clearTimeout(window._t);
+      window._t = setTimeout(() => t.classList.remove('show'), 3200);
+    }
+
+    let _locMap = null;
+    let _locMarker = null;
+    let _pendingLocData = null;
+
+    function openLocationModal() {
+      document.getElementById('locModal').classList.add('show');
+      const search = document.getElementById('locSearch');
+      if (search) {
+        search.value = '';
+        setTimeout(() => search.focus(), 150);
+      }
+      const resContainer = document.getElementById('locSearchResults');
+      if (resContainer) resContainer.style.display = 'none';
+
+      // Check if browser is on insecure HTTP context
+      const isSecure = window.isSecureContext || location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+      const notice = document.getElementById('gpsInsecureNotice');
+      if (notice) {
+        notice.style.display = isSecure ? 'none' : 'block';
+      }
+
+      // Initialize or refresh map
+      let uLat = parseFloat(localStorage.getItem('suggu_user_lat'));
+      let uLon = parseFloat(localStorage.getItem('suggu_user_lon'));
+      const savedLoc = localStorage.getItem('suggu_user_location') || '';
+      if (!uLat || !uLon || isNaN(uLat) || isNaN(uLon) || savedLoc.toLowerCase().includes('cantonment') || (uLat > 23.6 && uLat < 23.65)) {
+        uLat = 23.3555;
+        uLon = 85.3609;
+      }
+      initMapPicker(uLat, uLon);
+    }
+
+    function initMapPicker(initialLat, initialLon) {
+      const container = document.getElementById('liveMapPicker');
+      if (!container || typeof L === 'undefined') return;
+
+      const lat = initialLat || 23.3555;
+      const lon = initialLon || 85.3609;
+
+      if (!_locMap) {
+        _locMap = L.map('liveMapPicker', {
+          zoomControl: true,
+          attributionControl: false
+        }).setView([lat, lon], 16);
+
+        L.tileLayer('https://{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', {
+          maxZoom: 20,
+          subdomains: ['mt0', 'mt1', 'mt2', 'mt3']
+        }).addTo(_locMap);
+
+        // Custom High-Res Pin Marker
+        const pinHtml = `
+          <div style="position:relative; width:34px; height:34px; transform:translate(-50%, -100%); cursor:grab;">
+            <div style="width:34px; height:34px; background:#ef4444; border:3px solid #fff; border-radius:50% 50% 50% 0; transform:rotate(-45deg); box-shadow:0 4px 14px rgba(0,0,0,0.35); display:flex; align-items:center; justify-content:center;">
+              <div style="width:10px; height:10px; background:#fff; border-radius:50%;"></div>
+            </div>
+            <div style="position:absolute; bottom:-4px; left:50%; transform:translateX(-50%); width:10px; height:5px; background:rgba(0,0,0,0.3); border-radius:50%; filter:blur(1px);"></div>
+          </div>
+        `;
+        const pinIcon = L.divIcon({
+          className: 'sugu-map-pin',
+          html: pinHtml,
+          iconSize: [0, 0],
+          iconAnchor: [0, 0]
+        });
+
+        _locMarker = L.marker([lat, lon], {
+          draggable: true,
+          icon: pinIcon
+        }).addTo(_locMap);
+
+        _locMarker.on('dragend', function() {
+          const pos = _locMarker.getLatLng();
+          reverseGeocodeMapPin(pos.lat, pos.lng);
+        });
+
+        _locMap.on('click', function(e) {
+          _locMarker.setLatLng(e.latlng);
+          reverseGeocodeMapPin(e.latlng.lat, e.latlng.lng);
+        });
+      } else {
+        _locMap.setView([lat, lon], 15);
+        _locMarker.setLatLng([lat, lon]);
+      }
+
+      setTimeout(() => {
+        if (_locMap) _locMap.invalidateSize();
+      }, 200);
+
+      reverseGeocodeMapPin(lat, lon);
+    }
+
+    async function reverseGeocodeMapPin(lat, lon) {
+      const pText = document.getElementById('pinPrimaryText');
+      const sText = document.getElementById('pinSecondaryText');
+      if (pText) pText.textContent = 'Pinpointing exact address...';
+      if (sText) sText.textContent = `Coordinates: ${lat.toFixed(5)}, ${lon.toFixed(5)}`;
+
+      try {
+        const res = await fetch(`/api/detect-location/?lat=${lat}&lon=${lon}`);
+        const data = await res.json();
+        const primary = data.primary || data.name || 'Selected Location';
+        const sec = data.secondary || (data.city + ', ' + data.state);
+
+        if (pText) pText.textContent = primary;
+        if (sText) sText.textContent = sec;
+
+        _pendingLocData = {
+          name: data.name || primary,
+          primary: primary,
+          secondary: sec,
+          city: data.city,
+          state: data.state,
+          lat: lat,
+          lon: lon,
+          is_live: true
+        };
+      } catch(e) {
+        if (pText) pText.textContent = `Pinned Location (${lat.toFixed(4)}, ${lon.toFixed(4)})`;
+        _pendingLocData = {
+          name: `Location (${lat.toFixed(4)}, ${lon.toFixed(4)})`,
+          primary: `Pin (${lat.toFixed(4)}, ${lon.toFixed(4)})`,
+          lat: lat,
+          lon: lon,
+          is_live: true
+        };
+      }
+    }
+
+    function confirmMapPinLocation() {
+      if (!_pendingLocData) return;
+      applyLocation(_pendingLocData.primary || _pendingLocData.name, _pendingLocData.lat, _pendingLocData.lon, _pendingLocData);
+    }
+
+    function jumpToMapLoc(lat, lon, label) {
+      if (_locMap && _locMarker) {
+        _locMap.flyTo([lat, lon], 16, { duration: 1.0 });
+        _locMarker.setLatLng([lat, lon]);
+        reverseGeocodeMapPin(lat, lon);
+      } else {
+        applyLocation(label, lat, lon);
+      }
+    }
+
+    function applyLocation(locName, lat, lon, fullData) {
+      if (!locName) return;
+      document.getElementById('navLocText').textContent = locName;
+      const heroLoc = document.querySelector('.sbar .loc');
+      if (heroLoc) heroLoc.innerHTML = `<i class="bi bi-geo-alt-fill"></i> ${locName}`;
+
+      localStorage.setItem('suggu_user_location', locName);
+      if (lat) localStorage.setItem('suggu_user_lat', lat);
+      if (lon) localStorage.setItem('suggu_user_lon', lon);
+      if (fullData) {
+        try { localStorage.setItem('sugu_selected_location', JSON.stringify(fullData)); } catch(e) {}
+      }
+
+      shut('locModal');
+      toast('Location updated: ' + locName);
+      if (typeof filt === 'function') filt('', 'All');
+    }
+
+    let _locSearchTimer = null;
+    function onSearchLocation(q) {
+      clearTimeout(_locSearchTimer);
+      const resContainer = document.getElementById('locSearchResults');
+      if (!q || q.trim().length < 2) {
+        resContainer.style.display = 'none';
+        resContainer.innerHTML = '';
+        return;
+      }
+
+      _locSearchTimer = setTimeout(async () => {
+        try {
+          const res = await fetch(`/api/search-locations/?q=${encodeURIComponent(q.trim())}`);
+          const data = await res.json();
+          const list = data.results || [];
+          if (list.length === 0) {
+            resContainer.innerHTML = '<div style="padding:10px; color:#64748b; font-size:13px; text-align:center;">No matching locations found.</div>';
+            resContainer.style.display = 'block';
+            return;
+          }
+
+          resContainer.innerHTML = list.map(item => {
+            const safePrimary = (item.primary || item.name || '').replace(/'/g, "\\'");
+            const safeFull = (item.name || '').replace(/'/g, "\\'");
+            const safeSec = (item.secondary || item.name || '').replace(/'/g, "\\'");
+            return `
+              <div class="loc-result-item" onclick="selectSearchResult('${safePrimary}', ${item.lat || 'null'}, ${item.lon || 'null'}, '${safeFull}')">
+                <i class="bi bi-geo-alt-fill" style="color: #2563eb; font-size: 14px;"></i>
+                <div style="flex: 1; min-width: 0;">
+                  <div style="font-weight: 700; font-size: 13.5px; color: var(--n); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${item.primary || item.name}</div>
+                  <div style="font-size: 11.5px; color: var(--mute); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${item.secondary || item.name}</div>
+                </div>
+              </div>
+            `;
+          }).join('');
+          resContainer.style.display = 'block';
+        } catch(e) {
+          console.error('Search location error:', e);
+        }
+      }, 250);
+    }
+
+    function selectSearchResult(name, lat, lon, fullName) {
+      const resContainer = document.getElementById('locSearchResults');
+      if (resContainer) resContainer.style.display = 'none';
+      const search = document.getElementById('locSearch');
+      if (search) search.value = name;
+      if (lat && lon) {
+        jumpToMapLoc(lat, lon, fullName || name);
+      }
+    }
+
+    async function fetchLiveLocation() {
+      const icon = document.getElementById('mapLocateIcon');
+      if (icon) icon.className = "bi bi-arrow-repeat spin-anim";
+      toast('Requesting device high-accuracy GPS...');
+
+      function resetIcon() {
+        if (icon) icon.className = "bi bi-crosshair";
+      }
+
+      let coords = null;
+      if (navigator.geolocation) {
+        try {
+          coords = await new Promise((resolve) => {
+            navigator.geolocation.getCurrentPosition(
+              (pos) => resolve({ lat: pos.coords.latitude, lon: pos.coords.longitude }),
+              (err) => {
+                console.warn('Device GPS unavailable:', err.message);
+                resolve(null);
+              },
+              { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 }
+            );
+          });
+        } catch(e) { coords = null; }
+      }
+
+      if (coords) {
+        jumpToMapLoc(coords.lat, coords.lon);
+        try {
+          const res = await fetch(`/api/detect-location/?lat=${coords.lat}&lon=${coords.lon}`);
+          const data = await res.json();
+          const primary = data.primary || data.name || 'Current Location';
+          const name = data.name || (primary + ', ' + (data.city || 'Namkum'));
+          applyLocation(name, coords.lat, coords.lon, data);
+        } catch(e) {}
+        toast('Exact live location set: ' + (coords.lat.toFixed(4) + ', ' + coords.lon.toFixed(4)));
+        resetIcon();
+      } else {
+        const notice = document.getElementById('gpsInsecureNotice');
+        if (notice) notice.style.display = 'block';
+
+        try {
+          const res = await fetch('/api/detect-location/');
+          const data = await res.json();
+          if (data && data.lat && data.lon) {
+            jumpToMapLoc(data.lat, data.lon);
+            toast('GPS restricted on network IP. Drag pin or tap your building to pinpoint!');
+          } else {
+            toast('Please tap your building on the map to pinpoint.');
+          }
+        } catch(e) {
+          toast('Please tap your building on the map.');
+        }
+        resetIcon();
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      let savedLoc = localStorage.getItem('suggu_user_location');
+      const isCantonment = savedLoc && (savedLoc.toLowerCase().includes('cantonment') || savedLoc.toLowerCase().includes('ramgarh'));
+
+      // If already has a clean non-Cantonment location, display immediately
+      if (savedLoc && !isCantonment) {
+        document.getElementById('navLocText').textContent = savedLoc;
+        const heroLoc = document.querySelector('.sbar .loc');
+        if (heroLoc) heroLoc.innerHTML = `<i class="bi bi-geo-alt-fill"></i> ${savedLoc}`;
+      } else {
+        // Purge incorrect Cantonment cached state
+        localStorage.removeItem('suggu_user_location');
+        localStorage.removeItem('suggu_user_lat');
+        localStorage.removeItem('suggu_user_lon');
+        localStorage.removeItem('sugu_selected_location');
+        savedLoc = null;
+      }
+
+      // Automatically query device high-accuracy GPS for exact location
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+          async (pos) => {
+            const lat = pos.coords.latitude;
+            const lon = pos.coords.longitude;
+            try {
+              const res = await fetch(`/api/detect-location/?lat=${lat}&lon=${lon}`);
+              const data = await res.json();
+              if (data && (data.primary || data.name)) {
+                const name = data.name || (data.primary + ', ' + (data.city || 'Namkum'));
+                applyLocation(name, lat, lon, data);
+              }
+            } catch(e) {
+              console.warn("GPS reverse geocode error:", e);
+            }
+          },
+          (err) => {
+            // If GPS unavailable or denied and no saved location, fetch server auto-detect
+            if (!localStorage.getItem('suggu_user_location')) {
+              fetch('/api/detect-location/')
+                .then(r => r.json())
+                .then(data => {
+                  let name = data.primary || data.name || data.city;
+                  if (!name || name.toLowerCase().includes('cantonment')) {
+                    name = 'RIADA Road, Namkum';
+                  }
+                  applyLocation(name, data.lat || 23.3555, data.lon || 85.3609, data);
+                })
+                .catch(() => {});
+            }
+          },
+          { enableHighAccuracy: true, timeout: 8000, maximumAge: 60000 }
+        );
+      } else if (!savedLoc) {
+        fetch('/api/detect-location/')
+          .then(r => r.json())
+          .then(data => {
+            let name = data.primary || data.name || data.city;
+            if (!name || name.toLowerCase().includes('cantonment')) {
+              name = 'RIADA Road, Namkum';
+            }
+            applyLocation(name, data.lat || 23.3555, data.lon || 85.3609, data);
+          })
+          .catch(() => {});
+      }
+
+      setTimeout(() => filt('', 'All'), 200);
+    });
+
     const $ = s => document.querySelector(s), $$ = s => [...document.querySelectorAll(s)];
-    function filt(q, cat, limit=4) { let n = 0; $$('#grid .svc').forEach(c => { const match = (!q || c.innerText.toLowerCase().includes(q)) && (!cat || cat === 'All' || c.dataset.cat === cat); if (match && n < limit) { c.style.display = ''; n++ } else { c.style.display = 'none' } }); return n }
+    
+    function getDist(lat1, lon1, lat2, lon2) {
+      if (!lat1 || !lon1 || !lat2 || !lon2) return 0; // If no coords, assume it's global/visible
+      const p = 0.017453292519943295;
+      const a = 0.5 - Math.cos((lat2 - lat1) * p)/2 + Math.cos(lat1 * p) * Math.cos(lat2 * p) * (1 - Math.cos((lon2 - lon1) * p))/2;
+      return 12742 * Math.asin(Math.sqrt(a)); 
+    }
+
+    function filt(q, cat, limit=4) {
+      const uLat = localStorage.getItem('suggu_user_lat');
+      const uLon = localStorage.getItem('suggu_user_lon');
+      let n = 0;
+      $$('#grid .svc').forEach(c => {
+        const sLat = c.getAttribute('data-lat');
+        const sLon = c.getAttribute('data-lon');
+        let inRadius = true;
+        
+        if (uLat && uLon && sLat && sLon && sLat !== 'None' && sLon !== 'None') {
+           const dist = getDist(uLat, uLon, sLat, sLon);
+           const rad = parseFloat(c.getAttribute('data-radius')) || 15;
+           if (dist > rad) inRadius = false;
+        }
+
+        const match = (!q || c.innerText.toLowerCase().includes(q)) && 
+                      (!cat || cat === 'All' || c.dataset.cat === cat) && 
+                      inRadius;
+                      
+        if (match && n < limit) { c.style.display = ''; n++; }
+        else { c.style.display = 'none'; }
+      });
+      
+      const emptyMsg = document.querySelector('#grid .empty') || document.createElement('div');
+      if (n === 0) {
+        emptyMsg.className = 'empty';
+        emptyMsg.style.display = 'block';
+        emptyMsg.textContent = uLat ? 'No services found within your area. Try another category.' : 'No services found.';
+        if (!document.querySelector('#grid .empty')) document.getElementById('grid').appendChild(emptyMsg);
+      } else {
+        if (emptyMsg) emptyMsg.style.display = 'none';
+      }
+      return n;
+    }
     filt('', 'All');
     $$('.chip[data-f]').forEach(c => c.onclick = () => { $$('#chips .chip').forEach(x => x.classList.remove('on')); c.classList.add('on'); $$('.pick').forEach(x => x.classList.remove('on')); filt('', c.dataset.f) });
     function quickTag(q) { $('#quick').scrollIntoView({ behavior: 'smooth' }); if (filt(q) === 0) toast('No vendors for that yet. Try another service or post a requirement.') }
@@ -1991,26 +2888,124 @@
       shut('bm'); toast('Booking confirmed. A vendor will contact you shortly.')
     }
     $$('.modal').forEach(m => m.onclick = e => { if (e.target === m) m.classList.remove('show') });
-    function toast(m) { const t = $('#toast'); t.textContent = m; t.classList.add('show'); clearTimeout(window._t); window._t = setTimeout(() => t.classList.remove('show'), 3200) }
-    function useLoc(id) { if (!navigator.geolocation) return toast('Location is not available on this device.'); navigator.geolocation.getCurrentPosition(p => { document.getElementById(id).value = 'Pinned location: ' + p.coords.latitude.toFixed(5) + ', ' + p.coords.longitude.toFixed(5); upd() }, () => toast('Could not get location. Type your address instead.')) }
+    async function useLoc(id) {
+      const el = document.getElementById(id);
+      if (!el) return;
+      const btn = document.getElementById('btnUseLoc');
+      const icon = document.getElementById('locCrosshairIcon');
+      if (btn) btn.style.opacity = '0.7';
+      if (icon) icon.className = 'bi bi-arrow-repeat spin';
+      toast('Detecting GPS location...');
+
+      const applyGpsInfo = (addrText, lat, lon) => {
+        el.value = addrText;
+        S.lat = lat;
+        S.lon = lon;
+        const latInput = document.getElementById('job_lat');
+        const lonInput = document.getElementById('job_lon');
+        if (latInput) latInput.value = lat;
+        if (lonInput) lonInput.value = lon;
+
+        try {
+          localStorage.setItem('suggu_user_location', addrText);
+          localStorage.setItem('suggu_user_lat', lat);
+          localStorage.setItem('suggu_user_lon', lon);
+          localStorage.setItem('sugu_selected_location', JSON.stringify({
+            name: addrText,
+            primary: addrText,
+            lat: lat,
+            lon: lon,
+            is_live: true
+          }));
+        } catch(e) {}
+
+        const gpsPill = document.getElementById('locGpsPill');
+        const gpsText = document.getElementById('locGpsText');
+        const gpsLink = document.getElementById('locGpsMapsLink');
+        const mapsUrl = 'https://maps.google.com/?q=' + encodeURIComponent(lat + ',' + lon);
+        if (gpsPill) gpsPill.style.display = 'inline-flex';
+        if (gpsText) gpsText.innerHTML = '<strong>GPS:</strong> ' + Number(lat).toFixed(4) + ', ' + Number(lon).toFixed(4);
+        if (gpsLink) {
+          gpsLink.href = mapsUrl;
+          gpsLink.title = 'Open location in Google Maps';
+        }
+
+        if (typeof upd === 'function') upd();
+      };
+
+      const resetBtn = () => {
+        if (btn) btn.style.opacity = '1';
+        if (icon) icon.className = 'bi bi-crosshair';
+      };
+
+      const reverseGeocode = async (lat, lon) => {
+        try {
+          const res = await fetch(`/api/detect-location/?lat=${lat}&lon=${lon}`);
+          const data = await res.json();
+          const addr = data.full_address || data.name || ((data.primary || data.city) + ', ' + (data.city || ''));
+          applyGpsInfo(addr, lat, lon);
+          toast(`GPS Attached: ${Number(lat).toFixed(4)}, ${Number(lon).toFixed(4)}`);
+        } catch(e) {
+          applyGpsInfo(`Current Worksite (${Number(lat).toFixed(4)}, ${Number(lon).toFixed(4)})`, lat, lon);
+          toast(`GPS Attached: ${Number(lat).toFixed(4)}, ${Number(lon).toFixed(4)}`);
+        }
+        resetBtn();
+      };
+
+      const fallbackLoc = async () => {
+        try {
+          const res = await fetch('/api/detect-location/');
+          const data = await res.json();
+          const lat = data.lat || 23.3555;
+          const lon = data.lon || 85.3609;
+          const addr = data.full_address || data.name || ((data.primary || data.city) + ', ' + (data.city || ''));
+          applyGpsInfo(addr, lat, lon);
+          toast(`GPS Location set: ${addr.split(',')[0]} (${Number(lat).toFixed(4)}, ${Number(lon).toFixed(4)})`);
+        } catch(e) {
+          const savedLoc = localStorage.getItem('suggu_user_location') || 'RIADA Road, Namkum, Ranchi';
+          const savedLat = parseFloat(localStorage.getItem('suggu_user_lat')) || 23.3555;
+          const savedLon = parseFloat(localStorage.getItem('suggu_user_lon')) || 85.3609;
+          applyGpsInfo(savedLoc, savedLat, savedLon);
+          toast('Using saved location with GPS coordinates');
+        }
+        resetBtn();
+      };
+
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+          (pos) => {
+            const lat = pos.coords.latitude;
+            const lon = pos.coords.longitude;
+            reverseGeocode(lat, lon);
+          },
+          (err) => {
+            console.warn('Geolocation unavailable/denied, falling back:', err);
+            fallbackLoc();
+          },
+          { enableHighAccuracy: true, timeout: 6000, maximumAge: 10000 }
+        );
+      } else {
+        fallbackLoc();
+      }
+    }
     const DATA = {
       {% for cat in categories %}
-      {% if cat.service_type == "BIDDING" %}
       '{{ cat.name|escapejs }}': {
-        e: '{% if "Electric" in cat.name %}⚡{% elif "Renovation" in cat.name %}🏗️{% elif "Kitchen" in cat.name %}🍳{% elif "Paint" in cat.name %}🎨{% else %}✨{% endif %}',
+        e: '<i class="bi {{ cat.icon_class }}"></i>',
         d: '{% for sub in cat.subcategories.all %}{{ sub.name|escapejs }}{% if not forloop.last %}, {% endif %}{% endfor %}',
         s: [
           {% for sub in cat.subcategories.all %}
-          ['{{ sub.name|escapejs }}', '👉']{% if not forloop.last %},{% endif %}
+          ['{{ sub.name|escapejs }}', '<i class="bi bi-caret-right-fill"></i>']{% if not forloop.last %},{% endif %}
+          {% empty %}
+          ['General Service', '<i class="bi bi-caret-right-fill"></i>']
           {% endfor %}
         ],
         b: [5000, 25000, 80000]
-      },
-      {% endif %}
+      }{% if not forloop.last %},{% endif %}
       {% endfor %}
     };
-    let step = 0, S = { cat: '', sub: '' }; const inr = n => '₹' + Number(n).toLocaleString('en-IN');
-    $('#idx').innerHTML = Object.keys(DATA).map(k => `<button class="ix" type="button" onclick="pickCat('${k}')"><h3>${k}</h3><span>${DATA[k].d}</span><i>→</i></button>`).join('');
+    let step = 0, S = { cat: '', sub: '', lat: null, lon: null }; const inr = n => '₹' + Number(n).toLocaleString('en-IN');
+    $('#idx').innerHTML = Object.keys(DATA).map(k => `<button class="ix" type="button" onclick="pickCat('${k}')"><h3>${k}</h3><span>${DATA[k].d}</span><i><i class="bi bi-arrow-right"></i></i></button>`).join('');
     $('#cats').innerHTML = Object.keys(DATA).map(k => `<button class="opt" type="button" data-k="${k}"><em>${DATA[k].e}</em>${k}</button>`).join('');
     $$('#cats .opt').forEach(b => b.onclick = () => pickCat(b.dataset.k, true));
     function pickCat(k, stay) { S.cat = k; S.sub = ''; $('#budget').value = ''; $$('#cats .opt').forEach(x => x.classList.toggle('sel', x.dataset.k === k)); buildSubs(); step = 1; upd(); if (!stay) $('#wiz').scrollIntoView({ behavior: 'smooth', block: 'center' }) }
@@ -2032,16 +3027,120 @@
       $('#sum').innerHTML = `<b>${S.cat}</b> › <br>Budget: <b>${$('#budget').value ? inr($('#budget').value) : '-'}</b>`
     }
     function submit() {
-      const a = $('#addr').value.trim(), p = $('#ph').value.trim(); if (!a || p.length < 10) return toast('Add your address and a 10-digit mobile number.');
-      const payload = { category: S.cat, work_type: S.sub, budget: +$('#budget').value, address: a, phone: p, start: $('#when').value };
-      /* TODO: POST payload to your Django endpoint with the csrf token from the hidden form */
-      console.log('requirement', payload); toast('Requirement posted. Vendors near you can now send offers.');
-      S = { cat: '', sub: '' }; step = 0; $$('.opt.sel').forEach(x => x.classList.remove('sel'));['budget', 'addr', 'ph', 'when'].forEach(i => $('#' + i).value = ''); upd()
+      const a = $('#addr').value.trim(), p = $('#ph').value.trim(); 
+      if (!a || p.length < 10) return toast('Add your address and a 10-digit mobile number.');
+
+      const latVal = document.getElementById('job_lat')?.value || S.lat || localStorage.getItem('suggu_user_lat') || '23.3555';
+      const lonVal = document.getElementById('job_lon')?.value || S.lon || localStorage.getItem('suggu_user_lon') || '85.3609';
+      const lat = parseFloat(latVal);
+      const lon = parseFloat(lonVal);
+      const mapsUrl = `https://maps.google.com/?q=${lat},${lon}`;
+      
+      let formattedAddress = a;
+      if (!formattedAddress.includes('[GPS:') && !isNaN(lat) && !isNaN(lon)) {
+        formattedAddress = `${a} [GPS: ${lat}, ${lon} | Maps: ${mapsUrl}]`;
+      }
+      
+      const payload = { 
+        category: S.cat, 
+        work_type: S.sub, 
+        budget: +$('#budget').value, 
+        address: a, 
+        latitude: lat,
+        longitude: lon,
+        maps_url: mapsUrl,
+        full_address: formattedAddress,
+        phone: p, 
+        start: $('#when').value 
+      };
+      
+      try { 
+        localStorage.setItem('suggu_pending_requirement', JSON.stringify(payload)); 
+      } catch(e) {}
+      
+      console.log('requirement', payload);
+
+      // Populate preview details inside the modal
+      const sumCat = document.getElementById('askReqCat');
+      if (sumCat) sumCat.textContent = (S.cat || 'General') + (S.sub ? ' › ' + S.sub : '');
+      
+      const sumBudget = document.getElementById('askReqBudget');
+      if (sumBudget) sumBudget.textContent = $('#budget').value ? inr($('#budget').value) : 'Flexible';
+      
+      const sumAddr = document.getElementById('askReqAddr');
+      if (sumAddr) sumAddr.textContent = a + (p ? ' (' + p + ')' : '');
+
+      const coordsDisplay = document.getElementById('askReqCoords');
+      if (coordsDisplay) coordsDisplay.textContent = `${lat.toFixed(4)}, ${lon.toFixed(4)}`;
+
+      const modalMapsLink = document.getElementById('askReqMapsLink');
+      if (modalMapsLink) {
+        modalMapsLink.href = mapsUrl;
+        modalMapsLink.title = 'Open work location in Google Maps';
+      }
+      
+      // Update link targets with mobile number prefilled
+      const loginLink = document.getElementById('askLoginLink');
+      if (loginLink) loginLink.href = '/login/?phone=' + encodeURIComponent(p) + '&next=' + encodeURIComponent('/vendor/dashboard');
+      
+      const regLink = document.getElementById('askRegisterLink');
+      if (regLink) regLink.href = '/register/vendor/?mobile=' + encodeURIComponent(p);
+      
+      const custLogin = document.getElementById('askCustomerLoginLink');
+      if (custLogin) custLogin.href = '/login/?phone=' + encodeURIComponent(p) + '&next=' + encodeURIComponent('/user/dashboard');
+      
+      const custReg = document.getElementById('askCustomerRegLink');
+      if (custReg) custReg.href = '/register/user/?mobile=' + encodeURIComponent(p);
+      
+      // Open the action modal
+      const modal = document.getElementById('vendorAskModal');
+      if (modal) modal.classList.add('show');
+    }
+
+    function setWhenDate(days) {
+      const d = new Date();
+      d.setDate(d.getDate() + days);
+      const val = d.toISOString().split('T')[0];
+      const w = document.getElementById('when');
+      if (w) {
+        w.value = val;
+      }
+    }
+    const todayStr = new Date().toISOString().split('T')[0];
+    const whenInput = document.getElementById('when');
+    if (whenInput) {
+      whenInput.min = todayStr;
+      if (!whenInput.value) whenInput.value = todayStr;
     }
     upd();
   </script>
   <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
-  <script>AOS.init({duration: 800, once: true, offset: 50});</script>
+  <script>
+    AOS.init({
+      duration: 800,
+      once: false,
+      mirror: true,
+      offset: 50,
+      easing: 'ease-out-cubic',
+      throttleDelay: 50,
+      debounceDelay: 25
+    });
+
+    // Smoothly scroll to sections when clicking navigation links without lagging mouse wheel
+    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+      anchor.addEventListener('click', function(e) {
+        const href = this.getAttribute('href');
+        if (href && href.length > 1) {
+          const target = document.querySelector(href);
+          if (target) {
+            e.preventDefault();
+            target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            if (history.pushState) history.pushState(null, '', href);
+          }
+        }
+      });
+    });
+  </script>
 </body>
 
 </html>

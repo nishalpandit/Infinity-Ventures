@@ -526,6 +526,56 @@ class Category(models.Model):
     def __str__(self):
         return self.name
 
+    @property
+    def icon_class(self):
+        n = (self.name or '').strip().lower()
+        if any(k in n for k in ['appliance', 'tv', 'electronic', 'fridge', 'refrigerator', 'washing', 'microwave', 'oven']):
+            return 'bi-tv'
+        if any(k in n for k in ['beauty', 'spa', 'salon', 'makeup', 'massage', 'hair', 'grooming', 'facial']):
+            return 'bi-flower1'
+        if any(k in n for k in ['carpent', 'wood', 'furniture', 'door', 'bed', 'sofa', 'cabinet', 'hinge']):
+            return 'bi-hammer'
+        if any(k in n for k in ['clean', 'pest', 'wash', 'sanitize', 'housekeep', 'maid', 'disinfect']):
+            return 'bi-stars'
+        if any(k in n for k in ['electr', 'light', 'wire', 'power', 'switch', 'fuse', 'solar']):
+            return 'bi-lightning-charge-fill'
+        if any(k in n for k in ['paint', 'wall', 'polish', 'color', 'whitewash']):
+            return 'bi-paint-bucket'
+        if any(k in n for k in ['plumb', 'pipe', 'water', 'leak', 'drain', 'tap', 'faucet', 'toilet', 'bath', 'basin', 'sink']):
+            return 'bi-droplet-fill'
+        if any(k in n for k in ['ac', 'air condition', 'cool', 'hvac']):
+            return 'bi-fan'
+        if any(k in n for k in ['cctv', 'security', 'camera']):
+            return 'bi-camera-video-fill'
+        if any(k in n for k in ['renov', 'construct', 'build', 'masonry']):
+            return 'bi-building'
+        if any(k in n for k in ['garden', 'landscape', 'plant', 'lawn']):
+            return 'bi-tree-fill'
+        if any(k in n for k in ['pack', 'move', 'shift']):
+            return 'bi-truck'
+        if any(k in n for k in ['waterproof', 'roof', 'terrace', 'damp']):
+            return 'bi-shield-check'
+        return 'bi-tools'
+
+    @property
+    def icon_color(self):
+        n = (self.name or '').strip().lower()
+        if 'plumb' in n:
+            return '#0284c7'
+        if 'electr' in n:
+            return '#d97706'
+        if 'appliance' in n:
+            return '#3b82f6'
+        if 'clean' in n:
+            return '#059669'
+        if 'beauty' in n or 'spa' in n:
+            return '#db2777'
+        if 'paint' in n:
+            return '#8b5cf6'
+        if 'carpent' in n:
+            return '#b45309'
+        return '#2563eb'
+
 class SubCategory(models.Model):
     category = models.ForeignKey(Category, on_delete=models.CASCADE, related_name='subcategories')
     name = models.CharField(max_length=100)

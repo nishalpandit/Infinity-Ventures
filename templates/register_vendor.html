@@ -392,8 +392,7 @@
         <i class="fa-solid fa-arrow-left"></i> Home
       </a>
       <span class="brand-mark" style="display:flex;align-items:center;gap:8px;">
-        <img src="{% static 'assets/images/logo.png' %}" alt="Sugu" style="height:28px;width:28px;border-radius:6px;object-fit:contain;">
-        <span>Sugu</span>
+        <img src="{% static 'images/logo.png' %}" alt="Sugu" style="height:36px;width:auto;object-fit:contain;">
       </span>
     </div>
 
@@ -688,6 +687,15 @@
 
     // Auto-populate cities if state was previously selected on validation error
     window.addEventListener('DOMContentLoaded', () => {
+      const urlParams = new URLSearchParams(window.location.search);
+      const mParam = urlParams.get('mobile') || urlParams.get('phone');
+      if (mParam) {
+        const mobInput = document.getElementById('mobile');
+        if (mobInput && !mobInput.value) {
+          mobInput.value = mParam;
+        }
+      }
+
       const stateSelect = document.getElementById('state');
       if (stateSelect && stateSelect.value) {
         updateCities();

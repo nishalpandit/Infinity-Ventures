@@ -7,6 +7,7 @@
 <title>{{ selected_category.name|default:"Browse Services" }} — Sugu</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="icon" type="image/png" href="{% static 'images/logo.png' %}">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
 <!-- Urban Company Core Scripts -->
 <script src="{% static 'js/location_picker.js' %}"></script>
@@ -114,7 +115,27 @@ button{cursor:pointer}
   transition:all 0.2s;text-decoration:none;position:relative;
 }
 .uc-subcat-tile:hover{background:#fff;border-color:#7c3aed;transform:translateY(-2px);box-shadow:0 6px 16px rgba(124,58,237,0.1)}
-.uc-subcat-tile.active{background:#fff;border-color:#7c3aed;box-shadow:0 4px 12px rgba(124,58,237,0.12)}
+.uc-subcat-tile.active{background:#fdf4ff;border-color:#7c3aed;box-shadow:0 4px 14px rgba(124,58,237,0.16)}
+.uc-subcat-tile.active .uc-subcat-tile-icon{background:#7c3aed;color:#fff;}
+.uc-subcat-tile.active .uc-subcat-tile-label{color:#5b21b6;font-weight:700;}
+
+/* Subcategory Horizontal Quick Pills Bar */
+.uc-subcat-pills-bar{
+  display:flex;gap:8px;overflow-x:auto;padding-bottom:12px;margin-bottom:20px;scrollbar-width:none;
+}
+.uc-subcat-pills-bar::-webkit-scrollbar{display:none;}
+.uc-subcat-pill{
+  display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:50px;
+  font-size:12.5px;font-weight:600;color:#4b5563;background:#f3f4f6;border:1px solid #e5e7eb;
+  cursor:pointer;white-space:nowrap;transition:all 0.15s;
+}
+.uc-subcat-pill:hover{background:#e5e7eb;color:#111827;}
+.uc-subcat-pill.active{background:#7c3aed;color:#fff;border-color:#7c3aed;box-shadow:0 2px 8px rgba(124,58,237,0.25);}
+.uc-subcat-badge-tag{
+  display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:700;
+  color:#7c3aed;background:#f5f3ff;border:1px solid #ddd6fe;padding:2px 7px;
+  border-radius:6px;margin-left:auto;
+}
 .uc-subcat-tile .mini-badge{
   position:absolute;top:-6px;right:-4px;font-size:9px;font-weight:700;color:#059669;
   background:#ecfdf5;padding:2px 5px;border-radius:4px;border:1px solid #a7f3d0;
@@ -505,9 +526,8 @@ button{cursor:pointer}
 <!-- ===== HEADER ===== -->
 <header class="uc-header">
   <div class="uc-header-inner">
-    <a href="/" class="uc-logo">
-      <div class="uc-logo-icon">S</div>
-      <span class="uc-logo-text">Sugu</span>
+    <a href="/" class="uc-logo" style="text-decoration:none; display:flex; align-items:center;">
+      <img src="{% static 'images/logo.png' %}" alt="Sugu" style="height:48px; width:auto; object-fit:contain;">
     </a>
 
     <!-- Urban Company Location Button -->
@@ -541,7 +561,7 @@ button{cursor:pointer}
   <div class="uc-cat-bar-inner">
     {% for cat in categories %}
     <a href="/services/browse?category={{ cat.id }}" class="uc-cat-chip {% if selected_category_id == cat.id %}active{% endif %}">
-      <i class="fa-solid fa-{% if cat.name == 'Plumbing' %}wrench{% elif cat.name == 'Electrical' %}bolt{% elif 'AC' in cat.name %}snowflake{% elif cat.name == 'Cleaning' %}spray-can-sparkles{% elif cat.name == 'Painting' %}paint-roller{% elif cat.name == 'Carpentry' %}hammer{% elif 'Pest' in cat.name %}bug-slash{% elif 'Renovation' in cat.name %}trowel-bricks{% else %}screwdriver-wrench{% endif %}"></i>
+      <i class="fa-solid fa-{% if cat.name == 'Plumbing' %}wrench{% elif cat.name == 'Electrical' %}bolt{% elif 'Appliance' in cat.name or 'AC' in cat.name %}screwdriver-wrench{% elif 'Clean' in cat.name %}spray-can-sparkles{% elif 'Paint' in cat.name %}paint-roller{% elif 'Carpent' in cat.name %}hammer{% elif 'Beauty' in cat.name or 'Spa' in cat.name %}spa{% else %}screwdriver-wrench{% endif %}"></i>
       <span>{{ cat.name }}</span>
     </a>
     {% endfor %}
@@ -570,18 +590,39 @@ button{cursor:pointer}
 
     <!-- Category Hero Header -->
     <div class="uc-hero-header">
+      <div style="font-size:12px; color:#64748b; font-weight:600; margin-bottom:8px; display:flex; align-items:center; gap:6px;">
+        <a href="/" style="color:#64748b; text-decoration:none;">Home</a>
+        <i class="fa-solid fa-chevron-right" style="font-size:9px;"></i>
+        <a href="/services/browse?category={{ selected_category.id }}" style="color:#64748b; text-decoration:none;">{{ selected_category.name }}</a>
+        <span id="ucSubcatBreadcrumb" style="display:{% if selected_sub and selected_sub != 'All' %}inline-flex{% else %}none{% endif %}; align-items:center; gap:6px;">
+          <i class="fa-solid fa-chevron-right" style="font-size:9px;"></i>
+          <span style="color:#7c3aed; font-weight:700;" id="ucSubcatBreadcrumbText">{{ selected_sub }}</span>
+        </span>
+      </div>
       <div class="uc-cat-title-row">
-        <h1 class="uc-cat-title">{{ selected_category.name|default:"Home Services" }}</h1>
+        <h1 class="uc-cat-title" id="ucActiveFeedHeading">{{ selected_category.name|default:"Home Services" }}{% if selected_sub and selected_sub != 'All' %} • {{ selected_sub }}{% endif %}</h1>
         <div class="uc-eta-badge">
           <i class="fa-solid fa-bolt"></i> Instant In 44 mins
         </div>
       </div>
       <div class="uc-cat-meta">
-        <span class="star"><i class="fa-solid fa-star"></i> 4.78</span>
-        <span>(14.1 M bookings)</span>
+        <span class="star"><i class="fa-solid fa-star"></i> 4.85</span>
+        <span>(14.1 K verified bookings)</span>
         <span>•</span>
         <span style="color:#059669; font-weight:600;"><i class="fa-solid fa-shield-check"></i> Sugu Verified</span>
       </div>
+    </div>
+
+    <!-- Horizontal Subcategory Quick Tabs -->
+    <div class="uc-subcat-pills-bar" id="ucSubcatPillsBar">
+      <button type="button" class="uc-subcat-pill {% if not selected_sub or selected_sub == 'All' %}active{% endif %}" data-pill-name="All" onclick="filterBySubcat('All', null)">
+        <i class="fa-solid fa-border-all"></i> All {{ selected_category.name }}
+      </button>
+      {% for sub in subcategories %}
+      <button type="button" class="uc-subcat-pill {% if selected_sub == sub.name %}active{% endif %}" data-pill-name="{{ sub.name }}" onclick="filterBySubcat('{{ sub.name|escapejs }}', null)">
+        <span>{{ sub.name }}</span>
+      </button>
+      {% endfor %}
     </div>
 
     <!-- Promotional Offer Slider Banner -->
@@ -604,10 +645,10 @@ button{cursor:pointer}
         </div>
         <div>
           <div class="uc-delivery-title">
-            <span>Delivering to:</span> <strong id="ucActiveDeliveryLoc">Lalpur, Ranchi</strong>
+            <span>Delivering to:</span> <strong id="ucActiveDeliveryLoc">RIADA Road, Namkum</strong>
           </div>
           <div class="uc-delivery-sub">
-            <i class="fa-solid fa-circle-check"></i> Showing quick services within <strong>10 km radius</strong>
+            <i class="fa-solid fa-circle-check"></i> Showing quick services within <strong>15 km radius</strong>
           </div>
         </div>
       </div>
@@ -616,14 +657,19 @@ button{cursor:pointer}
       </button>
     </div>
 
-    <!-- Empty State when 0 services within 10 km -->
+    <!-- Empty State when 0 services match subcategory or distance -->
     <div class="uc-empty-range" id="ucNoNearbyServices" style="display:none;">
-      <div class="uc-empty-icon"><i class="fa-solid fa-location-crosshairs"></i></div>
-      <h3>No quick services within 10 km</h3>
-      <p>We couldn't find any partners for <strong>{{ selected_category.name|default:"this service" }}</strong> within 10 km of <span id="ucEmptyLocName" style="font-weight:700; color:#111827;">your location</span>.</p>
-      <button class="uc-change-loc-chip uc-location-trigger" style="margin-top:8px; padding:10px 18px; font-size:13px;">
-        <i class="fa-solid fa-location-dot"></i> Select Another Locality
-      </button>
+      <div class="uc-empty-icon"><i class="fa-solid fa-screwdriver-wrench"></i></div>
+      <h3 id="ucEmptyTitle">Need custom requirements for this service?</h3>
+      <p id="ucEmptyDesc">We have verified <strong>{{ selected_category.name }}</strong> partners in your area ready to take custom scopes.</p>
+      <div style="display:flex; gap:10px; flex-wrap:wrap; justify-content:center; margin-top:12px;">
+        <button type="button" class="btn" style="background:#7c3aed; color:#fff; font-weight:700; padding:10px 20px; border-radius:10px; border:none; cursor:pointer;" onclick="filterBySubcat('All', null)">
+          Show All {{ selected_category.name }} Services
+        </button>
+        <a href="/user/jobs/create.html?category={{ selected_category.id }}" class="btn" style="background:#111827; color:#fff; font-weight:700; padding:10px 20px; border-radius:10px; text-decoration:none;">
+          <i class="fa-solid fa-plus"></i> Post a Custom Requirement
+        </a>
+      </div>
     </div>
 
     <!-- Service Cards Feed -->
@@ -633,10 +679,12 @@ button{cursor:pointer}
            id="service-card-{{ service.id }}"
            data-service-id="{{ service.id }}" 
            data-category="{{ service.category_name }}"
+           data-subcat="{{ service.subcat_name|default:'' }}"
+           data-desc="{{ service.description|default:'' }}"
            data-lat="{{ service.latitude }}"
            data-lon="{{ service.longitude }}"
-           data-locality="{{ service.locality|default:'Ranchi' }}"
-           data-radius="{{ service.service_radius_km|default:10.0 }}">
+           data-locality="{{ service.locality|default:'Namkum, Ranchi' }}"
+           data-radius="{{ service.service_radius_km|default:25.0 }}">
         
         <!-- Left Content -->
         <div class="uc-card-left">
@@ -645,7 +693,10 @@ button{cursor:pointer}
               <i class="fa-solid fa-location-dot"></i>
               <span class="dist-val">Calculating...</span>
             </span>
-            <span class="uc-locality-label"><i class="fa-solid fa-map-pin"></i> {{ service.locality|default:"Ranchi Central" }}</span>
+            <span class="uc-locality-label"><i class="fa-solid fa-map-pin"></i> {{ service.locality|default:"Namkum, Ranchi" }}</span>
+            {% if service.subcat_name %}
+            <span class="uc-subcat-badge-tag"><i class="fa-solid fa-tag"></i> {{ service.subcat_name }}</span>
+            {% endif %}
           </div>
 
           <div class="uc-card-title">{{ service.title }}</div>
@@ -653,7 +704,7 @@ button{cursor:pointer}
           <div class="uc-card-rating">
             <span class="rating-pill"><i class="fa-solid fa-star"></i> {{ service.rating }}</span>
             <span>({{ service.reviews_count }} reviews)</span>
-            <span class="uc-card-vendor">• by {{ service.vendor_name }}</span>
+            <span class="uc-card-vendor">• <i class="fa-solid fa-shield-halved" style="color:#10b981;"></i> Sugu Verified Partner</span>
           </div>
 
           <div class="uc-card-pricing">
@@ -883,74 +934,180 @@ button{cursor:pointer}
 <script>
 // Data payload passed from Django
 const SERVICES_DATA = {{ services_json|safe }};
-const CURRENT_CATEGORY = "{{ selected_category.name|default:'Plumbing' }}";
+const CURRENT_CATEGORY = "{{ selected_category.name|default:'Plumbing'|escapejs }}";
+const CURRENT_CATEGORY_ID = "{{ selected_category.id }}";
+let ACTIVE_SUBCAT = "{{ selected_sub|default:'All'|escapejs }}";
 const IS_AUTHENTICATED = {% if user.is_authenticated %}true{% else %}false{% endif %};
 
-// Sub-services mapping for Left Sidebar
-const SUBCAT_NAV_CONFIG = {
-  "Plumbing": [
-    { name: "Tap & Mixer", icon: "fa-faucet-drip", badge: "30% OFF" },
-    { name: "Wash Basin", icon: "fa-sink", badge: "POPULAR" },
-    { name: "Drainage", icon: "fa-water", badge: "" },
-    { name: "Water Tank", icon: "fa-boxes-stacked", badge: "" }
-  ],
-  "Electrical": [
-    { name: "Switch & Socket", icon: "fa-toggle-on", badge: "20% OFF" },
-    { name: "Fan Installation", icon: "fa-fan", badge: "POPULAR" },
-    { name: "MCB & Fuse", icon: "fa-bolt-lightning", badge: "" },
-    { name: "House Wiring", icon: "fa-network-wired", badge: "" }
-  ],
-  "AC & Appliance": [
-    { name: "AC Service", icon: "fa-snowflake", badge: "BESTSELLER" },
-    { name: "Washing Machine", icon: "fa-soap", badge: "" },
-    { name: "Refrigerator", icon: "fa-temperature-arrow-down", badge: "" },
-    { name: "RO Purifier", icon: "fa-glass-water-droplet", badge: "25% OFF" }
-  ],
-  "Cleaning": [
-    { name: "Bathroom Cleaning", icon: "fa-bath", badge: "UPTO 30% OFF" },
-    { name: "Kitchen Cleaning", icon: "fa-kitchen-set", badge: "" },
-    { name: "Full Home Deep", icon: "fa-house-chimney", badge: "POPULAR" },
-    { name: "Sofa Cleaning", icon: "fa-couch", badge: "" }
-  ]
-};
+const SUBCATEGORIES = [
+  {% for sub in subcategories %}
+  { id: {{ sub.id }}, name: "{{ sub.name|escapejs }}" }{% if not forloop.last %},{% endif %}
+  {% endfor %}
+];
 
-// Render Left Sidebar Sub-categories
+function getSubcatIcon(name) {
+  const n = (name || '').toLowerCase();
+  if (n.includes('leak') || n.includes('pipe')) return 'fa-faucet-drip';
+  if (n.includes('tap') || n.includes('mixer')) return 'fa-faucet';
+  if (n.includes('tank')) return 'fa-boxes-stacked';
+  if (n.includes('wire') || n.includes('short')) return 'fa-bolt';
+  if (n.includes('inverter') || n.includes('battery')) return 'fa-car-battery';
+  if (n.includes('fan') || n.includes('light')) return 'fa-fan';
+  if (n.includes('ac') || n.includes('cool')) return 'fa-snowflake';
+  if (n.includes('washing') || n.includes('laundry')) return 'fa-soap';
+  if (n.includes('refriger') || n.includes('fridge')) return 'fa-temperature-low';
+  if (n.includes('deep clean') || n.includes('home clean')) return 'fa-house-chimney-window';
+  if (n.includes('pest')) return 'fa-bug-slash';
+  if (n.includes('bath')) return 'fa-bath';
+  if (n.includes('men') || n.includes('haircut') || n.includes('beard')) return 'fa-scissors';
+  if (n.includes('women') || n.includes('facial') || n.includes('wax')) return 'fa-wand-magic-sparkles';
+  if (n.includes('spa') || n.includes('massage')) return 'fa-spa';
+  if (n.includes('full home paint') || n.includes('interior')) return 'fa-paint-roller';
+  if (n.includes('room') || n.includes('wall')) return 'fa-brush';
+  if (n.includes('waterproof') || n.includes('damp')) return 'fa-shield-halved';
+  if (n.includes('furniture repair') || n.includes('hinge')) return 'fa-screwdriver-wrench';
+  if (n.includes('assembly') || n.includes('mounting')) return 'fa-hammer';
+  if (n.includes('polish') || n.includes('wood')) return 'fa-hand-sparkles';
+  return 'fa-wrench';
+}
+
+function getSubcatBadge(name, idx) {
+  const n = (name || '').toLowerCase();
+  if (n.includes('leak') || n.includes('short') || n.includes('ac')) return 'INSTANT';
+  if (n.includes('tap') || n.includes('fan') || n.includes('deep clean')) return 'POPULAR';
+  if (n.includes('facial') || n.includes('spa') || n.includes('tank')) return 'BESTSELLER';
+  if (idx % 2 === 0) return '20% OFF';
+  return '';
+}
+
+// Render Left Sidebar Sub-categories dynamically
 function renderLeftSubcatNav() {
   const container = document.getElementById('ucSubcatNavList');
   if (!container) return;
-  const items = SUBCAT_NAV_CONFIG[CURRENT_CATEGORY] || [
-    { name: "Standard Repairs", icon: "fa-wrench", badge: "" },
-    { name: "Overhaul & Service", icon: "fa-gears", badge: "POPULAR" },
-    { name: "Installation", icon: "fa-screwdriver-wrench", badge: "" },
-    { name: "Annual Plan", icon: "fa-shield", badge: "20% OFF" }
+
+  const items = [
+    { name: "All " + CURRENT_CATEGORY, icon: "fa-border-all", badge: "ALL", isAll: true },
+    ...SUBCATEGORIES.map((s, idx) => ({
+      id: s.id,
+      name: s.name,
+      icon: getSubcatIcon(s.name),
+      badge: getSubcatBadge(s.name, idx),
+      isAll: false
+    }))
   ];
 
-  container.innerHTML = items.map((item, idx) => `
-    <div class="uc-subcat-tile ${idx === 0 ? 'active' : ''}" onclick="filterBySubcat('${item.name}', this)">
-      ${item.badge ? `<span class="mini-badge">${item.badge}</span>` : ''}
-      <div class="uc-subcat-tile-icon">
-        <i class="fa-solid ${item.icon}"></i>
+  container.innerHTML = items.map((item) => {
+    const isAct = (item.isAll && (!ACTIVE_SUBCAT || ACTIVE_SUBCAT === 'All')) || 
+                  (!item.isAll && ACTIVE_SUBCAT.toLowerCase() === item.name.toLowerCase());
+    return `
+      <div class="uc-subcat-tile ${isAct ? 'active' : ''}" 
+           data-subcat-name="${item.name}" 
+           onclick="filterBySubcat('${item.isAll ? 'All' : item.name.replace(/'/g, "\\'")}', this)">
+        ${item.badge ? `<span class="mini-badge">${item.badge}</span>` : ''}
+        <div class="uc-subcat-tile-icon">
+          <i class="fa-solid ${item.icon}"></i>
+        </div>
+        <div class="uc-subcat-tile-label">${item.name}</div>
       </div>
-      <div class="uc-subcat-tile-label">${item.name}</div>
-    </div>
-  `).join('');
+    `;
+  }).join('');
 }
 
-function filterBySubcat(name, el) {
-  document.querySelectorAll('.uc-subcat-tile').forEach(t => t.classList.remove('active'));
-  el.classList.add('active');
+function filterBySubcat(subName, el) {
+  ACTIVE_SUBCAT = subName || 'All';
 
-  const cards = document.querySelectorAll('.uc-service-card');
-  cards.forEach(card => {
-    const title = card.querySelector('.uc-card-title').textContent.toLowerCase();
-    if (title.includes(name.toLowerCase().split(' ')[0])) {
-      card.style.display = 'grid';
-      card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  // Update left tiles active class
+  document.querySelectorAll('.uc-subcat-tile').forEach(t => {
+    const tName = t.getAttribute('data-subcat-name') || '';
+    if (ACTIVE_SUBCAT === 'All' && tName.startsWith('All ')) {
+      t.classList.add('active');
+    } else if (tName.toLowerCase() === ACTIVE_SUBCAT.toLowerCase()) {
+      t.classList.add('active');
     } else {
-      // Keep visible or highlight
-      card.style.display = 'grid';
+      t.classList.remove('active');
     }
   });
+
+  // Update horizontal quick pills
+  document.querySelectorAll('.uc-subcat-pill').forEach(p => {
+    const pName = p.getAttribute('data-pill-name') || '';
+    if (ACTIVE_SUBCAT === 'All' && pName === 'All') {
+      p.classList.add('active');
+    } else if (pName.toLowerCase() === ACTIVE_SUBCAT.toLowerCase()) {
+      p.classList.add('active');
+    } else {
+      p.classList.remove('active');
+    }
+  });
+
+  // Update heading & breadcrumb
+  const heading = document.getElementById('ucActiveFeedHeading');
+  const breadcrumb = document.getElementById('ucSubcatBreadcrumb');
+  const breadcrumbText = document.getElementById('ucSubcatBreadcrumbText');
+
+  if (ACTIVE_SUBCAT === 'All') {
+    if (heading) heading.textContent = CURRENT_CATEGORY;
+    if (breadcrumb) breadcrumb.style.display = 'none';
+    try { history.pushState(null, '', `/services/browse?category=${CURRENT_CATEGORY_ID}`); } catch(e) {}
+  } else {
+    if (heading) heading.textContent = `${CURRENT_CATEGORY} • ${ACTIVE_SUBCAT}`;
+    if (breadcrumb) {
+      breadcrumb.style.display = 'inline-flex';
+      if (breadcrumbText) breadcrumbText.textContent = ACTIVE_SUBCAT;
+    }
+    try { history.pushState(null, '', `/services/browse?category=${CURRENT_CATEGORY_ID}&sub=${encodeURIComponent(ACTIVE_SUBCAT)}`); } catch(e) {}
+  }
+
+  // Filter service cards
+  const cards = document.querySelectorAll('.uc-service-card');
+  let matchedCount = 0;
+
+  cards.forEach(card => {
+    const cardSub = (card.getAttribute('data-subcat') || '').toLowerCase();
+    const cardTitle = (card.querySelector('.uc-card-title')?.textContent || '').toLowerCase();
+    const cardDesc = (card.getAttribute('data-desc') || '').toLowerCase();
+    const subTarget = ACTIVE_SUBCAT.toLowerCase();
+
+    let matches = false;
+    if (ACTIVE_SUBCAT === 'All') {
+      matches = true;
+    } else if (cardSub && (cardSub.includes(subTarget) || subTarget.includes(cardSub))) {
+      matches = true;
+    } else if (cardTitle.includes(subTarget) || cardDesc.includes(subTarget)) {
+      matches = true;
+    } else {
+      // keyword matching
+      const words = subTarget.split(/[\s/&-]+/).filter(w => w.length > 2);
+      matches = words.some(w => cardTitle.includes(w) || cardSub.includes(w));
+    }
+
+    // Distance in-range check
+    const isInRange = card.dataset.inRange !== 'false';
+
+    if (matches && isInRange) {
+      card.style.display = 'grid';
+      matchedCount++;
+    } else {
+      card.style.display = 'none';
+    }
+  });
+
+  const servicesList = document.getElementById('ucServicesList');
+  const noNearby = document.getElementById('ucNoNearbyServices');
+  const emptyTitle = document.getElementById('ucEmptyTitle');
+  const emptyDesc = document.getElementById('ucEmptyDesc');
+
+  if (matchedCount === 0) {
+    if (servicesList) servicesList.style.display = 'none';
+    if (noNearby) {
+      noNearby.style.display = 'flex';
+      if (emptyTitle) emptyTitle.textContent = ACTIVE_SUBCAT === 'All' ? `No services in this area` : `Need custom ${ACTIVE_SUBCAT}?`;
+      if (emptyDesc) emptyDesc.innerHTML = `We have verified <strong>${CURRENT_CATEGORY}</strong> specialists in your locality ready to assist.`;
+    }
+  } else {
+    if (servicesList) servicesList.style.display = 'flex';
+    if (noNearby) noNearby.style.display = 'none';
+  }
 }
 
 // Service Action Button state sync with Cart
@@ -1196,12 +1353,15 @@ function calculateHaversineKm(lat1, lon1, lat2, lon2) {
   return Math.round((R * c) * 10) / 10;
 }
 
-// 10 KM Radius Dynamic Card Filter Engine
+// 15 KM Radius Dynamic Card Filter Engine with live storage
 function applyLocationDistanceFilter(locData) {
   if (!locData) return;
-  const userLat = locData.lat ? parseFloat(locData.lat) : 23.3697;
-  const userLon = locData.lon ? parseFloat(locData.lon) : 85.3346;
-  const userLocName = locData.primary || locData.name || "Ranchi Central";
+  const userLat = locData.lat ? parseFloat(locData.lat) : 23.3555;
+  const userLon = locData.lon ? parseFloat(locData.lon) : 85.3609;
+  const userLocName = locData.primary || locData.name || "RIADA Road, Namkum";
+
+  const headerLoc = document.querySelector('.uc-location-display');
+  if (headerLoc) headerLoc.textContent = userLocName;
 
   const deliveryLocEl = document.getElementById('ucActiveDeliveryLoc');
   if (deliveryLocEl) deliveryLocEl.textContent = userLocName;
@@ -1210,52 +1370,37 @@ function applyLocationDistanceFilter(locData) {
   if (emptyLocEl) emptyLocEl.textContent = userLocName;
 
   const cards = document.querySelectorAll('.uc-service-card');
-  let inRangeCount = 0;
 
   cards.forEach(card => {
     const sLat = parseFloat(card.getAttribute('data-lat'));
     const sLon = parseFloat(card.getAttribute('data-lon'));
-    const radius = parseFloat(card.getAttribute('data-radius')) || 10.0;
+    const radius = parseFloat(card.getAttribute('data-radius')) || 25.0;
     const sId = card.getAttribute('data-service-id');
     const badge = document.getElementById(`dist-badge-${sId}`);
 
     if (isNaN(sLat) || isNaN(sLon)) {
-      card.style.display = 'grid';
-      inRangeCount++;
+      card.dataset.inRange = 'true';
       return;
     }
 
     const dist = calculateHaversineKm(userLat, userLon, sLat, sLon);
-    const isWithinRange = dist <= radius; // 10 km rule
+    const isWithinRange = dist <= radius;
+
+    card.dataset.inRange = isWithinRange ? 'true' : 'false';
 
     if (badge) {
       if (isWithinRange) {
         badge.className = "uc-dist-badge in-range";
-        badge.innerHTML = `<i class="fa-solid fa-location-dot"></i> <span class="dist-val">${dist} km away • Within 10 km</span>`;
+        badge.innerHTML = `<i class="fa-solid fa-location-dot"></i> <span class="dist-val">${dist} km away • In Range</span>`;
       } else {
         badge.className = "uc-dist-badge out-range";
-        badge.innerHTML = `<i class="fa-solid fa-circle-xmark"></i> <span class="dist-val">${dist} km away • Outside 10 km</span>`;
+        badge.innerHTML = `<i class="fa-solid fa-circle-xmark"></i> <span class="dist-val">${dist} km away • Outside Range</span>`;
       }
-    }
-
-    if (isWithinRange) {
-      card.style.display = 'grid';
-      inRangeCount++;
-    } else {
-      card.style.display = 'none';
     }
   });
 
-  const servicesList = document.getElementById('ucServicesList');
-  const noNearby = document.getElementById('ucNoNearbyServices');
-
-  if (inRangeCount === 0) {
-    if (noNearby) noNearby.style.display = 'flex';
-    if (servicesList) servicesList.style.display = 'none';
-  } else {
-    if (noNearby) noNearby.style.display = 'none';
-    if (servicesList) servicesList.style.display = 'flex';
-  }
+  // Re-run filterBySubcat with current active subcategory
+  filterBySubcat(ACTIVE_SUBCAT || 'All', null);
 }
 
 // Initialize on page load
@@ -1285,17 +1430,25 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  const activeLoc = window.SuguLocation ? window.SuguLocation.getLocation() : null;
-  if (activeLoc) {
-    applyLocationDistanceFilter(activeLoc);
-  } else {
-    applyLocationDistanceFilter({
-      name: "Bengaluru, Karnataka",
-      primary: "Bengaluru",
-      lat: 12.9716,
-      lon: 77.5946
-    });
+  // Read live location from site-wide storage
+  let activeLoc = null;
+  try {
+    const raw = localStorage.getItem('sugu_selected_location');
+    if (raw) activeLoc = JSON.parse(raw);
+  } catch(e) {}
+
+  if (!activeLoc || !activeLoc.lat || (activeLoc.name && activeLoc.name.toLowerCase().includes('cantonment')) || (activeLoc.lat > 12.9 && activeLoc.lat < 13.0)) {
+    const locName = localStorage.getItem('suggu_user_location');
+    const uLat = parseFloat(localStorage.getItem('suggu_user_lat'));
+    const uLon = parseFloat(localStorage.getItem('suggu_user_lon'));
+    if (locName && !locName.toLowerCase().includes('cantonment')) {
+      activeLoc = { name: locName, primary: locName, lat: uLat || 23.3555, lon: uLon || 85.3609 };
+    } else {
+      activeLoc = { name: "RIADA Road, Namkum", primary: "RIADA Road", lat: 23.3555, lon: 85.3609 };
+    }
   }
+
+  applyLocationDistanceFilter(activeLoc);
 });
 </script>
 

@@ -597,8 +597,8 @@
 
     <!-- Brand Header -->
     <div class="brand-header">
-      <div class="brand-icon">
-        <img src="{% static 'assets/images/logo.png' %}" alt="Sugu Logo" onerror="this.style.display='none'">
+      <div class="brand-icon" style="background:transparent; box-shadow:none; width:auto; height:auto; display:flex; align-items:center; justify-content:center; margin:0 auto 12px;">
+        <img src="{% static 'images/logo.png' %}" alt="Sugu Logo" style="height:64px; width:auto; object-fit:contain;">
       </div>
       <h1>Welcome to Sugu</h1>
       <p>Sign in to access your dashboard</p>
@@ -1038,6 +1038,17 @@
       const modal = document.getElementById('createAccountModal');
       if (e.target === modal) {
         closeCreateAccountModal();
+      }
+    });
+
+    window.addEventListener('DOMContentLoaded', () => {
+      const urlParams = new URLSearchParams(window.location.search);
+      const pParam = urlParams.get('phone') || urlParams.get('mobile');
+      if (pParam) {
+        const pInput = document.getElementById('phoneInput');
+        if (pInput && !pInput.value) {
+          pInput.value = pParam;
+        }
       }
     });
   </script>

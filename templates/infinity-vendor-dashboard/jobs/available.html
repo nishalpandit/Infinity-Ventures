@@ -104,7 +104,7 @@
 
                 <div class="service-meta">
                   <span><span data-icon="rupee"></span> Budget <strong>₹{{ job.budget }}</strong> ({{ job.get_budget_type_display|default:'Fixed' }})</span>
-                  <span><span data-icon="map"></span> {% if job.location %}{{ job.location.city }}{% else %}{{ vendor_city|default:"Unknown Location" }}{% endif %}{% if job.locality %}, {{ job.locality }}{% endif %}</span>
+                  <span><span data-icon="map"></span> {% if job.location %}{{ job.location.city }}{% else %}{{ vendor_city|default:"Unknown Location" }}{% endif %}{% if job.locality %}, {{ job.locality }}{% endif %}{% if job.latitude and job.longitude %} <a href="https://maps.google.com/?q={{ job.latitude }},{{ job.longitude }}" target="_blank" rel="noopener noreferrer" style="color:#2563eb; font-weight:700; margin-left:4px; text-decoration:none;" title="Open in Google Maps">📍 Map ↗</a>{% endif %}</span>
                   <span><span data-icon="calendar"></span> Posted {{ job.created_at|date:"d-m-Y" }}</span>
                 </div>
 

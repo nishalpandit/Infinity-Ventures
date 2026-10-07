@@ -38,6 +38,9 @@
           <td style="color: var(--text-muted);">{{ st.created_at|date:"M d, Y" }}</td>
           <td>
             <div style="display: flex; gap: 8px;">
+              <button type="button" onclick="document.getElementById('city-{{ st.id }}').style.display = document.getElementById('city-{{ st.id }}').style.display === 'none' ? 'table-row' : 'none'" class="btn btn-outline btn-sm">
+                <i class="fa-solid fa-eye"></i> View
+              </button>
               <a href="{% url 'super_admin_state_edit' st.id %}" class="btn btn-outline btn-sm">
                 <i class="fa-solid fa-pen-to-square"></i> Edit
               </a>
@@ -47,60 +50,50 @@
             </div>
           </td>
         </tr>
+        <tr id="city-{{ st.id }}" style="display: none; background: #f8fafc; border-top: 1px dashed #cbd5e1;">
+          <td colspan="5" style="padding: 16px 24px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+              <h4 style="margin: 0; font-size: 14px; font-weight: 600; color: #475569;">Cities in {{ st.name }}</h4>
+              <a href="{% url 'super_admin_location_create' %}" class="btn btn-outline btn-sm" style="padding: 4px 10px; font-size: 12px;"><i class="fa-solid fa-plus"></i> Add City</a>
+            </div>
+            <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px;">
+              {% for loc in st.state_cities %}
+              <div style="background: white; border: 1px solid #e2e8f0; border-radius: 6px; padding: 10px; display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                  <strong style="font-size: 13px; color: #1e293b;">{{ loc.city }}</strong>
+                  <div style="font-size: 11px; color: {% if loc.status == 'active' %}#10b981{% else %}#ef4444{% endif %};">{{ loc.get_status_display }}</div>
+                </div>
+                <div style="display: flex; gap: 6px;">
+                  <a href="{% url 'super_admin_location_edit' loc.id %}" style="color: #64748b;"><i class="fa-solid fa-pen-to-square"></i></a>
+                  <a href="{% url 'super_admin_location_delete' loc.id %}" style="color: #ef4444;" onclick="return confirm('Delete {{ loc.city }}?');"><i class="fa-solid fa-trash"></i></a>
+                </div>
+              </div>
+              {% empty %}
+              <div style="color: #64748b; font-size: 13px; font-style: italic;">No cities mapped yet.</div>
+              {% endfor %}
+            </div>
+          </td>
+        </tr>
         {% empty %}
         <tr><td colspan="5" style="text-align: center; padding: 36px; color: var(--text-muted);">No states created yet.</td></tr>
         {% endfor %}
       </tbody>
     </table>
   </div>
-</div>
-
-<div style="margin-bottom: 16px; margin-top: 36px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 14px;">
-  <div>
-    <h3 style="font-size: 18px; font-weight: 700; color: var(--text-main); margin: 0 0 4px;">
-      <i class="fa-solid fa-city" style="color: var(--accent); margin-right: 8px;"></i>Service Cities
-    </h3>
+  
+  {% if states.has_other_pages %}
+  <div style="padding: 16px; border-top: 1px solid #f1f5f9; display: flex; justify-content: center;">
+    <div style="display: flex; gap: 8px;">
+      {% if states.has_previous %}
+      <a href="?state_page={{ states.previous_page_number }}" class="btn btn-outline btn-sm">Prev</a>
+      {% endif %}
+      <span class="btn btn-outline btn-sm" style="background: #f1f5f9; cursor: default;">Page {{ states.number }} of {{ states.paginator.num_pages }}</span>
+      {% if states.has_next %}
+      <a href="?state_page={{ states.next_page_number }}" class="btn btn-outline btn-sm">Next</a>
+      {% endif %}
+    </div>
   </div>
-  <a href="{% url 'super_admin_location_create' %}" class="btn btn-primary">
-    <i class="fa-solid fa-plus"></i> Add City
-  </a>
+  {% endif %}
 </div>
-
-<div class="card" style="padding: 0; overflow: hidden;">
-  <div class="table-container" style="border: none; border-radius: 0; box-shadow: none;">
-    <table>
-      <thead>
-        <tr>
-          <th>City</th>
-          <th>State</th>
-          <th>Status</th>
-          <th>Created</th>
-          <th>Actions</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for loc in locations %}
-        <tr>
-          <td><strong>{{ loc.city }}</strong></td>
-          <td>{{ loc.state }}</td>
-          <td><span class="badge {% if loc.status == 'active' %}active{% else %}inactive{% endif %}">{{ loc.get_status_display }}</span></td>
-          <td style="color: var(--text-muted);">{{ loc.created_at|date:"M d, Y" }}</td>
-          <td>
-            <div style="display: flex; gap: 8px;">
-              <a href="{% url 'super_admin_location_edit' loc.id %}" class="btn btn-outline btn-sm">
-                <i class="fa-solid fa-pen-to-square"></i> Edit
-              </a>
-              <a href="{% url 'super_admin_location_delete' loc.id %}" class="btn btn-outline btn-sm" style="border-color: rgba(239,68,68,0.3); color: var(--danger);" onclick="return confirm('Delete city {{ loc }}?');">
-                <i class="fa-solid fa-trash"></i>
-              </a>
-            </div>
-          </td>
-        </tr>
-        {% empty %}
-        <tr><td colspan="5" style="text-align: center; padding: 40px; color: var(--text-muted);">No cities found.</td></tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
-</div>
+<!-- Separate Cities section removed -->
 {% endblock %}
