@@ -184,6 +184,12 @@ urlpatterns = [
     path('api/user/address/update/', Api_views.update_customer_address_api, name='update_customer_address_api'),
     path('api/user/address/update', Api_views.update_customer_address_api),
 
+    # User Profile APIs
+    path('api/user/profile/', Api_views.user_profile_api, name='user_profile_api'),
+    path('api/user/profile', Api_views.user_profile_api),
+    path('api/user/profile/update/', Api_views.user_update_profile_api, name='user_update_profile_api'),
+    path('api/user/profile/update', Api_views.user_update_profile_api),
+
     # Service Booking API
     path('api/user/services/book/', Api_views.book_service_api, name='book_service_api'),
     path('api/user/services/book', Api_views.book_service_api),
