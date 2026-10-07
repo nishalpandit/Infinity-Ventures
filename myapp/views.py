@@ -367,9 +367,14 @@ def save_vendor_profile_changes(request, user):
     if vendor_type in ['vendor', 'company']:
         v_prof.vendor_type = vendor_type
     
-    category = request.POST.get('category')
-    if category is not None and category.strip():
-        v_prof.category = category.strip()
+    categories = request.POST.getlist('categories') or request.POST.getlist('category')
+    if categories and any(c.strip() for c in categories):
+        clean_cats = [c.strip() for c in categories if c.strip()]
+        v_prof.category = ", ".join(clean_cats)
+    else:
+        category = request.POST.get('category')
+        if category is not None and category.strip():
+            v_prof.category = category.strip()
         
     location = request.POST.get('location')
     if location is not None and location.strip():
@@ -1829,22 +1834,46 @@ def dashboard_view(request, path=''):
         jobs_qs = Job.objects.filter(status='open').select_related('category', 'location', 'user').order_by('-created_at')
         
         vendor_city = None
+        vendor_categories = []
         if request.user.is_authenticated:
             v_prof = getattr(request.user, 'vendor_profile', None)
-            if not v_prof and request.user.role == 'VENDOR':
+            if not v_prof and getattr(request.user, 'role', '') == 'VENDOR':
                 v_prof, _ = VendorProfile.objects.get_or_create(user=request.user)
-            if v_prof and v_prof.location and v_prof.location.strip():
-                vendor_city = v_prof.location.strip().split(',')[0].strip()
+            if v_prof:
+                if v_prof.location and v_prof.location.strip():
+                    vendor_city = v_prof.location.strip().split(',')[0].strip()
+                elif getattr(v_prof, 'address', None):
+                    vendor_city = v_prof.address.strip().split(',')[0].strip()
+                if v_prof.category and v_prof.category.strip():
+                    vendor_categories = v_prof.categories_list
                 
         if vendor_city:
             city_filter = (
                 Q(location__city__iexact=vendor_city) |
+                Q(city__iexact=vendor_city) |
                 (Q(location__isnull=True) & (Q(address__icontains=vendor_city) | Q(locality__icontains=vendor_city)))
             )
             jobs_qs = jobs_qs.filter(city_filter)
             context['vendor_city'] = vendor_city
 
+        if vendor_categories:
+            cat_filter = Q()
+            has_general = any(c.lower() in ['other', 'general', 'other / general services', 'general services'] for c in vendor_categories)
+            if has_general:
+                cat_filter |= Q(category__isnull=True) | Q(category__name__icontains='General') | Q(category__name__icontains='Other')
+            
+            for cat_name in vendor_categories:
+                if cat_name.lower() not in ['other', 'general', 'other / general services', 'general services']:
+                    cat_filter |= (
+                        Q(category__name__iexact=cat_name) |
+                        Q(category__name__icontains=cat_name) |
+                        (Q(category__isnull=True) & Q(title__icontains=cat_name))
+                    )
+            jobs_qs = jobs_qs.filter(cat_filter)
+            context['vendor_categories'] = vendor_categories
+
         context['available_jobs'] = jobs_qs
+        context['all_categories'] = Category.objects.filter(status='active').order_by('name')
 
     if path == 'vendor/quick-services/nearby':
         v_lat = None
@@ -3770,7 +3799,16 @@ def register_vendor_view(request):
         company_name = request.POST.get('company_name', '').strip()
         email = request.POST.get('email', '').strip()
         mobile = request.POST.get('mobile', '').strip()
-        category = request.POST.get('category', '').strip()
+        
+        # Multi-select categories support
+        categories_selected = request.POST.getlist('categories')
+        if not categories_selected:
+            categories_selected = request.POST.getlist('category')
+        if not categories_selected and request.POST.get('category'):
+            categories_selected = [c.strip() for c in request.POST.get('category').split(',') if c.strip()]
+        clean_cats = [c.strip() for c in categories_selected if c.strip()]
+        category = ", ".join(clean_cats) if clean_cats else ""
+
         state = request.POST.get('state', '').strip()
         city = request.POST.get('city', '').strip()
         location = f"{city}, {state}" if state and city else request.POST.get('location', '').strip()
@@ -3789,7 +3827,9 @@ def register_vendor_view(request):
         password = request.POST.get('password', '')
         confirm_password = request.POST.get('confirm_password', '')
         
-        if password != confirm_password:
+        if not clean_cats:
+            error = 'Please select at least one main service category.'
+        elif password != confirm_password:
             error = 'Passwords do not match.'
         elif User.objects.filter(email=email).exists() or User.objects.filter(username=email).exists():
             error = 'Email is already registered.'
@@ -3803,7 +3843,7 @@ def register_vendor_view(request):
             VendorProfile.objects.create(
                 user=user,
                 company_name=company_name,
-                category=category,
+                category=category or "General",
                 location=location,
                 dob=dob,
                 gender=gender,
@@ -3844,11 +3884,17 @@ def register_vendor_view(request):
             locations_dict[loc.state] = []
         locations_dict[loc.state].append(loc.city)
 
+    selected_categories = request.POST.getlist('categories') or request.POST.getlist('category')
+    if not selected_categories and request.POST.get('category'):
+        selected_categories = [c.strip() for c in request.POST.get('category').split(',') if c.strip()]
+
     context = {
         'error': error,
         'categories': Category.objects.filter(status='active').order_by('name'),
         'locations_json': json.dumps(locations_dict),
         'states': sorted(locations_dict.keys()),
+        'selected_categories': selected_categories,
+        'selected_categories_json': json.dumps(selected_categories),
     }
     return render(request, 'register_vendor.html', context)
 
@@ -3954,16 +4000,37 @@ def vendor_dashboard(request):
     pending_payouts_sum = PayoutRequest.objects.filter(vendor=user, status='pending').aggregate(total=Sum('amount'))['total'] or 0
 
     vendor_city = None
-    if vendor_profile and vendor_profile.location and vendor_profile.location.strip():
-        vendor_city = vendor_profile.location.strip().split(',')[0].strip()
+    vendor_categories = []
+    if vendor_profile:
+        if vendor_profile.location and vendor_profile.location.strip():
+            vendor_city = vendor_profile.location.strip().split(',')[0].strip()
+        elif getattr(vendor_profile, 'address', None):
+            vendor_city = vendor_profile.address.strip().split(',')[0].strip()
+        if vendor_profile.category and vendor_profile.category.strip():
+            vendor_categories = vendor_profile.categories_list
 
     jobs_base = Job.objects.filter(status='open')
     if vendor_city:
         city_filter = (
             Q(location__city__iexact=vendor_city) |
+            Q(city__iexact=vendor_city) |
             (Q(location__isnull=True) & (Q(address__icontains=vendor_city) | Q(locality__icontains=vendor_city)))
         )
         jobs_base = jobs_base.filter(city_filter)
+
+    if vendor_categories:
+        cat_filter = Q()
+        has_general = any(c.lower() in ['other', 'general', 'other / general services', 'general services'] for c in vendor_categories)
+        if has_general:
+            cat_filter |= Q(category__isnull=True) | Q(category__name__icontains='General') | Q(category__name__icontains='Other')
+        for cat_name in vendor_categories:
+            if cat_name.lower() not in ['other', 'general', 'other / general services', 'general services']:
+                cat_filter |= (
+                    Q(category__name__iexact=cat_name) |
+                    Q(category__name__icontains=cat_name) |
+                    (Q(category__isnull=True) & Q(title__icontains=cat_name))
+                )
+        jobs_base = jobs_base.filter(cat_filter)
 
     # Quick services strictly under 10km
     v_lat, v_lon = resolve_coordinates_for_location(vendor_city or (vendor_profile.location if vendor_profile else ''))

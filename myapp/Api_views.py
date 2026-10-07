@@ -474,7 +474,13 @@ def vendor_signup_api(request):
         password = data.get('password', '')
         confirm_password = data.get('confirm_password')
 
-        category = (data.get('category') or 'General Services').strip()
+        categories_input = data.get('categories') or data.get('category')
+        if isinstance(categories_input, list):
+            category = ", ".join(str(c).strip() for c in categories_input if str(c).strip())
+        elif isinstance(categories_input, str) and categories_input.strip():
+            category = categories_input.strip()
+        else:
+            category = 'General Services'
         city = (data.get('city') or '').strip()
         state = (data.get('state') or '').strip()
         location = f"{city}, {state}" if (city and state) else (data.get('location') or city or state or 'Ranchi, Jharkhand').strip()
@@ -3173,6 +3179,39 @@ def vendor_dashboard_api(request):
 
         # Dynamic query for open jobs and quick services
         open_jobs_qs = Job.objects.filter(status='open').select_related('category', 'location', 'user').order_by('-created_at')
+
+        vendor_city = None
+        vendor_categories = []
+        if vp:
+            if vp.location and vp.location.strip():
+                vendor_city = vp.location.strip().split(',')[0].strip()
+            elif getattr(vp, 'address', None):
+                vendor_city = vp.address.strip().split(',')[0].strip()
+            if vp.category and vp.category.strip():
+                vendor_categories = vp.categories_list
+
+        if vendor_city:
+            city_filter = (
+                Q(location__city__iexact=vendor_city) |
+                Q(city__iexact=vendor_city) |
+                (Q(location__isnull=True) & (Q(address__icontains=vendor_city) | Q(locality__icontains=vendor_city)))
+            )
+            open_jobs_qs = open_jobs_qs.filter(city_filter)
+
+        if vendor_categories:
+            cat_filter = Q()
+            has_general = any(c.lower() in ['other', 'general', 'other / general services', 'general services'] for c in vendor_categories)
+            if has_general:
+                cat_filter |= Q(category__isnull=True) | Q(category__name__icontains='General') | Q(category__name__icontains='Other')
+            for cat_name in vendor_categories:
+                if cat_name.lower() not in ['other', 'general', 'other / general services', 'general services']:
+                    cat_filter |= (
+                        Q(category__name__iexact=cat_name) |
+                        Q(category__name__icontains=cat_name) |
+                        (Q(category__isnull=True) & Q(title__icontains=cat_name))
+                    )
+            open_jobs_qs = open_jobs_qs.filter(cat_filter)
+
         active_qs_qs = QuickService.objects.filter(status__in=['active', 'open']).select_related('category', 'location').order_by('-created_at')
 
         # Bids counts
@@ -3257,6 +3296,42 @@ def vendor_jobs_api(request):
 
     try:
         jobs_qs = Job.objects.filter(status='open').select_related('category', 'location', 'user').order_by('-created_at')
+
+        vp = getattr(user, 'vendor_profile', None)
+        if not vp and getattr(user, 'role', '') == 'VENDOR':
+            vp, _ = VendorProfile.objects.get_or_create(user=user)
+
+        vendor_city = None
+        vendor_categories = []
+        if vp:
+            if vp.location and vp.location.strip():
+                vendor_city = vp.location.strip().split(',')[0].strip()
+            elif getattr(vp, 'address', None):
+                vendor_city = vp.address.strip().split(',')[0].strip()
+            if vp.category and vp.category.strip():
+                vendor_categories = vp.categories_list
+
+        if vendor_city:
+            city_filter = (
+                Q(location__city__iexact=vendor_city) |
+                Q(city__iexact=vendor_city) |
+                (Q(location__isnull=True) & (Q(address__icontains=vendor_city) | Q(locality__icontains=vendor_city)))
+            )
+            jobs_qs = jobs_qs.filter(city_filter)
+
+        if vendor_categories:
+            cat_filter = Q()
+            has_general = any(c.lower() in ['other', 'general', 'other / general services', 'general services'] for c in vendor_categories)
+            if has_general:
+                cat_filter |= Q(category__isnull=True) | Q(category__name__icontains='General') | Q(category__name__icontains='Other')
+            for cat_name in vendor_categories:
+                if cat_name.lower() not in ['other', 'general', 'other / general services', 'general services']:
+                    cat_filter |= (
+                        Q(category__name__iexact=cat_name) |
+                        Q(category__name__icontains=cat_name) |
+                        (Q(category__isnull=True) & Q(title__icontains=cat_name))
+                    )
+            jobs_qs = jobs_qs.filter(cat_filter)
 
         search_query = request.GET.get('search', '').strip()
         if search_query:

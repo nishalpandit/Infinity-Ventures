@@ -34,6 +34,11 @@
           <span class="badge badge-purple" style="font-size:12px; padding:6px 14px; font-weight:700; display:inline-flex; align-items:center; gap:6px;">
             <span data-icon="map"></span> City: <strong>{{ vendor_city|default:vendor_location|default:"All Cities" }}</strong>
           </span>
+          {% if vendor_categories %}
+          <span class="badge" style="font-size:12px; padding:6px 14px; font-weight:700; display:inline-flex; align-items:center; gap:6px; background:#eff6ff; color:#1d4ed8; border:1px solid #bfdbfe;">
+            <span data-icon="briefcase"></span> Categories: <strong>{{ vendor_categories|join:", " }}</strong>
+          </span>
+          {% endif %}
           <a href="/vendor/settings/index.html#profile" class="btn btn-secondary btn-sm" title="Change operating city in profile settings">
             <span data-icon="settings"></span> Change City
           </a>
@@ -47,19 +52,25 @@
             <input class="input" data-search-input placeholder="Search jobs, category or locality">
           </div>
 
-          <select class="select" style="max-width:160px" data-filter="category">
-            <option value="all">All categories</option>
-            {% for cat in all_categories %}
-              <option value="{{ cat.name }}">{{ cat.name }}</option>
-            {% endfor %}
-            {% if not all_categories %}
-              <option>Waterproofing</option>
-              <option>AC Repair</option>
-              <option>Plumbing</option>
-              <option>Electrical</option>
-              <option>Civil Work</option>
-              <option>Painting</option>
-              <option>Cleaning</option>
+          <select class="select" style="max-width:180px" data-filter="category">
+            <option value="all">All your categories</option>
+            {% if vendor_categories %}
+              {% for cat_name in vendor_categories %}
+                <option value="{{ cat_name }}">{{ cat_name }}</option>
+              {% endfor %}
+            {% else %}
+              {% for cat in all_categories %}
+                <option value="{{ cat.name }}">{{ cat.name }}</option>
+              {% endfor %}
+              {% if not all_categories %}
+                <option>Waterproofing</option>
+                <option>AC Repair</option>
+                <option>Plumbing</option>
+                <option>Electrical</option>
+                <option>Civil Work</option>
+                <option>Painting</option>
+                <option>Cleaning</option>
+              {% endif %}
             {% endif %}
           </select>
 
