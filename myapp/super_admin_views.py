@@ -8,9 +8,10 @@ from django.http import JsonResponse
 from django.views.decorators.http import require_POST
 from django.core.paginator import Paginator, PageNotAnInteger, EmptyPage
 from django.db.models import Q, Sum, Count
+from django.utils import timezone
 from .models import (
     CustomUser, VendorProfile, UserProfile, Job, QuickService, 
-    Category, GlobalSettings, Location, State, Bid, Subscription, Message,
+    Category, SubCategory, GlobalSettings, Location, State, Bid, Subscription, Message,
     SiteBranding, HeroSection, QuickServiceCard, FeaturedProjectCard,
     PackageCard, Testimonial, TrustMetric, VendorKYC,
     VendorWallet, WalletTransaction, PayoutRequest,
@@ -1253,44 +1254,86 @@ def super_admin_jobs(request):
 
 @sa_required
 def super_admin_job_create(request):
-    users = CustomUser.objects.filter(role='USER').order_by('username')
+    users = CustomUser.objects.filter(role__in=['USER', 'CUSTOMER']).select_related('user_profile').order_by('username')
     vendors = CustomUser.objects.filter(role='VENDOR').select_related('vendor_profile').order_by('username')
-    categories = Category.objects.all().order_by('name')
-    locations = Location.objects.all().order_by('state', 'city')
+    categories = Category.objects.filter(status='active').prefetch_related('subcategories').order_by('name')
+    locations = Location.objects.filter(status='active').order_by('state', 'city')
+    today_str = timezone.now().strftime('%Y-%m-%d')
 
     if request.method == 'POST':
         user_id = request.POST.get('user')
         title = request.POST.get('title', '').strip()
         cat_id = request.POST.get('category')
+        subcat_id = request.POST.get('subcategory')
         loc_id = request.POST.get('location')
         budget = request.POST.get('budget', 0) or 0
+        preferred_start_date = request.POST.get('preferred_start_date') or None
+        contact_mobile = request.POST.get('contact_mobile', '').strip()
+        contact_name = request.POST.get('contact_name', '').strip()
+        locality = request.POST.get('locality', '').strip()
+        address = request.POST.get('address', '').strip() or locality
+        pincode = request.POST.get('pincode', '').strip() or '834001'
+        
+        lat_val = request.POST.get('latitude')
+        lon_val = request.POST.get('longitude')
+        lat = None
+        lon = None
+        if lat_val:
+            try: lat = float(lat_val)
+            except (ValueError, TypeError): pass
+        if lon_val:
+            try: lon = float(lon_val)
+            except (ValueError, TypeError): pass
+
         max_bids = request.POST.get('max_bids')
         min_bid_amount = request.POST.get('min_bid_amount')
         max_bid_amount = request.POST.get('max_bid_amount')
         assigned_vendor_id = request.POST.get('assigned_vendor')
         status = request.POST.get('status', 'open')
         description = request.POST.get('description', '').strip()
-        address = request.POST.get('address', '').strip()
 
-        customer = get_object_or_404(CustomUser, pk=user_id)
+        customer = get_object_or_404(CustomUser, pk=user_id) if user_id else users.first()
         cat_obj = Category.objects.filter(id=cat_id).first() if cat_id else None
+        
+        # Determine location
         loc_obj = Location.objects.filter(id=loc_id).first() if loc_id else None
+        if not loc_obj:
+            loc_obj = Location.objects.filter(status='active').first()
+
         assigned_v = CustomUser.objects.filter(id=assigned_vendor_id, role='VENDOR').first() if assigned_vendor_id else None
+
+        # Build subcategory text / work requirements
+        subcat_name = None
+        if subcat_id:
+            subcat_obj = SubCategory.objects.filter(id=subcat_id).first()
+            if subcat_obj:
+                subcat_name = subcat_obj.name
+
+        c_name = contact_name or customer.get_full_name() or customer.username
+        c_mobile = contact_mobile or getattr(customer, 'mobile', '') or getattr(getattr(customer, 'user_profile', None), 'phone_number', '')
 
         job = Job.objects.create(
             user=customer,
-            title=title,
+            title=title or (subcat_name or "Home Service Job"),
             category=cat_obj,
             location=loc_obj,
             budget=budget,
+            budget_type='Fixed Price',
+            preferred_start_date=preferred_start_date,
+            contact_name=c_name,
+            contact_mobile=c_mobile,
+            locality=locality,
+            latitude=lat,
+            longitude=lon,
+            address=address,
+            pincode=pincode,
             max_bids=int(max_bids) if max_bids else 10,
             min_bid_amount=float(min_bid_amount) if min_bid_amount else None,
             max_bid_amount=float(max_bid_amount) if max_bid_amount else None,
             assigned_vendor=assigned_v,
             status=status if not assigned_v else ('selected' if status == 'open' else status),
-            description=description,
-            address=address,
-            contact_name=customer.get_full_name() or customer.username
+            description=description or f"Requirement for {title}",
+            required_work=[subcat_name] if subcat_name else ([title] if title else [])
         )
         django_messages.success(request, f'Job "{job.title}" created successfully.')
         return redirect('super_admin_jobs')
@@ -1300,23 +1343,59 @@ def super_admin_job_create(request):
         'users': users,
         'vendors': vendors,
         'categories': categories,
-        'locations': locations
+        'locations': locations,
+        'today_str': today_str
     })
 
 @sa_required
 def super_admin_job_edit(request, job_id):
-    job = get_object_or_404(Job.objects.select_related('assigned_vendor'), pk=job_id)
-    categories = Category.objects.all().order_by('name')
-    locations = Location.objects.all().order_by('state', 'city')
-    users = CustomUser.objects.filter(role='USER').order_by('username')
+    job = get_object_or_404(Job.objects.select_related('assigned_vendor', 'category', 'location', 'user'), pk=job_id)
+    categories = Category.objects.filter(status='active').prefetch_related('subcategories').order_by('name')
+    locations = Location.objects.filter(status='active').order_by('state', 'city')
+    users = CustomUser.objects.filter(role__in=['USER', 'CUSTOMER']).select_related('user_profile').order_by('username')
     vendors = CustomUser.objects.filter(role='VENDOR').select_related('vendor_profile').order_by('username')
+    today_str = timezone.now().strftime('%Y-%m-%d')
     
     if request.method == 'POST':
         old_status = job.status
-        job.title = request.POST.get('title', job.title)
+        job.title = request.POST.get('title', job.title).strip()
         job.status = request.POST.get('status', job.status)
         job.budget = request.POST.get('budget', job.budget)
         
+        pref_date = request.POST.get('preferred_start_date')
+        if pref_date:
+            job.preferred_start_date = pref_date
+            
+        c_mobile = request.POST.get('contact_mobile')
+        if c_mobile:
+            job.contact_mobile = c_mobile.strip()
+            
+        c_name = request.POST.get('contact_name')
+        if c_name:
+            job.contact_name = c_name.strip()
+
+        loc_text = request.POST.get('locality')
+        if loc_text:
+            job.locality = loc_text.strip()
+
+        addr_text = request.POST.get('address')
+        if addr_text:
+            job.address = addr_text.strip()
+
+        pin_text = request.POST.get('pincode')
+        if pin_text:
+            job.pincode = pin_text.strip()
+
+        lat_val = request.POST.get('latitude')
+        if lat_val:
+            try: job.latitude = float(lat_val)
+            except: pass
+
+        lon_val = request.POST.get('longitude')
+        if lon_val:
+            try: job.longitude = float(lon_val)
+            except: pass
+
         max_bids = request.POST.get('max_bids')
         job.max_bids = int(max_bids) if max_bids else None
         
@@ -1336,11 +1415,19 @@ def super_admin_job_edit(request, job_id):
 
         cat_id = request.POST.get('category')
         if cat_id:
-            job.category = get_object_or_404(Category, pk=cat_id)
+            job.category = Category.objects.filter(pk=cat_id).first()
+            
+        subcat_id = request.POST.get('subcategory')
+        if subcat_id:
+            sub_obj = SubCategory.objects.filter(pk=subcat_id).first()
+            if sub_obj:
+                job.required_work = [sub_obj.name]
+
         loc_id = request.POST.get('location')
         if loc_id:
             job.location = Location.objects.filter(id=loc_id).first()
-        job.description = request.POST.get('description', job.description)
+
+        job.description = request.POST.get('description', job.description).strip()
         job.save()
         if job.status == 'completed' and old_status != 'completed':
             settled, msg = settle_job_completion(job=job)
@@ -1348,13 +1435,15 @@ def super_admin_job_edit(request, job_id):
                 django_messages.info(request, msg)
         django_messages.success(request, f'Job "{job.title}" updated.')
         return redirect('super_admin_jobs')
+        
     return render(request, 'superadmin/job_form.html', {
         'mode': 'edit',
         'job': job,
         'categories': categories,
         'locations': locations,
         'users': users,
-        'vendors': vendors
+        'vendors': vendors,
+        'today_str': today_str
     })
 
 @sa_required
