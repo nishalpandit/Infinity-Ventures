@@ -1,15 +1,24 @@
 import json
 import re
 import random
+import io
+import base64
+import qrcode
 from datetime import timedelta
+from decimal import Decimal
 from django.http import JsonResponse
 from django.views.decorators.http import require_POST
 from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth import authenticate, login
 from django.contrib.auth import get_user_model
 from django.utils import timezone
+from django.db import transaction
 from django.db.models import Q
-from .models import UserProfile, VendorProfile, Category, Location, OTPVerification, AuthToken, Job, QuickService, VendorKYC, CustomerAddress, ServiceBooking, GlobalSettings, Message
+from .models import UserProfile, VendorProfile, Category, Location, OTPVerification, AuthToken, Job, QuickService, VendorKYC, CustomerAddress, ServiceBooking, GlobalSettings, Message, Bid, BidPlan, BidCreditTransaction, Subscription, VendorWallet, WalletTransaction, PlatformRevenueLedger, ServiceReview
+from .review_services import (
+    ReviewError, UNLOCKED_BOOKING_STATUSES, booking_contact_unlocked,
+    mask_customer_name, submit_booking_review, vendor_review_summary,
+)
 User = get_user_model()
 
 
@@ -143,8 +152,13 @@ def _get_user_from_bearer_token(request):
         Authorization: Token <token>
     Fallback:
         Query or Body parameter 'token' / 'bearer_token'
+        Session-authenticated user (from web portal)
     Returns: (user_or_None, error_message_or_None)
     """
+    # Allow session-authenticated requests (e.g. from web dashboard)
+    if hasattr(request, 'user') and request.user and request.user.is_authenticated:
+        return request.user, None
+
     auth_header = request.META.get('HTTP_AUTHORIZATION', '')
     token_key = ''
     if auth_header:
@@ -370,7 +384,7 @@ def user_signup_api(request):
                 'name': name,
                 'username': user.username,
                 'email': user.email,
-                'mobile': mobile or '—',
+                'mobile': mobile or 'â€”',
                 'role': user.role
             }
         }
@@ -408,7 +422,7 @@ def user_login_api(request):
         user.backend = 'django.contrib.auth.backends.ModelBackend'
         login(request, user)
 
-        mobile = '—'
+        mobile = 'â€”'
         try:
             if hasattr(user, 'user_profile') and user.user_profile.phone_number:
                 mobile = user.user_profile.phone_number
@@ -429,7 +443,7 @@ def user_login_api(request):
                 'user_code': code,
                 'name': full_name,
                 'username': user.username,
-                'email': user.email or '—',
+                'email': user.email or 'â€”',
                 'mobile': mobile,
                 'role': user.role
             }
@@ -590,12 +604,12 @@ def vendor_signup_api(request):
                 'user_id': user.id,
                 'name': name,
                 'company_name': company_name,
-                'contact': mobile or '—',
-                'mobile': mobile or '—',
+                'contact': mobile or 'â€”',
+                'mobile': mobile or 'â€”',
                 'email': user.email,
                 'category': category,
                 'location': location,
-                'address': address or '—',
+                'address': address or 'â€”',
                 'vendor_type': vendor_type,
                 'experience': experience,
                 'dob': str(vendor_profile.dob) if vendor_profile.dob else '',
@@ -653,7 +667,7 @@ def vendor_login_api(request):
         company_name = (profile.company_name if profile and profile.company_name else user.get_full_name()) or user.username
         category = profile.category if profile else 'General'
         location = profile.location if profile else 'Unknown'
-        address = profile.address if profile and profile.address else '—'
+        address = profile.address if profile and profile.address else 'â€”'
         vendor_type = profile.vendor_type if profile else 'vendor'
         experience = profile.experience if profile else 0
 
@@ -741,8 +755,8 @@ def add_user_api(request):
         user_data = {
             'id': f'USR-{user.id:04d}',
             'name': name,
-            'email': email or '—',
-            'mobile': mobile or '—',
+            'email': email or 'â€”',
+            'mobile': mobile or 'â€”',
             'location': user.assigned_state or 'Unknown',
             'quickServices': 0,
             'jobs': 0,
@@ -940,7 +954,7 @@ def unified_login_api(request):
                 'user_id': user.id,
                 'name': full_name,
                 'username': user.username,
-                'email': user.email or '—',
+                'email': user.email or 'â€”',
                 'role': role
             }
         }, status=200)
@@ -1054,7 +1068,7 @@ def unified_otp_login_api(request):
                 'user_id': user.id,
                 'name': full_name,
                 'username': user.username,
-                'email': user.email or '—',
+                'email': user.email or 'â€”',
                 'mobile': mobile,
                 'role': role
             }
@@ -1249,7 +1263,7 @@ def verify_otp_api(request):
                 'user_code': code,
                 'name': full_name,
                 'username': user.username,
-                'email': user.email or '—',
+                'email': user.email or 'â€”',
                 'mobile': mobile,
                 'role': user.role
             }
@@ -1437,7 +1451,7 @@ def user_otp_login_api(request):
                 'user_code': code,
                 'name': full_name,
                 'username': user.username,
-                'email': user.email or '—',
+                'email': user.email or 'â€”',
                 'mobile': mobile,
                 'role': user.role
             }
@@ -1613,7 +1627,7 @@ def vendor_otp_signup_api(request):
                 'email': user.email,
                 'category': category,
                 'location': location,
-                'address': address or '—',
+                'address': address or 'â€”',
                 'vendor_type': vendor_type,
                 'experience': experience,
                 'dob': str(vendor_profile.dob) if vendor_profile.dob else '',
@@ -2146,8 +2160,10 @@ def _serialize_quick_service(request, qs, vendor_profile=None, reviews_avg=None,
             'location': vendor_profile.location if vendor_profile else '',
             'vendor_type': vendor_profile.vendor_type if vendor_profile else 'vendor',
             'about': vendor_profile.about if vendor_profile and vendor_profile.about else '',
+            'is_online': vendor_profile.is_online if vendor_profile else True,
         },
         'created_at': qs.created_at.strftime("%Y-%m-%d %H:%M:%S"),
+        'is_available': qs.status == 'active' and (vendor_profile.is_online if vendor_profile else True),
     }
 
 
@@ -2593,7 +2609,7 @@ def update_customer_address_api(request):
     Params:
       - address_id (required)
       - title, address_line_1, address_line_2, city, state, pincode,
-        latitude, longitude, is_default (all optional – only provided fields are updated)
+        latitude, longitude, is_default (all optional â€“ only provided fields are updated)
     """
     if request.method != 'POST':
         return JsonResponse({'status': 'error', 'message': 'Method not allowed'}, status=405)
@@ -2781,6 +2797,7 @@ def _serialize_vendor_profile_data(user, request=None):
         'available_bids': vp.available_bids if vp.available_bids is not None else 5,
         'kyc_status': kyc_status,
         'registered_date': vp.registered_date.strftime("%Y-%m-%d %H:%M:%S") if vp.registered_date else '',
+        'is_online': vp.is_online,
         'role': 'VENDOR'
     }
 
@@ -2934,6 +2951,45 @@ def vendor_edit_profile_api(request):
     return _handle_vendor_profile_update(request, user, vp)
 
 
+@csrf_exempt
+@require_POST
+def vendor_toggle_online_api(request):
+    """
+    API for Vendor to toggle their online status.
+    URL: /api/vendor/toggle-online/
+    Method: POST
+    Payload: {"is_online": true/false}
+    """
+    user, err = _get_user_from_bearer_token(request)
+    if err:
+        return JsonResponse({'status': 'error', 'message': err}, status=401)
+        
+    if user.role != 'VENDOR':
+        return JsonResponse({'status': 'error', 'message': 'Only vendors can toggle online status.'}, status=403)
+        
+    data = _parse_api_request(request)
+    is_online = data.get('is_online')
+    if is_online is None:
+        return JsonResponse({'status': 'error', 'message': 'is_online parameter is required.'}, status=400)
+        
+    vp, _ = VendorProfile.objects.get_or_create(user=user)
+    
+    # Handle both boolean and string versions of true/false
+    if isinstance(is_online, str):
+        is_online = is_online.lower() in ('true', '1', 'yes')
+    else:
+        is_online = bool(is_online)
+        
+    vp.is_online = is_online
+    vp.save(update_fields=['is_online'])
+    
+    return JsonResponse({
+        'status': 'success',
+        'is_online': vp.is_online,
+        'message': 'Status updated successfully'
+    })
+
+
 # =====================================================================
 # 10. VENDOR DASHBOARD & JOBS APIS (Dynamic Mobile App Integration)
 # =====================================================================
@@ -3031,7 +3087,7 @@ def _serialize_job_summary(job, vendor_user=None, request=None):
         'category': category_name,
         'description': job.description or "",
         'budget': budget_val,
-        'budget_formatted': f"₹{int(budget_val):,}" if budget_val >= 1000 else f"₹{budget_val:.0f}",
+        'budget_formatted': f"â‚¹{int(budget_val):,}" if budget_val >= 1000 else f"â‚¹{budget_val:.0f}",
         'budget_type': job.budget_type or "Fixed Budget",
         'location': loc_display,
         'address': job.address or "",
@@ -3073,7 +3129,7 @@ def _serialize_quick_service_summary(qs, vendor_user=None, request=None):
         'category': category_name,
         'description': qs.description or "",
         'budget': base_price,
-        'budget_formatted': f"₹{int(base_price):,}" if base_price >= 1000 else f"₹{base_price:.0f}",
+        'budget_formatted': f"â‚¹{int(base_price):,}" if base_price >= 1000 else f"â‚¹{base_price:.0f}",
         'location': loc_display,
         'distance': f"{qs.service_radius_km:.1f} km",
         'time_posted': _format_time_ago(qs.created_at),
@@ -3137,7 +3193,7 @@ def vendor_dashboard_api(request):
                 next_appointment = {
                     'bid_id': selected_bid.id,
                     'title': target.title,
-                    'amount_formatted': f"₹{int(selected_bid.amount):,}",
+                    'amount_formatted': f"â‚¹{int(selected_bid.amount):,}",
                     'client_name': getattr(target, 'contact_name', None) or (target.user.get_full_name() if hasattr(target, 'user') and target.user else "Client"),
                     'location': getattr(target, 'locality', None) or getattr(target, 'address', 'Scheduled Location'),
                     'status': 'Selected / In Progress'
@@ -3157,13 +3213,13 @@ def vendor_dashboard_api(request):
             },
             'wallet': {
                 'available_balance': float(wallet.available_balance),
-                'available_balance_formatted': f"₹{wallet.available_balance:,.2f}",
+                'available_balance_formatted': f"â‚¹{wallet.available_balance:,.2f}",
                 'total_earned': float(wallet.total_earned),
-                'total_earned_formatted': f"₹{wallet.total_earned:,.2f}",
+                'total_earned_formatted': f"â‚¹{wallet.total_earned:,.2f}",
                 'total_withdrawn': float(wallet.total_withdrawn),
-                'total_withdrawn_formatted': f"₹{wallet.total_withdrawn:,.2f}",
+                'total_withdrawn_formatted': f"â‚¹{wallet.total_withdrawn:,.2f}",
                 'pending_payouts': float(pending_payouts_sum),
-                'pending_payouts_formatted': f"₹{pending_payouts_sum:,.2f}"
+                'pending_payouts_formatted': f"â‚¹{pending_payouts_sum:,.2f}"
             },
             'stats': {
                 'today_jobs_count': selected_bids_count if selected_bids_count > 0 else (1 if active_bids_count > 0 else 0),
@@ -3723,50 +3779,61 @@ def vendor_bookings_api(request):
         return JsonResponse({'status': 'error', 'message': err}, status=401)
     
     try:
-        bookings = ServiceBooking.objects.filter(vendor=user).select_related('customer', 'quick_service').order_by('-created_at')
+        bookings = ServiceBooking.objects.filter(vendor=user).select_related('customer', 'quick_service', 'review').order_by('-created_at')
         bookings_list = []
         for b in bookings:
-            # Parse GPS coordinates from service_address if present
-            lat, lng = None, None
-            clean_addr = b.service_address or ''
-            if b.service_address:
-                m = re.search(r'\[GPS:\s*([-\d.]+),\s*([-\d.]+)', b.service_address)
-                if m:
-                    lat, lng = m.group(1), m.group(2)
-                clean_addr = re.sub(r'\[GPS:[^\]]+\]', '', b.service_address).strip()
-            
-            # Map tracking URL
-            if lat and lng:
-                map_url = f"https://www.google.com/maps/search/?api=1&query={lat},{lng}"
-            elif clean_addr:
-                map_url = f"https://www.google.com/maps/search/?api=1&query={clean_addr.replace(' ', '+')}"
-            else:
-                map_url = ""
+            # PRIVACY: customer identity & location are revealed only after the vendor accepts.
+            unlocked = booking_contact_unlocked(b)
 
+            lat, lng = None, None
+            clean_addr = ''
+            map_url = ''
             cust_phone = ''
-            if hasattr(b.customer, 'user_profile') and b.customer.user_profile:
-                cust_phone = b.customer.user_profile.phone_number or ''
-            if not cust_phone and hasattr(b.customer, 'phone_number'):
-                cust_phone = b.customer.phone_number or ''
+            full_address = ''
+            if unlocked:
+                full_address = b.service_address or ''
+                clean_addr = full_address
+                if full_address:
+                    m = re.search(r'\[GPS:\s*([-\d.]+),\s*([-\d.]+)', full_address)
+                    if m:
+                        lat, lng = m.group(1), m.group(2)
+                    clean_addr = re.sub(r'\[GPS:[^\]]+\]', '', full_address).strip()
+
+                # Map tracking URL
+                if lat and lng:
+                    map_url = f"https://www.google.com/maps/search/?api=1&query={lat},{lng}"
+                elif clean_addr:
+                    map_url = f"https://www.google.com/maps/search/?api=1&query={clean_addr.replace(' ', '+')}"
+
+                if hasattr(b.customer, 'user_profile') and b.customer.user_profile:
+                    cust_phone = b.customer.user_profile.phone_number or ''
+                if not cust_phone and hasattr(b.customer, 'phone_number'):
+                    cust_phone = b.customer.phone_number or ''
+
+            review = getattr(b, 'review', None)
 
             bookings_list.append({
                 'id': b.id,
                 'service_title': b.quick_service.title if b.quick_service else 'Unknown Service',
-                'customer_id': b.customer.id,
-                'customer_name': b.customer.get_full_name() or b.customer.username,
-                'customer_email': b.customer.email or '',
+                'details_locked': not unlocked,
+                'locked_message': '' if unlocked else 'Customer details and location are shared after you accept this booking.',
+                'customer_id': b.customer.id if unlocked else None,
+                'customer_name': (b.customer.get_full_name() or b.customer.username) if unlocked else 'Customer',
+                'customer_email': (b.customer.email or '') if unlocked else '',
                 'customer_phone': cust_phone,
                 'package_name': b.package_name,
                 'total_amount': str(b.total_amount),
                 'total_price': str(b.total_amount),
                 'scheduled_date': str(b.scheduled_date),
                 'scheduled_time': str(b.scheduled_time) if b.scheduled_time else '',
-                'service_address': b.service_address,
+                'service_address': full_address,
                 'clean_address': clean_addr,
                 'latitude': lat,
                 'longitude': lng,
                 'map_url': map_url,
                 'status': b.status,
+                'review_rating': review.rating if review else None,
+                'review_comment': review.comment if review else '',
                 'created_at': b.created_at.isoformat()
             })
         return JsonResponse({'status': 'success', 'bookings': bookings_list}, status=200)
@@ -3791,16 +3858,206 @@ def vendor_booking_status_api(request, booking_id):
         booking = ServiceBooking.objects.get(id=booking_id, vendor=user)
         data = _parse_api_request(request)
         new_status = data.get('status')
-        if new_status in dict(ServiceBooking.STATUS_CHOICES).keys():
-            booking.status = new_status
-            booking.save()
-            return JsonResponse({'status': 'success', 'message': f'Booking status updated to {new_status}.'}, status=200)
-        else:
+        if new_status not in dict(ServiceBooking.STATUS_CHOICES).keys():
             return JsonResponse({'status': 'error', 'message': 'Invalid status.'}, status=400)
+
+        if new_status == booking.status:
+            return JsonResponse({'status': 'success', 'message': f'Booking is already {new_status}.'}, status=200)
+
+        # 'completed' is only reachable through billing / payment confirmation so that
+        # payment, wallet settlement and customer reviews can never be skipped.
+        if new_status == 'completed':
+            return JsonResponse({
+                'status': 'error',
+                'message': 'Complete the job from the billing screen to collect payment.'
+            }, status=400)
+
+        allowed_transitions = {
+            'pending': ('accepted', 'cancelled'),
+            'accepted': ('cancelled',),
+        }
+        if new_status not in allowed_transitions.get(booking.status, ()):
+            return JsonResponse({
+                'status': 'error',
+                'message': f'A {booking.status} booking cannot be changed to {new_status}.'
+            }, status=400)
+
+        booking.status = new_status
+        booking.save()
+        return JsonResponse({'status': 'success', 'message': f'Booking status updated to {new_status}.'}, status=200)
     except ServiceBooking.DoesNotExist:
         return JsonResponse({'status': 'error', 'message': 'Booking not found.'}, status=404)
     except Exception as e:
         return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+
+# =====================================================================
+# REVIEWS & RATINGS
+# =====================================================================
+
+def _review_service_title(r):
+    if r.booking and r.booking.quick_service:
+        return r.booking.quick_service.title
+    if r.quick_service:
+        return r.quick_service.title
+    if r.job:
+        return r.job.title
+    return ''
+
+
+@csrf_exempt
+def vendor_reviews_api(request):
+    """
+    API for the vendor's "My Reviews" screen.
+    URL: /api/vendor/reviews/
+    Method: GET
+    Header: Authorization: Bearer <token>
+    Query: ?rating=1..5 (optional filter), ?limit=50&offset=0
+    Customer names are masked (e.g. "Rahul P.").
+    """
+    if request.method != 'GET':
+        return JsonResponse({'status': 'error', 'message': 'Method not allowed. Use GET.'}, status=405)
+
+    user, err = _get_user_from_bearer_token(request)
+    if err:
+        return JsonResponse({'status': 'error', 'message': err}, status=401)
+
+    try:
+        qs = ServiceReview.objects.filter(vendor=user, status='published').select_related(
+            'customer', 'booking', 'booking__quick_service', 'quick_service', 'job'
+        ).order_by('-created_at')
+
+        rating_filter = (request.GET.get('rating') or '').strip()
+        if rating_filter.isdigit() and 1 <= int(rating_filter) <= 5:
+            qs = qs.filter(rating=int(rating_filter))
+
+        try:
+            limit = max(1, min(int(request.GET.get('limit', 50)), 100))
+            offset = max(0, int(request.GET.get('offset', 0)))
+        except (ValueError, TypeError):
+            limit, offset = 50, 0
+
+        total_filtered = qs.count()
+        reviews = []
+        for r in qs[offset:offset + limit]:
+            reviews.append({
+                'id': r.id,
+                'booking_id': r.booking_id,
+                'customer_name': mask_customer_name(r.customer),
+                'rating': r.rating,
+                'title': r.review_title or '',
+                'comment': r.comment or '',
+                'image_url': _build_absolute_image_url(request, r.review_image) if r.review_image else '',
+                'service_title': _review_service_title(r),
+                'created_at': r.created_at.isoformat(),
+                'time_ago': _format_time_ago(r.created_at),
+            })
+
+        summary = vendor_review_summary(user)
+        return JsonResponse({
+            'status': 'success',
+            'summary': summary,
+            'count': total_filtered,
+            'reviews': reviews,
+        }, status=200)
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+
+@csrf_exempt
+@require_POST
+def user_submit_review_api(request):
+    """
+    Customer submits (or updates) a review for a COMPLETED booking.
+    URL: /api/user/reviews/submit/
+    Method: POST (JSON or multipart)
+    Header: Authorization: Bearer <token>
+    Body: booking_id, rating (1-5), comment (optional), title (optional), image (optional file)
+    """
+    user, err = _get_user_from_bearer_token(request)
+    if err:
+        return JsonResponse({'status': 'error', 'message': err}, status=401)
+
+    try:
+        data = _parse_api_request(request)
+        review, created = submit_booking_review(
+            customer=user,
+            booking_id=data.get('booking_id'),
+            rating=data.get('rating'),
+            comment=data.get('comment') or data.get('review') or '',
+            title=data.get('title') or data.get('review_title') or '',
+            image=request.FILES.get('image') or request.FILES.get('review_image'),
+        )
+        return JsonResponse({
+            'status': 'success',
+            'message': 'Thank you! Your review has been submitted.' if created else 'Your review has been updated.',
+            'review': {
+                'id': review.id,
+                'booking_id': review.booking_id,
+                'rating': review.rating,
+                'title': review.review_title or '',
+                'comment': review.comment or '',
+                'created_at': review.created_at.isoformat(),
+            },
+        }, status=201 if created else 200)
+    except ReviewError as e:
+        return JsonResponse({'status': 'error', 'message': e.message}, status=e.status)
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+
+@csrf_exempt
+def user_pending_reviews_api(request):
+    """
+    Completed bookings of the customer that still need a rating & review.
+    URL: /api/user/reviews/pending/
+    Method: GET
+    Header: Authorization: Bearer <token>
+    """
+    if request.method != 'GET':
+        return JsonResponse({'status': 'error', 'message': 'Method not allowed. Use GET.'}, status=405)
+
+    user, err = _get_user_from_bearer_token(request)
+    if err:
+        return JsonResponse({'status': 'error', 'message': err}, status=401)
+
+    try:
+        pending = ServiceBooking.objects.filter(
+            customer=user, status='completed', review__isnull=True
+        ).select_related('vendor', 'vendor__vendor_profile', 'quick_service').order_by('-completed_at', '-created_at')
+
+        items = []
+        for b in pending:
+            vendor_name = b.vendor.get_full_name() or b.vendor.username
+            vp = getattr(b.vendor, 'vendor_profile', None)
+            if vp and vp.company_name:
+                vendor_name = vp.company_name
+            items.append({
+                'booking_id': b.id,
+                'service_title': b.quick_service.title if b.quick_service else b.package_name,
+                'vendor_id': b.vendor_id,
+                'vendor_name': vendor_name,
+                'total_amount': str(b.total_amount),
+                'completed_at': b.completed_at.isoformat() if b.completed_at else None,
+            })
+        return JsonResponse({'status': 'success', 'count': len(items), 'pending_reviews': items}, status=200)
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+
+def _vendor_can_see_customer(vendor, customer):
+    """
+    A vendor may see a customer's contact details only once a booking with that
+    customer is accepted/completed, or a job of theirs was awarded to the vendor.
+    Non-vendor/customer pairs are unaffected.
+    """
+    if vendor.role != 'VENDOR' or customer.role != 'CUSTOMER':
+        return True
+    if ServiceBooking.objects.filter(vendor=vendor, customer=customer, status__in=UNLOCKED_BOOKING_STATUSES).exists():
+        return True
+    if Job.objects.filter(user=customer, assigned_vendor=vendor).exists():
+        return True
+    return Bid.objects.filter(job__user=customer, vendor=vendor, status__in=['selected', 'completed']).exists()
 
 
 @csrf_exempt
@@ -3903,10 +4160,10 @@ def vendor_send_quotation_api(request):
                 return JsonResponse({'status': 'error', 'message': f'This job has reached its maximum limit of {job.max_bids} bids.'}, status=400)
 
             if job.min_bid_amount and amount_float < float(job.min_bid_amount):
-                return JsonResponse({'status': 'error', 'message': f'Minimum quotation amount allowed for this job is ₹{int(job.min_bid_amount):,}.'}, status=400)
+                return JsonResponse({'status': 'error', 'message': f'Minimum quotation amount allowed for this job is â‚¹{int(job.min_bid_amount):,}.'}, status=400)
 
             if job.max_bid_amount and amount_float > float(job.max_bid_amount):
-                return JsonResponse({'status': 'error', 'message': f'Maximum quotation amount allowed for this job is ₹{int(job.max_bid_amount):,}.'}, status=400)
+                return JsonResponse({'status': 'error', 'message': f'Maximum quotation amount allowed for this job is â‚¹{int(job.max_bid_amount):,}.'}, status=400)
 
             if Bid.objects.filter(job=job, vendor=user).exists():
                 return JsonResponse({'status': 'error', 'message': 'You have already submitted a quotation for this job.'}, status=400)
@@ -3966,7 +4223,7 @@ def vendor_send_quotation_api(request):
 
         return JsonResponse({
             'status': 'success',
-            'message': f'Quotation of ₹{int(amount_float):,} submitted successfully! 1 credit deducted ({vp.available_bids} remaining).',
+            'message': f'Quotation of â‚¹{int(amount_float):,} submitted successfully! 1 credit deducted ({vp.available_bids} remaining).',
             'bid_id': bid.id,
             'remaining_credits': vp.available_bids,
             'vendor_payout': float(vendor_base),
@@ -4086,7 +4343,7 @@ def _serialize_bid_detail(bid, request=None):
         'status': status_key,
         'raw_status': bid.status,
         'status_label': status_label,
-        'budget': f"₹{int(base_payout):,}",
+        'budget': f"â‚¹{int(base_payout):,}",
         'distance': '1.0 km',
         'date': relative_date,
         'created_at': bid.created_at.strftime('%b %d, %Y, %I:%M %p'),
@@ -4114,7 +4371,7 @@ def _serialize_bid_detail(bid, request=None):
         # Submitted Quotation Details
         'submitted_quotation': {
             'vendor_base_amount': base_payout,
-            'formatted_vendor_payout': f"₹{int(base_payout):,}",
+            'formatted_vendor_payout': f"â‚¹{int(base_payout):,}",
             'commission_percent': float(bid.commission_percent_applied or 10.0),
             'commission_amount': float(bid.commission_amount or 0.0),
             'cgst_percent': float(bid.cgst_percent_applied or 9.0),
@@ -4123,7 +4380,7 @@ def _serialize_bid_detail(bid, request=None):
             'sgst_amount': float(bid.sgst_amount or 0.0),
             'flat_fee_amount': float(bid.flat_fee_amount or 0.0),
             'total_customer_amount': total_cust,
-            'formatted_customer_total': f"₹{int(total_cust):,}",
+            'formatted_customer_total': f"â‚¹{int(total_cust):,}",
             'estimated_time': bid.estimated_time or 'Within 2 hours',
             'proposal': bid.proposal or bid.message or 'I have verified experience and all necessary tools for this job.',
             'message': bid.message or bid.proposal or '',
@@ -4132,7 +4389,7 @@ def _serialize_bid_detail(bid, request=None):
         },
         # Additional Job Specifications
         'job_details': {
-            'customer_budget': f"₹{int(budget_val):,}",
+            'customer_budget': f"â‚¹{int(budget_val):,}",
             'preferred_start_date': preferred_start,
             'expected_completion': expected_comp,
             'scope_of_work': scope_of_work,
@@ -4241,7 +4498,14 @@ def book_service_api(request):
         }, status=400)
         
     try:
-        qs = QuickService.objects.get(id=qs_id)
+        qs = QuickService.objects.select_related('vendor', 'vendor__vendor_profile').get(id=qs_id)
+        
+        if hasattr(qs.vendor, 'vendor_profile') and not qs.vendor.vendor_profile.is_online:
+            return JsonResponse({
+                'status': 'error',
+                'message': 'This vendor is currently offline and not accepting bookings.'
+            }, status=400)
+            
         booking = ServiceBooking.objects.create(
             customer=user,
             vendor=qs.vendor,
@@ -4420,7 +4684,8 @@ def chat_conversations_api(request):
 
         # If user is a vendor, also include customers who have booked with them
         if user.role == 'VENDOR':
-            customer_ids = set(ServiceBooking.objects.filter(vendor=user).values_list('customer_id', flat=True))
+            # Only customers whose booking the vendor has accepted (or completed) are listed.
+            customer_ids = set(ServiceBooking.objects.filter(vendor=user, status__in=UNLOCKED_BOOKING_STATUSES).values_list('customer_id', flat=True))
             partner_ids = partner_ids.union(customer_ids)
         elif user.role == 'CUSTOMER':
             vendor_ids = set(ServiceBooking.objects.filter(customer=user).values_list('vendor_id', flat=True))
@@ -4455,6 +4720,9 @@ def chat_conversations_api(request):
                 if partner.user_profile.profile_image:
                     avatar_url = _build_absolute_image_url(request, partner.user_profile.profile_image)
                 phone = partner.user_profile.phone_number or ''
+
+            if not _vendor_can_see_customer(user, partner):
+                phone = ''
 
             display_name = partner.get_full_name() or partner.username
             if partner.role == 'VENDOR' and hasattr(partner, 'vendor_profile') and partner.vendor_profile and partner.vendor_profile.company_name:
@@ -4503,7 +4771,10 @@ def chat_conversations_api(request):
         return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
 
 
+from django.views.decorators.cache import never_cache
+
 @csrf_exempt
+@never_cache
 def chat_messages_api(request, other_user_id):
     """
     API to fetch message history between authenticated user and other_user_id.
@@ -4560,6 +4831,9 @@ def chat_messages_api(request, other_user_id):
             if partner.user_profile.profile_image:
                 partner_avatar = _build_absolute_image_url(request, partner.user_profile.profile_image)
             partner_phone = partner.user_profile.phone_number or ''
+
+        if not _vendor_can_see_customer(user, partner):
+            partner_phone = ''
 
         partner_name = partner.get_full_name() or partner.username
         if partner.role == 'VENDOR' and hasattr(partner, 'vendor_profile') and partner.vendor_profile and partner.vendor_profile.company_name:
@@ -4656,25 +4930,27 @@ def chat_send_message_api(request):
             is_read=False
         )
 
-        # Broadcast via WebSocket
+        # Broadcast message to Channels WebSocket group so web clients receive it immediately
         try:
             from channels.layers import get_channel_layer
             from asgiref.sync import async_to_sync
             channel_layer = get_channel_layer()
-            user_ids = sorted([user.id, receiver.id])
-            room_group_name = f'chat_{user_ids[0]}_{user_ids[1]}'
-            async_to_sync(channel_layer.group_send)(
-                room_group_name,
-                {
-                    'type': 'chat_message',
-                    'message': msg.content,
-                    'sender_id': user.id,
-                    'sender_name': user.get_full_name() or user.username,
-                    'time': msg.created_at.strftime("%I:%M %p").lstrip('0')
-                }
-            )
-        except Exception as ws_err:
-            pass # ignore websocket errors, message is saved
+            if channel_layer:
+                user_ids = sorted([user.id, receiver.id])
+                room_group_name = f'chat_{user_ids[0]}_{user_ids[1]}'
+                async_to_sync(channel_layer.group_send)(
+                    room_group_name,
+                    {
+                        'type': 'chat_message',
+                        'id': msg.id,
+                        'message': msg.content,
+                        'sender_id': user.id,
+                        'sender_name': user.get_full_name() or user.username,
+                        'time': msg.created_at.strftime("%I:%M %p").lstrip('0')
+                    }
+                )
+        except Exception:
+            pass
 
         return JsonResponse({
             'status': 'success',
@@ -4696,9 +4972,1530 @@ def chat_send_message_api(request):
     except Exception as e:
         return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
 
+
 # =====================================================================
-# USER PROFILE APIS (BEARER TOKEN PROTECTED)
+# DYNAMIC BID SYSTEM APIS (DEDICATED ENDPOINTS)
 # =====================================================================
+
+@csrf_exempt
+def bids_create_api(request):
+    """
+    Dedicated API to create and submit a dynamic quotation / bid.
+    URL: /api/bids/create/ or /api/bids/submit/
+    Method: POST
+    Header: Authorization: Bearer <token>
+    Body:
+        job_id (int, optional)
+        quick_service_id (int, optional)
+        amount (float/Decimal, required)
+        estimated_time (str, optional)
+        proposal / message (str, optional)
+        attachment (file, optional)
+    """
+    if request.method != 'POST':
+        return JsonResponse({'status': 'error', 'message': 'Method not allowed. Use POST.'}, status=405)
+
+    user, err = _get_user_from_bearer_token(request)
+    if err:
+        return JsonResponse({'status': 'error', 'message': err}, status=401)
+
+    if user.role != 'VENDOR' and not user.is_superuser:
+        return JsonResponse({'status': 'error', 'message': 'Only registered vendors can submit bids.'}, status=403)
+
+    try:
+        data = _parse_api_request(request)
+        job_id = data.get('job_id') or request.POST.get('job_id')
+        quick_service_id = data.get('quick_service_id') or request.POST.get('quick_service_id')
+        amount_raw = data.get('amount') or request.POST.get('amount')
+
+        if not amount_raw:
+            return JsonResponse({'status': 'error', 'message': "Field 'amount' is required."}, status=400)
+
+        try:
+            amount_float = float(amount_raw)
+            if amount_float <= 0:
+                raise ValueError()
+        except (ValueError, TypeError):
+            return JsonResponse({'status': 'error', 'message': 'Please provide a valid bid amount greater than 0.'}, status=400)
+
+        estimated_time = (data.get('estimated_time') or request.POST.get('estimated_time') or 'Within 2 hours').strip()
+        proposal = (data.get('proposal') or data.get('message') or request.POST.get('proposal') or request.POST.get('message') or '').strip()
+        attachment = request.FILES.get('attachment')
+
+        vp = getattr(user, 'vendor_profile', None)
+        if not vp:
+            vp, _ = VendorProfile.objects.get_or_create(user=user)
+
+        # Dynamic Credit Verification
+        available_credits = vp.available_bids if vp.available_bids is not None else 0
+        if available_credits <= 0:
+            return JsonResponse({
+                'status': 'error',
+                'error_code': 'INSUFFICIENT_CREDITS',
+                'message': 'Insufficient bid credits! You have 0 credits remaining. Please recharge your bid credits.',
+                'remaining_credits': 0,
+                'recharge_url': '/api/credits/plans/'
+            }, status=403)
+
+        # Dynamic GlobalSettings calculations
+        gs = GlobalSettings.objects.first()
+        comm_pct = Decimal(str(gs.platform_commission_percent if gs and gs.platform_commission_percent is not None else '10.00'))
+        cgst_pct = Decimal(str(gs.cgst_percent if gs and gs.cgst_percent is not None else '9.00'))
+        sgst_pct = Decimal(str(gs.sgst_percent if gs and gs.sgst_percent is not None else '9.00'))
+        flat_fee = Decimal(str(gs.platform_flat_fee if gs and gs.platform_flat_fee is not None else '0.00'))
+        tax_mode = gs.tax_calculation_mode if gs and gs.tax_calculation_mode else 'commission_only'
+
+        vendor_base = Decimal(str(amount_float)).quantize(Decimal('0.01'))
+        comm_amount = ((vendor_base * comm_pct) / Decimal('100.00') + flat_fee).quantize(Decimal('0.01'))
+
+        if tax_mode == 'commission_only':
+            cgst_amount = ((comm_amount * cgst_pct) / Decimal('100.00')).quantize(Decimal('0.01'))
+            sgst_amount = ((comm_amount * sgst_pct) / Decimal('100.00')).quantize(Decimal('0.01'))
+        else:
+            taxable_base = vendor_base + comm_amount
+            cgst_amount = ((taxable_base * cgst_pct) / Decimal('100.00')).quantize(Decimal('0.01'))
+            sgst_amount = ((taxable_base * sgst_pct) / Decimal('100.00')).quantize(Decimal('0.01'))
+
+        total_customer = (vendor_base + comm_amount + cgst_amount + sgst_amount).quantize(Decimal('0.01'))
+
+        job = None
+        qs = None
+        if job_id:
+            try:
+                job = Job.objects.get(id=int(job_id))
+            except (Job.DoesNotExist, ValueError):
+                return JsonResponse({'status': 'error', 'message': f'Job #{job_id} not found.'}, status=404)
+
+            if job.status not in ['open', 'Open']:
+                return JsonResponse({'status': 'error', 'message': f'This job is currently {job.status} and not accepting bids.'}, status=400)
+
+            if job.max_bids and job.bids.count() >= job.max_bids:
+                return JsonResponse({'status': 'error', 'message': f'Job #{job_id} has reached its maximum limit of {job.max_bids} bids.'}, status=400)
+
+            if job.min_bid_amount and amount_float < float(job.min_bid_amount):
+                return JsonResponse({'status': 'error', 'message': f'Minimum quotation allowed is â‚¹{int(job.min_bid_amount):,}.'}, status=400)
+
+            if job.max_bid_amount and amount_float > float(job.max_bid_amount):
+                return JsonResponse({'status': 'error', 'message': f'Maximum quotation allowed is â‚¹{int(job.max_bid_amount):,}.'}, status=400)
+
+            if Bid.objects.filter(job=job, vendor=user).exclude(status='withdrawn').exists():
+                return JsonResponse({'status': 'error', 'message': 'You have already submitted an active bid for this job.'}, status=400)
+
+        elif quick_service_id:
+            try:
+                qs = QuickService.objects.get(id=int(quick_service_id))
+            except (QuickService.DoesNotExist, ValueError):
+                return JsonResponse({'status': 'error', 'message': f'QuickService #{quick_service_id} not found.'}, status=404)
+
+            if Bid.objects.filter(quick_service=qs, vendor=user).exclude(status='withdrawn').exists():
+                return JsonResponse({'status': 'error', 'message': 'You have already submitted an active bid for this service request.'}, status=400)
+        else:
+            return JsonResponse({'status': 'error', 'message': 'Either job_id or quick_service_id is required.'}, status=400)
+
+        # Create Bid record
+        bid = Bid.objects.create(
+            vendor=user,
+            job=job,
+            quick_service=qs,
+            amount=total_customer,
+            vendor_base_amount=vendor_base,
+            commission_percent_applied=comm_pct,
+            commission_amount=comm_amount,
+            cgst_percent_applied=cgst_pct,
+            cgst_amount=cgst_amount,
+            sgst_percent_applied=sgst_pct,
+            sgst_amount=sgst_amount,
+            flat_fee_amount=flat_fee,
+            total_customer_amount=total_customer,
+            estimated_time=estimated_time,
+            proposal=proposal,
+            message=proposal,
+            attachment=attachment,
+            status='submitted'
+        )
+
+        # Deduct 1 credit & log transaction
+        vp.available_bids = max(0, available_credits - 1)
+        vp.save(update_fields=['available_bids'])
+
+        if job:
+            job.bids_count = job.bids.count()
+            job.save(update_fields=['bids_count'])
+
+        target_title = job.title if job else (qs.title if qs else 'Service')
+        BidCreditTransaction.objects.create(
+            vendor=user,
+            transaction_type='used',
+            credits=-1,
+            description=f"Quotation placed on {target_title}",
+            related_job=job
+        )
+
+        return JsonResponse({
+            'status': 'success',
+            'message': f'Bid submitted successfully! 1 credit deducted ({vp.available_bids} remaining).',
+            'bid_id': bid.id,
+            'remaining_credits': vp.available_bids,
+            'vendor_payout': float(vendor_base),
+            'customer_total': float(total_customer),
+            'bid': _serialize_bid_detail(bid, request=request)
+        }, status=201)
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+
+@csrf_exempt
+def bids_list_api(request):
+    """
+    Dedicated API to list all bids submitted by the authenticated vendor with dynamic stats.
+    URL: /api/bids/ or /api/bids/my-bids/
+    Method: GET
+    Header: Authorization: Bearer <token>
+    Query: status=pending|accepted|rejected|withdrawn|all, search=...
+    """
+    if request.method != 'GET':
+        return JsonResponse({'status': 'error', 'message': 'Method not allowed. Use GET.'}, status=405)
+
+    user, err = _get_user_from_bearer_token(request)
+    if err:
+        return JsonResponse({'status': 'error', 'message': err}, status=401)
+
+    try:
+        all_user_bids = Bid.objects.filter(vendor=user).select_related(
+            'job', 'job__category', 'job__user', 'quick_service', 'quick_service__category'
+        ).order_by('-created_at')
+
+        # Dynamic Stats
+        total_bids = all_user_bids.count()
+        pending_bids = all_user_bids.filter(status='submitted').count()
+        accepted_bids = all_user_bids.filter(status='selected').count()
+        rejected_bids = all_user_bids.filter(status__in=['rejected', 'withdrawn']).count()
+        potential_earnings = sum(float(b.vendor_base_amount or b.amount) for b in all_user_bids.filter(status__in=['submitted', 'selected']))
+
+        vp = getattr(user, 'vendor_profile', None)
+        remaining_credits = vp.available_bids if vp else 0
+
+        # Filter by status
+        bids_qs = all_user_bids
+        status_filter = request.GET.get('status', '').strip().lower()
+        if status_filter and status_filter != 'all':
+            if status_filter in ['accepted', 'selected']:
+                bids_qs = bids_qs.filter(status='selected')
+            elif status_filter in ['pending', 'submitted']:
+                bids_qs = bids_qs.filter(status='submitted')
+            elif status_filter == 'rejected':
+                bids_qs = bids_qs.filter(status='rejected')
+            elif status_filter == 'withdrawn':
+                bids_qs = bids_qs.filter(status='withdrawn')
+
+        # Filter by search
+        search = request.GET.get('search', '').strip().lower()
+        if search:
+            bids_qs = bids_qs.filter(
+                Q(job__title__icontains=search) |
+                Q(quick_service__title__icontains=search) |
+                Q(proposal__icontains=search)
+            )
+
+        serialized_bids = [_serialize_bid_detail(b, request=request) for b in bids_qs]
+
+        return JsonResponse({
+            'status': 'success',
+            'stats': {
+                'total_bids': total_bids,
+                'pending_bids': pending_bids,
+                'accepted_bids': accepted_bids,
+                'rejected_bids': rejected_bids,
+                'potential_earnings': potential_earnings,
+                'remaining_credits': remaining_credits,
+            },
+            'count': len(serialized_bids),
+            'bids': serialized_bids
+        }, status=200)
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+
+@csrf_exempt
+def bid_detail_api(request, bid_id):
+    """
+    Dedicated API to fetch detailed information of a single bid.
+    URL: /api/bids/<bid_id>/
+    Method: GET
+    Header: Authorization: Bearer <token>
+    """
+    if request.method != 'GET':
+        return JsonResponse({'status': 'error', 'message': 'Method not allowed. Use GET.'}, status=405)
+
+    user, err = _get_user_from_bearer_token(request)
+    if err:
+        return JsonResponse({'status': 'error', 'message': err}, status=401)
+
+    try:
+        # Accessible if user is the bidding vendor, or the customer who posted the job, or admin
+        bid = Bid.objects.select_related(
+            'job', 'job__category', 'job__user', 'quick_service', 'quick_service__category', 'vendor', 'vendor__vendor_profile'
+        ).get(id=bid_id)
+
+        is_owner_vendor = (bid.vendor_id == user.id)
+        is_job_customer = (bid.job and bid.job.user_id == user.id)
+        if not (is_owner_vendor or is_job_customer or user.is_superuser):
+            return JsonResponse({'status': 'error', 'message': 'Unauthorized to view this bid.'}, status=403)
+
+        return JsonResponse({
+            'status': 'success',
+            'bid': _serialize_bid_detail(bid, request=request)
+        }, status=200)
+    except Bid.DoesNotExist:
+        return JsonResponse({'status': 'error', 'message': f'Bid #{bid_id} not found.'}, status=404)
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+
+@csrf_exempt
+@require_POST
+def bid_withdraw_api(request, bid_id):
+    """
+    Dedicated API for a vendor to withdraw a submitted bid and receive 1 credit refund.
+    URL: /api/bids/<bid_id>/withdraw/
+    Method: POST
+    Header: Authorization: Bearer <token>
+    """
+    user, err = _get_user_from_bearer_token(request)
+    if err:
+        return JsonResponse({'status': 'error', 'message': err}, status=401)
+
+    try:
+        bid = Bid.objects.select_related('job', 'quick_service').get(id=bid_id, vendor=user)
+        if bid.status != 'submitted':
+            return JsonResponse({
+                'status': 'error',
+                'message': f"Cannot withdraw bid #{bid_id} because its current status is '{bid.status}'."
+            }, status=400)
+
+        bid.status = 'withdrawn'
+        bid.save(update_fields=['status'])
+
+        # Refund 1 credit to vendor
+        vp = getattr(user, 'vendor_profile', None)
+        if not vp:
+            vp, _ = VendorProfile.objects.get_or_create(user=user)
+
+        vp.available_bids = (vp.available_bids or 0) + 1
+        vp.save(update_fields=['available_bids'])
+
+        target_title = bid.job.title if bid.job else (bid.quick_service.title if bid.quick_service else 'Service')
+        BidCreditTransaction.objects.create(
+            vendor=user,
+            transaction_type='refund',
+            credits=1,
+            description=f"Refund for withdrawn quotation #{bid.id} on {target_title}",
+            related_job=bid.job
+        )
+
+        return JsonResponse({
+            'status': 'success',
+            'message': f'Bid #{bid_id} withdrawn successfully. 1 credit has been refunded to your account.',
+            'remaining_credits': vp.available_bids
+        }, status=200)
+    except Bid.DoesNotExist:
+        return JsonResponse({'status': 'error', 'message': f'Bid #{bid_id} not found or unauthorized.'}, status=404)
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+
+@csrf_exempt
+def job_bids_api(request, job_id):
+    """
+    Dedicated API for job poster (Customer) to view all bids on their job.
+    URL: /api/bids/job/<job_id>/
+    Method: GET
+    Header: Authorization: Bearer <token>
+    """
+    if request.method != 'GET':
+        return JsonResponse({'status': 'error', 'message': 'Method not allowed. Use GET.'}, status=405)
+
+    user, err = _get_user_from_bearer_token(request)
+    if err:
+        return JsonResponse({'status': 'error', 'message': err}, status=401)
+
+    try:
+        job = Job.objects.get(id=job_id)
+        if job.user_id != user.id and not user.is_superuser:
+            return JsonResponse({'status': 'error', 'message': 'Unauthorized to view bids for this job.'}, status=403)
+
+        bids = Bid.objects.filter(job=job).select_related('vendor', 'vendor__vendor_profile').order_by('-created_at')
+        bids_data = []
+        for b in bids:
+            vp = getattr(b.vendor, 'vendor_profile', None)
+            profile_img_url = ""
+            if vp and vp.profile_image:
+                profile_img_url = _build_absolute_image_url(request, vp.profile_image)
+
+            bids_data.append({
+                'bid_id': b.id,
+                'vendor_id': b.vendor.id,
+                'vendor_name': b.vendor.get_full_name() or b.vendor.username,
+                'vendor_company': vp.company_name if vp else '',
+                'vendor_rating': float(vp.rating) if vp and vp.rating else 0.0,
+                'profile_image': profile_img_url,
+                'amount': float(b.amount),
+                'vendor_payout': float(b.vendor_base_amount or b.amount),
+                'estimated_time': b.estimated_time or 'Standard delivery',
+                'proposal': b.proposal or b.message or '',
+                'status': b.status,
+                'created_at': b.created_at.strftime('%Y-%m-%d %H:%M:%S'),
+            })
+
+        return JsonResponse({
+            'status': 'success',
+            'job_id': job.id,
+            'job_title': job.title,
+            'job_status': job.status,
+            'count': len(bids_data),
+            'bids': bids_data
+        }, status=200)
+    except Job.DoesNotExist:
+        return JsonResponse({'status': 'error', 'message': f'Job #{job_id} not found.'}, status=404)
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+
+@csrf_exempt
+@require_POST
+def bid_action_api(request, bid_id):
+    """
+    Dedicated API for job poster (Customer) to accept or reject a specific bid.
+    URL: /api/bids/<bid_id>/action/
+    Method: POST
+    Header: Authorization: Bearer <token>
+    Payload: { 'action': 'accept' | 'reject' }
+    """
+    user, err = _get_user_from_bearer_token(request)
+    if err:
+        return JsonResponse({'status': 'error', 'message': err}, status=401)
+
+    try:
+        data = _parse_api_request(request)
+        action = (data.get('action') or '').strip().lower()
+        if action not in ['accept', 'reject']:
+            return JsonResponse({'status': 'error', 'message': "Field 'action' must be 'accept' or 'reject'."}, status=400)
+
+        bid = Bid.objects.select_related('job', 'job__user').get(id=bid_id)
+        if not bid.job or (bid.job.user_id != user.id and not user.is_superuser):
+            return JsonResponse({'status': 'error', 'message': 'Unauthorized or job not associated with this bid.'}, status=403)
+
+        job = bid.job
+        if action == 'accept':
+            if job.status in ['selected', 'Selected', 'completed', 'Completed']:
+                return JsonResponse({'status': 'error', 'message': f'Job is already {job.status}.'}, status=400)
+
+            bid.status = 'selected'
+            bid.save(update_fields=['status'])
+
+            job.status = 'selected'
+            job.assigned_vendor = bid.vendor
+            job.save(update_fields=['status', 'assigned_vendor'])
+
+            # Reject other pending bids on this job
+            Bid.objects.filter(job=job).exclude(id=bid.id).filter(status='submitted').update(status='rejected')
+
+            return JsonResponse({
+                'status': 'success',
+                'message': f'Bid #{bid.id} accepted. Vendor has been assigned to job #{job.id}.',
+                'job_status': 'selected',
+                'assigned_vendor': bid.vendor.get_full_name() or bid.vendor.username
+            }, status=200)
+
+        elif action == 'reject':
+            bid.status = 'rejected'
+            bid.save(update_fields=['status'])
+            return JsonResponse({'status': 'success', 'message': f'Bid #{bid.id} has been rejected.'}, status=200)
+
+    except Bid.DoesNotExist:
+        return JsonResponse({'status': 'error', 'message': f'Bid #{bid_id} not found.'}, status=404)
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+
+# =====================================================================
+# DYNAMIC CREDIT SYSTEM APIS (DEDICATED ENDPOINTS)
+# =====================================================================
+
+@csrf_exempt
+def credit_balance_api(request):
+    """
+    Dedicated API to fetch real-time bid credit balance and statistics for authenticated vendor.
+    URL: /api/credits/balance/
+    Method: GET
+    Header: Authorization: Bearer <token>
+    """
+    if request.method != 'GET':
+        return JsonResponse({'status': 'error', 'message': 'Method not allowed. Use GET.'}, status=405)
+
+    user, err = _get_user_from_bearer_token(request)
+    if err:
+        return JsonResponse({'status': 'error', 'message': err}, status=401)
+
+    try:
+        vp = getattr(user, 'vendor_profile', None)
+        if not vp:
+            vp, _ = VendorProfile.objects.get_or_create(user=user)
+
+        txns = BidCreditTransaction.objects.filter(vendor=user)
+        total_purchased = sum(t.credits for t in txns.filter(transaction_type='purchased'))
+        total_used = abs(sum(t.credits for t in txns.filter(transaction_type='used')))
+        total_refunded = sum(t.credits for t in txns.filter(transaction_type='refund'))
+        total_bonus = sum(t.credits for t in txns.filter(transaction_type='bonus'))
+
+        last_txn = txns.order_by('-created_at').first()
+        last_txn_data = None
+        if last_txn:
+            last_txn_data = {
+                'id': last_txn.id,
+                'type': last_txn.transaction_type,
+                'credits': last_txn.credits,
+                'description': last_txn.description,
+                'date': last_txn.created_at.strftime('%d %b %Y, %I:%M %p')
+            }
+
+        curr_credits = vp.available_bids if vp.available_bids is not None else 0
+
+        return JsonResponse({
+            'status': 'success',
+            'vendor_id': user.id,
+            'vendor_code': vp.vendor_code or f"VEN{user.id:03d}",
+            'available_credits': curr_credits,
+            'can_bid': curr_credits > 0,
+            'stats': {
+                'total_purchased': total_purchased,
+                'total_used': total_used,
+                'total_refunded': total_refunded,
+                'total_bonus': total_bonus,
+            },
+            'last_transaction': last_txn_data
+        }, status=200)
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+
+@csrf_exempt
+def credit_plans_api(request):
+    """
+    Dedicated API to fetch dynamic credit plans / packages available for purchase.
+    URL: /api/credits/plans/ or /api/credits/packages/
+    Method: GET
+    """
+    if request.method != 'GET':
+        return JsonResponse({'status': 'error', 'message': 'Method not allowed. Use GET.'}, status=405)
+
+    try:
+        # Load from database BidPlan
+        db_plans = BidPlan.objects.filter(is_active=True).order_by('order', 'price')
+        plans_list = []
+
+        if db_plans.exists():
+            for p in db_plans:
+                orig_price = float(p.original_price) if p.original_price else None
+                cur_price = float(p.price)
+                discount_pct = round(((orig_price - cur_price) / orig_price) * 100) if (orig_price and orig_price > cur_price) else 0
+
+                plans_list.append({
+                    'id': p.id,
+                    'package_id': str(p.id),
+                    'name': p.name,
+                    'tagline': p.tagline or f"{p.credits} Bids Pack",
+                    'credits': p.credits,
+                    'price': cur_price,
+                    'original_price': orig_price,
+                    'discount_percent': discount_pct,
+                    'cost_per_credit': float(p.cost_per_bid),
+                    'is_popular': p.is_popular,
+                    'features': [
+                        f"{p.credits} Bid Credits",
+                        "Credits never expire",
+                        "Use on any open customer job",
+                        "Instant account activation"
+                    ]
+                })
+        else:
+            # Dynamic fallback standard plans
+            plans_list = [
+                {
+                    'id': 1,
+                    'package_id': 'starter',
+                    'name': 'Starter Pack',
+                    'tagline': '5 bids for â‚¹100',
+                    'credits': 5,
+                    'price': 100.0,
+                    'original_price': 150.0,
+                    'discount_percent': 33,
+                    'cost_per_credit': 20.0,
+                    'is_popular': False,
+                    'features': ['5 Bid Credits', 'Credits never expire', 'Use on any open job', 'Instant activation']
+                },
+                {
+                    'id': 2,
+                    'package_id': 'value',
+                    'name': 'Value Pack',
+                    'tagline': '10 bids for â‚¹200',
+                    'credits': 10,
+                    'price': 200.0,
+                    'original_price': 300.0,
+                    'discount_percent': 33,
+                    'cost_per_credit': 20.0,
+                    'is_popular': True,
+                    'features': ['10 Bid Credits', 'Credits never expire', 'Best value for active pros', 'Instant activation']
+                },
+                {
+                    'id': 3,
+                    'package_id': 'pro',
+                    'name': 'Pro Contractor Pack',
+                    'tagline': '30 bids for â‚¹500',
+                    'credits': 30,
+                    'price': 500.0,
+                    'original_price': 750.0,
+                    'discount_percent': 33,
+                    'cost_per_credit': 16.67,
+                    'is_popular': False,
+                    'features': ['30 Bid Credits', 'Credits never expire', 'Lowest price per bid', 'Priority placement badge']
+                }
+            ]
+
+        return JsonResponse({
+            'status': 'success',
+            'count': len(plans_list),
+            'plans': plans_list
+        }, status=200)
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+
+@csrf_exempt
+@require_POST
+def credit_purchase_api(request):
+    """
+    Dedicated API to dynamically purchase a credit plan or package.
+    URL: /api/credits/purchase/ or /api/vendor/bid-credits/purchase/
+    Method: POST
+    Header: Authorization: Bearer <token>
+    Payload: {
+        "plan_id": int | str,
+        "payment_method": str (optional, default "UPI"),
+        "transaction_id": str (optional),
+        "credits": int (optional fallback),
+        "amount": float (optional fallback)
+    }
+    """
+    user, err = _get_user_from_bearer_token(request)
+    if err:
+        return JsonResponse({'status': 'error', 'message': err}, status=401)
+
+    if user.role != 'VENDOR' and not user.is_superuser:
+        return JsonResponse({'status': 'error', 'message': 'Only registered vendors can purchase bid credits.'}, status=403)
+
+    try:
+        data = _parse_api_request(request)
+        plan_id = data.get('plan_id') or data.get('package_id')
+        payment_method = data.get('payment_method') or 'UPI'
+        txn_ref = data.get('transaction_id') or f"PAY_{random.randint(100000, 999999)}"
+
+        credits_to_add = None
+        price_charged = None
+        plan_name = "Custom Credits Package"
+
+        # 1. Try finding from BidPlan table
+        if plan_id:
+            try:
+                p = BidPlan.objects.filter(id=int(plan_id)).first()
+                if p:
+                    credits_to_add = p.credits
+                    price_charged = float(p.price)
+                    plan_name = p.name
+            except (ValueError, TypeError):
+                key = str(plan_id).lower().strip()
+                if key == 'starter':
+                    credits_to_add, price_charged, plan_name = 5, 100.0, "Starter Pack"
+                elif key == 'value':
+                    credits_to_add, price_charged, plan_name = 10, 200.0, "Value Pack"
+                elif key == 'pro':
+                    credits_to_add, price_charged, plan_name = 30, 500.0, "Pro Contractor Pack"
+
+        # 2. Fallback to direct credits and amount in payload
+        if credits_to_add is None:
+            raw_c = data.get('credits')
+            raw_a = data.get('amount')
+            if raw_c and raw_a:
+                credits_to_add = int(raw_c)
+                price_charged = float(raw_a)
+                plan_name = f"{credits_to_add} Credits Top-up"
+
+        if not credits_to_add or credits_to_add <= 0:
+            return JsonResponse({'status': 'error', 'message': 'Valid plan_id or credits count is required.'}, status=400)
+
+        price_charged = price_charged or float(credits_to_add * 20.0)
+
+        # Log Subscription
+        sub = Subscription.objects.create(
+            vendor=user,
+            package_name=f"{plan_name} ({credits_to_add} Credits)",
+            amount=Decimal(str(price_charged)).quantize(Decimal('0.01')),
+            credits_added=credits_to_add,
+            status='success'
+        )
+
+        # Update Vendor Profile credits
+        vp = getattr(user, 'vendor_profile', None)
+        if not vp:
+            vp, _ = VendorProfile.objects.get_or_create(user=user)
+
+        current_val = vp.available_bids if vp.available_bids is not None else 0
+        new_val = current_val + credits_to_add
+        vp.available_bids = new_val
+        vp.save(update_fields=['available_bids'])
+
+        # Record BidCreditTransaction
+        txn = BidCreditTransaction.objects.create(
+            vendor=user,
+            transaction_type='purchased',
+            credits=credits_to_add,
+            description=f"Purchased {plan_name} via {payment_method} ({txn_ref})",
+            related_subscription=sub
+        )
+
+        return JsonResponse({
+            'status': 'success',
+            'message': f'Payment of â‚¹{int(price_charged):,} successful! {credits_to_add} bid credits added to your account instantly.',
+            'credits_added': credits_to_add,
+            'remaining_credits': new_val,
+            'amount_paid': price_charged,
+            'transaction_id': txn.id,
+            'subscription_id': sub.id
+        }, status=200)
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+
+@csrf_exempt
+def credit_transactions_api(request):
+    """
+    Dedicated API to fetch transaction history of credits for authenticated vendor.
+    URL: /api/credits/transactions/ or /api/credits/history/
+    Method: GET
+    Header: Authorization: Bearer <token>
+    Query: type=all|purchased|used|refund|bonus, limit=50
+    """
+    if request.method != 'GET':
+        return JsonResponse({'status': 'error', 'message': 'Method not allowed. Use GET.'}, status=405)
+
+    user, err = _get_user_from_bearer_token(request)
+    if err:
+        return JsonResponse({'status': 'error', 'message': err}, status=401)
+
+    try:
+        txns_qs = BidCreditTransaction.objects.filter(vendor=user).select_related('related_job', 'related_subscription').order_by('-created_at')
+
+        type_filter = request.GET.get('type', '').strip().lower()
+        if type_filter and type_filter != 'all':
+            txns_qs = txns_qs.filter(transaction_type=type_filter)
+
+        try:
+            limit = int(request.GET.get('limit', 50))
+        except (ValueError, TypeError):
+            limit = 50
+
+        txns_qs = txns_qs[:limit]
+
+        transactions_data = []
+        for t in txns_qs:
+            transactions_data.append({
+                'id': t.id,
+                'transaction_type': t.transaction_type,
+                'type_label': t.get_transaction_type_display(),
+                'credits': t.credits,
+                'is_addition': t.credits > 0,
+                'description': t.description,
+                'related_job_id': t.related_job_id,
+                'related_job_title': t.related_job.title if t.related_job else None,
+                'created_at': t.created_at.isoformat(),
+                'formatted_date': t.created_at.strftime('%d %b %Y, %I:%M %p')
+            })
+
+        vp = getattr(user, 'vendor_profile', None)
+        curr_balance = vp.available_bids if vp else 0
+
+        return JsonResponse({
+            'status': 'success',
+            'current_balance': curr_balance,
+            'count': len(transactions_data),
+            'transactions': transactions_data
+        }, status=200)
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+
+@csrf_exempt
+@require_POST
+def credit_claim_bonus_api(request):
+    """
+    Dedicated API to claim initial registration / welcome bonus credits.
+    URL: /api/credits/claim-bonus/
+    Method: POST
+    Header: Authorization: Bearer <token>
+    """
+    user, err = _get_user_from_bearer_token(request)
+    if err:
+        return JsonResponse({'status': 'error', 'message': err}, status=401)
+
+    try:
+        already_claimed = BidCreditTransaction.objects.filter(vendor=user, transaction_type='bonus').exists()
+        if already_claimed:
+            return JsonResponse({
+                'status': 'error',
+                'message': 'Welcome bonus credits have already been claimed on this account.'
+            }, status=400)
+
+        gs = GlobalSettings.objects.first()
+        bonus_credits = gs.free_starter_bids if (gs and gs.free_starter_bids) else 5
+
+        vp = getattr(user, 'vendor_profile', None)
+        if not vp:
+            vp, _ = VendorProfile.objects.get_or_create(user=user)
+
+        vp.available_bids = (vp.available_bids or 0) + bonus_credits
+        vp.save(update_fields=['available_bids'])
+
+        txn = BidCreditTransaction.objects.create(
+            vendor=user,
+            transaction_type='bonus',
+            credits=bonus_credits,
+            description="Welcome bonus credits on registration"
+        )
+
+        return JsonResponse({
+            'status': 'success',
+            'message': f'Congratulations! {bonus_credits} free starter bid credits have been credited to your account.',
+            'credits_claimed': bonus_credits,
+            'remaining_credits': vp.available_bids,
+            'transaction_id': txn.id
+        }, status=200)
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+
+@csrf_exempt
+def credit_summary_api(request):
+    """
+    Dedicated API to fetch comprehensive credit summary, stats, and top-up recommendations.
+    URL: /api/credits/summary/
+    Method: GET
+    Header: Authorization: Bearer <token>
+    """
+    if request.method != 'GET':
+        return JsonResponse({'status': 'error', 'message': 'Method not allowed. Use GET.'}, status=405)
+
+    user, err = _get_user_from_bearer_token(request)
+    if err:
+        return JsonResponse({'status': 'error', 'message': err}, status=401)
+
+    try:
+        vp = getattr(user, 'vendor_profile', None)
+        if not vp:
+            vp, _ = VendorProfile.objects.get_or_create(user=user)
+
+        txns = BidCreditTransaction.objects.filter(vendor=user).order_by('-created_at')
+
+        recent_txns = []
+        for t in txns[:5]:
+            recent_txns.append({
+                'id': t.id,
+                'type': t.transaction_type,
+                'credits': t.credits,
+                'is_addition': t.credits > 0,
+                'description': t.description,
+                'date': t.created_at.strftime('%d %b %Y, %I:%M %p')
+            })
+
+        balance = vp.available_bids if vp.available_bids is not None else 0
+        total_purchased = sum(t.credits for t in txns.filter(transaction_type='purchased'))
+        total_used = abs(sum(t.credits for t in txns.filter(transaction_type='used')))
+
+        db_plans = BidPlan.objects.filter(is_active=True).order_by('order', 'price')
+        plans = []
+        for p in db_plans:
+            plans.append({
+                'id': p.id,
+                'name': p.name,
+                'credits': p.credits,
+                'price': float(p.price),
+                'cost_per_credit': float(p.cost_per_bid),
+                'is_popular': p.is_popular
+            })
+
+        return JsonResponse({
+            'status': 'success',
+            'balance': balance,
+            'can_bid': balance > 0,
+            'stats': {
+                'total_purchased': total_purchased,
+                'total_used': total_used,
+            },
+            'recent_transactions': recent_txns,
+            'available_plans': plans
+        }, status=200)
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+
+# =====================================================================
+# DYNAMIC QUICK SERVICE COMPLETION, UPI QR & REVENUE SPLIT APIS
+# =====================================================================
+
+def _generate_upi_qr_base64(upi_string):
+    """
+    Generates a high-contrast base64 encoded PNG data URI for a UPI payment URI.
+    """
+    try:
+        qr = qrcode.QRCode(
+            version=1,
+            error_correction=qrcode.constants.ERROR_CORRECT_M,
+            box_size=10,
+            border=2,
+        )
+        qr.add_data(upi_string)
+        qr.make(fit=True)
+        img = qr.make_image(fill_color="#0f172a", back_color="white")
+        buffered = io.BytesIO()
+        img.save(buffered, format="PNG")
+        img_str = base64.b64encode(buffered.getvalue()).decode("utf-8")
+        return f"data:image/png;base64,{img_str}"
+    except Exception as e:
+        return ""
+
+
+@csrf_exempt
+def generate_booking_bill_api(request, booking_id):
+    """
+    Dedicated API to generate the final completion bill and dynamic UPI QR Code.
+    URL: /api/quick-services/bookings/<booking_id>/generate-bill/
+    Method: POST
+    Header: Authorization: Bearer <token>
+    Payload: {
+        "additional_charges": float (optional, e.g. parts/materials),
+        "additional_notes": str (optional),
+        "discount": float (optional)
+    }
+    """
+    if request.method != 'POST':
+        return JsonResponse({'status': 'error', 'message': 'Method not allowed. Use POST.'}, status=405)
+
+    user, err = _get_user_from_bearer_token(request)
+    if err:
+        return JsonResponse({'status': 'error', 'message': err}, status=401)
+
+    try:
+        booking = ServiceBooking.objects.select_related('customer', 'vendor', 'quick_service').get(id=booking_id)
+
+        # Only assigned vendor or superadmin can complete and bill
+        if booking.vendor_id != user.id and not user.is_superuser:
+            return JsonResponse({'status': 'error', 'message': 'Unauthorized to generate bill for this booking.'}, status=403)
+
+        data = _parse_api_request(request)
+        try:
+            extra_charges = float(data.get('additional_charges') or request.POST.get('additional_charges') or 0.0)
+            if extra_charges < 0:
+                extra_charges = 0.0
+        except (ValueError, TypeError):
+            extra_charges = 0.0
+
+        try:
+            discount = float(data.get('discount') or request.POST.get('discount') or 0.0)
+            if discount < 0:
+                discount = 0.0
+        except (ValueError, TypeError):
+            discount = 0.0
+
+        notes = (data.get('additional_notes') or request.POST.get('additional_notes') or '').strip()
+
+        # Customer total payable bill (inclusive of service and approved extras)
+        base_service_amount = float(booking.total_amount or (booking.quick_service.base_price if booking.quick_service else 0.0))
+        final_customer_total = max(0.0, base_service_amount + extra_charges - discount)
+
+        # Dynamic calculations via GlobalSettings
+        gs = GlobalSettings.objects.first()
+        if not gs:
+            gs = GlobalSettings.objects.create()
+
+        financials = gs.split_qs_final_total(final_customer_total)
+        vendor_payout = financials['vendor_payout']
+        platform_commission = financials['commission']
+        cgst = financials['cgst']
+        sgst = financials['sgst']
+        total_tax = financials['total_tax']
+        flat_fee = financials['flat_fee']
+        total_customer_price = financials['customer_price']
+        superadmin_cut = financials['superadmin_share']
+
+        # Generate unique transaction reference
+        txn_ref = f"TXN_QS_{booking.id}_{random.randint(10000, 99999)}"
+        admin_vpa = getattr(gs, 'admin_upi_id', None) or "sugu.platform@okaxis"
+        payee_name = "Sugu Platform"
+
+        # Standard UPI URI scheme
+        upi_intent = (
+            f"upi://pay?pa={admin_vpa}"
+            f"&pn={payee_name.replace(' ', '%20')}"
+            f"&am={total_customer_price:.2f}"
+            f"&cu=INR"
+            f"&tn=Booking_{booking.id}_Payment"
+            f"&tr={txn_ref}"
+        )
+
+        qr_data_url = _generate_upi_qr_base64(upi_intent)
+
+        # Update booking details
+        booking.additional_charges = Decimal(str(extra_charges)).quantize(Decimal('0.01'))
+        if notes:
+            booking.additional_notes = notes
+        booking.transaction_reference = txn_ref
+        booking.save(update_fields=['additional_charges', 'additional_notes', 'transaction_reference'])
+
+        return JsonResponse({
+            'status': 'success',
+            'booking_id': booking.id,
+            'service_title': booking.quick_service.title if booking.quick_service else booking.package_name,
+            'customer_name': booking.customer.get_full_name() or booking.customer.username,
+            'customer_phone': getattr(booking.customer, 'phone_number', None) or getattr(booking.customer, 'username', ''),
+            'financials': {
+                'base_service_amount': base_service_amount,
+                'additional_charges': extra_charges,
+                'discount': discount,
+                'net_vendor_payout': vendor_payout,
+                'platform_commission': platform_commission,
+                'cgst': cgst,
+                'sgst': sgst,
+                'total_tax': total_tax,
+                'flat_fee': flat_fee,
+                'superadmin_share': superadmin_cut,
+                'total_customer_payable': total_customer_price,
+                'commission_percent': financials['commission_percent'],
+                'cgst_percent': financials['cgst_percent'],
+                'sgst_percent': financials['sgst_percent'],
+            },
+            'payment': {
+                'upi_intent': upi_intent,
+                'qr_data_url': qr_data_url,
+                'transaction_reference': txn_ref,
+                'payee_vpa': admin_vpa,
+                'payee_name': payee_name,
+                'amount': total_customer_price
+            }
+        }, status=200)
+
+    except ServiceBooking.DoesNotExist:
+        return JsonResponse({'status': 'error', 'message': f'Booking #{booking_id} not found.'}, status=404)
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+
+@csrf_exempt
+def booking_payment_qr_api(request, booking_id):
+    """
+    Dedicated API to retrieve the dynamic QR code for a booking.
+    URL: /api/quick-services/bookings/<booking_id>/payment-qr/
+    Method: GET
+    Header: Authorization: Bearer <token>
+    """
+    if request.method != 'GET':
+        return JsonResponse({'status': 'error', 'message': 'Method not allowed. Use GET.'}, status=405)
+
+    user, err = _get_user_from_bearer_token(request)
+    if err:
+        return JsonResponse({'status': 'error', 'message': err}, status=401)
+
+    try:
+        booking = ServiceBooking.objects.select_related('customer', 'vendor', 'quick_service').get(id=booking_id)
+
+        # Accessible by vendor, customer or admin
+        if user.id not in [booking.vendor_id, booking.customer_id] and not user.is_superuser:
+            return JsonResponse({'status': 'error', 'message': 'Unauthorized to view QR code for this booking.'}, status=403)
+
+        gs = GlobalSettings.objects.first()
+        if not gs:
+            gs = GlobalSettings.objects.create()
+
+        base_amount = float(booking.total_amount or 0.0) + float(booking.additional_charges or 0.0)
+        calc = gs.split_qs_final_total(base_amount)
+        total_customer_price = calc['customer_price']
+
+        txn_ref = booking.transaction_reference or f"TXN_QS_{booking.id}_{random.randint(10000, 99999)}"
+        admin_vpa = getattr(gs, 'admin_upi_id', None) or "sugu.platform@okaxis"
+        payee_name = "Sugu Platform"
+
+        upi_intent = (
+            f"upi://pay?pa={admin_vpa}"
+            f"&pn={payee_name.replace(' ', '%20')}"
+            f"&am={total_customer_price:.2f}"
+            f"&cu=INR"
+            f"&tn=Booking_{booking.id}_Payment"
+            f"&tr={txn_ref}"
+        )
+
+        qr_data_url = _generate_upi_qr_base64(upi_intent)
+
+        return JsonResponse({
+            'status': 'success',
+            'booking_id': booking.id,
+            'is_paid': booking.payment_status == 'paid',
+            'payment_status': booking.payment_status,
+            'total_amount': total_customer_price,
+            'upi_intent': upi_intent,
+            'qr_data_url': qr_data_url,
+            'transaction_reference': txn_ref
+        }, status=200)
+
+    except ServiceBooking.DoesNotExist:
+        return JsonResponse({'status': 'error', 'message': f'Booking #{booking_id} not found.'}, status=404)
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+
+@csrf_exempt
+@require_POST
+def confirm_booking_payment_api(request, booking_id):
+    """
+    Dedicated API to verify customer payment, mark service completed,
+    credit net payout to Vendor Wallet, and settle SuperAdmin cut & GST.
+    URL: /api/quick-services/bookings/<booking_id>/payment/confirm/
+    Method: POST
+    Header: Authorization: Bearer <token>
+    Payload: {
+        "payment_method": "upi_qr" | "cash_collected" | "online",
+        "transaction_reference": str (optional),
+        "amount_received": float (optional)
+    }
+    """
+    user, err = _get_user_from_bearer_token(request)
+    if err:
+        return JsonResponse({'status': 'error', 'message': err}, status=401)
+
+    try:
+        data = _parse_api_request(request)
+        payment_method = (data.get('payment_method') or request.POST.get('payment_method') or 'upi_qr').strip().lower()
+        txn_ref = (data.get('transaction_reference') or request.POST.get('transaction_reference') or '').strip()
+
+        with transaction.atomic():
+            booking = ServiceBooking.objects.select_for_update().select_related('customer', 'vendor', 'quick_service').get(id=booking_id)
+
+            if booking.vendor_id != user.id and not user.is_superuser:
+                return JsonResponse({'status': 'error', 'message': 'Unauthorized to confirm payment for this booking.'}, status=403)
+
+            # Idempotency check: if already paid, return current state
+            if booking.payment_status == 'paid' and booking.status == 'completed':
+                vw = VendorWallet.objects.filter(vendor=booking.vendor).first()
+                return JsonResponse({
+                    'status': 'success',
+                    'message': 'This booking has already been completed and paid.',
+                    'already_settled': True,
+                    'booking_id': booking.id,
+                    'booking_status': 'completed',
+                    'payment_status': 'paid',
+                    'wallet_balance': float(vw.available_balance if vw else 0.0)
+                }, status=200)
+
+            gs = GlobalSettings.objects.first()
+            if not gs:
+                gs = GlobalSettings.objects.create()
+
+            base_amount = float(booking.total_amount or 0.0) + float(booking.additional_charges or 0.0)
+            calc = gs.split_qs_final_total(base_amount)
+
+            vendor_payout = Decimal(str(calc['vendor_payout'])).quantize(Decimal('0.01'))
+            platform_comm = Decimal(str(calc['commission'])).quantize(Decimal('0.01'))
+            cgst = Decimal(str(calc['cgst'])).quantize(Decimal('0.01'))
+            sgst = Decimal(str(calc['sgst'])).quantize(Decimal('0.01'))
+            flat_fee = Decimal(str(calc['flat_fee'])).quantize(Decimal('0.01'))
+            total_customer_paid = Decimal(str(calc['customer_price'])).quantize(Decimal('0.01'))
+
+            txn_ref = txn_ref or booking.transaction_reference or f"TXN_QS_{booking.id}_{random.randint(10000, 99999)}"
+
+            # 1. Update Booking
+            booking.status = 'completed'
+            booking.payment_status = 'paid'
+            booking.payment_method = payment_method
+            booking.transaction_reference = txn_ref
+            booking.completed_at = timezone.now()
+            booking.save(update_fields=[
+                'status', 'payment_status', 'payment_method',
+                'transaction_reference', 'completed_at', 'updated_at'
+            ])
+
+            # 2. Credit Vendor Wallet
+            vw, _ = VendorWallet.objects.get_or_create(vendor=booking.vendor)
+            vw.available_balance = (vw.available_balance or Decimal('0.00')) + vendor_payout
+            vw.total_earned = (vw.total_earned or Decimal('0.00')) + vendor_payout
+            vw.save(update_fields=['available_balance', 'total_earned', 'updated_at'])
+
+            # 3. Create Wallet Transaction Log
+            service_name = booking.quick_service.title if booking.quick_service else booking.package_name
+            WalletTransaction.objects.create(
+                wallet=vw,
+                amount=vendor_payout,
+                transaction_type='credit',
+                related_quick_service=booking.quick_service,
+                description=f"Earnings for Booking #{booking.id}: {service_name}"
+            )
+
+            # 4. Record SuperAdmin Platform Revenue Ledger
+            superadmin_revenue = platform_comm + cgst + sgst + flat_fee
+            PlatformRevenueLedger.objects.create(
+                related_booking=booking,
+                related_quick_service=booking.quick_service,
+                vendor=booking.vendor,
+                vendor_payout=vendor_payout,
+                platform_commission=platform_comm,
+                cgst_collected=cgst,
+                sgst_collected=sgst,
+                flat_fee_collected=flat_fee,
+                total_customer_paid=total_customer_paid,
+                settled_at=timezone.now()
+            )
+
+        return JsonResponse({
+            'status': 'success',
+            'message': f'Payment verified! â‚¹{float(vendor_payout):,.2f} credited to your Vendor Wallet. â‚¹{float(superadmin_revenue):,.2f} platform fee & GST settled.',
+            'booking_id': booking.id,
+            'booking_status': 'completed',
+            'payment_status': 'paid',
+            'settlement': {
+                'customer_paid': float(total_customer_paid),
+                'credited_to_wallet': float(vendor_payout),
+                'superadmin_commission': float(platform_comm),
+                'cgst': float(cgst),
+                'sgst': float(sgst),
+                'superadmin_total': float(superadmin_revenue)
+            },
+            'wallet': {
+                'new_available_balance': float(vw.available_balance),
+                'total_earned': float(vw.total_earned)
+            }
+        }, status=200)
+
+    except ServiceBooking.DoesNotExist:
+        return JsonResponse({'status': 'error', 'message': f'Booking #{booking_id} not found.'}, status=404)
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+
+@csrf_exempt
+def booking_payment_status_api(request, booking_id):
+    """
+    Dedicated API to poll the real-time payment and completion status of a booking.
+    URL: /api/quick-services/bookings/<booking_id>/payment/status/
+    Method: GET
+    Header: Authorization: Bearer <token>
+    """
+    if request.method != 'GET':
+        return JsonResponse({'status': 'error', 'message': 'Method not allowed. Use GET.'}, status=405)
+
+    user, err = _get_user_from_bearer_token(request)
+    if err:
+        return JsonResponse({'status': 'error', 'message': err}, status=401)
+
+    try:
+        booking = ServiceBooking.objects.select_related('customer', 'vendor').get(id=booking_id)
+
+        if user.id not in [booking.vendor_id, booking.customer_id] and not user.is_superuser:
+            return JsonResponse({'status': 'error', 'message': 'Unauthorized to view payment status.'}, status=403)
+
+        vw = VendorWallet.objects.filter(vendor=booking.vendor).first()
+        wallet_balance = float(vw.available_balance) if vw else 0.0
+
+        return JsonResponse({
+            'status': 'success',
+            'booking_id': booking.id,
+            'booking_status': booking.status,
+            'payment_status': booking.payment_status or 'pending',
+            'is_paid': booking.payment_status == 'paid',
+            'payment_method': booking.payment_method,
+            'transaction_reference': booking.transaction_reference,
+            'completed_at': booking.completed_at.strftime('%Y-%m-%d %H:%M:%S') if booking.completed_at else None,
+            'wallet_balance': wallet_balance
+        }, status=200)
+
+    except ServiceBooking.DoesNotExist:
+        return JsonResponse({'status': 'error', 'message': f'Booking #{booking_id} not found.'}, status=404)
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+
+@csrf_exempt
+def vendor_wallet_balance_api(request):
+    """
+    Dedicated API to fetch real-time vendor wallet balance and financial earnings.
+    URL: /api/vendor/wallet/balance/
+    Method: GET
+    Header: Authorization: Bearer <token>
+    """
+    if request.method != 'GET':
+        return JsonResponse({'status': 'error', 'message': 'Method not allowed. Use GET.'}, status=405)
+
+    user, err = _get_user_from_bearer_token(request)
+    if err:
+        return JsonResponse({'status': 'error', 'message': err}, status=401)
+
+    try:
+        vw, _ = VendorWallet.objects.get_or_create(vendor=user)
+        recent_txns = WalletTransaction.objects.filter(wallet=vw).order_by('-created_at')[:5]
+
+        txns_data = []
+        for t in recent_txns:
+            is_credit = t.transaction_type == 'credit'
+            sign = '+' if is_credit else '-'
+            txns_data.append({
+                'id': f"TX-{t.id:05d}",
+                'raw_id': t.id,
+                'amount': float(t.amount),
+                'amount_formatted': f"{sign}â‚¹{float(t.amount):,.2f}",
+                'title': t.description or ('Earnings Credit' if is_credit else 'Payout Debit'),
+                'type': t.transaction_type,
+                'type_label': t.get_transaction_type_display(),
+                'is_credit': is_credit,
+                'description': t.description,
+                'status': 'Settled',
+                'date': t.created_at.strftime('%d %b %Y, %I:%M %p'),
+                'formatted_date': t.created_at.strftime('%d %b %Y, %I:%M %p')
+            })
+
+        return JsonResponse({
+            'status': 'success',
+            'wallet': {
+                'available_balance': float(vw.available_balance or 0.0),
+                'available_balance_formatted': f"â‚¹{float(vw.available_balance or 0.0):,.2f}",
+                'total_earned': float(vw.total_earned or 0.0),
+                'total_earned_formatted': f"â‚¹{float(vw.total_earned or 0.0):,.2f}",
+                'total_withdrawn': float(vw.total_withdrawn or 0.0),
+                'total_withdrawn_formatted': f"â‚¹{float(vw.total_withdrawn or 0.0):,.2f}",
+                'last_updated': vw.updated_at.strftime('%Y-%m-%d %H:%M:%S') if vw.updated_at else None,
+            },
+            'recent_transactions': txns_data
+        }, status=200)
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+
+@csrf_exempt
+def vendor_wallet_transactions_api(request):
+    """
+    Dedicated API to fetch paginated wallet transaction history.
+    URL: /api/vendor/wallet/transactions/
+    Method: GET
+    Header: Authorization: Bearer <token>
+    Query: type=credit|debit|all, limit=50
+    """
+    if request.method != 'GET':
+        return JsonResponse({'status': 'error', 'message': 'Method not allowed. Use GET.'}, status=405)
+
+    user, err = _get_user_from_bearer_token(request)
+    if err:
+        return JsonResponse({'status': 'error', 'message': err}, status=401)
+
+    try:
+        vw, _ = VendorWallet.objects.get_or_create(vendor=user)
+        txns_qs = WalletTransaction.objects.filter(wallet=vw).order_by('-created_at')
+
+        type_filter = request.GET.get('type', '').strip().lower()
+        if type_filter and type_filter != 'all':
+            txns_qs = txns_qs.filter(transaction_type=type_filter)
+
+        try:
+            limit = int(request.GET.get('limit', 50))
+        except (ValueError, TypeError):
+            limit = 50
+
+        txns_qs = txns_qs[:limit]
+
+        transactions_data = []
+        for t in txns_qs:
+            is_credit = t.transaction_type == 'credit'
+            sign = '+' if is_credit else '-'
+            transactions_data.append({
+                'id': f"TX-{t.id:05d}",
+                'raw_id': t.id,
+                'amount': float(t.amount),
+                'amount_formatted': f"{sign}â‚¹{float(t.amount):,.2f}",
+                'title': t.description or ('Earnings Credit' if is_credit else 'Payout Debit'),
+                'type': t.transaction_type,
+                'type_label': t.get_transaction_type_display(),
+                'is_credit': is_credit,
+                'description': t.description,
+                'status': 'Settled',
+                'date': t.created_at.strftime('%d %b %Y, %I:%M %p'),
+                'formatted_date': t.created_at.strftime('%d %b %Y, %I:%M %p'),
+                'related_service_id': t.related_quick_service_id,
+                'related_job_id': t.related_job_id,
+                'created_at': t.created_at.isoformat(),
+            })
+
+        return JsonResponse({
+            'status': 'success',
+            'available_balance': float(vw.available_balance or 0.0),
+            'count': len(transactions_data),
+            'transactions': transactions_data
+        }, status=200)
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+
+
+
+
+@csrf_exempt
+def add_subcategory_api(request):
+    if not request.user.is_authenticated or not request.user.is_superuser:
+        return JsonResponse({'success': False, 'error': 'Unauthorized'})
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            cat_id = data.get('category_id')
+            name = data.get('name')
+            status = data.get('status', 'active')
+            if not cat_id or not name:
+                return JsonResponse({'success': False, 'error': 'Category ID and Name are required'})
+            
+            category = Category.objects.get(id=cat_id)
+            subcat = SubCategory.objects.create(category=category, name=name, status=status)
+            return JsonResponse({'success': True, 'subcategory': {'id': subcat.id, 'name': subcat.name, 'status': subcat.status}})
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)})
+    return JsonResponse({'success': False, 'error': 'Invalid method'})
+
+@csrf_exempt
+def update_subcategory_api(request):
+    if not request.user.is_authenticated or not request.user.is_superuser:
+        return JsonResponse({'success': False, 'error': 'Unauthorized'})
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            subcat_id = data.get('id')
+            if not subcat_id:
+                return JsonResponse({'success': False, 'error': 'ID is required'})
+            
+            subcat = SubCategory.objects.get(id=subcat_id)
+            if 'name' in data: subcat.name = data['name']
+            if 'status' in data: subcat.status = data['status']
+            subcat.save()
+            return JsonResponse({'success': True, 'subcategory': {'id': subcat.id, 'name': subcat.name, 'status': subcat.status}})
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)})
+    return JsonResponse({'success': False, 'error': 'Invalid method'})
+
+@csrf_exempt
+def delete_subcategory_api(request):
+    if not request.user.is_authenticated or not request.user.is_superuser:
+        return JsonResponse({'success': False, 'error': 'Unauthorized'})
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            subcat_id = data.get('id')
+            SubCategory.objects.filter(id=subcat_id).delete()
+            return JsonResponse({'success': True})
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)})
+    return JsonResponse({'success': False, 'error': 'Invalid method'})
+
+@csrf_exempt
+def add_category_field_api(request):
+    if not request.user.is_authenticated or not request.user.is_superuser:
+        return JsonResponse({'success': False, 'error': 'Unauthorized'})
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            cat_id = data.get('category_id')
+            name = data.get('name')
+            field_type = data.get('field_type', 'text')
+            options = data.get('options', '')
+            is_required = data.get('is_required', True)
+            
+            if not cat_id or not name:
+                return JsonResponse({'success': False, 'error': 'Category ID and Name are required'})
+            
+            category = Category.objects.get(id=cat_id)
+            field = CategoryField.objects.create(
+                category=category, name=name, field_type=field_type,
+                options=options, is_required=is_required
+            )
+            return JsonResponse({'success': True, 'field': {
+                'id': field.id, 'name': field.name, 'field_type': field.field_type,
+                'options': field.options, 'is_required': field.is_required
+            }})
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)})
+    return JsonResponse({'success': False, 'error': 'Invalid method'})
+
+@csrf_exempt
+def update_category_field_api(request):
+    if not request.user.is_authenticated or not request.user.is_superuser:
+        return JsonResponse({'success': False, 'error': 'Unauthorized'})
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            field_id = data.get('id')
+            if not field_id:
+                return JsonResponse({'success': False, 'error': 'ID is required'})
+            
+            field = CategoryField.objects.get(id=field_id)
+            if 'name' in data: field.name = data['name']
+            if 'field_type' in data: field.field_type = data['field_type']
+            if 'options' in data: field.options = data['options']
+            if 'is_required' in data: field.is_required = data['is_required']
+            field.save()
+            return JsonResponse({'success': True, 'field': {
+                'id': field.id, 'name': field.name, 'field_type': field.field_type,
+                'options': field.options, 'is_required': field.is_required
+            }})
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)})
+    return JsonResponse({'success': False, 'error': 'Invalid method'})
+
+@csrf_exempt
+def delete_category_field_api(request):
+    if not request.user.is_authenticated or not request.user.is_superuser:
+        return JsonResponse({'success': False, 'error': 'Unauthorized'})
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            field_id = data.get('id')
+            CategoryField.objects.filter(id=field_id).delete()
+            return JsonResponse({'success': True})
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)})
+    return JsonResponse({'success': False, 'error': 'Invalid method'})
+
+@csrf_exempt
+def category_details_api(request, category_id):
+    if not request.user.is_authenticated or not request.user.is_superuser:
+        return JsonResponse({'success': False, 'error': 'Unauthorized'})
+    try:
+        category = Category.objects.get(id=category_id)
+        subcats = list(category.subcategories.values('id', 'name', 'status'))
+        fields = list(category.fields.values('id', 'name', 'field_type', 'options', 'is_required'))
+        return JsonResponse({
+            'success': True,
+            'category': {
+                'id': category.id,
+                'name': category.name,
+                'service_type': category.service_type,
+                'status': category.status
+            },
+            'subcategories': subcats,
+            'fields': fields
+        })
+    except Category.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Category not found'})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})
+
 
 @csrf_exempt
 def user_profile_api(request):
