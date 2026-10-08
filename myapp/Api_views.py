@@ -4663,7 +4663,10 @@ def get_user_jobs_api(request):
     if not user:
         return JsonResponse({'status': 'error', 'message': 'Unauthorized'}, status=401)
         
-    jobs = Job.objects.filter(user=user).select_related('category', 'location', 'assigned_vendor').order_by('-created_at')
+    from django.db.models import Count
+    jobs = Job.objects.filter(user=user).select_related('category', 'location', 'assigned_vendor').annotate(
+        actual_bids_count=Count('bids')
+    ).order_by('-created_at')
     
     jobs_data = []
     for job in jobs:
@@ -4677,7 +4680,7 @@ def get_user_jobs_api(request):
             'status': job.status,
             'created_at': job.created_at.strftime("%Y-%m-%d %H:%M:%S"),
             'location': job.location.city if job.location else job.address,
-            'bids_count': job.bids_count,
+            'bids_count': job.actual_bids_count,
             'assigned_vendor': job.assigned_vendor.get_full_name() or job.assigned_vendor.username if job.assigned_vendor else None
         })
         
