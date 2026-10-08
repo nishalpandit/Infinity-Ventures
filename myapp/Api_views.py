@@ -14,7 +14,7 @@ from django.contrib.auth import get_user_model
 from django.utils import timezone
 from django.db import transaction
 from django.db.models import Q
-from .models import UserProfile, VendorProfile, Category, Location, OTPVerification, AuthToken, Job, JobImage, QuickService, VendorKYC, CustomerAddress, ServiceBooking, GlobalSettings, Message, Bid, BidPlan, BidCreditTransaction, Subscription, VendorWallet, WalletTransaction, PlatformRevenueLedger, ServiceReview
+from .models import UserProfile, VendorProfile, Category, Location, OTPVerification, AuthToken, Job, QuickService, VendorKYC, CustomerAddress, ServiceBooking, GlobalSettings, Message, Bid, BidPlan, BidCreditTransaction, Subscription, VendorWallet, WalletTransaction, PlatformRevenueLedger, ServiceReview
 from .review_services import (
     ReviewError, UNLOCKED_BOOKING_STATUSES, booking_contact_unlocked,
     mask_customer_name, submit_booking_review, vendor_review_summary,
@@ -474,13 +474,7 @@ def vendor_signup_api(request):
         password = data.get('password', '')
         confirm_password = data.get('confirm_password')
 
-        categories_input = data.get('categories') or data.get('category')
-        if isinstance(categories_input, list):
-            category = ", ".join(str(c).strip() for c in categories_input if str(c).strip())
-        elif isinstance(categories_input, str) and categories_input.strip():
-            category = categories_input.strip()
-        else:
-            category = 'General Services'
+        category = (data.get('category') or 'General Services').strip()
         city = (data.get('city') or '').strip()
         state = (data.get('state') or '').strip()
         location = f"{city}, {state}" if (city and state) else (data.get('location') or city or state or 'Ranchi, Jharkhand').strip()
@@ -1903,12 +1897,6 @@ def user_post_job_api(request):
             status='open',
             bids_count=0
         )
-        uploaded_files = request.FILES.getlist('images') or request.FILES.getlist('image')
-        if uploaded_files:
-            job.image = uploaded_files[0]
-            job.save(update_fields=['image'])
-            for img_file in uploaded_files:
-                JobImage.objects.create(job=job, image=img_file)
 
         job_code = f"JOB-{job.id:04d}"
         response_data = {
@@ -2713,6 +2701,36 @@ def top_professionals_api(request):
     vendors_data = []
     for vp in top_vendors:
         profile_img_url = _build_absolute_image_url(request, vp.profile_image) if vp.profile_image else ""
+        
+        # Get quick services for this vendor
+        qs_list = QuickService.objects.filter(vendor=vp.user, status='active')
+        services_data = []
+        for qs in qs_list:
+            services_data.append({
+                'id': qs.id,
+                'title': qs.title,
+                'base_price': float(qs.base_price),
+                'image': _build_absolute_image_url(request, qs.image, qs.image_url),
+            })
+            
+        # Get published reviews for this vendor
+        reviews_list = ServiceReview.objects.filter(vendor=vp.user, status='published').select_related('customer')[:5]
+        reviews_data = []
+        for r in reviews_list:
+            customer_img = ""
+            if hasattr(r.customer, 'user_profile') and r.customer.user_profile.profile_image:
+                customer_img = _build_absolute_image_url(request, r.customer.user_profile.profile_image)
+                
+            reviews_data.append({
+                'id': r.id,
+                'rating': r.rating,
+                'title': r.review_title or "",
+                'comment': r.comment,
+                'customer_name': r.customer.get_full_name() or r.customer.username,
+                'customer_image': customer_img,
+                'created_at': r.created_at.strftime("%Y-%m-%d"),
+            })
+
         vendors_data.append({
             'vendor_profile_id': vp.id,
             'user_id': vp.user.id,
@@ -2724,7 +2742,9 @@ def top_professionals_api(request):
             'rating': float(vp.rating) if vp.rating else 0.0,
             'profile_image': profile_img_url,
             'vendor_type': vp.vendor_type,
-            'about': vp.about or ""
+            'about': vp.about or "",
+            'services': services_data,
+            'reviews': reviews_data
         })
 
     return JsonResponse({
@@ -4595,6 +4615,21 @@ def book_service_api(request):
                 'message': 'This vendor is currently offline and not accepting bookings.'
             }, status=400)
             
+        # Parse scheduled_time to 24-hour format if it contains AM/PM
+        parsed_time = None
+        if scheduled_time:
+            try:
+                from datetime import datetime
+                if 'AM' in scheduled_time.upper() or 'PM' in scheduled_time.upper():
+                    parsed_time = datetime.strptime(scheduled_time.strip(), '%I:%M %p').time()
+                else:
+                    parsed_time = datetime.strptime(scheduled_time.strip(), '%H:%M').time()
+            except ValueError:
+                return JsonResponse({
+                    'status': 'error',
+                    'message': 'Invalid scheduled_time format. Use HH:MM AM/PM or HH:MM.'
+                }, status=400)
+            
         booking = ServiceBooking.objects.create(
             customer=user,
             vendor=qs.vendor,
@@ -4602,7 +4637,7 @@ def book_service_api(request):
             package_name=package_name,
             total_amount=total_amount,
             scheduled_date=scheduled_date,
-            scheduled_time=scheduled_time if scheduled_time else None,
+            scheduled_time=parsed_time,
             service_address=service_address,
             status='pending'
         )
@@ -4615,6 +4650,56 @@ def book_service_api(request):
         return JsonResponse({'status': 'error', 'message': 'Service not found.'}, status=404)
 
 @csrf_exempt
+def user_bookings_api(request):
+    """
+    API for User (Customer) to fetch their Bookings.
+    URL: /api/user/bookings/
+    Method: GET
+    Header: Authorization: Bearer <token>
+    """
+    if request.method != 'GET':
+        return JsonResponse({'status': 'error', 'message': 'Method not allowed. Use GET.'}, status=405)
+
+    user, err = _get_user_from_bearer_token(request)
+    if err:
+        return JsonResponse({'status': 'error', 'message': err}, status=401)
+    
+    try:
+        bookings = ServiceBooking.objects.filter(customer=user).select_related('vendor', 'quick_service', 'review').order_by('-created_at')
+        bookings_list = []
+        for b in bookings:
+            vendor_name = b.vendor.get_full_name() or b.vendor.username if b.vendor else 'Unknown Vendor'
+            vendor_phone = ''
+            if b.vendor:
+                if hasattr(b.vendor, 'user_profile') and b.vendor.user_profile:
+                    vendor_phone = b.vendor.user_profile.phone_number or ''
+                if not vendor_phone and hasattr(b.vendor, 'phone_number'):
+                    vendor_phone = getattr(b.vendor, 'phone_number', '')
+
+            review = getattr(b, 'review', None)
+            
+            bookings_list.append({
+                'id': b.id,
+                'service_title': b.quick_service.title if b.quick_service else 'Unknown Service',
+                'vendor_id': b.vendor.id if b.vendor else None,
+                'vendor_name': vendor_name,
+                'vendor_phone': vendor_phone,
+                'package_name': b.package_name,
+                'total_amount': float(b.total_amount),
+                'total_price': float(b.total_amount),
+                'scheduled_date': str(b.scheduled_date),
+                'scheduled_time': str(b.scheduled_time) if b.scheduled_time else '',
+                'service_address': b.service_address or '',
+                'status': b.status,
+                'payment_status': b.payment_status,
+                'review_rating': review.rating if review else None,
+                'review_comment': review.comment if review else '',
+                'created_at': b.created_at.isoformat()
+            })
+        return JsonResponse({'status': 'success', 'bookings': bookings_list}, status=200)
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
 def get_user_jobs_api(request):
     """
     API for a user to fetch their posted jobs.
@@ -4628,7 +4713,10 @@ def get_user_jobs_api(request):
     if not user:
         return JsonResponse({'status': 'error', 'message': 'Unauthorized'}, status=401)
         
-    jobs = Job.objects.filter(user=user).select_related('category', 'location', 'assigned_vendor').order_by('-created_at')
+    from django.db.models import Count
+    jobs = Job.objects.filter(user=user).select_related('category', 'location', 'assigned_vendor').annotate(
+        actual_bids_count=Count('bids')
+    ).order_by('-created_at')
     
     jobs_data = []
     for job in jobs:
@@ -4642,7 +4730,7 @@ def get_user_jobs_api(request):
             'status': job.status,
             'created_at': job.created_at.strftime("%Y-%m-%d %H:%M:%S"),
             'location': job.location.city if job.location else job.address,
-            'bids_count': job.bids_count,
+            'bids_count': job.actual_bids_count,
             'assigned_vendor': job.assigned_vendor.get_full_name() or job.assigned_vendor.username if job.assigned_vendor else None
         })
         
@@ -5977,7 +6065,6 @@ def _generate_upi_qr_base64(upi_string):
     Generates a high-contrast base64 encoded PNG data URI for a UPI payment URI.
     """
     try:
-        import qrcode
         qr = qrcode.QRCode(
             version=1,
             error_correction=qrcode.constants.ERROR_CORRECT_M,

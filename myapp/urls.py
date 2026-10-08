@@ -193,6 +193,9 @@ urlpatterns = [
     # Service Booking API
     path('api/user/services/book/', Api_views.book_service_api, name='book_service_api'),
     path('api/user/services/book', Api_views.book_service_api),
+    
+    path('api/user/bookings/', Api_views.user_bookings_api, name='user_bookings_api'),
+    path('api/user/bookings', Api_views.user_bookings_api),
 
     # Jobs API
     path('api/user/jobs/', Api_views.get_user_jobs_api, name='get_user_jobs_api'),
