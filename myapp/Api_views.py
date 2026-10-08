@@ -4340,7 +4340,7 @@ def get_job_bids_api(request, job_id):
             'created_at': bid.created_at.strftime("%Y-%m-%d %H:%M:%S"),
         })
         
-    return JsonResponse({'status': 'success', 'bids': bids_data})
+    return JsonResponse({'status': 'success', 'job_status': job.status, 'bids': bids_data})
 
 @csrf_exempt
 def handle_bid_action_api(request):
@@ -4391,6 +4391,38 @@ def handle_bid_action_api(request):
         bid.status = 'rejected'
         bid.save()
         return JsonResponse({'status': 'success', 'message': 'Bid rejected successfully.'})
+
+
+@csrf_exempt
+def user_mark_job_complete_api(request, job_id):
+    """
+    API to mark a job as completed by the user.
+    URL: /api/user/jobs/<job_id>/complete/
+    Method: POST
+    """
+    if request.method != 'POST':
+        return JsonResponse({'status': 'error', 'message': 'Method not allowed'}, status=405)
+
+    user = _authenticate_api_user(request)
+    if not user:
+        return JsonResponse({'status': 'error', 'message': 'Unauthorized'}, status=401)
+        
+    try:
+        job = Job.objects.get(id=job_id, user=user)
+    except Job.DoesNotExist:
+        return JsonResponse({'status': 'error', 'message': 'Job not found or unauthorized.'}, status=404)
+        
+    if job.status not in ['selected', 'progress']:
+        return JsonResponse({'status': 'error', 'message': f'Job cannot be marked as completed from {job.status} status.'}, status=400)
+        
+    job.status = 'completed'
+    job.save()
+    
+    # Also update the winning bid status
+    if job.assigned_vendor:
+        Bid.objects.filter(job=job, vendor=job.assigned_vendor, status='selected').update(status='completed')
+    
+    return JsonResponse({'status': 'success', 'message': 'Job marked as completed successfully.'})
 
 
 # =====================================================================
