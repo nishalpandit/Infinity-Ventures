@@ -5,7 +5,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{{ branding.site_title|default:"Sugu Services" }} — Home services, sorted</title>
+  <title>{{ branding.site_title|default:"Sugu Services" }} Home services, sorted</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link
     href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Manrope:wght@400;500;600;700;800&display=swap"
@@ -24,8 +24,11 @@
     }
 
     @keyframes spin {
-      to { transform: rotate(360deg); }
+      to {
+        transform: rotate(360deg);
+      }
     }
+
     .spin {
       display: inline-block;
       animation: spin 0.8s linear infinite;
@@ -142,6 +145,7 @@
       position: relative;
       overflow: hidden;
     }
+
     .hero::after {
       content: "";
       position: absolute;
@@ -149,7 +153,8 @@
       background: rgba(16, 32, 64, 0.75);
       z-index: 0;
     }
-    .hero > * {
+
+    .hero>* {
       position: relative;
       z-index: 1;
     }
@@ -552,8 +557,19 @@
       color: #fff;
       position: relative;
     }
-    .dark::before { content: ''; position: absolute; inset: 0; background: rgba(20, 30, 50, 0.85); z-index: 0; }
-    .dark > * { position: relative; z-index: 1; }
+
+    .dark::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: rgba(20, 30, 50, 0.85);
+      z-index: 0;
+    }
+
+    .dark>* {
+      position: relative;
+      z-index: 1;
+    }
 
     .head {
       display: flex;
@@ -598,16 +614,38 @@
       background: url('{% static "images/hero.jpg" %}') center/cover;
       position: relative;
     }
-    .way.a::before { content: ''; position: absolute; inset: 0; background: rgba(255,255,255,0.85); z-index: 0; }
-    .way.a > * { position: relative; z-index: 1; }
+
+    .way.a::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: rgba(255, 255, 255, 0.85);
+      z-index: 0;
+    }
+
+    .way.a>* {
+      position: relative;
+      z-index: 1;
+    }
 
     .way.b {
       background: url('{% static "images/quick_services.jpg" %}') center/cover;
       color: #fff;
       position: relative;
     }
-    .way.b::before { content: ''; position: absolute; inset: 0; background: rgba(16, 32, 64, 0.7); z-index: 0; }
-    .way.b > * { position: relative; z-index: 1; }
+
+    .way.b::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: rgba(16, 32, 64, 0.7);
+      z-index: 0;
+    }
+
+    .way.b>* {
+      position: relative;
+      z-index: 1;
+    }
 
     .way h2 {
       font-size: clamp(36px, 4.4vw, 58px)
@@ -676,6 +714,7 @@
       color: #0a1a3c;
       transition: .3s cubic-bezier(0.4, 0, 0.2, 1);
     }
+
     .pick:hover span,
     .pick.on span {
       background: #ffffff;
@@ -1423,7 +1462,7 @@
       z-index: 0;
     }
 
-    .cta > * {
+    .cta>* {
       position: relative;
       z-index: 1;
     }
@@ -1561,8 +1600,13 @@
     }
 
     @keyframes spin {
-      from { transform: rotate(0deg); }
-      to { transform: rotate(360deg); }
+      from {
+        transform: rotate(0deg);
+      }
+
+      to {
+        transform: rotate(360deg);
+      }
     }
 
     .spin-anim {
@@ -1620,18 +1664,21 @@
       gap: 14px;
       text-decoration: none;
       transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-      box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
       box-sizing: border-box;
     }
+
     .vendor-ask-card:hover {
       border-color: #2563eb;
       transform: translateY(-2px);
       box-shadow: 0 10px 24px -6px rgba(37, 99, 235, 0.16) !important;
     }
+
     .vendor-ask-card.highlight {
       border-color: #93c5fd;
       background: #f0f7ff;
     }
+
     .vendor-ask-card.highlight:hover {
       border-color: #2563eb;
       background: #e0f2fe;
@@ -1784,15 +1831,16 @@
     }
   </style>
   <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 </head>
 
 <body>
   <header>
     <nav class="wrap nav">
-      <a class="logo" href="/"><img src="{% static 'images/logo.png' %}" alt="sugu logo" style="height: 52px; width: auto; object-fit: contain;"></a>
-      
+      <a class="logo" href="/"><img src="{% static 'images/logo.png' %}" alt="sugu logo"
+          style="height: 52px; width: auto; object-fit: contain;"></a>
+
       <div class="nav-loc" onclick="openLocationModal()">
         <span class="nav-loc-icon"><i class="bi bi-geo-alt-fill"></i></span>
         <span class="nav-loc-text" id="navLocText">Set location</span>
@@ -1818,12 +1866,14 @@
         <p class="lead">Book a haircut, massage or repair at your door in minutes. Planning a renovation? Post your
           budget and let trusted vendors come to you.</p>
         <div class="sbar"><input id="hs" placeholder="Search haircut, massage, AC repair"
-            aria-label="Search services"><span class="loc"><i class="bi bi-geo-alt-fill"></i> Ranchi</span><button class="btn"
-            onclick="heroSearch()">Search</button></div>
+            aria-label="Search services"><span class="loc"><i class="bi bi-geo-alt-fill"></i> Ranchi</span><button
+            class="btn" onclick="heroSearch()">Search</button></div>
         <div class="tags">
           <span>Popular:</span>
           {% for cat in categories|slice:":4" %}
-          <button onclick="document.getElementById('quick').scrollIntoView({behavior: 'smooth'}); filterCategory('{{ cat.name|escapejs }}')">{{ cat.name }}</button>
+          <button
+            onclick="document.getElementById('quick').scrollIntoView({behavior: 'smooth'}); filterCategory('{{ cat.name|escapejs }}')">{{
+            cat.name }}</button>
           {% endfor %}
         </div>
       </div>
@@ -1832,7 +1882,8 @@
           <div class="phone">
             <h4>Book a service</h4>
             {% for cat in categories|slice:":3" %}
-            <div class="pl {% if forloop.first %}on{% endif %}"><span><i class="bi {{ cat.icon_class }}"></i></span>{{ cat.name }}</div>
+            <div class="pl {% if forloop.first %}on{% endif %}"><span><i class="bi {{ cat.icon_class }}"></i></span>{{
+              cat.name }}</div>
             {% endfor %}
             <div class="pmap"><i class="bi bi-geo-alt-fill"></i> Your location</div>
             <div class="pbtn">Confirm booking</div>
@@ -1898,9 +1949,9 @@
         <a class="pick" href="/services/browse?category={{ cat.id }}" title="{{ cat.name }}">
           <span>
             {% if cat.icon %}
-              <img src="{{ cat.icon.url }}" alt="{{ cat.name }}" style="width:36px; height:36px; object-fit:contain;" />
+            <img src="{{ cat.icon.url }}" alt="{{ cat.name }}" style="width:36px; height:36px; object-fit:contain;" />
             {% else %}
-              <i class="bi {{ cat.icon_class }}"></i>
+            <i class="bi {{ cat.icon_class }}"></i>
             {% endif %}
           </span>
           {{ cat.name }}
@@ -1912,20 +1963,26 @@
 
       <div class="tiles" id="grid" style="margin-top: 40px;">
         {% for service in landing_services|default:top_services %}
-        <article class="svc" data-aos="zoom-in" data-aos-delay="100" data-cat="{{ service.category.name|default:'' }}" data-lat="{{ service.latitude|default:'' }}" data-lon="{{ service.longitude|default:'' }}" data-radius="{{ service.service_radius_km|default:15 }}">
-          <div class="img" {% if service.image %}style="background: url('{{ service.image.url }}') center/cover no-repeat, linear-gradient(135deg, var(--n2), var(--n3));" {% elif service.image_url %}style="background: url('{{ service.image_url }}') center/cover no-repeat, linear-gradient(135deg, var(--n2), var(--n3));" {% endif %}>{% if not service.image and not service.image_url %}<i class="bi bi-image" style="font-size:24px; opacity:0.5;"></i>{% endif %}<span class="rt">★ 4.8</span></div>
+        <article class="svc" data-aos="zoom-in" data-aos-delay="100" data-cat="{{ service.category.name|default:'' }}"
+          data-lat="{{ service.latitude|default:'' }}" data-lon="{{ service.longitude|default:'' }}"
+          data-radius="{{ service.service_radius_km|default:15 }}">
+          <div class="img"{% if service.image %} style="background: url('{{ service.image.url }}') center/cover no-repeat, linear-gradient(135deg, var(--n2), var(--n3));"{% elif service.image_url %} style="background: url('{{ service.image_url }}') center/cover no-repeat, linear-gradient(135deg, var(--n2), var(--n3));"{% endif %}>
+            {% if not service.image and not service.image_url %}<i class="bi bi-image" style="font-size:24px; opacity:0.5;"></i>{% endif %}
+            <span class="rt">★ 4.8</span>
+          </div>
           <h3>{{ service.title }}</h3>
           <small><i class="bi bi-shield-check" style="color:#10b981;"></i> Sugu Verified Partner</small>
           <div class="row">
             <span><b>₹{{ service.base_price|floatformat:"0" }}</b> <small>onwards</small></span>
-            <a class="btn" href="/services/browse?category={{ service.category.id|default:'' }}#service-{{ service.id }}">View</a>
+            <a class="btn"
+              href="/services/browse?category={{ service.category.id|default:'' }}#service-{{ service.id }}">View</a>
           </div>
         </article>
         {% empty %}
         <div class="empty">No services listed yet. Check back soon.</div>
         {% endfor %}
       </div>
-      
+
       <script>
         function filterCategory(catName) {
           const svcs = document.querySelectorAll('.svc');
@@ -1996,15 +2053,20 @@
               <textarea id="addr" rows="2" placeholder="House no, street, area, city"></textarea>
               <input type="hidden" id="job_lat" name="latitude">
               <input type="hidden" id="job_lon" name="longitude">
-              
-              <div style="display: flex; align-items: center; justify-content: space-between; margin-top: 6px; flex-wrap: wrap; gap: 8px;">
-                <button class="loc2" type="button" onclick="useLoc('addr')" id="btnUseLoc" style="display: inline-flex; align-items: center; gap: 6px; cursor: pointer;">
+
+              <div
+                style="display: flex; align-items: center; justify-content: space-between; margin-top: 6px; flex-wrap: wrap; gap: 8px;">
+                <button class="loc2" type="button" onclick="useLoc('addr')" id="btnUseLoc"
+                  style="display: inline-flex; align-items: center; gap: 6px; cursor: pointer;">
                   <i class="bi bi-crosshair" id="locCrosshairIcon"></i> Use my current location
                 </button>
-                <div id="locGpsPill" style="display: none; align-items: center; gap: 6px; font-size: 11.5px; background: #eff6ff; border: 1.5px solid #bfdbfe; padding: 4px 11px; border-radius: 999px; color: #1e40af;">
-                  <span style="width: 7px; height: 7px; border-radius: 50%; background: #22c55e; display: inline-block;"></span>
+                <div id="locGpsPill"
+                  style="display: none; align-items: center; gap: 6px; font-size: 11.5px; background: #eff6ff; border: 1.5px solid #bfdbfe; padding: 4px 11px; border-radius: 999px; color: #1e40af;">
+                  <span
+                    style="width: 7px; height: 7px; border-radius: 50%; background: #22c55e; display: inline-block;"></span>
                   <span id="locGpsText">Lat: 23.3555, Lon: 85.3609</span>
-                  <a id="locGpsMapsLink" href="#" target="_blank" rel="noopener noreferrer" style="color: #2563eb; font-weight: 700; text-decoration: underline; margin-left: 4px; display: inline-flex; align-items: center; gap: 3px;">
+                  <a id="locGpsMapsLink" href="#" target="_blank" rel="noopener noreferrer"
+                    style="color: #2563eb; font-weight: 700; text-decoration: underline; margin-left: 4px; display: inline-flex; align-items: center; gap: 3px;">
                     <i class="bi bi-geo-alt-fill"></i> Google Maps ↗
                   </a>
                 </div>
@@ -2016,7 +2078,8 @@
               <div class="field">
                 <label for="when" style="display: flex; justify-content: space-between; align-items: center;">
                   <span>When to start</span>
-                  <span style="font-size: 11.5px; font-weight: 600; color: #2563eb;"><i class="bi bi-calendar3"></i> Pick date</span>
+                  <span style="font-size: 11.5px; font-weight: 600; color: #2563eb;"><i class="bi bi-calendar3"></i>
+                    Pick date</span>
                 </label>
                 <input type="date" id="when" onclick="if(this.showPicker) this.showPicker()" style="cursor: pointer;">
                 <div class="when-chips" style="display: flex; gap: 6px; margin-top: 6px; flex-wrap: wrap;">
@@ -2147,9 +2210,11 @@
           <big>"{{ feat.review_text }}"</big>
           <div class="w">
             {% if feat.avatar %}
-            <img class="av" src="{{ feat.avatar.url }}" alt="{{ feat.client_name }}" style="object-fit: cover; border: 2px solid #fff;">
+            <img class="av" src="{{ feat.avatar.url }}" alt="{{ feat.client_name }}"
+              style="object-fit: cover; border: 2px solid #fff;">
             {% else %}
-            <div class="av" style="border: 2px solid #fff; background: linear-gradient(135deg, #2563eb, #1e3a8a); color: #fff; font-weight: 800; font-size: 15px; display: grid; place-items: center; border-radius: 50%;">
+            <div class="av"
+              style="border: 2px solid #fff; background: linear-gradient(135deg, #2563eb, #1e3a8a); color: #fff; font-weight: 800; font-size: 15px; display: grid; place-items: center; border-radius: 50%;">
               {{ feat.client_name|slice:":2"|upper }}
             </div>
             {% endif %}
@@ -2174,9 +2239,11 @@
             <p>"{{ item.review_text }}"</p>
             <div class="w">
               {% if item.avatar %}
-              <img class="av" src="{{ item.avatar.url }}" alt="{{ item.client_name }}" style="object-fit: cover; border: 2px solid #fff;">
+              <img class="av" src="{{ item.avatar.url }}" alt="{{ item.client_name }}"
+                style="object-fit: cover; border: 2px solid #fff;">
               {% else %}
-              <div class="av" style="border: 2px solid #fff; background: linear-gradient(135deg, #2563eb, #1e3a8a); color: #fff; font-weight: 800; font-size: 14px; display: grid; place-items: center; border-radius: 50%;">
+              <div class="av"
+                style="border: 2px solid #fff; background: linear-gradient(135deg, #2563eb, #1e3a8a); color: #fff; font-weight: 800; font-size: 14px; display: grid; place-items: center; border-radius: 50%;">
                 {{ item.client_name|slice:":2"|upper }}
               </div>
               {% endif %}
@@ -2196,24 +2263,29 @@
           <big>"I posted my 2 BHK renovation in the evening and had three offers by morning. Chose one and
             the work started that week. Extremely professional!"</big>
           <div class="w">
-            <img class="av" src="{% static 'images/avatar.jpg' %}" alt="Priya Sinha" style="object-fit: cover; border: 2px solid #fff;">
+            <img class="av" src="{% static 'images/avatar.jpg' %}" alt="Priya Sinha"
+              style="object-fit: cover; border: 2px solid #fff;">
             <div>Priya Sinha<small>Home renovation, Ranchi</small></div>
           </div>
         </div>
         <div class="qr" data-aos="fade-left" data-aos-delay="200">
           <div class="q">
             <div style="color: #ffb400; font-size: 18px; margin-bottom: 8px;">★ ★ ★ ★ ★</div>
-            <p>"Haircut and beard trim at home before a function. On time and very neat. Highly recommend the grooming services."</p>
+            <p>"Haircut and beard trim at home before a function. On time and very neat. Highly recommend the grooming
+              services."</p>
             <div class="w">
-              <img class="av" src="{% static 'images/avatar.jpg' %}" alt="Rahul Kumar" style="object-fit: cover; border: 2px solid #fff;">
+              <img class="av" src="{% static 'images/avatar.jpg' %}" alt="Rahul Kumar"
+                style="object-fit: cover; border: 2px solid #fff;">
               <div>Rahul Kumar<small>Quick service</small></div>
             </div>
           </div>
           <div class="q">
             <div style="color: #ffb400; font-size: 18px; margin-bottom: 8px;">★ ★ ★ ★ ★</div>
-            <p>"The pest control team was professional and the price matched what was shown. Will use Infinity Ventures again."</p>
+            <p>"The pest control team was professional and the price matched what was shown. Will use Infinity Ventures
+              again."</p>
             <div class="w">
-              <img class="av" src="{% static 'images/avatar.jpg' %}" alt="Anita Mahto" style="object-fit: cover; border: 2px solid #fff;">
+              <img class="av" src="{% static 'images/avatar.jpg' %}" alt="Anita Mahto"
+                style="object-fit: cover; border: 2px solid #fff;">
               <div>Anita Mahto<small>Pest control</small></div>
             </div>
           </div>
@@ -2285,7 +2357,8 @@
   <footer>
     <div class="wrap">
       <div class="fg">
-        <div><a class="logo" href="/"><img src="{% static 'images/logo.png' %}" alt="sugu logo" style="height: 64px; width: auto; object-fit: contain;"></a>
+        <div><a class="logo" href="/"><img src="{% static 'images/logo.png' %}" alt="sugu logo"
+              style="height: 64px; width: auto; object-fit: contain;"></a>
           <p style="max-width:300px;margin-top:14px">Home services, sorted. Quick bookings and big projects, all in one
             place.</p>
         </div>
@@ -2302,8 +2375,12 @@
         </div>
       </div>
       <div class="fb" style="align-items: center;">
-        <span>Copyright &copy; 2026 <a href="https://www.brightcodess.com/" target="_blank" style="color: #3b82f6; text-decoration: none; font-weight: 600; display: inline;">Brightcode Software Services Pvt.Ltd.</a> All rights reserved.</span>
-        <span>Designed By - <a href="https://www.brightcodess.com/" target="_blank" style="text-decoration: none; display: inline;"><b style="color: #1e3a8a; font-size: 1.1em;">Bright</b><b style="color: #e11d48; font-size: 1.1em;">code</b></a></span>
+        <span>Copyright &copy; 2026 <a href="https://www.brightcodess.com/" target="_blank"
+            style="color: #3b82f6; text-decoration: none; font-weight: 600; display: inline;">Brightcode Software
+            Services Pvt.Ltd.</a> All rights reserved.</span>
+        <span>Designed By - <a href="https://www.brightcodess.com/" target="_blank"
+            style="text-decoration: none; display: inline;"><b style="color: #1e3a8a; font-size: 1.1em;">Bright</b><b
+              style="color: #e11d48; font-size: 1.1em;">code</b></a></span>
       </div>
     </div>
   </footer>
@@ -2331,46 +2408,66 @@
 
   <!-- Location Modal with Interactive Map -->
   <div class="modal" id="locModal">
-    <div class="card" style="width: min(500px, 95vw); max-height: 92vh; padding: 22px; border-radius: 20px; display: flex; flex-direction: column;">
+    <div class="card"
+      style="width: min(500px, 95vw); max-height: 92vh; padding: 22px; border-radius: 20px; display: flex; flex-direction: column;">
       <div class="top" style="margin-bottom: 12px; align-items: center;">
         <div>
           <h3 style="font-size: 20px; font-weight: 800; margin: 0;">Select your location</h3>
-          <p style="font-size: 12px; color: var(--mute); margin: 2px 0 0;">Drag pin on map or search for your exact building</p>
+          <p style="font-size: 12px; color: var(--mute); margin: 2px 0 0;">Drag pin on map or search for your exact
+            building</p>
         </div>
         <button class="x" onclick="shut('locModal')" aria-label="Close">×</button>
       </div>
 
       <!-- Real-time Location Search Input -->
       <div class="search-box" style="margin-bottom: 8px; position: relative;">
-        <i class="bi bi-search" style="position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--mute);"></i>
-        <input type="text" class="input" id="locSearch" placeholder="Search society, colony, street or landmark..." style="width: 100%; border-radius: 12px; border: 1.5px solid #e2e8f0; padding: 11px 14px 11px 38px; outline: none; box-sizing: border-box; font-size: 14px;" oninput="onSearchLocation(this.value)">
+        <i class="bi bi-search"
+          style="position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--mute);"></i>
+        <input type="text" class="input" id="locSearch" placeholder="Search society, colony, street or landmark..."
+          style="width: 100%; border-radius: 12px; border: 1.5px solid #e2e8f0; padding: 11px 14px 11px 38px; outline: none; box-sizing: border-box; font-size: 14px;"
+          oninput="onSearchLocation(this.value)">
       </div>
-      <div id="locSearchResults" style="display: none; max-height: 180px; overflow-y: auto; margin-bottom: 10px; border: 1px solid #e2e8f0; border-radius: 12px; padding: 4px; background: #fff; z-index: 10;"></div>
-      
+      <div id="locSearchResults"
+        style="display: none; max-height: 180px; overflow-y: auto; margin-bottom: 10px; border: 1px solid #e2e8f0; border-radius: 12px; padding: 4px; background: #fff; z-index: 10;">
+      </div>
+
       <!-- Interactive Leaflet Map Picker -->
-      <div style="position: relative; width: 100%; height: 220px; border-radius: 14px; overflow: hidden; border: 1.5px solid #cbd5e1; box-shadow: inset 0 2px 4px rgba(0,0,0,0.06);">
+      <div
+        style="position: relative; width: 100%; height: 220px; border-radius: 14px; overflow: hidden; border: 1.5px solid #cbd5e1; box-shadow: inset 0 2px 4px rgba(0,0,0,0.06);">
         <div id="liveMapPicker" style="width: 100%; height: 100%;"></div>
-        <div style="position: absolute; top: 10px; left: 50%; transform: translateX(-50%); z-index: 999; background: rgba(15, 23, 42, 0.85); color: #fff; padding: 4px 14px; border-radius: 20px; font-size: 11px; font-weight: 700; pointer-events: none; backdrop-filter: blur(4px); box-shadow: 0 2px 8px rgba(0,0,0,0.25); white-space: nowrap;">
+        <div
+          style="position: absolute; top: 10px; left: 50%; transform: translateX(-50%); z-index: 999; background: rgba(15, 23, 42, 0.85); color: #fff; padding: 4px 14px; border-radius: 20px; font-size: 11px; font-weight: 700; pointer-events: none; backdrop-filter: blur(4px); box-shadow: 0 2px 8px rgba(0,0,0,0.25); white-space: nowrap;">
           📍 Tap map or drag pin to exact building
         </div>
         <!-- Locate Me Map Button -->
-        <button type="button" onclick="fetchLiveLocation()" title="Detect device GPS" style="position: absolute; bottom: 12px; right: 12px; z-index: 999; width: 38px; height: 38px; border-radius: 10px; background: #fff; border: 1.5px solid #cbd5e1; box-shadow: 0 4px 12px rgba(0,0,0,0.15); display: flex; align-items: center; justify-content: center; cursor: pointer; color: #2563eb; font-size: 18px;">
+        <button type="button" onclick="fetchLiveLocation()" title="Detect device GPS"
+          style="position: absolute; bottom: 12px; right: 12px; z-index: 999; width: 38px; height: 38px; border-radius: 10px; background: #fff; border: 1.5px solid #cbd5e1; box-shadow: 0 4px 12px rgba(0,0,0,0.15); display: flex; align-items: center; justify-content: center; cursor: pointer; color: #2563eb; font-size: 18px;">
           <i class="bi bi-crosshair" id="mapLocateIcon"></i>
         </button>
       </div>
 
       <!-- Selected Live Pin Address Card -->
-      <div id="pinSelectedCard" style="margin-top: 10px; background: #f8fafc; border: 1.5px solid #22c55e; border-radius: 12px; padding: 10px 14px;">
+      <div id="pinSelectedCard"
+        style="margin-top: 10px; background: #f8fafc; border: 1.5px solid #22c55e; border-radius: 12px; padding: 10px 14px;">
         <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
           <div style="flex: 1; min-width: 0;">
             <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 2px;">
-              <span style="width: 7px; height: 7px; border-radius: 50%; background: #22c55e; display: inline-block;"></span>
-              <span style="font-size: 10px; font-weight: 800; color: #15803d; text-transform: uppercase; letter-spacing: 0.5px;">Pinned Exact Location</span>
+              <span
+                style="width: 7px; height: 7px; border-radius: 50%; background: #22c55e; display: inline-block;"></span>
+              <span
+                style="font-size: 10px; font-weight: 800; color: #15803d; text-transform: uppercase; letter-spacing: 0.5px;">Pinned
+                Exact Location</span>
             </div>
-            <div id="pinPrimaryText" style="font-size: 13.5px; font-weight: 800; color: var(--n); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Loading location...</div>
-            <div id="pinSecondaryText" style="font-size: 11px; color: var(--mute); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Tap map or drag pin to adjust</div>
+            <div id="pinPrimaryText"
+              style="font-size: 13.5px; font-weight: 800; color: var(--n); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+              Loading location...</div>
+            <div id="pinSecondaryText"
+              style="font-size: 11px; color: var(--mute); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+              Tap map or drag pin to adjust</div>
           </div>
-          <button type="button" class="btn" style="padding: 9px 16px; font-size: 13px; background: #16a34a; color: #fff; font-weight: 700; flex-shrink: 0;" onclick="confirmMapPinLocation()">
+          <button type="button" class="btn"
+            style="padding: 9px 16px; font-size: 13px; background: #16a34a; color: #fff; font-weight: 700; flex-shrink: 0;"
+            onclick="confirmMapPinLocation()">
             Confirm &amp; Use
           </button>
         </div>
@@ -2380,13 +2477,16 @@
 
   <!-- Modal: Vendor Requirement Action Modal -->
   <div class="modal" id="vendorAskModal">
-    <div class="card" style="width: min(480px, 94vw); max-height: 92vh; padding: 26px 24px; border-radius: 24px; display: flex; flex-direction: column; position: relative; box-shadow: 0 25px 50px -12px rgba(10, 26, 60, 0.25);">
+    <div class="card"
+      style="width: min(480px, 94vw); max-height: 92vh; padding: 26px 24px; border-radius: 24px; display: flex; flex-direction: column; position: relative; box-shadow: 0 25px 50px -12px rgba(10, 26, 60, 0.25);">
       <div style="display: flex; justify-content: flex-end; margin-bottom: 2px;">
-        <button class="x" onclick="shut('vendorAskModal')" aria-label="Close" style="cursor: pointer; border: 0; background: var(--t1); width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 18px;">&times;</button>
+        <button class="x" onclick="shut('vendorAskModal')" aria-label="Close"
+          style="cursor: pointer; border: 0; background: var(--t1); width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 18px;">&times;</button>
       </div>
 
       <div style="text-align: center; margin-bottom: 18px;">
-        <div style="width: 58px; height: 58px; border-radius: 18px; background: linear-gradient(135deg, #eff6ff, #dbeafe); color: #2563eb; display: inline-flex; align-items: center; justify-content: center; font-size: 26px; box-shadow: 0 8px 16px -4px rgba(37, 99, 235, 0.2); margin-bottom: 12px;">
+        <div
+          style="width: 58px; height: 58px; border-radius: 18px; background: linear-gradient(135deg, #eff6ff, #dbeafe); color: #2563eb; display: inline-flex; align-items: center; justify-content: center; font-size: 26px; box-shadow: 0 8px 16px -4px rgba(37, 99, 235, 0.2); margin-bottom: 12px;">
           <i class="bi bi-patch-check-fill"></i>
         </div>
         <h3 style="font-size: 22px; font-weight: 800; color: #0a1a3c; margin: 0 0 6px;">Requirement Submitted!</h3>
@@ -2396,23 +2496,34 @@
       </div>
 
       <!-- Quick Requirement Summary Preview -->
-      <div style="background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 14px; padding: 12px 16px; margin-bottom: 18px;">
+      <div
+        style="background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 14px; padding: 12px 16px; margin-bottom: 18px;">
         <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 4px;">
-          <span style="font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; color: #64748b;">Project Summary</span>
+          <span
+            style="font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; color: #64748b;">Project
+            Summary</span>
           <span id="askReqBudget" style="font-size: 14px; font-weight: 800; color: #16a34a;">₹0</span>
         </div>
-        <div id="askReqCat" style="font-size: 14px; font-weight: 700; color: #0f172a; margin-bottom: 2px;">Category</div>
-        <div id="askReqAddr" style="font-size: 12px; color: #64748b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Address</div>
-        <div id="askReqGpsRow" style="display: flex; align-items: center; justify-content: space-between; margin-top: 6px; font-size: 11.5px; border-top: 1px dashed #e2e8f0; padding-top: 4px;">
-          <span style="color: #15803d; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;"><span style="width: 6px; height: 6px; border-radius: 50%; background: #22c55e;"></span> GPS Attached: <span id="askReqCoords">23.3555, 85.3609</span></span>
-          <a id="askReqMapsLink" href="#" target="_blank" rel="noopener noreferrer" style="color: #2563eb; font-weight: 700; text-decoration: underline;">Open Google Maps ↗</a>
+        <div id="askReqCat" style="font-size: 14px; font-weight: 700; color: #0f172a; margin-bottom: 2px;">Category
+        </div>
+        <div id="askReqAddr"
+          style="font-size: 12px; color: #64748b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+          Address</div>
+        <div id="askReqGpsRow"
+          style="display: flex; align-items: center; justify-content: space-between; margin-top: 6px; font-size: 11.5px; border-top: 1px dashed #e2e8f0; padding-top: 4px;">
+          <span style="color: #15803d; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;"><span
+              style="width: 6px; height: 6px; border-radius: 50%; background: #22c55e;"></span> GPS Attached: <span
+              id="askReqCoords">23.3555, 85.3609</span></span>
+          <a id="askReqMapsLink" href="#" target="_blank" rel="noopener noreferrer"
+            style="color: #2563eb; font-weight: 700; text-decoration: underline;">Open Google Maps ↗</a>
         </div>
       </div>
 
       <!-- Action Choice 1: Already a vendor? Login -->
       <a id="askLoginLink" href="/login/" class="vendor-ask-card">
         <div style="display: flex; align-items: center; gap: 12px; min-width: 0;">
-          <div style="width: 44px; height: 44px; border-radius: 12px; background: #e0e7ff; color: #4338ca; display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0;">
+          <div
+            style="width: 44px; height: 44px; border-radius: 12px; background: #e0e7ff; color: #4338ca; display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0;">
             <i class="bi bi-box-arrow-in-right"></i>
           </div>
           <div style="min-width: 0;">
@@ -2420,7 +2531,8 @@
             <div style="font-size: 12px; color: #64748b; line-height: 1.3;">Sign in to view bids and leads</div>
           </div>
         </div>
-        <span class="btn" style="padding: 9px 18px; font-size: 13px; font-weight: 700; border-radius: 10px; white-space: nowrap; flex-shrink: 0; background: #0a1a3c; color: #fff; pointer-events: none;">
+        <span class="btn"
+          style="padding: 9px 18px; font-size: 13px; font-weight: 700; border-radius: 10px; white-space: nowrap; flex-shrink: 0; background: #0a1a3c; color: #fff; pointer-events: none;">
           Login
         </span>
       </a>
@@ -2428,29 +2540,37 @@
       <!-- Action Choice 2: New here? Create a vendor account -->
       <a id="askRegisterLink" href="/register/vendor/" class="vendor-ask-card highlight">
         <div style="display: flex; align-items: center; gap: 12px; min-width: 0;">
-          <div style="width: 44px; height: 44px; border-radius: 12px; background: #2563eb; color: #ffffff; display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0;">
+          <div
+            style="width: 44px; height: 44px; border-radius: 12px; background: #2563eb; color: #ffffff; display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0;">
             <i class="bi bi-person-plus-fill"></i>
           </div>
           <div style="min-width: 0;">
             <div style="font-size: 15px; font-weight: 800; color: #0a1a3c;">New here?</div>
-            <div style="font-size: 12px; color: #2563eb; font-weight: 600; line-height: 1.3;">Start getting local client jobs</div>
+            <div style="font-size: 12px; color: #2563eb; font-weight: 600; line-height: 1.3;">Start getting local client
+              jobs</div>
           </div>
         </div>
-        <span class="btn" style="padding: 9px 18px; font-size: 13px; font-weight: 700; border-radius: 10px; white-space: nowrap; flex-shrink: 0; background: #2563eb; color: #fff; box-shadow: 0 4px 12px rgba(37,99,235,0.25); pointer-events: none;">
+        <span class="btn"
+          style="padding: 9px 18px; font-size: 13px; font-weight: 700; border-radius: 10px; white-space: nowrap; flex-shrink: 0; background: #2563eb; color: #fff; box-shadow: 0 4px 12px rgba(37,99,235,0.25); pointer-events: none;">
           Create a vendor account
         </span>
       </a>
 
       <!-- Customer Alternative Option -->
-      <div style="text-align: center; border-top: 1px solid #f1f5f9; padding-top: 14px; font-size: 12.5px; color: #64748b;">
+      <div
+        style="text-align: center; border-top: 1px solid #f1f5f9; padding-top: 14px; font-size: 12.5px; color: #64748b;">
         Customer posting this job?
-        <a id="askCustomerLoginLink" href="/login/" style="color: #2563eb; font-weight: 700; text-decoration: none; margin-left: 3px;">Sign In</a> or
-        <a id="askCustomerRegLink" href="/register/user/" style="color: #2563eb; font-weight: 700; text-decoration: none; margin-left: 2px;">Create Customer Account</a>
+        <a id="askCustomerLoginLink" href="/login/"
+          style="color: #2563eb; font-weight: 700; text-decoration: none; margin-left: 3px;">Sign In</a> or
+        <a id="askCustomerRegLink" href="/register/user/"
+          style="color: #2563eb; font-weight: 700; text-decoration: none; margin-left: 2px;">Create Customer Account</a>
       </div>
 
       {% if user.is_authenticated %}
       <div style="margin-top: 14px; padding-top: 12px; border-top: 1px dashed #e2e8f0; text-align: center;">
-        <a href="{% if user.role == 'VENDOR' %}/vendor/dashboard{% elif user.role == 'ADMIN' %}/admin-dashboard{% else %}/user/dashboard{% endif %}" class="btn" style="width: 100%; padding: 11px; font-size: 13.5px; font-weight: 700; background: #0a1a3c; color: #fff; border-radius: 12px; text-decoration: none; display: block; box-sizing: border-box;">
+        <a href="{% if user.role == 'VENDOR' %}/vendor/dashboard{% elif user.role == 'ADMIN' %}/admin-dashboard{% else %}/user/dashboard{% endif %}"
+          class="btn"
+          style="width: 100%; padding: 11px; font-size: 13.5px; font-weight: 700; background: #0a1a3c; color: #fff; border-radius: 12px; text-decoration: none; display: block; box-sizing: border-box;">
           Continue to Your Dashboard ({{ user.username }}) &rarr;
         </a>
       </div>
@@ -2535,12 +2655,12 @@
           icon: pinIcon
         }).addTo(_locMap);
 
-        _locMarker.on('dragend', function() {
+        _locMarker.on('dragend', function () {
           const pos = _locMarker.getLatLng();
           reverseGeocodeMapPin(pos.lat, pos.lng);
         });
 
-        _locMap.on('click', function(e) {
+        _locMap.on('click', function (e) {
           _locMarker.setLatLng(e.latlng);
           reverseGeocodeMapPin(e.latlng.lat, e.latlng.lng);
         });
@@ -2581,7 +2701,7 @@
           lon: lon,
           is_live: true
         };
-      } catch(e) {
+      } catch (e) {
         if (pText) pText.textContent = `Pinned Location (${lat.toFixed(4)}, ${lon.toFixed(4)})`;
         _pendingLocData = {
           name: `Location (${lat.toFixed(4)}, ${lon.toFixed(4)})`,
@@ -2618,7 +2738,7 @@
       if (lat) localStorage.setItem('suggu_user_lat', lat);
       if (lon) localStorage.setItem('suggu_user_lon', lon);
       if (fullData) {
-        try { localStorage.setItem('sugu_selected_location', JSON.stringify(fullData)); } catch(e) {}
+        try { localStorage.setItem('sugu_selected_location', JSON.stringify(fullData)); } catch (e) { }
       }
 
       shut('locModal');
@@ -2662,7 +2782,7 @@
             `;
           }).join('');
           resContainer.style.display = 'block';
-        } catch(e) {
+        } catch (e) {
           console.error('Search location error:', e);
         }
       }, 250);
@@ -2700,7 +2820,7 @@
               { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 }
             );
           });
-        } catch(e) { coords = null; }
+        } catch (e) { coords = null; }
       }
 
       if (coords) {
@@ -2711,7 +2831,7 @@
           const primary = data.primary || data.name || 'Current Location';
           const name = data.name || (primary + ', ' + (data.city || 'Namkum'));
           applyLocation(name, coords.lat, coords.lon, data);
-        } catch(e) {}
+        } catch (e) { }
         toast('Exact live location set: ' + (coords.lat.toFixed(4) + ', ' + coords.lon.toFixed(4)));
         resetIcon();
       } else {
@@ -2724,7 +2844,7 @@
           } else {
             toast('Please tap your building on the map or search your location.');
           }
-        } catch(e) {
+        } catch (e) {
           toast('Please tap your building on the map or search your location.');
         }
         resetIcon();
@@ -2762,7 +2882,7 @@
                 const name = data.name || (data.primary + ', ' + (data.city || 'Namkum'));
                 applyLocation(name, lat, lon, data);
               }
-            } catch(e) {
+            } catch (e) {
               console.warn("GPS reverse geocode error:", e);
             }
           },
@@ -2778,7 +2898,7 @@
                   }
                   applyLocation(name, data.lat || 23.3555, data.lon || 85.3609, data);
                 })
-                .catch(() => {});
+                .catch(() => { });
             }
           },
           { enableHighAccuracy: true, timeout: 8000, maximumAge: 60000 }
@@ -2793,22 +2913,22 @@
             }
             applyLocation(name, data.lat || 23.3555, data.lon || 85.3609, data);
           })
-          .catch(() => {});
+          .catch(() => { });
       }
 
       setTimeout(() => filt('', 'All'), 200);
     });
 
     const $ = s => document.querySelector(s), $$ = s => [...document.querySelectorAll(s)];
-    
+
     function getDist(lat1, lon1, lat2, lon2) {
       if (!lat1 || !lon1 || !lat2 || !lon2) return 0; // If no coords, assume it's global/visible
       const p = 0.017453292519943295;
-      const a = 0.5 - Math.cos((lat2 - lat1) * p)/2 + Math.cos(lat1 * p) * Math.cos(lat2 * p) * (1 - Math.cos((lon2 - lon1) * p))/2;
-      return 12742 * Math.asin(Math.sqrt(a)); 
+      const a = 0.5 - Math.cos((lat2 - lat1) * p) / 2 + Math.cos(lat1 * p) * Math.cos(lat2 * p) * (1 - Math.cos((lon2 - lon1) * p)) / 2;
+      return 12742 * Math.asin(Math.sqrt(a));
     }
 
-    function filt(q, cat, limit=4) {
+    function filt(q, cat, limit = 4) {
       const uLat = localStorage.getItem('suggu_user_lat');
       const uLon = localStorage.getItem('suggu_user_lon');
       let n = 0;
@@ -2816,21 +2936,21 @@
         const sLat = c.getAttribute('data-lat');
         const sLon = c.getAttribute('data-lon');
         let inRadius = true;
-        
+
         if (uLat && uLon && sLat && sLon && sLat !== 'None' && sLon !== 'None') {
-           const dist = getDist(uLat, uLon, sLat, sLon);
-           const rad = parseFloat(c.getAttribute('data-radius')) || 15;
-           if (dist > rad) inRadius = false;
+          const dist = getDist(uLat, uLon, sLat, sLon);
+          const rad = parseFloat(c.getAttribute('data-radius')) || 15;
+          if (dist > rad) inRadius = false;
         }
 
-        const match = (!q || c.innerText.toLowerCase().includes(q)) && 
-                      (!cat || cat === 'All' || c.dataset.cat === cat) && 
-                      inRadius;
-                      
+        const match = (!q || c.innerText.toLowerCase().includes(q)) &&
+          (!cat || cat === 'All' || c.dataset.cat === cat) &&
+          inRadius;
+
         if (match && n < limit) { c.style.display = ''; n++; }
         else { c.style.display = 'none'; }
       });
-      
+
       const emptyMsg = document.querySelector('#grid .empty') || document.createElement('div');
       if (n === 0) {
         emptyMsg.className = 'empty';
@@ -2887,7 +3007,7 @@
             lon: lon,
             is_live: true
           }));
-        } catch(e) {}
+        } catch (e) { }
 
         const gpsPill = document.getElementById('locGpsPill');
         const gpsText = document.getElementById('locGpsText');
@@ -2915,7 +3035,7 @@
           const addr = data.full_address || data.name || ((data.primary || data.city) + ', ' + (data.city || ''));
           applyGpsInfo(addr, lat, lon);
           toast(`GPS Attached: ${Number(lat).toFixed(4)}, ${Number(lon).toFixed(4)}`);
-        } catch(e) {
+        } catch (e) {
           applyGpsInfo(`Current Worksite (${Number(lat).toFixed(4)}, ${Number(lon).toFixed(4)})`, lat, lon);
           toast(`GPS Attached: ${Number(lat).toFixed(4)}, ${Number(lon).toFixed(4)}`);
         }
@@ -2931,7 +3051,7 @@
           const addr = data.full_address || data.name || ((data.primary || data.city) + ', ' + (data.city || ''));
           applyGpsInfo(addr, lat, lon);
           toast(`GPS Location set: ${addr.split(',')[0]} (${Number(lat).toFixed(4)}, ${Number(lon).toFixed(4)})`);
-        } catch(e) {
+        } catch (e) {
           const savedLoc = localStorage.getItem('suggu_user_location') || 'RIADA Road, Namkum, Ranchi';
           const savedLat = parseFloat(localStorage.getItem('suggu_user_lat')) || 23.3555;
           const savedLon = parseFloat(localStorage.getItem('suggu_user_lon')) || 85.3609;
@@ -2960,19 +3080,19 @@
     }
     const DATA = {
       {% for cat in categories %}
-      '{{ cat.name|escapejs }}': {
-        e: '<i class="bi {{ cat.icon_class }}"></i>',
+    '{{ cat.name|escapejs }}': {
+      e: '<i class="bi {{ cat.icon_class }}"></i>',
         d: '{% for sub in cat.subcategories.all %}{{ sub.name|escapejs }}{% if not forloop.last %}, {% endif %}{% endfor %}',
-        s: [
-          {% for sub in cat.subcategories.all %}
-          ['{{ sub.name|escapejs }}', '<i class="bi bi-caret-right-fill"></i>']{% if not forloop.last %},{% endif %}
-          {% empty %}
-          ['General Service', '<i class="bi bi-caret-right-fill"></i>']
-          {% endfor %}
+          s: [
+            {% for sub in cat.subcategories.all %}
+    ['{{ sub.name|escapejs }}', '<i class="bi bi-caret-right-fill"></i>']{% if not forloop.last %}, {% endif %}
+    {% empty %}
+    ['General Service', '<i class="bi bi-caret-right-fill"></i>']
+    {% endfor %}
         ],
-        b: [5000, 25000, 80000]
-      }{% if not forloop.last %},{% endif %}
-      {% endfor %}
+    b: [5000, 25000, 80000]
+      }{% if not forloop.last %}, {% endif %}
+    {% endfor %}
     };
     let step = 0, S = { cat: '', sub: '', lat: null, lon: null }; const inr = n => '₹' + Number(n).toLocaleString('en-IN');
     $('#idx').innerHTML = Object.keys(DATA).map(k => `<button class="ix" type="button" onclick="pickCat('${k}')"><h3>${k}</h3><span>${DATA[k].d}</span><i><i class="bi bi-arrow-right"></i></i></button>`).join('');
@@ -2997,7 +3117,7 @@
       $('#sum').innerHTML = `<b>${S.cat}</b> › <br>Budget: <b>${$('#budget').value ? inr($('#budget').value) : '-'}</b>`
     }
     function submit() {
-      const a = $('#addr').value.trim(), p = $('#ph').value.trim(); 
+      const a = $('#addr').value.trim(), p = $('#ph').value.trim();
       if (!a || p.length < 10) return toast('Add your address and a 10-digit mobile number.');
 
       const latVal = document.getElementById('job_lat')?.value || S.lat || localStorage.getItem('suggu_user_lat') || '23.3555';
@@ -3005,38 +3125,38 @@
       const lat = parseFloat(latVal);
       const lon = parseFloat(lonVal);
       const mapsUrl = `https://maps.google.com/?q=${lat},${lon}`;
-      
+
       let formattedAddress = a;
       if (!formattedAddress.includes('[GPS:') && !isNaN(lat) && !isNaN(lon)) {
         formattedAddress = `${a} [GPS: ${lat}, ${lon} | Maps: ${mapsUrl}]`;
       }
-      
-      const payload = { 
-        category: S.cat, 
-        work_type: S.sub, 
-        budget: +$('#budget').value, 
-        address: a, 
+
+      const payload = {
+        category: S.cat,
+        work_type: S.sub,
+        budget: +$('#budget').value,
+        address: a,
         latitude: lat,
         longitude: lon,
         maps_url: mapsUrl,
         full_address: formattedAddress,
-        phone: p, 
-        start: $('#when').value 
+        phone: p,
+        start: $('#when').value
       };
-      
-      try { 
-        localStorage.setItem('suggu_pending_requirement', JSON.stringify(payload)); 
-      } catch(e) {}
-      
+
+      try {
+        localStorage.setItem('suggu_pending_requirement', JSON.stringify(payload));
+      } catch (e) { }
+
       console.log('requirement', payload);
 
       // Populate preview details inside the modal
       const sumCat = document.getElementById('askReqCat');
       if (sumCat) sumCat.textContent = (S.cat || 'General') + (S.sub ? ' › ' + S.sub : '');
-      
+
       const sumBudget = document.getElementById('askReqBudget');
       if (sumBudget) sumBudget.textContent = $('#budget').value ? inr($('#budget').value) : 'Flexible';
-      
+
       const sumAddr = document.getElementById('askReqAddr');
       if (sumAddr) sumAddr.textContent = a + (p ? ' (' + p + ')' : '');
 
@@ -3048,20 +3168,20 @@
         modalMapsLink.href = mapsUrl;
         modalMapsLink.title = 'Open work location in Google Maps';
       }
-      
+
       // Update link targets with mobile number prefilled
       const loginLink = document.getElementById('askLoginLink');
       if (loginLink) loginLink.href = '/login/?phone=' + encodeURIComponent(p) + '&next=' + encodeURIComponent('/vendor/dashboard');
-      
+
       const regLink = document.getElementById('askRegisterLink');
       if (regLink) regLink.href = '/register/vendor/?mobile=' + encodeURIComponent(p);
-      
+
       const custLogin = document.getElementById('askCustomerLoginLink');
       if (custLogin) custLogin.href = '/login/?phone=' + encodeURIComponent(p) + '&next=' + encodeURIComponent('/user/dashboard');
-      
+
       const custReg = document.getElementById('askCustomerRegLink');
       if (custReg) custReg.href = '/register/user/?mobile=' + encodeURIComponent(p);
-      
+
       // Open the action modal
       const modal = document.getElementById('vendorAskModal');
       if (modal) modal.classList.add('show');
@@ -3098,7 +3218,7 @@
 
     // Smoothly scroll to sections when clicking navigation links without lagging mouse wheel
     document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-      anchor.addEventListener('click', function(e) {
+      anchor.addEventListener('click', function (e) {
         const href = this.getAttribute('href');
         if (href && href.length > 1) {
           const target = document.querySelector(href);
