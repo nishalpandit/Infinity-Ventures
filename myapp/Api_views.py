@@ -4862,6 +4862,25 @@ def user_mark_job_complete_api(request, job_id):
     # Also update the winning bid status
     if job.assigned_vendor:
         Bid.objects.filter(job=job, vendor=job.assigned_vendor, status='selected').update(status='completed')
+        
+        # Check if review data was provided in the request
+        data = _parse_api_request(request)
+        rating = data.get('rating')
+        if rating:
+            try:
+                ServiceReview.objects.create(
+                    job=job,
+                    customer=user,
+                    vendor=job.assigned_vendor,
+                    rating=int(rating),
+                    review_title=data.get('title') or data.get('review_title') or '',
+                    comment=data.get('comment') or data.get('review') or '',
+                    review_image=request.FILES.get('image') or request.FILES.get('review_image'),
+                    status='published'
+                )
+            except Exception as e:
+                # We can log this, but we shouldn't fail the job completion
+                print(f"Error creating review during job completion: {e}")
     
     return JsonResponse({'status': 'success', 'message': 'Job marked as completed successfully.'})
 
