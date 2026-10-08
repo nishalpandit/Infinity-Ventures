@@ -1897,6 +1897,12 @@ def user_post_job_api(request):
             status='open',
             bids_count=0
         )
+        uploaded_files = request.FILES.getlist('images') or request.FILES.getlist('image')
+        if uploaded_files:
+            job.image = uploaded_files[0]
+            job.save(update_fields=['image'])
+            for img_file in uploaded_files:
+                JobImage.objects.create(job=job, image=img_file)
 
         job_code = f"JOB-{job.id:04d}"
         response_data = {
