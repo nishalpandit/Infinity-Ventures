@@ -1751,31 +1751,8 @@ def dashboard_view(request, path=''):
             messages.success(request, "Profile updated successfully!")
             return redirect('/vendor/profile/index.html')
 
-    if path == 'vendor/kyc/index' or path == 'vendor/kyc':
-        if request.user.is_authenticated:
-            kyc = VendorKYC.objects.filter(vendor=request.user).first()
-            if not kyc:
-                kyc = VendorKYC(vendor=request.user)
-                
-            if request.method == 'POST':
-                kyc.id_type = request.POST.get('id_type', 'aadhaar')
-                kyc.id_number = request.POST.get('id_number')
-                
-                if 'id_document_front' in request.FILES:
-                    kyc.id_document_front = request.FILES['id_document_front']
-                if 'id_document_back' in request.FILES:
-                    kyc.id_document_back = request.FILES['id_document_back']
-                if 'business_license' in request.FILES:
-                    kyc.business_license = request.FILES['business_license']
-                if 'gst_certificate' in request.FILES:
-                    kyc.gst_certificate = request.FILES['gst_certificate']
-                
-                kyc.status = 'pending'
-                kyc.save()
-                
-                return redirect('/vendor/kyc/index.html')
-            
-            context['kyc'] = kyc
+    if path.startswith('vendor/kyc'):
+        return redirect('/vendor/dashboard.html')
 
     if path in ['vendor/wallet/index', 'vendor/wallet', 'vendor/wallet.html']:
         from .wallet_services import get_or_create_wallet, request_payout, get_platform_commission_percent, settle_job_completion
@@ -1876,57 +1853,7 @@ def dashboard_view(request, path=''):
         context['all_categories'] = Category.objects.filter(status='active').order_by('name')
 
     if path == 'vendor/quick-services/nearby':
-        v_lat = None
-        v_lon = None
-        vendor_city = None
-        if request.user.is_authenticated:
-            v_prof = getattr(request.user, 'vendor_profile', None)
-            if not v_prof and request.user.role == 'VENDOR':
-                v_prof, _ = VendorProfile.objects.get_or_create(user=request.user)
-            if v_prof and v_prof.location and v_prof.location.strip():
-                vendor_city = v_prof.location.strip().split(',')[0].strip()
-
-        req_lat = request.GET.get('lat')
-        req_lon = request.GET.get('lon')
-        if req_lat and req_lon:
-            try:
-                v_lat = float(req_lat)
-                v_lon = float(req_lon)
-            except (ValueError, TypeError):
-                v_lat = None
-                v_lon = None
-
-        if v_lat is None or v_lon is None:
-            v_lat, v_lon = resolve_coordinates_for_location(vendor_city or (v_prof.location if v_prof else ''))
-
-        max_distance_km = 10.0
-        try:
-            custom_radius = float(request.GET.get('distance') or request.GET.get('radius') or 10.0)
-            max_distance_km = min(custom_radius, 10.0)
-        except (ValueError, TypeError):
-            max_distance_km = 10.0
-
-        all_qs = QuickService.objects.filter(status__in=['active', 'open']).select_related('category', 'location', 'vendor').order_by('-created_at')
-        nearby_services = []
-        for qs in all_qs:
-            q_lat = float(qs.latitude) if qs.latitude else None
-            q_lon = float(qs.longitude) if qs.longitude else None
-            if q_lat is None or q_lon is None:
-                loc_name = (qs.locality or '') + ' ' + (qs.location.city if qs.location else '')
-                q_lat, q_lon = resolve_coordinates_for_location(loc_name, default_coords=(None, None))
-            if q_lat is not None and q_lon is not None:
-                d = haversine_distance_km(v_lat, v_lon, q_lat, q_lon)
-                if d is not None and d <= max_distance_km:
-                    qs.distance_km = d
-                    qs.budget = float(qs.base_price)
-                    nearby_services.append(qs)
-
-        nearby_services.sort(key=lambda x: getattr(x, 'distance_km', 999.0))
-        context['available_qs'] = nearby_services
-        context['vendor_city'] = vendor_city
-        context['vendor_lat'] = v_lat
-        context['vendor_lon'] = v_lon
-        context['max_distance_km'] = max_distance_km
+        return redirect('/vendor/catalog/index.html')
 
     if path == 'vendor/quick-services/details':
         qs_id = request.GET.get('id')
@@ -1936,7 +1863,7 @@ def dashboard_view(request, path=''):
                 qs.budget = float(qs.base_price)
                 context['qs'] = qs
             except QuickService.DoesNotExist:
-                return redirect('/vendor/quick-services/nearby.html')
+                return redirect('/vendor/catalog/index.html')
 
     if path == 'vendor/quick-services/send-quotation':
         qs_id = request.GET.get('qs_id') or request.GET.get('id') or request.POST.get('qs_id') or request.POST.get('id')
@@ -1962,9 +1889,9 @@ def dashboard_view(request, path=''):
                             status='submitted'
                         )
                         messages.success(request, f"Quotation for '{qs.title}' submitted successfully!")
-                        return redirect('/vendor/quick-services/nearby.html')
+                        return redirect('/vendor/jobs/available.html')
             except QuickService.DoesNotExist:
-                return redirect('/vendor/quick-services/nearby.html')
+                return redirect('/vendor/catalog/index.html')
 
     if path == 'vendor/jobs/bid-details':
         bid_id = request.GET.get('bid_id')
@@ -4066,7 +3993,10 @@ def vendor_dashboard(request):
     # Active Requests: For quick services, it could be QS where vendor bid is pending
     active_requests_count = Bid.objects.filter(vendor=user, quick_service__isnull=False, status='pending').count()
     
+    my_services_count = QuickService.objects.filter(vendor=user).count()
+
     context.update({
+        'my_services_count': my_services_count,
         'available_qs': available_qs,
         'available_jobs': available_jobs,
         'remaining_credits': getattr(vendor_profile, 'bid_credits', 5) if vendor_profile else 5,
@@ -4081,13 +4011,13 @@ def vendor_dashboard(request):
         'total_withdrawn': wallet.total_withdrawn,
         'pending_payouts_sum': pending_payouts_sum,
         'kyc': kyc,
-        'is_kyc_verified': bool(kyc and kyc.status == 'approved'),
+        'is_kyc_verified': True,
         'recent_transactions': wallet.transactions.all().order_by('-created_at')[:4],
     })
 
     # Fetch recent items
     context['recent_quick_services'] = nearby_qs[:3]
-    context['recent_jobs'] = jobs_base.order_by('-created_at')[:2]
+    context['recent_jobs'] = jobs_base.order_by('-created_at')[:4]
 
     return render(request, 'infinity-vendor-dashboard/dashboard.html', context)
 
