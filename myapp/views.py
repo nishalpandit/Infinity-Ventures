@@ -10,7 +10,7 @@ from django.conf import settings
 from django.http import Http404, HttpResponse, JsonResponse
 from django.template import TemplateDoesNotExist
 from .models import (
-    VendorProfile, QuickService, Job, Bid, Subscription, Category, Location, 
+    VendorProfile, QuickService, Job, JobImage, Bid, Subscription, Category, Location, 
     UserProfile, Message, GlobalSettings, SiteBranding, HeroSection, 
     QuickServiceCard, FeaturedProjectCard, PackageCard, Testimonial, TrustMetric,
     VendorWallet, WalletTransaction, PayoutRequest, VendorKYC,
@@ -715,10 +715,15 @@ def dashboard_view(request, path=''):
             first_loc = Location.objects.filter(status='active').first()
             if first_loc: job.location = first_loc
 
-        if 'image' in request.FILES and request.FILES['image']:
-            job.image = request.FILES['image']
+        uploaded_files = request.FILES.getlist('images') or request.FILES.getlist('image')
+        if uploaded_files:
+            job.image = uploaded_files[0]
+            job.save()
+            for img_file in uploaded_files:
+                JobImage.objects.create(job=job, image=img_file)
+        else:
+            job.save()
 
-        job.save()
         return redirect('/user/jobs/index.html')
 
     if request.method == 'POST' and (path in ['vendor/catalog/index', 'vendor/catalog', 'infinity-vendor-dashboard/catalog/index'] or 'catalog' in path):

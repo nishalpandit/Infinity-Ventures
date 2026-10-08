@@ -14,7 +14,7 @@ from django.contrib.auth import get_user_model
 from django.utils import timezone
 from django.db import transaction
 from django.db.models import Q
-from .models import UserProfile, VendorProfile, Category, Location, OTPVerification, AuthToken, Job, QuickService, VendorKYC, CustomerAddress, ServiceBooking, GlobalSettings, Message, Bid, BidPlan, BidCreditTransaction, Subscription, VendorWallet, WalletTransaction, PlatformRevenueLedger, ServiceReview
+from .models import UserProfile, VendorProfile, Category, Location, OTPVerification, AuthToken, Job, JobImage, QuickService, VendorKYC, CustomerAddress, ServiceBooking, GlobalSettings, Message, Bid, BidPlan, BidCreditTransaction, Subscription, VendorWallet, WalletTransaction, PlatformRevenueLedger, ServiceReview
 from .review_services import (
     ReviewError, UNLOCKED_BOOKING_STATUSES, booking_contact_unlocked,
     mask_customer_name, submit_booking_review, vendor_review_summary,
@@ -1903,9 +1903,12 @@ def user_post_job_api(request):
             status='open',
             bids_count=0
         )
-        if 'image' in request.FILES and request.FILES['image']:
-            job.image = request.FILES['image']
+        uploaded_files = request.FILES.getlist('images') or request.FILES.getlist('image')
+        if uploaded_files:
+            job.image = uploaded_files[0]
             job.save(update_fields=['image'])
+            for img_file in uploaded_files:
+                JobImage.objects.create(job=job, image=img_file)
 
         job_code = f"JOB-{job.id:04d}"
         response_data = {

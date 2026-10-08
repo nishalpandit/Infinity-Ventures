@@ -238,6 +238,17 @@ class Job(models.Model):
     def __str__(self):
         return self.title
 
+class JobImage(models.Model):
+    job = models.ForeignKey(Job, on_delete=models.CASCADE, related_name='images')
+    image = models.ImageField(upload_to='jobs/gallery/')
+    created_at = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        ordering = ['id']
+
+    def __str__(self):
+        return f"Job #{self.job_id} Image #{self.id}"
+
 class Bid(models.Model):
     STATUS_CHOICES = (
         ('submitted', 'Submitted'),

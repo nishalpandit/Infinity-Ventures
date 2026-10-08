@@ -127,7 +127,17 @@
                 <p class="muted">{{ job.additional_requirements }}</p>
                 {% endif %}
 
-                {% if job.image %}
+                {% if job.images.all %}
+                <div class="divider"></div>
+                <h3 class="section-title"><i class="fa-solid fa-camera" style="color:#5b5bd6; margin-right:6px;"></i> Attached Photos &amp; Worksite Images ({{ job.images.count }})</h3>
+                <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(130px, 1fr)); gap:12px; margin-top:12px;">
+                  {% for ji in job.images.all %}
+                  <a href="{{ ji.image.url }}" target="_blank" title="Click to view full photo" style="display:block; aspect-ratio:1/1; border-radius:10px; overflow:hidden; border:1px solid #cbd5e1; box-shadow:0 2px 8px rgba(0,0,0,0.06); transition:transform 0.15s;" onmouseover="this.style.transform='scale(1.03)'" onmouseout="this.style.transform='scale(1)'">
+                    <img src="{{ ji.image.url }}" alt="Job photo #{{ forloop.counter }}" style="width:100%; height:100%; object-fit:cover; display:block;">
+                  </a>
+                  {% endfor %}
+                </div>
+                {% elif job.image %}
                 <div class="divider"></div>
                 <h3 class="section-title"><i class="fa-solid fa-camera" style="color:#5b5bd6; margin-right:6px;"></i> Attached Worksite / Reference Photo</h3>
                 <div style="margin-top:12px;">

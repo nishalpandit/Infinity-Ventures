@@ -266,14 +266,14 @@
                     </div>
                   </div>
 
-                  <!-- 7. Upload Job Photo / Reference Image (Optional) -->
+                  <!-- 7. Upload Job Photos / Reference Images (Multiple) -->
                   <div class="field full">
                     <label style="display:flex; align-items:center; justify-content:space-between; margin-bottom:6px;">
                       <span style="font-weight:600; font-size:13px; color:#1e293b; display:inline-flex; align-items:center; gap:6px;">
-                        <i class="fa-solid fa-camera" style="color:#5b5bd6;"></i> Upload Job Photo / Reference Image 
-                        <span style="font-weight:normal; color:#64748b; font-size:12px;">(Optional)</span>
+                        <i class="fa-solid fa-camera" style="color:#5b5bd6;"></i> Upload Job Photos / Reference Images 
+                        <span style="font-weight:normal; color:#64748b; font-size:12px;">(Optional — Multiple allowed)</span>
                       </span>
-                      <span style="font-size:11.5px; color:#64748b; font-weight:500;">PNG, JPG, JPEG, WEBP (Max 10MB)</span>
+                      <span style="font-size:11.5px; color:#64748b; font-weight:500;">Up to 8 photos • Max 10MB each</span>
                     </label>
 
                     <!-- Dropzone Container -->
@@ -284,38 +284,31 @@
                          ondragleave="handleJobImageDragLeave(event)"
                          ondrop="handleJobImageDrop(event)">
                       <div style="width:44px; height:44px; border-radius:50%; background:#e0e7ff; color:#4f46e5; display:inline-flex; align-items:center; justify-content:center; margin-bottom:8px; font-size:18px;">
-                        <i class="fa-solid fa-cloud-arrow-up"></i>
+                        <i class="fa-solid fa-images"></i>
                       </div>
                       <div style="font-size:13.5px; font-weight:700; color:#1e293b;">
-                        Click to upload photo <span style="font-weight:400; color:#64748b;">or drag and drop</span>
+                        Click to upload photos <span style="font-weight:400; color:#64748b;">or drag & drop</span>
                       </div>
                       <p style="font-size:12px; color:#64748b; margin:4px 0 0;">
-                        Attach photos of the issue, room, or layout to help local vendors quote accurately.
+                        Attach multiple angles, room photos, or reference designs to get accurate bids.
                       </p>
-                      <input type="file" name="image" id="jobImageInput" accept="image/*" style="display:none;" onchange="handleJobImageSelect(this)">
+                      <input type="file" name="images" id="jobImageInput" accept="image/*" multiple style="display:none;" onchange="handleJobImageSelect(this)">
                     </div>
 
-                    <!-- Image Preview Container (Hidden by default) -->
-                    <div id="jobImagePreviewBox" style="display:none; margin-top:10px; border:1.5px solid #e2e8f0; border-radius:12px; padding:12px 16px; background:#fff; align-items:center; justify-content:space-between; gap:16px;">
-                      <div style="display:flex; align-items:center; gap:12px; min-width:0;">
-                        <img id="jobImageThumb" src="" alt="Job photo preview" style="width:56px; height:56px; object-fit:cover; border-radius:8px; border:1px solid #cbd5e1; flex-shrink:0;">
-                        <div style="min-width:0;">
-                          <div id="jobImageFileName" style="font-size:13px; font-weight:700; color:#1e293b; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">image.jpg</div>
-                          <div style="font-size:11.5px; color:#64748b; display:flex; align-items:center; gap:8px; margin-top:2px;">
-                            <span id="jobImageFileSize">0 KB</span>
-                            <span style="display:inline-block; width:4px; height:4px; border-radius:50%; background:#94a3b8;"></span>
-                            <span style="color:#059669; font-weight:600;"><i class="fa-solid fa-circle-check"></i> Ready to upload</span>
-                          </div>
+                    <!-- Multi-Image Preview Container (Hidden when empty) -->
+                    <div id="jobMultiPreviewWrap" style="display:none; margin-top:14px; border:1px solid #e2e8f0; border-radius:12px; padding:16px; background:#fff;">
+                      <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; padding-bottom:8px; border-bottom:1px solid #f1f5f9;">
+                        <div style="font-size:12.5px; font-weight:700; color:#1e293b; display:flex; align-items:center; gap:8px;">
+                          <span id="jobPhotosCountBadge" style="background:#e0e7ff; color:#4338ca; padding:2px 8px; border-radius:99px; font-size:11px;">0 Photos</span>
+                          <span style="color:#64748b; font-weight:400; font-size:12px;">First photo will be used as cover</span>
                         </div>
-                      </div>
-                      <div style="display:flex; align-items:center; gap:8px; flex-shrink:0;">
-                        <button type="button" class="btn btn-secondary btn-sm" onclick="document.getElementById('jobImageInput').click()" style="padding:6px 12px; font-size:12px; cursor:pointer;">
-                          Change
-                        </button>
-                        <button type="button" class="btn btn-sm" onclick="removeJobImage()" style="background:#fee2e2; color:#dc2626; border:1px solid #fecaca; padding:6px 12px; font-size:12px; border-radius:8px; font-weight:600; cursor:pointer;">
-                          <i class="fa-solid fa-trash-can"></i> Remove
+                        <button type="button" class="btn btn-secondary btn-sm" onclick="document.getElementById('jobImageInput').click()" style="padding:4px 10px; font-size:11.5px; display:inline-flex; align-items:center; gap:5px; cursor:pointer;">
+                          <i class="fa-solid fa-plus"></i> Add More
                         </button>
                       </div>
+
+                      <!-- Gallery Grid of previews -->
+                      <div id="jobPhotosGrid" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(110px, 1fr)); gap:12px;"></div>
                     </div>
                   </div>
 
@@ -540,54 +533,109 @@
     }
 
     // ==========================================
-    // JOB IMAGE UPLOAD & LIVE PREVIEW HANDLERS
+    // MULTI-IMAGE UPLOAD & GALLERY HANDLERS
     // ==========================================
+    let selectedJobFiles = [];
+
     function handleJobImageSelect(input) {
-      if (input.files && input.files[0]) {
-        displaySelectedJobImage(input.files[0]);
+      if (input.files && input.files.length > 0) {
+        appendJobFiles(Array.from(input.files));
       }
     }
 
-    function displaySelectedJobImage(file) {
-      if (!file.type.startsWith('image/')) {
-        alert('Please select a valid image file (PNG, JPG, JPEG, WEBP).');
-        return;
+    function appendJobFiles(newFiles) {
+      for (const f of newFiles) {
+        if (!f.type.startsWith('image/')) {
+          alert(`"${f.name}" is not an image file.`);
+          continue;
+        }
+        if (f.size > 10 * 1024 * 1024) {
+          alert(`"${f.name}" exceeds 10MB limit.`);
+          continue;
+        }
+        if (selectedJobFiles.length >= 8) {
+          alert("Maximum 8 photos allowed.");
+          break;
+        }
+        // Deduplicate by name and size
+        if (!selectedJobFiles.some(existing => existing.name === f.name && existing.size === f.size)) {
+          selectedJobFiles.push(f);
+        }
       }
-      if (file.size > 10 * 1024 * 1024) {
-        alert('Image file size must be less than 10MB.');
-        return;
-      }
-      const previewBox = document.getElementById('jobImagePreviewBox');
-      const dropzone = document.getElementById('jobImageDropzone');
-      const thumb = document.getElementById('jobImageThumb');
-      const nameLabel = document.getElementById('jobImageFileName');
-      const sizeLabel = document.getElementById('jobImageFileSize');
-
-      if (nameLabel) nameLabel.textContent = file.name;
-      if (sizeLabel) {
-        sizeLabel.textContent = (file.size / (1024 * 1024) >= 1) 
-          ? (file.size / (1024 * 1024)).toFixed(2) + ' MB' 
-          : (file.size / 1024).toFixed(1) + ' KB';
-      }
-
-      const reader = new FileReader();
-      reader.onload = function(e) {
-        if (thumb) thumb.src = e.target.result;
-        if (dropzone) dropzone.style.display = 'none';
-        if (previewBox) previewBox.style.display = 'flex';
-      };
-      reader.readAsDataURL(file);
+      syncJobFileInput();
+      renderJobPhotosGrid();
     }
 
-    function removeJobImage() {
+    function removeJobPhoto(idx) {
+      selectedJobFiles.splice(idx, 1);
+      syncJobFileInput();
+      renderJobPhotosGrid();
+    }
+
+    function syncJobFileInput() {
+      const dt = new DataTransfer();
+      for (const f of selectedJobFiles) {
+        dt.items.add(f);
+      }
       const input = document.getElementById('jobImageInput');
-      if (input) input.value = '';
-      const previewBox = document.getElementById('jobImagePreviewBox');
-      const dropzone = document.getElementById('jobImageDropzone');
-      const thumb = document.getElementById('jobImageThumb');
-      if (previewBox) previewBox.style.display = 'none';
-      if (dropzone) dropzone.style.display = 'block';
-      if (thumb) thumb.src = '';
+      if (input) input.files = dt.files;
+    }
+
+    function renderJobPhotosGrid() {
+      const wrap = document.getElementById('jobMultiPreviewWrap');
+      const grid = document.getElementById('jobPhotosGrid');
+      const countBadge = document.getElementById('jobPhotosCountBadge');
+
+      if (!selectedJobFiles.length) {
+        if (wrap) wrap.style.display = 'none';
+        return;
+      }
+
+      if (wrap) wrap.style.display = 'block';
+      if (countBadge) countBadge.textContent = `${selectedJobFiles.length} Photo${selectedJobFiles.length > 1 ? 's' : ''}`;
+
+      if (grid) {
+        grid.innerHTML = '';
+        selectedJobFiles.forEach((file, idx) => {
+          const card = document.createElement('div');
+          card.style.cssText = "position:relative; border-radius:10px; overflow:hidden; border:1.5px solid #cbd5e1; background:#f8fafc; aspect-ratio:1/1;";
+
+          const img = document.createElement('img');
+          img.src = URL.createObjectURL(file);
+          img.style.cssText = "width:100%; height:100%; object-fit:cover; display:block;";
+
+          const removeBtn = document.createElement('button');
+          removeBtn.type = 'button';
+          removeBtn.innerHTML = '×';
+          removeBtn.title = 'Remove photo';
+          removeBtn.style.cssText = "position:absolute; top:4px; right:4px; width:22px; height:22px; border-radius:50%; background:rgba(220,38,38,0.9); color:#fff; border:none; cursor:pointer; font-size:16px; line-height:20px; text-align:center; font-weight:bold; padding:0;";
+          removeBtn.onclick = (e) => {
+            e.stopPropagation();
+            removeJobPhoto(idx);
+          };
+
+          if (idx === 0) {
+            const coverBadge = document.createElement('span');
+            coverBadge.textContent = 'Cover';
+            coverBadge.style.cssText = "position:absolute; bottom:4px; left:4px; background:rgba(79,70,229,0.9); color:#fff; font-size:10px; font-weight:700; padding:1px 6px; border-radius:4px;";
+            card.appendChild(coverBadge);
+          }
+
+          card.appendChild(img);
+          card.appendChild(removeBtn);
+          grid.appendChild(card);
+        });
+
+        if (selectedJobFiles.length < 8) {
+          const addTile = document.createElement('div');
+          addTile.style.cssText = "border:2px dashed #cbd5e1; border-radius:10px; display:flex; flex-direction:column; align-items:center; justify-content:center; cursor:pointer; color:#64748b; aspect-ratio:1/1; background:#f8fafc; transition:all 0.15s;";
+          addTile.onmouseover = () => { addTile.style.borderColor = '#5b5bd6'; addTile.style.color = '#5b5bd6'; };
+          addTile.onmouseout = () => { addTile.style.borderColor = '#cbd5e1'; addTile.style.color = '#64748b'; };
+          addTile.onclick = () => document.getElementById('jobImageInput').click();
+          addTile.innerHTML = `<i class="fa-solid fa-plus" style="font-size:18px; margin-bottom:4px;"></i><span style="font-size:11px; font-weight:600;">Add Photo</span>`;
+          grid.appendChild(addTile);
+        }
+      }
     }
 
     function handleJobImageDragOver(e) {
@@ -618,12 +666,8 @@
         dz.style.borderColor = '#cbd5e1';
         dz.style.background = '#f8fafc';
       }
-      if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0]) {
-        const input = document.getElementById('jobImageInput');
-        if (input) {
-          input.files = e.dataTransfer.files;
-          displaySelectedJobImage(e.dataTransfer.files[0]);
-        }
+      if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+        appendJobFiles(Array.from(e.dataTransfer.files));
       }
     }
   </script>
