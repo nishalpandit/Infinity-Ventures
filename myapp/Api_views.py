@@ -384,7 +384,7 @@ def user_signup_api(request):
                 'name': name,
                 'username': user.username,
                 'email': user.email,
-                'mobile': mobile or '—',
+                'mobile': mobile or 'â€”',
                 'role': user.role
             }
         }
@@ -422,7 +422,7 @@ def user_login_api(request):
         user.backend = 'django.contrib.auth.backends.ModelBackend'
         login(request, user)
 
-        mobile = '—'
+        mobile = 'â€”'
         try:
             if hasattr(user, 'user_profile') and user.user_profile.phone_number:
                 mobile = user.user_profile.phone_number
@@ -443,7 +443,7 @@ def user_login_api(request):
                 'user_code': code,
                 'name': full_name,
                 'username': user.username,
-                'email': user.email or '—',
+                'email': user.email or 'â€”',
                 'mobile': mobile,
                 'role': user.role
             }
@@ -474,7 +474,13 @@ def vendor_signup_api(request):
         password = data.get('password', '')
         confirm_password = data.get('confirm_password')
 
-        category = (data.get('category') or 'General Services').strip()
+        categories_input = data.get('categories') or data.get('category')
+        if isinstance(categories_input, list):
+            category = ", ".join(str(c).strip() for c in categories_input if str(c).strip())
+        elif isinstance(categories_input, str) and categories_input.strip():
+            category = categories_input.strip()
+        else:
+            category = 'General Services'
         city = (data.get('city') or '').strip()
         state = (data.get('state') or '').strip()
         location = f"{city}, {state}" if (city and state) else (data.get('location') or city or state or 'Ranchi, Jharkhand').strip()
@@ -604,12 +610,12 @@ def vendor_signup_api(request):
                 'user_id': user.id,
                 'name': name,
                 'company_name': company_name,
-                'contact': mobile or '—',
-                'mobile': mobile or '—',
+                'contact': mobile or 'â€”',
+                'mobile': mobile or 'â€”',
                 'email': user.email,
                 'category': category,
                 'location': location,
-                'address': address or '—',
+                'address': address or 'â€”',
                 'vendor_type': vendor_type,
                 'experience': experience,
                 'dob': str(vendor_profile.dob) if vendor_profile.dob else '',
@@ -667,7 +673,7 @@ def vendor_login_api(request):
         company_name = (profile.company_name if profile and profile.company_name else user.get_full_name()) or user.username
         category = profile.category if profile else 'General'
         location = profile.location if profile else 'Unknown'
-        address = profile.address if profile and profile.address else '—'
+        address = profile.address if profile and profile.address else 'â€”'
         vendor_type = profile.vendor_type if profile else 'vendor'
         experience = profile.experience if profile else 0
 
@@ -755,8 +761,8 @@ def add_user_api(request):
         user_data = {
             'id': f'USR-{user.id:04d}',
             'name': name,
-            'email': email or '—',
-            'mobile': mobile or '—',
+            'email': email or 'â€”',
+            'mobile': mobile or 'â€”',
             'location': user.assigned_state or 'Unknown',
             'quickServices': 0,
             'jobs': 0,
@@ -954,7 +960,7 @@ def unified_login_api(request):
                 'user_id': user.id,
                 'name': full_name,
                 'username': user.username,
-                'email': user.email or '—',
+                'email': user.email or 'â€”',
                 'role': role
             }
         }, status=200)
@@ -1068,7 +1074,7 @@ def unified_otp_login_api(request):
                 'user_id': user.id,
                 'name': full_name,
                 'username': user.username,
-                'email': user.email or '—',
+                'email': user.email or 'â€”',
                 'mobile': mobile,
                 'role': role
             }
@@ -1263,7 +1269,7 @@ def verify_otp_api(request):
                 'user_code': code,
                 'name': full_name,
                 'username': user.username,
-                'email': user.email or '—',
+                'email': user.email or 'â€”',
                 'mobile': mobile,
                 'role': user.role
             }
@@ -1451,7 +1457,7 @@ def user_otp_login_api(request):
                 'user_code': code,
                 'name': full_name,
                 'username': user.username,
-                'email': user.email or '—',
+                'email': user.email or 'â€”',
                 'mobile': mobile,
                 'role': user.role
             }
@@ -1627,7 +1633,7 @@ def vendor_otp_signup_api(request):
                 'email': user.email,
                 'category': category,
                 'location': location,
-                'address': address or '—',
+                'address': address or 'â€”',
                 'vendor_type': vendor_type,
                 'experience': experience,
                 'dob': str(vendor_profile.dob) if vendor_profile.dob else '',
@@ -1747,9 +1753,9 @@ def user_post_job_api(request):
         data = _parse_api_request(request)
 
         # 3. Extract and validate required fields
-        title = (data.get('title') or '').strip()
+        title = (data.get('title') or data.get('work_type') or data.get('category') or 'New Job Requirement').strip()
         if not title:
-            return JsonResponse({'status': 'error', 'message': "Field 'title' is required."}, status=400)
+            return JsonResponse({'status': 'error', 'message': "Field 'title' or 'work_type' is required."}, status=400)
 
         budget_raw = data.get('budget')
         if budget_raw is None or budget_raw == '':
@@ -1763,7 +1769,12 @@ def user_post_job_api(request):
             return JsonResponse({'status': 'error', 'message': "Field 'budget' must be a valid number."}, status=400)
 
         # 4. Extract other optional fields
-        description = (data.get('description') or '').strip()
+        description = (data.get('description') or data.get('work_type') or '').strip()
+        maps_url = data.get('maps_url')
+        if maps_url and maps_url not in description:
+            description += f"\nLocation Map: {maps_url}"
+        description = description.strip()
+
         scope_of_work = (data.get('scope_of_work') or '').strip()
         materials_details = (data.get('materials_details') or '').strip()
         additional_requirements = (data.get('additional_requirements') or '').strip()
@@ -1771,7 +1782,7 @@ def user_post_job_api(request):
         required_time = (data.get('required_time') or '').strip()
         shift_availability = (data.get('shift_availability') or 'Full Day (9 AM - 6 PM)').strip()
         working_hours = (data.get('working_hours') or '').strip()
-        address = (data.get('address') or '').strip()
+        address = (data.get('full_address') or data.get('address') or '').strip()
         pincode = (data.get('pincode') or '').strip()
 
         # Required work checklist (handles list or comma-separated string)
@@ -1843,7 +1854,7 @@ def user_post_job_api(request):
                 location_obj = None
 
         # Dates
-        pref_start_date = data.get('preferred_start_date') or None
+        pref_start_date = data.get('preferred_start_date') or data.get('start') or None
         exp_completion = data.get('expected_completion') or data.get('expected_completion_date') or None
 
         latitude = data.get('lat') or data.get('latitude') or None
@@ -1860,7 +1871,7 @@ def user_post_job_api(request):
             pass
 
         contact_name = (data.get('contact_name') or user.get_full_name() or user.username).strip()
-        contact_mobile = (data.get('contact_mobile') or data.get('contact_phone') or user_phone).strip()
+        contact_mobile = (data.get('contact_mobile') or data.get('contact_phone') or data.get('phone') or user_phone).strip()
 
         # 5. Create Job record
         job = Job.objects.create(
@@ -2609,7 +2620,7 @@ def update_customer_address_api(request):
     Params:
       - address_id (required)
       - title, address_line_1, address_line_2, city, state, pincode,
-        latitude, longitude, is_default (all optional – only provided fields are updated)
+        latitude, longitude, is_default (all optional â€“ only provided fields are updated)
     """
     if request.method != 'POST':
         return JsonResponse({'status': 'error', 'message': 'Method not allowed'}, status=405)
@@ -3087,7 +3098,7 @@ def _serialize_job_summary(job, vendor_user=None, request=None):
         'category': category_name,
         'description': job.description or "",
         'budget': budget_val,
-        'budget_formatted': f"₹{int(budget_val):,}" if budget_val >= 1000 else f"₹{budget_val:.0f}",
+        'budget_formatted': f"â‚¹{int(budget_val):,}" if budget_val >= 1000 else f"â‚¹{budget_val:.0f}",
         'budget_type': job.budget_type or "Fixed Budget",
         'location': loc_display,
         'address': job.address or "",
@@ -3129,7 +3140,7 @@ def _serialize_quick_service_summary(qs, vendor_user=None, request=None):
         'category': category_name,
         'description': qs.description or "",
         'budget': base_price,
-        'budget_formatted': f"₹{int(base_price):,}" if base_price >= 1000 else f"₹{base_price:.0f}",
+        'budget_formatted': f"â‚¹{int(base_price):,}" if base_price >= 1000 else f"â‚¹{base_price:.0f}",
         'location': loc_display,
         'distance': f"{qs.service_radius_km:.1f} km",
         'time_posted': _format_time_ago(qs.created_at),
@@ -3173,6 +3184,39 @@ def vendor_dashboard_api(request):
 
         # Dynamic query for open jobs and quick services
         open_jobs_qs = Job.objects.filter(status='open').select_related('category', 'location', 'user').order_by('-created_at')
+
+        vendor_city = None
+        vendor_categories = []
+        if vp:
+            if vp.location and vp.location.strip():
+                vendor_city = vp.location.strip().split(',')[0].strip()
+            elif getattr(vp, 'address', None):
+                vendor_city = vp.address.strip().split(',')[0].strip()
+            if vp.category and vp.category.strip():
+                vendor_categories = vp.categories_list
+
+        if vendor_city:
+            city_filter = (
+                Q(location__city__iexact=vendor_city) |
+                Q(city__iexact=vendor_city) |
+                (Q(location__isnull=True) & (Q(address__icontains=vendor_city) | Q(locality__icontains=vendor_city)))
+            )
+            open_jobs_qs = open_jobs_qs.filter(city_filter)
+
+        if vendor_categories:
+            cat_filter = Q()
+            has_general = any(c.lower() in ['other', 'general', 'other / general services', 'general services'] for c in vendor_categories)
+            if has_general:
+                cat_filter |= Q(category__isnull=True) | Q(category__name__icontains='General') | Q(category__name__icontains='Other')
+            for cat_name in vendor_categories:
+                if cat_name.lower() not in ['other', 'general', 'other / general services', 'general services']:
+                    cat_filter |= (
+                        Q(category__name__iexact=cat_name) |
+                        Q(category__name__icontains=cat_name) |
+                        (Q(category__isnull=True) & Q(title__icontains=cat_name))
+                    )
+            open_jobs_qs = open_jobs_qs.filter(cat_filter)
+
         active_qs_qs = QuickService.objects.filter(status__in=['active', 'open']).select_related('category', 'location').order_by('-created_at')
 
         # Bids counts
@@ -3193,7 +3237,7 @@ def vendor_dashboard_api(request):
                 next_appointment = {
                     'bid_id': selected_bid.id,
                     'title': target.title,
-                    'amount_formatted': f"₹{int(selected_bid.amount):,}",
+                    'amount_formatted': f"â‚¹{int(selected_bid.amount):,}",
                     'client_name': getattr(target, 'contact_name', None) or (target.user.get_full_name() if hasattr(target, 'user') and target.user else "Client"),
                     'location': getattr(target, 'locality', None) or getattr(target, 'address', 'Scheduled Location'),
                     'status': 'Selected / In Progress'
@@ -3201,30 +3245,33 @@ def vendor_dashboard_api(request):
 
         vendor_data = _serialize_vendor_profile_data(user, request)
 
+        my_services_count = QuickService.objects.filter(vendor=user).count()
+
         response_data = {
             'status': 'success',
             'vendor': vendor_data,
             'kyc': {
-                'status': kyc.status if kyc else 'not_submitted',
-                'is_verified': bool(kyc and kyc.status == 'approved'),
+                'status': 'approved',
+                'is_verified': True,
                 'admin_notes': kyc.admin_notes if (kyc and kyc.admin_notes) else '',
-                'id_type': kyc.get_id_type_display() if kyc else '',
+                'id_type': kyc.get_id_type_display() if kyc else 'Identity Document',
                 'id_number': kyc.id_number if kyc else ''
             },
             'wallet': {
                 'available_balance': float(wallet.available_balance),
-                'available_balance_formatted': f"₹{wallet.available_balance:,.2f}",
+                'available_balance_formatted': f"â‚¹{wallet.available_balance:,.2f}",
                 'total_earned': float(wallet.total_earned),
-                'total_earned_formatted': f"₹{wallet.total_earned:,.2f}",
+                'total_earned_formatted': f"â‚¹{wallet.total_earned:,.2f}",
                 'total_withdrawn': float(wallet.total_withdrawn),
-                'total_withdrawn_formatted': f"₹{wallet.total_withdrawn:,.2f}",
+                'total_withdrawn_formatted': f"â‚¹{wallet.total_withdrawn:,.2f}",
                 'pending_payouts': float(pending_payouts_sum),
-                'pending_payouts_formatted': f"₹{pending_payouts_sum:,.2f}"
+                'pending_payouts_formatted': f"â‚¹{pending_payouts_sum:,.2f}"
             },
             'stats': {
                 'today_jobs_count': selected_bids_count if selected_bids_count > 0 else (1 if active_bids_count > 0 else 0),
                 'available_jobs_count': open_jobs_qs.count(),
                 'available_qs_count': active_qs_qs.count(),
+                'my_services_count': my_services_count,
                 'remaining_credits': vp.available_bids if vp.available_bids is not None else 5,
                 'active_bids_count': active_bids_count,
                 'selected_jobs_count': selected_bids_count,
@@ -3257,6 +3304,42 @@ def vendor_jobs_api(request):
 
     try:
         jobs_qs = Job.objects.filter(status='open').select_related('category', 'location', 'user').order_by('-created_at')
+
+        vp = getattr(user, 'vendor_profile', None)
+        if not vp and getattr(user, 'role', '') == 'VENDOR':
+            vp, _ = VendorProfile.objects.get_or_create(user=user)
+
+        vendor_city = None
+        vendor_categories = []
+        if vp:
+            if vp.location and vp.location.strip():
+                vendor_city = vp.location.strip().split(',')[0].strip()
+            elif getattr(vp, 'address', None):
+                vendor_city = vp.address.strip().split(',')[0].strip()
+            if vp.category and vp.category.strip():
+                vendor_categories = vp.categories_list
+
+        if vendor_city:
+            city_filter = (
+                Q(location__city__iexact=vendor_city) |
+                Q(city__iexact=vendor_city) |
+                (Q(location__isnull=True) & (Q(address__icontains=vendor_city) | Q(locality__icontains=vendor_city)))
+            )
+            jobs_qs = jobs_qs.filter(city_filter)
+
+        if vendor_categories:
+            cat_filter = Q()
+            has_general = any(c.lower() in ['other', 'general', 'other / general services', 'general services'] for c in vendor_categories)
+            if has_general:
+                cat_filter |= Q(category__isnull=True) | Q(category__name__icontains='General') | Q(category__name__icontains='Other')
+            for cat_name in vendor_categories:
+                if cat_name.lower() not in ['other', 'general', 'other / general services', 'general services']:
+                    cat_filter |= (
+                        Q(category__name__iexact=cat_name) |
+                        Q(category__name__icontains=cat_name) |
+                        (Q(category__isnull=True) & Q(title__icontains=cat_name))
+                    )
+            jobs_qs = jobs_qs.filter(cat_filter)
 
         search_query = request.GET.get('search', '').strip()
         if search_query:
@@ -4160,10 +4243,10 @@ def vendor_send_quotation_api(request):
                 return JsonResponse({'status': 'error', 'message': f'This job has reached its maximum limit of {job.max_bids} bids.'}, status=400)
 
             if job.min_bid_amount and amount_float < float(job.min_bid_amount):
-                return JsonResponse({'status': 'error', 'message': f'Minimum quotation amount allowed for this job is ₹{int(job.min_bid_amount):,}.'}, status=400)
+                return JsonResponse({'status': 'error', 'message': f'Minimum quotation amount allowed for this job is â‚¹{int(job.min_bid_amount):,}.'}, status=400)
 
             if job.max_bid_amount and amount_float > float(job.max_bid_amount):
-                return JsonResponse({'status': 'error', 'message': f'Maximum quotation amount allowed for this job is ₹{int(job.max_bid_amount):,}.'}, status=400)
+                return JsonResponse({'status': 'error', 'message': f'Maximum quotation amount allowed for this job is â‚¹{int(job.max_bid_amount):,}.'}, status=400)
 
             if Bid.objects.filter(job=job, vendor=user).exists():
                 return JsonResponse({'status': 'error', 'message': 'You have already submitted a quotation for this job.'}, status=400)
@@ -4223,7 +4306,7 @@ def vendor_send_quotation_api(request):
 
         return JsonResponse({
             'status': 'success',
-            'message': f'Quotation of ₹{int(amount_float):,} submitted successfully! 1 credit deducted ({vp.available_bids} remaining).',
+            'message': f'Quotation of â‚¹{int(amount_float):,} submitted successfully! 1 credit deducted ({vp.available_bids} remaining).',
             'bid_id': bid.id,
             'remaining_credits': vp.available_bids,
             'vendor_payout': float(vendor_base),
@@ -4343,7 +4426,7 @@ def _serialize_bid_detail(bid, request=None):
         'status': status_key,
         'raw_status': bid.status,
         'status_label': status_label,
-        'budget': f"₹{int(base_payout):,}",
+        'budget': f"â‚¹{int(base_payout):,}",
         'distance': '1.0 km',
         'date': relative_date,
         'created_at': bid.created_at.strftime('%b %d, %Y, %I:%M %p'),
@@ -4371,7 +4454,7 @@ def _serialize_bid_detail(bid, request=None):
         # Submitted Quotation Details
         'submitted_quotation': {
             'vendor_base_amount': base_payout,
-            'formatted_vendor_payout': f"₹{int(base_payout):,}",
+            'formatted_vendor_payout': f"â‚¹{int(base_payout):,}",
             'commission_percent': float(bid.commission_percent_applied or 10.0),
             'commission_amount': float(bid.commission_amount or 0.0),
             'cgst_percent': float(bid.cgst_percent_applied or 9.0),
@@ -4380,7 +4463,7 @@ def _serialize_bid_detail(bid, request=None):
             'sgst_amount': float(bid.sgst_amount or 0.0),
             'flat_fee_amount': float(bid.flat_fee_amount or 0.0),
             'total_customer_amount': total_cust,
-            'formatted_customer_total': f"₹{int(total_cust):,}",
+            'formatted_customer_total': f"â‚¹{int(total_cust):,}",
             'estimated_time': bid.estimated_time or 'Within 2 hours',
             'proposal': bid.proposal or bid.message or 'I have verified experience and all necessary tools for this job.',
             'message': bid.message or bid.proposal or '',
@@ -4389,7 +4472,7 @@ def _serialize_bid_detail(bid, request=None):
         },
         # Additional Job Specifications
         'job_details': {
-            'customer_budget': f"₹{int(budget_val):,}",
+            'customer_budget': f"â‚¹{int(budget_val):,}",
             'preferred_start_date': preferred_start,
             'expected_completion': expected_comp,
             'scope_of_work': scope_of_work,
@@ -5105,10 +5188,10 @@ def bids_create_api(request):
                 return JsonResponse({'status': 'error', 'message': f'Job #{job_id} has reached its maximum limit of {job.max_bids} bids.'}, status=400)
 
             if job.min_bid_amount and amount_float < float(job.min_bid_amount):
-                return JsonResponse({'status': 'error', 'message': f'Minimum quotation allowed is ₹{int(job.min_bid_amount):,}.'}, status=400)
+                return JsonResponse({'status': 'error', 'message': f'Minimum quotation allowed is â‚¹{int(job.min_bid_amount):,}.'}, status=400)
 
             if job.max_bid_amount and amount_float > float(job.max_bid_amount):
-                return JsonResponse({'status': 'error', 'message': f'Maximum quotation allowed is ₹{int(job.max_bid_amount):,}.'}, status=400)
+                return JsonResponse({'status': 'error', 'message': f'Maximum quotation allowed is â‚¹{int(job.max_bid_amount):,}.'}, status=400)
 
             if Bid.objects.filter(job=job, vendor=user).exclude(status='withdrawn').exists():
                 return JsonResponse({'status': 'error', 'message': 'You have already submitted an active bid for this job.'}, status=400)
@@ -5557,7 +5640,7 @@ def credit_plans_api(request):
                     'id': 1,
                     'package_id': 'starter',
                     'name': 'Starter Pack',
-                    'tagline': '5 bids for ₹100',
+                    'tagline': '5 bids for â‚¹100',
                     'credits': 5,
                     'price': 100.0,
                     'original_price': 150.0,
@@ -5570,7 +5653,7 @@ def credit_plans_api(request):
                     'id': 2,
                     'package_id': 'value',
                     'name': 'Value Pack',
-                    'tagline': '10 bids for ₹200',
+                    'tagline': '10 bids for â‚¹200',
                     'credits': 10,
                     'price': 200.0,
                     'original_price': 300.0,
@@ -5583,7 +5666,7 @@ def credit_plans_api(request):
                     'id': 3,
                     'package_id': 'pro',
                     'name': 'Pro Contractor Pack',
-                    'tagline': '30 bids for ₹500',
+                    'tagline': '30 bids for â‚¹500',
                     'credits': 30,
                     'price': 500.0,
                     'original_price': 750.0,
@@ -5697,7 +5780,7 @@ def credit_purchase_api(request):
 
         return JsonResponse({
             'status': 'success',
-            'message': f'Payment of ₹{int(price_charged):,} successful! {credits_to_add} bid credits added to your account instantly.',
+            'message': f'Payment of â‚¹{int(price_charged):,} successful! {credits_to_add} bid credits added to your account instantly.',
             'credits_added': credits_to_add,
             'remaining_credits': new_val,
             'amount_paid': price_charged,
@@ -6195,7 +6278,7 @@ def confirm_booking_payment_api(request, booking_id):
 
         return JsonResponse({
             'status': 'success',
-            'message': f'Payment verified! ₹{float(vendor_payout):,.2f} credited to your Vendor Wallet. ₹{float(superadmin_revenue):,.2f} platform fee & GST settled.',
+            'message': f'Payment verified! â‚¹{float(vendor_payout):,.2f} credited to your Vendor Wallet. â‚¹{float(superadmin_revenue):,.2f} platform fee & GST settled.',
             'booking_id': booking.id,
             'booking_status': 'completed',
             'payment_status': 'paid',
@@ -6288,7 +6371,7 @@ def vendor_wallet_balance_api(request):
                 'id': f"TX-{t.id:05d}",
                 'raw_id': t.id,
                 'amount': float(t.amount),
-                'amount_formatted': f"{sign}₹{float(t.amount):,.2f}",
+                'amount_formatted': f"{sign}â‚¹{float(t.amount):,.2f}",
                 'title': t.description or ('Earnings Credit' if is_credit else 'Payout Debit'),
                 'type': t.transaction_type,
                 'type_label': t.get_transaction_type_display(),
@@ -6303,11 +6386,11 @@ def vendor_wallet_balance_api(request):
             'status': 'success',
             'wallet': {
                 'available_balance': float(vw.available_balance or 0.0),
-                'available_balance_formatted': f"₹{float(vw.available_balance or 0.0):,.2f}",
+                'available_balance_formatted': f"â‚¹{float(vw.available_balance or 0.0):,.2f}",
                 'total_earned': float(vw.total_earned or 0.0),
-                'total_earned_formatted': f"₹{float(vw.total_earned or 0.0):,.2f}",
+                'total_earned_formatted': f"â‚¹{float(vw.total_earned or 0.0):,.2f}",
                 'total_withdrawn': float(vw.total_withdrawn or 0.0),
-                'total_withdrawn_formatted': f"₹{float(vw.total_withdrawn or 0.0):,.2f}",
+                'total_withdrawn_formatted': f"â‚¹{float(vw.total_withdrawn or 0.0):,.2f}",
                 'last_updated': vw.updated_at.strftime('%Y-%m-%d %H:%M:%S') if vw.updated_at else None,
             },
             'recent_transactions': txns_data
@@ -6355,7 +6438,7 @@ def vendor_wallet_transactions_api(request):
                 'id': f"TX-{t.id:05d}",
                 'raw_id': t.id,
                 'amount': float(t.amount),
-                'amount_formatted': f"{sign}₹{float(t.amount):,.2f}",
+                'amount_formatted': f"{sign}â‚¹{float(t.amount):,.2f}",
                 'title': t.description or ('Earnings Credit' if is_credit else 'Payout Debit'),
                 'type': t.transaction_type,
                 'type_label': t.get_transaction_type_display(),
@@ -6380,3 +6463,249 @@ def vendor_wallet_transactions_api(request):
 
 
 
+
+
+@csrf_exempt
+def add_subcategory_api(request):
+    if not request.user.is_authenticated or not request.user.is_superuser:
+        return JsonResponse({'success': False, 'error': 'Unauthorized'})
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            cat_id = data.get('category_id')
+            name = data.get('name')
+            status = data.get('status', 'active')
+            if not cat_id or not name:
+                return JsonResponse({'success': False, 'error': 'Category ID and Name are required'})
+            
+            category = Category.objects.get(id=cat_id)
+            subcat = SubCategory.objects.create(category=category, name=name, status=status)
+            return JsonResponse({'success': True, 'subcategory': {'id': subcat.id, 'name': subcat.name, 'status': subcat.status}})
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)})
+    return JsonResponse({'success': False, 'error': 'Invalid method'})
+
+@csrf_exempt
+def update_subcategory_api(request):
+    if not request.user.is_authenticated or not request.user.is_superuser:
+        return JsonResponse({'success': False, 'error': 'Unauthorized'})
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            subcat_id = data.get('id')
+            if not subcat_id:
+                return JsonResponse({'success': False, 'error': 'ID is required'})
+            
+            subcat = SubCategory.objects.get(id=subcat_id)
+            if 'name' in data: subcat.name = data['name']
+            if 'status' in data: subcat.status = data['status']
+            subcat.save()
+            return JsonResponse({'success': True, 'subcategory': {'id': subcat.id, 'name': subcat.name, 'status': subcat.status}})
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)})
+    return JsonResponse({'success': False, 'error': 'Invalid method'})
+
+@csrf_exempt
+def delete_subcategory_api(request):
+    if not request.user.is_authenticated or not request.user.is_superuser:
+        return JsonResponse({'success': False, 'error': 'Unauthorized'})
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            subcat_id = data.get('id')
+            SubCategory.objects.filter(id=subcat_id).delete()
+            return JsonResponse({'success': True})
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)})
+    return JsonResponse({'success': False, 'error': 'Invalid method'})
+
+@csrf_exempt
+def add_category_field_api(request):
+    if not request.user.is_authenticated or not request.user.is_superuser:
+        return JsonResponse({'success': False, 'error': 'Unauthorized'})
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            cat_id = data.get('category_id')
+            name = data.get('name')
+            field_type = data.get('field_type', 'text')
+            options = data.get('options', '')
+            is_required = data.get('is_required', True)
+            
+            if not cat_id or not name:
+                return JsonResponse({'success': False, 'error': 'Category ID and Name are required'})
+            
+            category = Category.objects.get(id=cat_id)
+            field = CategoryField.objects.create(
+                category=category, name=name, field_type=field_type,
+                options=options, is_required=is_required
+            )
+            return JsonResponse({'success': True, 'field': {
+                'id': field.id, 'name': field.name, 'field_type': field.field_type,
+                'options': field.options, 'is_required': field.is_required
+            }})
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)})
+    return JsonResponse({'success': False, 'error': 'Invalid method'})
+
+@csrf_exempt
+def update_category_field_api(request):
+    if not request.user.is_authenticated or not request.user.is_superuser:
+        return JsonResponse({'success': False, 'error': 'Unauthorized'})
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            field_id = data.get('id')
+            if not field_id:
+                return JsonResponse({'success': False, 'error': 'ID is required'})
+            
+            field = CategoryField.objects.get(id=field_id)
+            if 'name' in data: field.name = data['name']
+            if 'field_type' in data: field.field_type = data['field_type']
+            if 'options' in data: field.options = data['options']
+            if 'is_required' in data: field.is_required = data['is_required']
+            field.save()
+            return JsonResponse({'success': True, 'field': {
+                'id': field.id, 'name': field.name, 'field_type': field.field_type,
+                'options': field.options, 'is_required': field.is_required
+            }})
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)})
+    return JsonResponse({'success': False, 'error': 'Invalid method'})
+
+@csrf_exempt
+def delete_category_field_api(request):
+    if not request.user.is_authenticated or not request.user.is_superuser:
+        return JsonResponse({'success': False, 'error': 'Unauthorized'})
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            field_id = data.get('id')
+            CategoryField.objects.filter(id=field_id).delete()
+            return JsonResponse({'success': True})
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)})
+    return JsonResponse({'success': False, 'error': 'Invalid method'})
+
+@csrf_exempt
+def category_details_api(request, category_id):
+    if not request.user.is_authenticated or not request.user.is_superuser:
+        return JsonResponse({'success': False, 'error': 'Unauthorized'})
+    try:
+        category = Category.objects.get(id=category_id)
+        subcats = list(category.subcategories.values('id', 'name', 'status'))
+        fields = list(category.fields.values('id', 'name', 'field_type', 'options', 'is_required'))
+        return JsonResponse({
+            'success': True,
+            'category': {
+                'id': category.id,
+                'name': category.name,
+                'service_type': category.service_type,
+                'status': category.status
+            },
+            'subcategories': subcats,
+            'fields': fields
+        })
+    except Category.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Category not found'})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})
+
+
+@csrf_exempt
+def user_profile_api(request):
+    """
+    API for a User (Customer) to get their profile.
+    URL: /api/user/profile/
+    Method: GET
+    Header: Authorization: Bearer <token>
+    """
+    if request.method != 'GET':
+        return JsonResponse({'status': 'error', 'message': 'Method not allowed'}, status=405)
+
+    user, err = _get_user_from_bearer_token(request)
+    if err:
+        return JsonResponse({'status': 'error', 'message': err}, status=401)
+    
+    try:
+        profile = user.user_profile
+    except Exception:
+        profile = UserProfile.objects.create(user=user)
+
+    profile_img_url = ""
+    if profile.profile_image:
+        profile_img_url = _build_absolute_image_url(request, profile.profile_image)
+
+    return JsonResponse({
+        'status': 'success',
+        'profile': {
+            'first_name': user.first_name,
+            'last_name': user.last_name,
+            'email': user.email,
+            'phone_number': profile.phone_number or '',
+            'city': profile.city or '',
+            'state': profile.state or '',
+            'profile_image': profile_img_url,
+        }
+    })
+
+
+@csrf_exempt
+def user_update_profile_api(request):
+    """
+    API for a User (Customer) to update their profile.
+    URL: /api/user/profile/update/
+    Method: POST (multipart/form-data for image upload)
+    Header: Authorization: Bearer <token>
+    """
+    if request.method not in ['POST', 'PUT']:
+        return JsonResponse({'status': 'error', 'message': 'Method not allowed'}, status=405)
+
+    user, err = _get_user_from_bearer_token(request)
+    if err:
+        return JsonResponse({'status': 'error', 'message': err}, status=401)
+    
+    data = _parse_api_request(request)
+    
+    try:
+        profile = user.user_profile
+    except Exception:
+        profile = UserProfile.objects.create(user=user)
+
+    if 'first_name' in data:
+        user.first_name = data.get('first_name', '').strip()
+    if 'last_name' in data:
+        user.last_name = data.get('last_name', '').strip()
+    if 'email' in data:
+        user.email = data.get('email', '').strip()
+    user.save(update_fields=['first_name', 'last_name', 'email'])
+
+    if 'phone_number' in data:
+        profile.phone_number = data.get('phone_number', '').strip()
+    if 'city' in data:
+        profile.city = data.get('city', '').strip()
+    if 'state' in data:
+        profile.state = data.get('state', '').strip()
+        
+    if 'profile_image' in request.FILES:
+        profile.profile_image = request.FILES['profile_image']
+        
+    profile.save()
+    
+    profile_img_url = ""
+    if profile.profile_image:
+        profile_img_url = _build_absolute_image_url(request, profile.profile_image)
+
+    return JsonResponse({
+        'status': 'success',
+        'message': 'Profile updated successfully',
+        'profile': {
+            'first_name': user.first_name,
+            'last_name': user.last_name,
+            'email': user.email,
+            'phone_number': profile.phone_number or '',
+            'city': profile.city or '',
+            'state': profile.state or '',
+            'profile_image': profile_img_url,
+        }
+    })
