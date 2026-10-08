@@ -3,7 +3,6 @@ import re
 import random
 import io
 import base64
-import qrcode
 from datetime import timedelta
 from decimal import Decimal
 from django.http import JsonResponse
@@ -5971,6 +5970,7 @@ def _generate_upi_qr_base64(upi_string):
     Generates a high-contrast base64 encoded PNG data URI for a UPI payment URI.
     """
     try:
+        import qrcode
         qr = qrcode.QRCode(
             version=1,
             error_correction=qrcode.constants.ERROR_CORRECT_M,

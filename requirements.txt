@@ -2,3 +2,4 @@ Django
 channels
 daphne
 Pillow
+qrcode[pil]
