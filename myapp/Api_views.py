@@ -2718,7 +2718,9 @@ def top_professionals_api(request):
             'rating': float(vp.rating) if vp.rating else 0.0,
             'profile_image': profile_img_url,
             'vendor_type': vp.vendor_type,
-            'about': vp.about or ""
+            'about': vp.about or "",
+            'services_count': vp.user.vendor_services.count(),
+            'reviews_count': vp.user.received_reviews.count(),
         })
 
     return JsonResponse({
