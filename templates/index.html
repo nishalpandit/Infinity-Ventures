@@ -2359,11 +2359,6 @@
         </button>
       </div>
 
-      <!-- Insecure Origin GPS Notice (Shown only if browser blocks GPS on HTTP IP) -->
-      <div id="gpsInsecureNotice" style="display: none; margin-top: 10px; padding: 9px 12px; background: #fffbeb; border: 1px solid #fde68a; border-radius: 10px; font-size: 11.5px; color: #92400e; line-height: 1.4;">
-        <i class="bi bi-info-circle-fill" style="margin-right: 4px;"></i> <b>Device GPS tip:</b> Chrome blocks automatic GPS on local IP (<code>192.168.x.x</code>). Open via <b>http://localhost:8000</b> to auto-detect, or tap your exact building on the map above.
-      </div>
-
       <!-- Selected Live Pin Address Card -->
       <div id="pinSelectedCard" style="margin-top: 10px; background: #f8fafc; border: 1.5px solid #22c55e; border-radius: 12px; padding: 10px 14px;">
         <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
@@ -2489,13 +2484,6 @@
       }
       const resContainer = document.getElementById('locSearchResults');
       if (resContainer) resContainer.style.display = 'none';
-
-      // Check if browser is on insecure HTTP context
-      const isSecure = window.isSecureContext || location.hostname === 'localhost' || location.hostname === '127.0.0.1';
-      const notice = document.getElementById('gpsInsecureNotice');
-      if (notice) {
-        notice.style.display = isSecure ? 'none' : 'block';
-      }
 
       // Initialize or refresh map
       let uLat = parseFloat(localStorage.getItem('suggu_user_lat'));
@@ -2727,20 +2715,17 @@
         toast('Exact live location set: ' + (coords.lat.toFixed(4) + ', ' + coords.lon.toFixed(4)));
         resetIcon();
       } else {
-        const notice = document.getElementById('gpsInsecureNotice');
-        if (notice) notice.style.display = 'block';
-
         try {
           const res = await fetch('/api/detect-location/');
           const data = await res.json();
           if (data && data.lat && data.lon) {
             jumpToMapLoc(data.lat, data.lon);
-            toast('GPS restricted on network IP. Drag pin or tap your building to pinpoint!');
+            toast('Location auto-detected. Tap your exact building on the map or search to adjust.');
           } else {
-            toast('Please tap your building on the map to pinpoint.');
+            toast('Please tap your building on the map or search your location.');
           }
         } catch(e) {
-          toast('Please tap your building on the map.');
+          toast('Please tap your building on the map or search your location.');
         }
         resetIcon();
       }
