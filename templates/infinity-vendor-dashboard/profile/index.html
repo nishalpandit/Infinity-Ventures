@@ -1,6 +1,6 @@
 <!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="description" content="Sugu Vendor Portal - Vendor Profile"><title>Vendor Profile · Sugu Vendor</title><link rel="stylesheet" href="/infinity-vendor-dashboard/assets/styles.css"><script>
   window.VENDOR_INITIALS = "{{ vendor_initials|default:'VN'|escapejs }}";
-  window.VENDOR_NAME = "{{ vendor_name|default:user.username|escapejs }}";
+  window.VENDOR_NAME = "{{ vendor_name|default:'Vendor'|escapejs }}";
   window.VENDOR_TYPE = "{{ vendor_type|default:'Vendor'|escapejs }}";
   window.VENDOR_LOCATION = "{{ vendor_location|default:'Ranchi'|escapejs }}";
   window.PROFILE_IMAGE_URL = "{{ profile_image_url|default:''|escapejs }}" || null;

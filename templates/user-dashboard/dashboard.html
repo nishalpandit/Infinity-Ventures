@@ -83,7 +83,7 @@
                 Service not available at your location
               </div>
               <div style="color: #be123c; font-size: 13.5px; line-height: 1.4;">
-                Our home services are currently not available in <strong>{{ user_city|default:user_location|default:"your location" }}</strong>. We are expanding rapidly to new cities! You can update your location in your profile settings.
+                Our home services are currently not available in <strong>{% if user_city %}{{ user_city }}{% elif user_location %}{{ user_location }}{% else %}your location{% endif %}</strong>. We are expanding rapidly to new cities! You can update your location in your profile settings.
               </div>
             </div>
           </div>

@@ -456,6 +456,10 @@ def dashboard_view(request, path=''):
     if path.startswith('user/') and not request.user.is_authenticated:
         return redirect('register_user')
 
+    # Enforce authentication for vendor/ pages before proceeding
+    if path.startswith('vendor/') and not request.user.is_authenticated:
+        return redirect(f'/login/?next=/{path}.html')
+
     # Subscriptions and Notifications modules completely removed
     if any(path.startswith(prefix) for prefix in ['subscriptions', 'admin-dashboard/subscriptions']) or path == 'subscriptions':
         messages.warning(request, "Access Denied: The subscriptions page has been removed.")
@@ -1060,62 +1064,78 @@ def dashboard_view(request, path=''):
     template_name = f'{mapped_path}.html'
     context = {}
     
-    if path.startswith('vendor/') and request.user.is_authenticated:
+    if path.startswith('vendor/'):
+        context['vendor_name'] = "Vendor"
+        context['vendor_initials'] = "VN"
+        context['vendor_location'] = "Ranchi"
+        context['vendor_city'] = "Ranchi"
+        context['vendor_type'] = "Individual Vendor"
+        context['wallet_balance'] = "0.00"
+        context['available_bids'] = 5
+        context['remaining_credits'] = 5
         try:
-            from .wallet_services import get_or_create_wallet
-            wallet = get_or_create_wallet(request.user)
-            context['wallet_balance'] = f"{wallet.available_balance:.2f}"
-            context['vendor_wallet'] = wallet
-            
-            vendor_profile = getattr(request.user, 'vendor_profile', None)
-            if not vendor_profile and request.user.role == 'VENDOR':
-                vendor_profile, _ = VendorProfile.objects.get_or_create(user=request.user)
-            user_profile, _ = UserProfile.objects.get_or_create(user=request.user)
-            
-            context['vendor_profile'] = vendor_profile
-            context['user_profile'] = user_profile
-            
-            kyc_doc = VendorKYC.objects.filter(vendor=request.user).first()
-            context['kyc'] = kyc_doc
-            context['is_kyc_verified'] = (kyc_doc.status == 'approved') if kyc_doc else False
             context['all_categories'] = Category.objects.filter(status='active').order_by('name')
+        except Exception:
+            pass
 
-            # Determine display vendor name & vendor classification
-            display_name = None
-            if vendor_profile:
-                if vendor_profile.vendor_type == 'company' and vendor_profile.company_name and vendor_profile.company_name.strip():
-                    display_name = vendor_profile.company_name.strip()
-                elif vendor_profile.company_name and vendor_profile.company_name.strip() and vendor_profile.company_name.strip().lower() != request.user.first_name.strip().lower():
-                    display_name = vendor_profile.company_name.strip()
-
-            if not display_name:
-                display_name = request.user.get_full_name() or request.user.first_name or request.user.username
+        if request.user.is_authenticated:
+            try:
+                from .wallet_services import get_or_create_wallet
+                wallet = get_or_create_wallet(request.user)
+                context['wallet_balance'] = f"{wallet.available_balance:.2f}"
+                context['vendor_wallet'] = wallet
                 
-            context['vendor_name'] = display_name
-            context['vendor_initials'] = display_name[:2].upper() if display_name else "VN"
-            context['vendor_location'] = (vendor_profile.location if (vendor_profile and vendor_profile.location) else "Ranchi")
-            
-            if vendor_profile and vendor_profile.vendor_type == 'company':
-                context['vendor_type'] = "Company Vendor"
-            else:
-                context['vendor_type'] = "Individual Vendor"
-            
-            prof_img = None
-            if vendor_profile and vendor_profile.profile_image:
-                try:
-                    prof_img = vendor_profile.profile_image.url
-                except Exception:
-                    prof_img = None
-            if not prof_img and user_profile and user_profile.profile_image:
-                try:
-                    prof_img = user_profile.profile_image.url
-                except Exception:
-                    prof_img = None
-            context['profile_image_url'] = prof_img
-            context['remaining_credits'] = getattr(vendor_profile, 'available_bids', 5) if vendor_profile else 5
-            context['available_bids'] = getattr(vendor_profile, 'available_bids', 5) if vendor_profile else 5
-        except Exception as e:
-            print("Error initializing vendor context:", e)
+                vendor_profile = getattr(request.user, 'vendor_profile', None)
+                if not vendor_profile and request.user.role == 'VENDOR':
+                    vendor_profile, _ = VendorProfile.objects.get_or_create(user=request.user)
+                user_profile, _ = UserProfile.objects.get_or_create(user=request.user)
+                
+                context['vendor_profile'] = vendor_profile
+                context['user_profile'] = user_profile
+                
+                kyc_doc = VendorKYC.objects.filter(vendor=request.user).first()
+                context['kyc'] = kyc_doc
+                context['is_kyc_verified'] = (kyc_doc.status == 'approved') if kyc_doc else False
+                context['all_categories'] = Category.objects.filter(status='active').order_by('name')
+
+                # Determine display vendor name & vendor classification
+                display_name = None
+                if vendor_profile:
+                    if vendor_profile.vendor_type == 'company' and vendor_profile.company_name and vendor_profile.company_name.strip():
+                        display_name = vendor_profile.company_name.strip()
+                    elif vendor_profile.company_name and vendor_profile.company_name.strip() and vendor_profile.company_name.strip().lower() != request.user.first_name.strip().lower():
+                        display_name = vendor_profile.company_name.strip()
+
+                if not display_name:
+                    display_name = request.user.get_full_name() or request.user.first_name or request.user.username
+                    
+                context['vendor_name'] = display_name
+                context['vendor_initials'] = display_name[:2].upper() if display_name else "VN"
+                loc = (vendor_profile.location if (vendor_profile and vendor_profile.location) else "Ranchi")
+                context['vendor_location'] = loc
+                context['vendor_city'] = loc.split(',')[0].strip() if loc else "Ranchi"
+                
+                if vendor_profile and vendor_profile.vendor_type == 'company':
+                    context['vendor_type'] = "Company Vendor"
+                else:
+                    context['vendor_type'] = "Individual Vendor"
+                
+                prof_img = None
+                if vendor_profile and vendor_profile.profile_image:
+                    try:
+                        prof_img = vendor_profile.profile_image.url
+                    except Exception:
+                        prof_img = None
+                if not prof_img and user_profile and user_profile.profile_image:
+                    try:
+                        prof_img = user_profile.profile_image.url
+                    except Exception:
+                        prof_img = None
+                context['profile_image_url'] = prof_img
+                context['remaining_credits'] = getattr(vendor_profile, 'available_bids', 5) if vendor_profile else 5
+                context['available_bids'] = getattr(vendor_profile, 'available_bids', 5) if vendor_profile else 5
+            except Exception as e:
+                print("Error initializing vendor context:", e)
             
     # Inject dynamic user data
     if 'master/categories' in path:
@@ -1832,6 +1852,10 @@ def dashboard_view(request, path=''):
             )
             jobs_qs = jobs_qs.filter(city_filter)
             context['vendor_city'] = vendor_city
+            context['vendor_location'] = vendor_city
+        else:
+            context.setdefault('vendor_city', context.get('vendor_location') or 'Ranchi')
+            context.setdefault('vendor_location', context.get('vendor_city') or 'Ranchi')
 
         if vendor_categories:
             cat_filter = Q()

@@ -8,7 +8,7 @@
   <link rel="stylesheet" href="/infinity-vendor-dashboard/assets/styles.css">
   <script>
     window.VENDOR_INITIALS = "{{ vendor_initials|default:'VN'|escapejs }}";
-    window.VENDOR_NAME = "{{ vendor_name|default:user.username|escapejs }}";
+    window.VENDOR_NAME = "{{ vendor_name|default:'Vendor'|escapejs }}";
     window.VENDOR_TYPE = "{{ vendor_type|default:'Vendor'|escapejs }}";
     window.VENDOR_LOCATION = "{{ vendor_location|default:'Ranchi'|escapejs }}";
     window.PROFILE_IMAGE_URL = "{{ profile_image_url|default:''|escapejs }}" || null;
@@ -252,7 +252,7 @@
 
                     <div class="field">
                       <label for="phone_number">Primary Mobile / Contact Number <span class="required">*</span></label>
-                      <input class="input" type="tel" id="phone_number" name="phone_number" required value="{{ user_profile.phone_number|default:vendor_profile.mobile|default:'' }}" placeholder="e.g. +91 98765 43210">
+                      <input class="input" type="tel" id="phone_number" name="phone_number" required value="{% if user_profile.phone_number %}{{ user_profile.phone_number }}{% elif vendor_profile.mobile %}{{ vendor_profile.mobile }}{% endif %}" placeholder="e.g. +91 98765 43210">
                       <div class="field-hint">Used for customer job notifications and OTP logins.</div>
                     </div>
 

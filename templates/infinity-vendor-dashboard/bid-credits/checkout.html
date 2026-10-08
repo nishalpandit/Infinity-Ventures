@@ -95,11 +95,11 @@
                 <div class="form-grid">
                   <div class="field">
                     <label>Business / Agency Name</label>
-                    <input class="input" value="{{ vendor_name|default:user.username }}" readonly style="background:#f8fafc; font-weight:600;">
+                    <input class="input" value="{{ vendor_name|default:'Vendor' }}" readonly style="background:#f8fafc; font-weight:600;">
                   </div>
                   <div class="field">
                     <label>Contact Person</label>
-                    <input class="input" value="{{ user.get_full_name|default:user.username }}" readonly style="background:#f8fafc;">
+                    <input class="input" value="{% if user.get_full_name %}{{ user.get_full_name }}{% elif user.username %}{{ user.username }}{% else %}Vendor{% endif %}" readonly style="background:#f8fafc;">
                   </div>
                   <div class="field">
                     <label>Email Address</label>

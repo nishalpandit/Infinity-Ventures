@@ -8,7 +8,7 @@
   <link rel="stylesheet" href="/infinity-vendor-dashboard/assets/styles.css">
   <script>
     window.VENDOR_INITIALS = "{{ vendor_initials|default:'VN'|escapejs }}";
-    window.VENDOR_NAME = "{{ vendor_name|default:user.username|escapejs }}";
+    window.VENDOR_NAME = "{{ vendor_name|default:'Vendor'|escapejs }}";
     window.VENDOR_TYPE = "{{ vendor_type|default:'Vendor'|escapejs }}";
     window.VENDOR_LOCATION = "{{ vendor_location|default:'Ranchi'|escapejs }}";
     window.PROFILE_IMAGE_URL = "{{ profile_image_url|default:''|escapejs }}" || null;
@@ -32,7 +32,7 @@
         </div>
         <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
           <span class="badge badge-purple" style="font-size:12px; padding:6px 14px; font-weight:700; display:inline-flex; align-items:center; gap:6px;">
-            <span data-icon="map"></span> City: <strong>{{ vendor_city|default:vendor_location|default:"All Cities" }}</strong>
+            <span data-icon="map"></span> City: <strong>{% if vendor_city %}{{ vendor_city }}{% elif vendor_location %}{{ vendor_location }}{% else %}All Cities{% endif %}</strong>
           </span>
           {% if vendor_categories %}
           <span class="badge" style="font-size:12px; padding:6px 14px; font-weight:700; display:inline-flex; align-items:center; gap:6px; background:#eff6ff; color:#1d4ed8; border:1px solid #bfdbfe;">
@@ -82,7 +82,7 @@
           </select>
 
           <select class="select" style="max-width:150px" data-filter="location">
-            <option value="all">All in {{ vendor_city|default:vendor_location }}</option>
+            <option value="all">All in {% if vendor_city %}{{ vendor_city }}{% elif vendor_location %}{{ vendor_location }}{% else %}City{% endif %}</option>
             {% if vendor_city %}
               <option value="{{ vendor_city }}">{{ vendor_city }}</option>
             {% endif %}
@@ -138,8 +138,8 @@
             {% empty %}
               <div style="grid-column: 1 / -1; text-align: center; padding: 50px 20px; background:#f8fafc; border-radius:12px; border:1.5px dashed #cbd5e1;">
                 <div style="font-size:38px; margin-bottom:12px;">📍</div>
-                <h3 style="font-size:17px; font-weight:700; color:var(--ink); margin-bottom:6px;">No Active Jobs in {{ vendor_city|default:vendor_location }}</h3>
-                <p class="muted" style="max-width:440px; margin:0 auto 16px; font-size:13px;">There are no open customer requests in your city right now. New customer leads posted in {{ vendor_city|default:vendor_location }} will automatically appear here.</p>
+                <h3 style="font-size:17px; font-weight:700; color:var(--ink); margin-bottom:6px;">No Active Jobs in {% if vendor_city %}{{ vendor_city }}{% elif vendor_location %}{{ vendor_location }}{% else %}your city{% endif %}</h3>
+                <p class="muted" style="max-width:440px; margin:0 auto 16px; font-size:13px;">There are no open customer requests in your city right now. New customer leads posted in {% if vendor_city %}{{ vendor_city }}{% elif vendor_location %}{{ vendor_location }}{% else %}your city{% endif %} will automatically appear here.</p>
                 <a href="/vendor/settings/index.html#profile" class="btn btn-secondary btn-sm">
                   <span data-icon="settings"></span> Update Operating City
                 </a>
