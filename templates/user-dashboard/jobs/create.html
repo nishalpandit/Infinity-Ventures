@@ -145,16 +145,19 @@
                     </div>
                   </div>
 
-                  <script>
-                  const subcats = {
+                  <script type="application/json" id="subcats-data">
+                  {
                     {% for cat in categories %}
-                    '{{ cat.id }}': [
+                    "{{ cat.id }}": [
                       {% for sub in cat.subcategories.all %}
-                      { id: '{{ sub.id }}', name: '{{ sub.name|escapejs }}' }{% if not forloop.last %},{% endif %}
+                      { "id": "{{ sub.id }}", "name": "{{ sub.name|escapejs }}" }{% if not forloop.last %},{% endif %}
                       {% endfor %}
                     ]{% if not forloop.last %},{% endif %}
                     {% endfor %}
-                  };
+                  }
+                  </script>
+                  <script>
+                  const subcats = JSON.parse(document.getElementById('subcats-data').textContent);
 
                   function updateSubcats(catId) {
                     const grid = document.getElementById('subcategory_grid');

@@ -78,16 +78,34 @@
                   <td>
                     <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
                       {% if b.status == 'selected' %}
-                      <button class="btn btn-primary btn-sm" type="button" onclick="openSubmitProofModal('{% if b.job %}{{ b.job.id }}{% endif %}', '{% if not b.job %}{{ b.quick_service.id }}{% endif %}', '{% if b.job %}{{ b.job.title|escapejs }}{% else %}{{ b.quick_service.title|escapejs }}{% endif %}', '{% if b.job %}{{ b.job.user.get_full_name|default:b.job.user.username|escapejs }}{% else %}{{ b.quick_service.user.get_full_name|default:b.quick_service.user.username|escapejs }}{% endif %}')" style="background:#059669; border-color:#059669;">
+                      <button class="btn btn-primary btn-sm" type="button" 
+                        data-job-id="{% if b.job %}{{ b.job.id }}{% endif %}"
+                        data-qs-id="{% if not b.job %}{{ b.quick_service.id }}{% endif %}"
+                        data-title="{% if b.job %}{{ b.job.title }}{% else %}{{ b.quick_service.title }}{% endif %}"
+                        data-user="{% if b.job %}{{ b.job.user.get_full_name|default:b.job.user.username }}{% else %}{{ b.quick_service.user.get_full_name|default:b.quick_service.user.username }}{% endif %}"
+                        onclick="openSubmitProofModal(this.dataset.jobId, this.dataset.qsId, this.dataset.title, this.dataset.user)" 
+                        style="background:#059669; border-color:#059669;">
                         <span data-icon="check"></span> Complete &amp; Proof
                       </button>
                       {% elif b.status == 'completed' %}
                         {% if b.job and b.job.completion_proof %}
-                        <button class="btn btn-secondary btn-sm" type="button" onclick="viewProofModal('{{ b.job.title|escapejs }}', '{{ b.job.completion_proof.work_summary|escapejs }}', '{{ b.job.completion_proof.photo_1.url }}', '{% if b.job.completion_proof.photo_2 %}{{ b.job.completion_proof.photo_2.url }}{% endif %}', '{{ b.job.completion_proof.completed_at|date:"d M Y, h:i A" }}')">
+                        <button class="btn btn-secondary btn-sm" type="button" 
+                          data-title="{{ b.job.title }}"
+                          data-summary="{{ b.job.completion_proof.work_summary }}"
+                          data-photo1="{{ b.job.completion_proof.photo_1.url }}"
+                          data-photo2="{% if b.job.completion_proof.photo_2 %}{{ b.job.completion_proof.photo_2.url }}{% endif %}"
+                          data-date="{{ b.job.completion_proof.completed_at|date:'d M Y, h:i A' }}"
+                          onclick="viewProofModal(this.dataset.title, this.dataset.summary, this.dataset.photo1, this.dataset.photo2, this.dataset.date)">
                           View Proof
                         </button>
                         {% elif b.quick_service.completion_proof %}
-                        <button class="btn btn-secondary btn-sm" type="button" onclick="viewProofModal('{{ b.quick_service.title|escapejs }}', '{{ b.quick_service.completion_proof.work_summary|escapejs }}', '{{ b.quick_service.completion_proof.photo_1.url }}', '{% if b.quick_service.completion_proof.photo_2 %}{{ b.quick_service.completion_proof.photo_2.url }}{% endif %}', '{{ b.quick_service.completion_proof.completed_at|date:"d M Y, h:i A" }}')">
+                        <button class="btn btn-secondary btn-sm" type="button" 
+                          data-title="{{ b.quick_service.title }}"
+                          data-summary="{{ b.quick_service.completion_proof.work_summary }}"
+                          data-photo1="{{ b.quick_service.completion_proof.photo_1.url }}"
+                          data-photo2="{% if b.quick_service.completion_proof.photo_2 %}{{ b.quick_service.completion_proof.photo_2.url }}{% endif %}"
+                          data-date="{{ b.quick_service.completion_proof.completed_at|date:'d M Y, h:i A' }}"
+                          onclick="viewProofModal(this.dataset.title, this.dataset.summary, this.dataset.photo1, this.dataset.photo2, this.dataset.date)">
                           View Proof
                         </button>
                         {% endif %}

@@ -4649,6 +4649,7 @@ def book_service_api(request):
     except QuickService.DoesNotExist:
         return JsonResponse({'status': 'error', 'message': 'Service not found.'}, status=404)
 
+
 @csrf_exempt
 def user_bookings_api(request):
     """
