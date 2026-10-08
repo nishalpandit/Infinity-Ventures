@@ -4650,6 +4650,56 @@ def book_service_api(request):
         return JsonResponse({'status': 'error', 'message': 'Service not found.'}, status=404)
 
 @csrf_exempt
+def user_bookings_api(request):
+    """
+    API for User (Customer) to fetch their Bookings.
+    URL: /api/user/bookings/
+    Method: GET
+    Header: Authorization: Bearer <token>
+    """
+    if request.method != 'GET':
+        return JsonResponse({'status': 'error', 'message': 'Method not allowed. Use GET.'}, status=405)
+
+    user, err = _get_user_from_bearer_token(request)
+    if err:
+        return JsonResponse({'status': 'error', 'message': err}, status=401)
+    
+    try:
+        bookings = ServiceBooking.objects.filter(customer=user).select_related('vendor', 'quick_service', 'review').order_by('-created_at')
+        bookings_list = []
+        for b in bookings:
+            vendor_name = b.vendor.get_full_name() or b.vendor.username if b.vendor else 'Unknown Vendor'
+            vendor_phone = ''
+            if b.vendor:
+                if hasattr(b.vendor, 'user_profile') and b.vendor.user_profile:
+                    vendor_phone = b.vendor.user_profile.phone_number or ''
+                if not vendor_phone and hasattr(b.vendor, 'phone_number'):
+                    vendor_phone = getattr(b.vendor, 'phone_number', '')
+
+            review = getattr(b, 'review', None)
+            
+            bookings_list.append({
+                'id': b.id,
+                'service_title': b.quick_service.title if b.quick_service else 'Unknown Service',
+                'vendor_id': b.vendor.id if b.vendor else None,
+                'vendor_name': vendor_name,
+                'vendor_phone': vendor_phone,
+                'package_name': b.package_name,
+                'total_amount': float(b.total_amount),
+                'total_price': float(b.total_amount),
+                'scheduled_date': str(b.scheduled_date),
+                'scheduled_time': str(b.scheduled_time) if b.scheduled_time else '',
+                'service_address': b.service_address or '',
+                'status': b.status,
+                'payment_status': b.payment_status,
+                'review_rating': review.rating if review else None,
+                'review_comment': review.comment if review else '',
+                'created_at': b.created_at.isoformat()
+            })
+        return JsonResponse({'status': 'success', 'bookings': bookings_list}, status=200)
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
 def get_user_jobs_api(request):
     """
     API for a user to fetch their posted jobs.
