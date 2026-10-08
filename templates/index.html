@@ -1871,9 +1871,7 @@
         <div class="tags">
           <span>Popular:</span>
           {% for cat in categories|slice:":4" %}
-          <button
-            onclick="document.getElementById('quick').scrollIntoView({behavior: 'smooth'}); filterCategory('{{ cat.name|escapejs }}')">{{
-            cat.name }}</button>
+          <button onclick="document.getElementById('quick').scrollIntoView({behavior: 'smooth'}); filterCategory('{{ cat.name|escapejs }}')">{{ cat.name }}</button>
           {% endfor %}
         </div>
       </div>
@@ -1882,8 +1880,7 @@
           <div class="phone">
             <h4>Book a service</h4>
             {% for cat in categories|slice:":3" %}
-            <div class="pl {% if forloop.first %}on{% endif %}"><span><i class="bi {{ cat.icon_class }}"></i></span>{{
-              cat.name }}</div>
+            <div class="pl {% if forloop.first %}on{% endif %}"><span><i class="bi {{ cat.icon_class }}"></i></span>{{ cat.name }}</div>
             {% endfor %}
             <div class="pmap"><i class="bi bi-geo-alt-fill"></i> Your location</div>
             <div class="pbtn">Confirm booking</div>
