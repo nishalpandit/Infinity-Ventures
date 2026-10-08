@@ -107,42 +107,102 @@
 
               <div class="form-section" style="padding:24px;">
                 <div class="form-grid">
-                  <!-- Title -->
+                  <!-- Hidden Defaults to bypass validation if required -->
+                  <input type="hidden" name="description" value="Details to be discussed.">
+                  
+                  <style>
+                  .cat-card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 12px; }
+                  .cat-card { border: 1.5px solid #cbd5e1; border-radius: 10px; padding: 16px; text-align: center; cursor: pointer; transition: all 0.2s; display: flex; flex-direction: column; align-items: center; gap: 8px; background: #fff; }
+                  .cat-card:hover { border-color: #5b5bd6; background: #f8f8ff; }
+                  .cat-card input[type="radio"] { display: none; }
+                  .cat-card input[type="radio"]:checked + .card-content { color: #5b5bd6; font-weight: 700; }
+                  .cat-card:has(input[type="radio"]:checked) { border-color: #5b5bd6; background: #f0f0ff; box-shadow: 0 0 0 3px rgba(91,91,214,0.15); }
+                  .card-content i { font-size: 26px; color: #64748b; }
+                  .cat-card input[type="radio"]:checked + .card-content i { color: #5b5bd6; }
+                  </style>
+
+                  <!-- 1. Category Cards -->
                   <div class="field full">
-                    <label>What service do you need? <span class="required">*</span></label>
-                    <input class="input" name="title" required placeholder="e.g. Full Bathroom Renovation, Electrical Rewiring, Terrace Waterproofing" autocomplete="off">
-                  </div>
-
-                  <!-- Category -->
-                  <div class="field">
-                    <label>Category <span class="required">*</span></label>
-                    <select class="select" name="category" required>
-                      <option value="">Select category</option>
+                    <label>Select Category <span class="required">*</span></label>
+                    <div class="cat-card-grid">
                       {% for cat in categories %}
-                      <option value="{{ cat.id }}">{{ cat.name }}</option>
+                      <label class="cat-card" onclick="updateSubcats('{{ cat.id }}')">
+                         <input type="radio" name="category" value="{{ cat.id }}" required>
+                         <div class="card-content">
+                            <i class="bi {{ cat.icon_class }}"></i>
+                            <span style="display:block; margin-top:8px; font-size:13px;">{{ cat.name }}</span>
+                         </div>
+                      </label>
                       {% endfor %}
-                    </select>
-                  </div>
-
-                  <!-- Budget -->
-                  <div class="field">
-                    <label>Expected Budget (₹) <span class="required">*</span></label>
-                    <div class="input-prefix">
-                      <span>₹</span>
-                      <input class="input" name="budget" required type="number" min="100" placeholder="e.g. 5000">
                     </div>
                   </div>
 
-                  <!-- Preferred Start Date -->
-                  <div class="field">
-                    <label>When do you want to start?</label>
-                    <input class="input" name="preferred_start_date" type="date">
+                  <!-- 2. Subcategory Cards -->
+                  <div class="field full" id="subcat-container" style="display: none;">
+                    <label>Select Subcategory <span class="required">*</span></label>
+                    <div class="cat-card-grid" id="subcategory_grid">
+                      <!-- Subcategories will be injected here as cards -->
+                    </div>
                   </div>
 
-                  <!-- Contact Mobile -->
+                  <script>
+                  const subcats = {
+                    {% for cat in categories %}
+                    '{{ cat.id }}': [
+                      {% for sub in cat.subcategories.all %}
+                      { id: '{{ sub.id }}', name: '{{ sub.name|escapejs }}' }{% if not forloop.last %},{% endif %}
+                      {% endfor %}
+                    ]{% if not forloop.last %},{% endif %}
+                    {% endfor %}
+                  };
+
+                  function updateSubcats(catId) {
+                    const grid = document.getElementById('subcategory_grid');
+                    grid.innerHTML = '';
+                    if (subcats[catId] && subcats[catId].length > 0) {
+                      subcats[catId].forEach(s => {
+                         grid.innerHTML += `
+                           <label class="cat-card">
+                             <input type="radio" name="subcategory" value="${s.id}" required>
+                             <div class="card-content">
+                               <i class="bi bi-tag"></i>
+                               <span style="display:block; margin-top:8px; font-size:13px;">${s.name}</span>
+                             </div>
+                           </label>
+                         `;
+                      });
+                      document.getElementById('subcat-container').style.display = 'block';
+                    } else {
+                      document.getElementById('subcat-container').style.display = 'none';
+                    }
+                  }
+                  </script>
+
+                  <!-- 3. Title -->
+                  <div class="field full">
+                    <label>What service do you need? <span class="required">*</span></label>
+                    <input class="input" name="title" required placeholder="e.g. Full Bathroom Renovation, Bridal Makeup" autocomplete="off">
+                  </div>
+
+                  <!-- 4. Preferred Start Date -->
+                  <div class="field">
+                    <label>When do you want to start? <span class="required">*</span></label>
+                    <input class="input" name="preferred_start_date" type="date" required>
+                  </div>
+
+                  <!-- 5. Contact Mobile (Empty by default) -->
                   <div class="field">
                     <label>Your Contact Phone <span class="required">*</span></label>
-                    <input class="input" name="contact_mobile" required value="{{ request.user.user_profile.phone_number|default:'' }}" placeholder="+91 98765 43210">
+                    <input class="input" name="contact_mobile" required value="" placeholder="+91 98765 43210">
+                  </div>
+
+                  <!-- 6. Expected Budget / Price -->
+                  <div class="field">
+                    <label>Expected Budget / Price (₹) <span class="required">*</span></label>
+                    <div class="input-prefix">
+                      <span>₹</span>
+                      <input class="input" name="budget" required type="number" min="100" placeholder="e.g. 1500">
+                    </div>
                   </div>
 
                   <!-- ============================================== -->
@@ -150,8 +210,7 @@
                   <!-- ============================================== -->
                   <div class="field full">
                     <label style="display:flex; align-items:center; justify-content:space-between;">
-                      <span>Worksite Location (10 km Vendor Match) <span class="required">*</span></span>
-                      <span style="font-size:11px; color:#5b5bd6; font-weight:700;"><i class="fa-solid fa-location-crosshairs"></i> 10 km Range Enabled</span>
+                      <span>Worksite Location <span class="required">*</span></span>
                     </label>
 
                     <div class="loc-picker-box">
@@ -173,6 +232,7 @@
                       <!-- Quick Localities in Ranchi -->
                       <div class="quick-chips">
                         <span style="font-size:11px; color:#64748b; font-weight:600; align-self:center;">Popular Areas:</span>
+                        <button type="button" class="quick-chip" onclick="selectJobLocality('RIADA Road, Namkum', 23.3555, 85.3609)">Namkum</button>
                         <button type="button" class="quick-chip" onclick="selectJobLocality('Lalpur, Circular Road', 23.3697, 85.3346)">Lalpur</button>
                         <button type="button" class="quick-chip" onclick="selectJobLocality('Harmu Housing Colony', 23.3550, 85.3050)">Harmu</button>
                         <button type="button" class="quick-chip" onclick="selectJobLocality('Doranda High Court Area', 23.3340, 85.3218)">Doranda</button>
@@ -184,13 +244,17 @@
                       </div>
 
                       <!-- Live Active Location Pill -->
-                      <div class="loc-active-pill" id="jobLocActiveDisplay">
-                        <span class="live-dot"></span>
-                        <div>
-                          <strong id="jobDisplayLocName">Lalpur, Circular Road</strong>
-                          <span style="color:#059669; font-size:12px; margin-left:6px;" id="jobDisplayCoords">(23.3697, 85.3346)</span>
-                          <span style="color:#065f46; font-size:11.5px; margin-left:8px;">• Matching local partners in 10 km</span>
+                      <div class="loc-active-pill" id="jobLocActiveDisplay" style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px;">
+                        <div style="display:flex; align-items:center; gap:8px;">
+                          <span class="live-dot"></span>
+                          <div>
+                            <strong id="jobDisplayLocName">Lalpur, Circular Road</strong>
+                            <span style="color:#059669; font-size:12px; margin-left:6px;" id="jobDisplayCoords">(23.3697, 85.3346)</span>
+                          </div>
                         </div>
+                        <a id="jobLocMapsLink" href="https://maps.google.com/?q=23.3697,85.3346" target="_blank" rel="noopener noreferrer" style="font-size:11.5px; color:#2563eb; font-weight:700; text-decoration:underline; display:inline-flex; align-items:center; gap:4px;">
+                          <i class="fa-solid fa-map-location-dot"></i> Google Maps ↗
+                        </a>
                       </div>
 
                       <!-- Hidden Coordinate & Locality Form Fields -->
@@ -200,12 +264,6 @@
                       <input type="hidden" name="address" id="jobInputAddress" value="Lalpur, Circular Road, Ranchi">
                       <input type="hidden" name="pincode" id="jobInputPincode" value="834001">
                     </div>
-                  </div>
-
-                  <!-- Details / Scope -->
-                  <div class="field full">
-                    <label>Work Description & Details <span class="required">*</span></label>
-                    <textarea class="textarea" name="description" rows="3" required placeholder="Describe what needs to be done, specific problems, room dimensions, or any material preferences..."></textarea>
                   </div>
 
                   <input type="hidden" name="contact_name" value="{{ request.user.get_full_name|default:request.user.username }}">
@@ -231,13 +289,7 @@
               </div>
               <div class="card-body">
                 <div class="stack small">
-                  <div class="cell-user">
-                    <span class="stat-icon" style="background:#eeeeff; color:#5b5bd6;"><i class="fa-solid fa-location-dot"></i></span>
-                    <div>
-                      <strong>10 km Range Match</strong>
-                      <div class="muted">Only vendors near your live location receive this job notification.</div>
-                    </div>
-                  </div>
+
                   <div class="cell-user">
                     <span class="stat-icon teal"><i class="fa-solid fa-comments-dollar"></i></span>
                     <div>
@@ -274,16 +326,73 @@
       document.getElementById('jobInputLocality').value = name;
       document.getElementById('jobInputLat').value = lat;
       document.getElementById('jobInputLon').value = lon;
-      document.getElementById('jobInputAddress').value = `${name}, Ranchi`;
+      const mapsUrl = `https://maps.google.com/?q=${lat},${lon}`;
+      document.getElementById('jobInputAddress').value = `${name}, Ranchi [GPS: ${lat}, ${lon} | Maps: ${mapsUrl}]`;
 
       document.getElementById('jobDisplayLocName').textContent = name;
-      document.getElementById('jobDisplayCoords').textContent = `(${lat.toFixed(4)}, ${lon.toFixed(4)})`;
+      document.getElementById('jobDisplayCoords').textContent = `(${parseFloat(lat).toFixed(4)}, ${parseFloat(lon).toFixed(4)})`;
+      const mapsLink = document.getElementById('jobLocMapsLink');
+      if (mapsLink) mapsLink.href = mapsUrl;
 
       const searchInput = document.getElementById('jobLocSearchInput');
       if (searchInput) searchInput.value = '';
       const searchRes = document.getElementById('jobLocSearchResults');
       if (searchRes) searchRes.style.display = 'none';
+
+      // Synchronize with site-wide location storage
+      try {
+        localStorage.setItem('suggu_user_location', name);
+        localStorage.setItem('suggu_user_lat', lat);
+        localStorage.setItem('suggu_user_lon', lon);
+        localStorage.setItem('sugu_selected_location', JSON.stringify({
+          name: name,
+          primary: name,
+          lat: lat,
+          lon: lon,
+          is_live: true
+        }));
+      } catch(e) {}
     }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      // Check for pending requirement from landing page wizard
+      try {
+        const pending = localStorage.getItem('suggu_pending_requirement');
+        if (pending) {
+          const req = JSON.parse(pending);
+          if (req.budget) {
+            const bInput = document.querySelector('input[name="budget"]');
+            if (bInput) bInput.value = req.budget;
+          }
+          if (req.start) {
+            const dInput = document.querySelector('input[name="preferred_start_date"]');
+            if (dInput) dInput.value = req.start;
+          }
+          if (req.phone) {
+            const pInput = document.querySelector('input[name="contact_mobile"]');
+            if (pInput) pInput.value = req.phone;
+          }
+          if (req.category || req.work_type) {
+            const tInput = document.querySelector('input[name="title"]');
+            if (tInput && !tInput.value) {
+              tInput.value = (req.work_type || req.category) + ' Service Requirement';
+            }
+          }
+          if (req.latitude && req.longitude) {
+            const addrName = (req.address || 'Live Worksite').split(' [GPS:')[0];
+            selectJobLocality(addrName, req.latitude, req.longitude);
+            return;
+          }
+        }
+      } catch(e) {}
+
+      const savedLoc = localStorage.getItem('suggu_user_location');
+      const savedLat = parseFloat(localStorage.getItem('suggu_user_lat'));
+      const savedLon = parseFloat(localStorage.getItem('suggu_user_lon'));
+      if (savedLoc && !isNaN(savedLat) && !isNaN(savedLon) && !savedLoc.toLowerCase().includes('cantonment')) {
+        selectJobLocality(savedLoc, savedLat, savedLon);
+      }
+    });
 
     // HTML5 High Accuracy Device Geolocation for Job Worksite
     function detectUserJobGps() {

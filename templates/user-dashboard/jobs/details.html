@@ -89,7 +89,22 @@
                   </div>
                   <div class="info-item" style="grid-column:1/-1">
                     <div class="info-label">Location / Address</div>
-                    <div class="info-value">{{ job.address|default:"Not specified" }}</div>
+                    <div class="info-value">
+                      {{ job.address|default:"Not specified" }}
+                      {% if job.latitude and job.longitude %}
+                      <div style="margin-top:6px;">
+                        <a href="https://maps.google.com/?q={{ job.latitude }},{{ job.longitude }}" target="_blank" rel="noopener noreferrer" class="btn btn-soft btn-sm" style="display:inline-flex;align-items:center;gap:6px;color:#2563eb;text-decoration:none;font-weight:700;">
+                          <span data-icon="map"></span> Open Google Maps ↗
+                        </a>
+                      </div>
+                      {% elif job.address %}
+                      <div style="margin-top:6px;">
+                        <a href="https://maps.google.com/?q={{ job.address|urlencode }}" target="_blank" rel="noopener noreferrer" class="btn btn-soft btn-sm" style="display:inline-flex;align-items:center;gap:6px;color:#2563eb;text-decoration:none;font-weight:700;">
+                          <span data-icon="map"></span> Open Google Maps ↗
+                        </a>
+                      </div>
+                      {% endif %}
+                    </div>
                   </div>
                 </div>
 

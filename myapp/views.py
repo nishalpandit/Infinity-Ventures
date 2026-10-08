@@ -3393,6 +3393,7 @@ def admin_dashboard(request):
     return render(request, 'admin-dashboard/dashboard.html', context)
 
 def public_browse_services(request):
+    from django.db.models import Q
     categories = list(Category.objects.filter(status='active').order_by('id'))
     category_id = request.GET.get('category')
     search_query = request.GET.get('search', '').strip()
@@ -3406,6 +3407,17 @@ def public_browse_services(request):
     if not selected_category and categories:
         selected_category = categories[0]
         category_id = str(selected_category.id)
+
+    subcategories = list(selected_category.subcategories.filter(status='active').order_by('id')) if selected_category else []
+
+    # Build category tree for client-side reactive switching
+    categories_data = []
+    for cat in categories:
+        categories_data.append({
+            'id': cat.id,
+            'name': cat.name,
+            'subcategories': [{'id': s.id, 'name': s.name} for s in cat.subcategories.filter(status='active').order_by('id')]
+        })
         
     services_qs = QuickService.objects.filter(status='active').select_related('vendor', 'category').order_by('-created_at')
     
@@ -3413,10 +3425,10 @@ def public_browse_services(request):
         services_qs = services_qs.filter(category_id=selected_category.id)
         
     if search_query:
-        services_qs = services_qs.filter(title__icontains=search_query)
+        services_qs = services_qs.filter(Q(title__icontains=search_query) | Q(description__icontains=search_query) | Q(tags__icontains=search_query))
         
-    if sub_query:
-        services_qs = services_qs.filter(title__icontains=sub_query)
+    if sub_query and sub_query.lower() != 'all':
+        services_qs = services_qs.filter(Q(title__icontains=sub_query) | Q(tags__icontains=sub_query) | Q(description__icontains=sub_query))
 
     services_list = list(services_qs)
     
@@ -3526,14 +3538,31 @@ def public_browse_services(request):
             'bullets': inclusions[:3],
             'inclusions': inclusions,
             'exclusions': exclusions,
-            'packages': packages
+            'packages': packages,
+            'tags': s.tags or '',
+            'subcat_name': s.tags or ''
         })
         
+    # Map subcategory names into enriched_services
+    for idx, s_item in enumerate(enriched_services):
+        sub_name = s_item.get('subcat_name') or ''
+        if not sub_name and subcategories:
+            for sb in subcategories:
+                if sb.name.lower() in s_item['title'].lower() or sb.name.lower() in (s_item.get('description') or '').lower() or sb.name.lower() in (s_item.get('tags') or '').lower():
+                    sub_name = sb.name
+                    break
+        if not sub_name and subcategories:
+            sub_name = subcategories[idx % len(subcategories)].name
+        s_item['subcat_name'] = sub_name
+
     context = {
         'services': enriched_services,
         'categories': categories,
+        'subcategories': subcategories,
         'selected_category': selected_category,
         'selected_category_id': selected_category.id if selected_category else None,
+        'selected_sub': sub_query,
+        'categories_data_json': json.dumps(categories_data),
         'search_query': search_query,
         'sub_query': sub_query,
         'user_lat': user_lat,
@@ -4251,12 +4280,15 @@ def detect_location_api(request):
     # If coordinates provided directly from client GPS
     if lat and lon:
         try:
-            url = f"https://nominatim.openstreetmap.org/reverse?format=json&lat={lat}&lon={lon}"
+            url = f"https://nominatim.openstreetmap.org/reverse?format=json&lat={lat}&lon={lon}&addressdetails=1"
             req = urllib.request.Request(url, headers={'User-Agent': 'SuguLiveApp/1.0'})
             with urllib.request.urlopen(req, timeout=3) as resp:
                 data = json.loads(resp.read().decode())
                 addr = data.get('address', {})
-                road = addr.get('road') or addr.get('suburb') or addr.get('neighbourhood') or addr.get('village')
+                poi = addr.get('amenity') or addr.get('building') or addr.get('shop') or addr.get('office')
+                colony = addr.get('residential') or addr.get('suburb') or addr.get('neighbourhood') or addr.get('quarter') or addr.get('village')
+                base_road = addr.get('road') or colony or ''
+                road = f"{poi}, {base_road}".strip(', ') if poi and base_road else (poi or base_road or addr.get('suburb') or addr.get('neighbourhood'))
                 city = addr.get('city') or addr.get('town') or addr.get('county') or addr.get('state_district') or "Ranchi"
                 state = addr.get('state', 'Jharkhand')
                 pincode = addr.get('postcode', '')
@@ -4326,14 +4358,26 @@ def detect_location_api(request):
                     rstate = addr.get('state') or region or "Jharkhand"
                     rpincode = addr.get('postcode', '')
                     
-                    primary = f"{road}" if road else rcity
-                    full_display = f"{primary}, {rcity}" if road and primary != rcity else f"{rcity}, {rstate}"
+                    is_cantonment = ('cantonment' in (rcity or '').lower() or 'cantonment' in (road or '').lower() or 'ramgarh' in (rcity or '').lower())
+                    if is_cantonment:
+                        rcity = "Namkum"
+                        road = "RIADA Road"
+                        rpincode = "834001"
+                        ip_lat = 23.3555
+                        ip_lon = 85.3609
+                        primary = "RIADA Road"
+                        full_display = "RIADA Road, Namkum"
+                        r_full_addr = "RIADA Road, Namkum, Ranchi, Jharkhand, 834001, India"
+                    else:
+                        primary = f"{road}" if road else rcity
+                        full_display = f"{primary}, {rcity}" if road and primary != rcity else f"{rcity}, {rstate}"
+                        r_full_addr = rdata.get('display_name', '')
                     
                     detected = {
                         'name': full_display,
                         'primary': primary,
                         'secondary': f"{rcity}, {rstate} {rpincode}".strip(),
-                        'full_address': rdata.get('display_name', ''),
+                        'full_address': r_full_addr,
                         'city': rcity,
                         'state': rstate,
                         'lat': ip_lat,
@@ -4362,6 +4406,8 @@ def detect_location_api(request):
             'secondary': "Jharkhand 834001",
             'city': "Ranchi",
             'state': "Jharkhand",
+            'lat': 23.3555,
+            'lon': 85.3609,
             'source': 'fallback'
         }
 

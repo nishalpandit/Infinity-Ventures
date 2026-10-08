@@ -114,7 +114,7 @@
       `<span class="avatar vendor">${initials}</span>`;
 
     sidebarRoot.outerHTML = `<aside class="sidebar" id="sidebar" aria-label="Vendor navigation">
-      <a class="brand" href="${route('dashboard.html')}"><span class="brand-mark" style="background:transparent;box-shadow:none;padding:0;display:flex;align-items:center;justify-content:center;"><img src="/static/assets/images/logo.png" alt="Sugu" style="width:30px;height:30px;border-radius:8px;object-fit:contain;"></span><span class="brand-copy"><strong>Sugu</strong><span>Vendor Portal</span></span></a>
+      <a class="brand" href="${route('dashboard.html')}"><span class="brand-mark" style="background:transparent;box-shadow:none;padding:0;display:flex;align-items:center;justify-content:center;"><img src="/static/images/logo.png" alt="Sugu" style="height:36px;width:auto;object-fit:contain;"></span><span class="brand-copy"><strong>Sugu</strong><span>Vendor Portal</span></span></a>
       <nav class="nav-scroll"><div class="nav-label">Workspace</div>${links}<div class="nav-label">Session</div><a class="nav-link" href="${route('dashboard.html')}" data-confirm="logout" data-tooltip="Logout">${icon('logout')}<span class="nav-text">Logout</span></a></nav>
       <div class="sidebar-bottom"><div class="side-user">${avatarHtml}<span class="side-user-copy"><strong>${name}</strong><span>${type} • ${loc}</span></span></div></div>
     </aside>`;

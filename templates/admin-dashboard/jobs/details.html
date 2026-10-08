@@ -233,7 +233,22 @@
                 <div class="cust-icon"><i class="fa-solid fa-location-dot"></i></div>
                 <div>
                   <div class="cust-label">Address</div>
-                  <div class="cust-value">{{ job.address|default:"Not specified" }}</div>
+                  <div class="cust-value">
+                    {{ job.address|default:"Not specified" }}
+                    {% if job.latitude and job.longitude %}
+                    <div style="margin-top:4px;">
+                      <a href="https://maps.google.com/?q={{ job.latitude }},{{ job.longitude }}" target="_blank" rel="noopener noreferrer" style="color:var(--primary); font-size:12px; font-weight:600; text-decoration:none;">
+                        <i class="fa-solid fa-arrow-up-right-from-square"></i> Open Google Maps
+                      </a>
+                    </div>
+                    {% elif job.address %}
+                    <div style="margin-top:4px;">
+                      <a href="https://maps.google.com/?q={{ job.address|urlencode }}" target="_blank" rel="noopener noreferrer" style="color:var(--primary); font-size:12px; font-weight:600; text-decoration:none;">
+                        <i class="fa-solid fa-arrow-up-right-from-square"></i> Open Google Maps
+                      </a>
+                    </div>
+                    {% endif %}
+                  </div>
                 </div>
               </div>
             </div>

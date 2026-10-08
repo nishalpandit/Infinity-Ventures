@@ -277,12 +277,12 @@
               <!-- Provider Profile Banner -->
               <div class="provider-strip">
                 <div class="provider-avatar">
-                  {{ service.vendor.vendor_profile.company_name|default:service.vendor.username|slice:":1"|upper }}
+                  <i class="fa-solid fa-shield-halved" style="color:#10b981; font-size: 24px;"></i>
                 </div>
                 <div style="flex:1; min-width:0;">
                   <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
                     <strong style="font-size:15px; color:#0f172a;">
-                      {{ service.vendor.vendor_profile.company_name|default:service.vendor.get_full_name|default:service.vendor.username }}
+                      Sugu Verified Partner
                     </strong>
                     <span class="badge badge-info" style="font-size:10.5px; padding:3px 8px;">
                       ✓ Verified Service Partner

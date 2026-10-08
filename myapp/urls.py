@@ -203,6 +203,8 @@ urlpatterns = [
     path('api/user/jobs/<int:job_id>/bids', Api_views.get_job_bids_api),
     path('api/user/bids/action/', Api_views.handle_bid_action_api, name='handle_bid_action_api'),
     path('api/user/bids/action', Api_views.handle_bid_action_api),
+    path('api/user/jobs/<int:job_id>/complete/', Api_views.user_mark_job_complete_api, name='user_mark_job_complete_api'),
+    path('api/user/jobs/<int:job_id>/complete', Api_views.user_mark_job_complete_api),
 
 
 

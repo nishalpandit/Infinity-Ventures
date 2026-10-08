@@ -1036,10 +1036,11 @@ def super_admin_locations(request):
     except (EmptyPage, PageNotAnInteger):
         states = state_paginator.page(1)
         
+    for st in states:
+        st.state_cities = Location.objects.filter(state=st.name)
+        st.cities_count = st.state_cities.count()
+        
     context = {
-        'locations': locations,
-        'loc_page': loc_page,
-        'total_locations': loc_paginator.count,
         'states': states,
         'state_page': state_page,
         'total_states': state_paginator.count,
