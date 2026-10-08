@@ -4615,6 +4615,21 @@ def book_service_api(request):
                 'message': 'This vendor is currently offline and not accepting bookings.'
             }, status=400)
             
+        # Parse scheduled_time to 24-hour format if it contains AM/PM
+        parsed_time = None
+        if scheduled_time:
+            try:
+                from datetime import datetime
+                if 'AM' in scheduled_time.upper() or 'PM' in scheduled_time.upper():
+                    parsed_time = datetime.strptime(scheduled_time.strip(), '%I:%M %p').time()
+                else:
+                    parsed_time = datetime.strptime(scheduled_time.strip(), '%H:%M').time()
+            except ValueError:
+                return JsonResponse({
+                    'status': 'error',
+                    'message': 'Invalid scheduled_time format. Use HH:MM AM/PM or HH:MM.'
+                }, status=400)
+            
         booking = ServiceBooking.objects.create(
             customer=user,
             vendor=qs.vendor,
@@ -4622,7 +4637,7 @@ def book_service_api(request):
             package_name=package_name,
             total_amount=total_amount,
             scheduled_date=scheduled_date,
-            scheduled_time=scheduled_time if scheduled_time else None,
+            scheduled_time=parsed_time,
             service_address=service_address,
             status='pending'
         )
