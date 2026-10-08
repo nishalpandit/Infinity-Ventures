@@ -715,6 +715,9 @@ def dashboard_view(request, path=''):
             first_loc = Location.objects.filter(status='active').first()
             if first_loc: job.location = first_loc
 
+        if 'image' in request.FILES and request.FILES['image']:
+            job.image = request.FILES['image']
+
         job.save()
         return redirect('/user/jobs/index.html')
 

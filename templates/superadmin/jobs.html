@@ -28,10 +28,17 @@
         {% for job in jobs %}
         <tr>
           <td>
-            <strong>{{ job.title }}</strong>
-            <div style="font-size: 11.5px; color: var(--text-muted);">
-              {% if job.category %}<span style="color: var(--accent); font-weight: 600;">{{ job.category.name }}</span> · {% endif %}
-              {% if job.location %}{{ job.location.city }}, {{ job.location.state }}{% else %}Online / Anywhere{% endif %}
+            <div style="display:flex; align-items:center; gap:10px;">
+              {% if job.image %}
+              <a href="{{ job.image.url }}" target="_blank" title="View attached job photo"><img src="{{ job.image.url }}" alt="Job Photo" style="width:36px; height:36px; object-fit:cover; border-radius:6px; border:1px solid #cbd5e1; flex-shrink:0;"></a>
+              {% endif %}
+              <div>
+                <strong>{{ job.title }}</strong>
+                <div style="font-size: 11.5px; color: var(--text-muted);">
+                  {% if job.category %}<span style="color: var(--accent); font-weight: 600;">{{ job.category.name }}</span> · {% endif %}
+                  {% if job.location %}{{ job.location.city }}, {{ job.location.state }}{% else %}Online / Anywhere{% endif %}
+                </div>
+              </div>
             </div>
           </td>
           <td>

@@ -232,6 +232,7 @@ class Job(models.Model):
     max_bid_amount = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True, help_text="Maximum allowed bid price")
     assigned_vendor = models.ForeignKey(CustomUser, on_delete=models.SET_NULL, null=True, blank=True, related_name='assigned_jobs', help_text="Vendor assigned to this job")
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='open')
+    image = models.ImageField(upload_to='jobs/', null=True, blank=True, help_text="Job site photo or reference image")
     created_at = models.DateTimeField(default=timezone.now)
 
     def __str__(self):

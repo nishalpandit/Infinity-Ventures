@@ -213,7 +213,7 @@
       </span>
     </div>
 
-    <form method="POST" id="adminJobForm">
+    <form method="POST" id="adminJobForm" enctype="multipart/form-data">
       {% csrf_token %}
 
       <!-- 1. Customer Account Selector & Phone -->
@@ -437,6 +437,25 @@
           Description &amp; Scope of Work <span style="color:var(--text-muted); font-weight:normal;">(Optional)</span>
         </label>
         <textarea name="description" class="form-control" placeholder="Provide detailed project scope, specific requirements, or material preferences..." style="min-height: 100px;">{{ job.description|default:'' }}</textarea>
+      </div>
+
+      <!-- 8.5 Worksite Photo / Reference Image -->
+      <div class="form-group" style="margin-bottom: 24px;">
+        <label class="form-label" style="display:flex; align-items:center; gap:6px;">
+          <i class="fa-solid fa-camera" style="color:var(--accent);"></i>
+          Worksite Photo / Reference Image <span style="color:var(--text-muted); font-weight:normal;">(Optional)</span>
+        </label>
+        {% if job.image %}
+        <div style="margin-bottom: 12px; display:flex; align-items:center; gap:14px; background:#f8fafc; border:1px solid var(--border); border-radius:var(--r-md); padding:10px 14px;">
+          <a href="{{ job.image.url }}" target="_blank"><img src="{{ job.image.url }}" alt="{{ job.title }}" style="width:64px; height:64px; object-fit:cover; border-radius:8px; border:1px solid #cbd5e1;"></a>
+          <div>
+            <div style="font-weight:700; font-size:13px; color:var(--text-main);">Current Job Photo Attached</div>
+            <a href="{{ job.image.url }}" target="_blank" style="font-size:12px; color:var(--accent); text-decoration:underline;">View full image ↗</a>
+          </div>
+        </div>
+        {% endif %}
+        <input type="file" name="image" class="form-control" accept="image/*">
+        <small style="color:var(--text-muted); font-size:11.5px; display:block; margin-top:4px;">Upload site photo, damage photo, or architectural layout.</small>
       </div>
 
       <!-- 9. Submit Actions -->

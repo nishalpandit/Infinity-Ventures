@@ -3,6 +3,7 @@ import re
 import random
 import io
 import base64
+import qrcode
 from datetime import timedelta
 from decimal import Decimal
 from django.http import JsonResponse
@@ -1902,6 +1903,9 @@ def user_post_job_api(request):
             status='open',
             bids_count=0
         )
+        if 'image' in request.FILES and request.FILES['image']:
+            job.image = request.FILES['image']
+            job.save(update_fields=['image'])
 
         job_code = f"JOB-{job.id:04d}"
         response_data = {

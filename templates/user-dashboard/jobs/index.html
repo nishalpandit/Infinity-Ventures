@@ -68,8 +68,15 @@
                 <tr data-row data-status="{{ job.status }}" data-category="{{ job.category.name|default:'General' }}" data-date="{{ job.created_at|date:'Ymd' }}" data-budget="{{ job.budget|floatformat:0 }}" data-search="JOB-{{ job.id|stringformat:'04d' }} {{ job.title }} {{ job.category.name }} {{ job.location.city }}">
                   <td><strong>JOB-{{ job.id|stringformat:"04d" }}</strong></td>
                   <td>
-                    <a class="table-title" href="details.html?id={{ job.id }}">{{ job.title }}</a>
-                    <div class="table-sub">{{ job.category.name|default:"General" }}</div>
+                    <div style="display:flex; align-items:center; gap:8px;">
+                      {% if job.image %}
+                      <a href="{{ job.image.url }}" target="_blank" title="View attached job photo"><img src="{{ job.image.url }}" alt="Job Photo" style="width:34px; height:34px; object-fit:cover; border-radius:6px; border:1px solid #cbd5e1; flex-shrink:0;"></a>
+                      {% endif %}
+                      <div>
+                        <a class="table-title" href="details.html?id={{ job.id }}">{{ job.title }}</a>
+                        <div class="table-sub">{{ job.category.name|default:"General" }}</div>
+                      </div>
+                    </div>
                   </td>
                   <td>{{ job.location.city|default:"Ranchi" }}, {{ job.location.state|default:"Jharkhand" }}</td>
                   <td>₹{{ job.budget|floatformat:0 }}</td>

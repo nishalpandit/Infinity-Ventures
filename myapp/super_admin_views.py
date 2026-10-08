@@ -1335,6 +1335,9 @@ def super_admin_job_create(request):
             description=description or f"Requirement for {title}",
             required_work=[subcat_name] if subcat_name else ([title] if title else [])
         )
+        if 'image' in request.FILES and request.FILES['image']:
+            job.image = request.FILES['image']
+            job.save(update_fields=['image'])
         django_messages.success(request, f'Job "{job.title}" created successfully.')
         return redirect('super_admin_jobs')
 
@@ -1428,6 +1431,8 @@ def super_admin_job_edit(request, job_id):
             job.location = Location.objects.filter(id=loc_id).first()
 
         job.description = request.POST.get('description', job.description).strip()
+        if 'image' in request.FILES and request.FILES['image']:
+            job.image = request.FILES['image']
         job.save()
         if job.status == 'completed' and old_status != 'completed':
             settled, msg = settle_job_completion(job=job)

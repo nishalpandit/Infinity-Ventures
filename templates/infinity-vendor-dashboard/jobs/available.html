@@ -110,7 +110,14 @@
                     <h3>{{ job.title }}</h3>
                     <div class="small muted">{{ job.category.name|default:"General" }}</div>
                   </div>
-                  <span class="badge badge-{{ job.status }}">{{ job.get_status_display|default:"Open" }}</span>
+                  <div style="display:flex; align-items:center; gap:6px;">
+                    {% if job.image %}
+                    <span class="badge" style="background:#e0e7ff; color:#4338ca; border:1px solid #c7d2fe; font-size:11px; padding:3px 8px; border-radius:6px; display:inline-flex; align-items:center; gap:4px;">
+                      <i class="fa-solid fa-camera"></i> Photo
+                    </span>
+                    {% endif %}
+                    <span class="badge badge-{{ job.status }}">{{ job.get_status_display|default:"Open" }}</span>
+                  </div>
                 </div>
 
                 <div class="service-meta">

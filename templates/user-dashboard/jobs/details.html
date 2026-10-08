@@ -126,6 +126,16 @@
                 <h3 class="section-title">Additional requirements</h3>
                 <p class="muted">{{ job.additional_requirements }}</p>
                 {% endif %}
+
+                {% if job.image %}
+                <div class="divider"></div>
+                <h3 class="section-title"><i class="fa-solid fa-camera" style="color:#5b5bd6; margin-right:6px;"></i> Attached Worksite / Reference Photo</h3>
+                <div style="margin-top:12px;">
+                  <a href="{{ job.image.url }}" target="_blank" title="Click to view full image in new tab">
+                    <img src="{{ job.image.url }}" alt="{{ job.title }}" style="max-width:100%; max-height:360px; object-fit:cover; border-radius:12px; border:1px solid #e2e8f0; box-shadow:0 4px 12px rgba(0,0,0,0.06);">
+                  </a>
+                </div>
+                {% endif %}
               </div>
             </section>
 
