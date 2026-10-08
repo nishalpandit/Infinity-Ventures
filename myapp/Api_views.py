@@ -474,13 +474,7 @@ def vendor_signup_api(request):
         password = data.get('password', '')
         confirm_password = data.get('confirm_password')
 
-        categories_input = data.get('categories') or data.get('category')
-        if isinstance(categories_input, list):
-            category = ", ".join(str(c).strip() for c in categories_input if str(c).strip())
-        elif isinstance(categories_input, str) and categories_input.strip():
-            category = categories_input.strip()
-        else:
-            category = 'General Services'
+        category = (data.get('category') or 'General Services').strip()
         city = (data.get('city') or '').strip()
         state = (data.get('state') or '').strip()
         location = f"{city}, {state}" if (city and state) else (data.get('location') or city or state or 'Ranchi, Jharkhand').strip()
@@ -2707,6 +2701,36 @@ def top_professionals_api(request):
     vendors_data = []
     for vp in top_vendors:
         profile_img_url = _build_absolute_image_url(request, vp.profile_image) if vp.profile_image else ""
+        
+        # Get quick services for this vendor
+        qs_list = QuickService.objects.filter(vendor=vp.user, status='active')
+        services_data = []
+        for qs in qs_list:
+            services_data.append({
+                'id': qs.id,
+                'title': qs.title,
+                'base_price': float(qs.base_price),
+                'image': _build_absolute_image_url(request, qs.image, qs.image_url),
+            })
+            
+        # Get published reviews for this vendor
+        reviews_list = ServiceReview.objects.filter(vendor=vp.user, status='published').select_related('customer')[:5]
+        reviews_data = []
+        for r in reviews_list:
+            customer_img = ""
+            if hasattr(r.customer, 'user_profile') and r.customer.user_profile.profile_image:
+                customer_img = _build_absolute_image_url(request, r.customer.user_profile.profile_image)
+                
+            reviews_data.append({
+                'id': r.id,
+                'rating': r.rating,
+                'title': r.review_title or "",
+                'comment': r.comment,
+                'customer_name': r.customer.get_full_name() or r.customer.username,
+                'customer_image': customer_img,
+                'created_at': r.created_at.strftime("%Y-%m-%d"),
+            })
+
         vendors_data.append({
             'vendor_profile_id': vp.id,
             'user_id': vp.user.id,
@@ -2719,8 +2743,8 @@ def top_professionals_api(request):
             'profile_image': profile_img_url,
             'vendor_type': vp.vendor_type,
             'about': vp.about or "",
-            'services_count': vp.user.vendor_services.count(),
-            'reviews_count': vp.user.received_reviews.count(),
+            'services': services_data,
+            'reviews': reviews_data
         })
 
     return JsonResponse({
