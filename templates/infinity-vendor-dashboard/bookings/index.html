@@ -67,6 +67,228 @@
       border-radius: 14px;
       padding: 18px;
     }
+
+    /* Table & Alignment Modern Styling */
+    .table-wrap {
+      overflow-x: auto;
+      width: 100%;
+    }
+    .bookings-table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 920px;
+    }
+    .bookings-table thead th {
+      background: #f8fafc;
+      color: #64748b;
+      font-size: 11px;
+      font-weight: 750;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      padding: 13px 18px;
+      border-bottom: 1px solid var(--line);
+      white-space: nowrap;
+      text-align: left;
+      vertical-align: middle;
+    }
+    .bookings-table tbody td {
+      padding: 15px 18px;
+      border-bottom: 1px solid #edf0f4;
+      vertical-align: middle;
+      font-size: 13.5px;
+      color: #1e293b;
+      text-align: left;
+    }
+    .bookings-table tbody tr {
+      transition: background-color 0.15s ease;
+    }
+    .bookings-table tbody tr:hover td {
+      background-color: #f8faff;
+    }
+    .bookings-table tbody tr:last-child td {
+      border-bottom: none;
+    }
+
+    /* Column Widths & Alignments */
+    .bookings-table th.col-id,
+    .bookings-table td.col-id {
+      width: 9%;
+      text-align: left;
+      padding-left: 20px;
+    }
+    .bookings-table th.col-service,
+    .bookings-table td.col-service {
+      width: 23%;
+      text-align: left;
+    }
+    .bookings-table th.col-customer,
+    .bookings-table td.col-customer {
+      width: 22%;
+      text-align: left;
+    }
+    .bookings-table th.col-datetime,
+    .bookings-table td.col-datetime {
+      width: 16%;
+      text-align: left;
+    }
+    .bookings-table th.col-amount,
+    .bookings-table td.col-amount {
+      width: 10%;
+      text-align: left;
+    }
+    .bookings-table th.col-status,
+    .bookings-table td.col-status {
+      width: 9%;
+      text-align: center;
+    }
+    .bookings-table th.col-action,
+    .bookings-table td.col-action {
+      width: 11%;
+      text-align: right;
+      padding-right: 20px;
+    }
+
+    /* Custom Component Styling */
+    .booking-tag {
+      display: inline-block;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 12.5px;
+      font-weight: 750;
+      color: #334155;
+      background: #f1f5f9;
+      border: 1px solid #e2e8f0;
+      padding: 4px 9px;
+      border-radius: 6px;
+      letter-spacing: 0.3px;
+    }
+    .service-cell .service-title {
+      font-weight: 700;
+      color: #0f172a;
+      font-size: 13.5px;
+      line-height: 1.35;
+    }
+    .service-cell .service-pkg {
+      font-size: 11.5px;
+      color: #64748b;
+      margin-top: 3px;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .customer-cell {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .cust-avatar {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%);
+      color: #0284c7;
+      font-weight: 750;
+      font-size: 13px;
+      display: grid;
+      place-items: center;
+      flex-shrink: 0;
+      border: 1px solid #7dd3fc;
+    }
+    .cust-name {
+      font-weight: 700;
+      color: #0f172a;
+      font-size: 13.5px;
+      line-height: 1.25;
+    }
+    .cust-phone {
+      font-size: 11.5px;
+      color: #64748b;
+      margin-top: 2px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .datetime-cell .sched-date {
+      font-weight: 600;
+      color: #1e293b;
+      font-size: 13px;
+      line-height: 1.3;
+    }
+    .datetime-cell .sched-time {
+      font-size: 11.5px;
+      color: #64748b;
+      margin-top: 3px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .amount-value {
+      font-size: 14.5px;
+      font-weight: 800;
+      color: #059669;
+      letter-spacing: -0.2px;
+    }
+    .badge-pending {
+      color: #b45309;
+      background: #fef3c7;
+      border-color: #fde68a;
+    }
+    .badge-accepted {
+      color: #1d4ed8;
+      background: #dbeafe;
+      border-color: #bfdbfe;
+    }
+    .badge-completed {
+      color: #047857;
+      background: #d1fae5;
+      border-color: #a7f3d0;
+    }
+    .badge-cancelled {
+      color: #b91c1c;
+      background: #fee2e2;
+      border-color: #fecaca;
+    }
+    .btn-view-booking {
+      background: #ffffff;
+      border: 1px solid #d0d5dd;
+      color: #344054;
+      font-weight: 700;
+      border-radius: 8px;
+      padding: 6px 12px;
+      font-size: 12px;
+      transition: all 0.15s ease;
+      white-space: nowrap;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      cursor: pointer;
+    }
+    .btn-view-booking:hover {
+      border-color: #98a2b3;
+      background: #f8fafc;
+      color: #1e293b;
+    }
+    .btn-complete-bill {
+      background: #059669;
+      border: 1px solid #059669;
+      color: #ffffff;
+      font-weight: 700;
+      border-radius: 8px;
+      padding: 6px 13px;
+      font-size: 12px;
+      transition: all 0.15s ease;
+      box-shadow: 0 1px 3px rgba(5, 150, 105, 0.25);
+      white-space: nowrap;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      cursor: pointer;
+    }
+    .btn-complete-bill:hover {
+      background: #047857;
+      border-color: #047857;
+      transform: translateY(-1px);
+      box-shadow: 0 3px 8px rgba(5, 150, 105, 0.3);
+    }
   </style>
 </head>
 <body data-page="bookings" data-title="My Bookings" data-root="../">
@@ -77,7 +299,7 @@
       <main class="page">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; flex-wrap:wrap; gap:12px;">
           <div>
-            <h2 style="margin:0 0 4px; font-size:20px;">Manage Bookings</h2>
+            <h2 style="margin:0 0 4px; font-size:20px; font-weight:800; color:#0f172a;">Manage Bookings</h2>
             <p class="muted" style="margin:0; font-size:12.5px;">Manage service bookings, track customer doorstep locations, and call/chat with customers</p>
           </div>
         </div>
@@ -91,53 +313,113 @@
         {% endif %}
 
         <section class="card" data-filter-scope>
-          <div class="toolbar">
-            <div class="search-box">
-              <span data-icon="search"></span>
-              <input class="input" data-search-input placeholder="Search bookings by customer, service, address...">
+          <div class="tabs">
+            <button type="button" class="tab active" data-status="all">
+              All Bookings <span class="count">{{ my_bookings|length }}</span>
+            </button>
+            <button type="button" class="tab" data-status="pending">Pending</button>
+            <button type="button" class="tab" data-status="accepted">Accepted</button>
+            <button type="button" class="tab" data-status="completed">Completed</button>
+            <button type="button" class="tab" data-status="cancelled">Cancelled</button>
+          </div>
+          <div class="toolbar" style="display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap;">
+            <div class="search-box" style="position:relative; flex:1; max-width:420px; min-width:260px;">
+              <svg style="position:absolute; left:12px; top:50%; transform:translateY(-50%); width:16px; height:16px; color:#94a3b8; pointer-events:none;" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                <circle cx="11" cy="11" r="8"></circle>
+                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+              </svg>
+              <input class="input" data-search-input placeholder="Search bookings by customer, service, address..." style="padding-left:36px;">
+            </div>
+            <div style="display:flex; align-items:center; gap:8px;">
+              <span class="muted small" data-result-count style="font-weight:600;">{{ my_bookings|length }} booking{{ my_bookings|length|pluralize }}</span>
             </div>
           </div>
           <div class="card-body" style="padding:0;">
-            <div class="table-responsive">
-              <table class="table" style="width:100%;">
+            <div class="table-wrap">
+              <table class="data-table bookings-table">
                 <thead>
                   <tr>
-                    <th>Booking ID</th>
-                    <th>Service</th>
-                    <th>Customer</th>
-                    <th>Date & Time</th>
-                    <th>Amount</th>
-                    <th>Status</th>
-                    <th style="text-align:center;">Action</th>
+                    <th class="col-id">Booking ID</th>
+                    <th class="col-service">Service</th>
+                    <th class="col-customer">Customer</th>
+                    <th class="col-datetime">Date &amp; Time</th>
+                    <th class="col-amount">Amount</th>
+                    <th class="col-status">Status</th>
+                    <th class="col-action">Action</th>
                   </tr>
                 </thead>
                 <tbody data-rows>
                 {% for booking in my_bookings %}
-                  <tr data-row data-search="{{ booking.id }} {% if not booking.contact_locked %}{{ booking.customer.get_full_name }} {{ booking.customer.username }}{% endif %} {{ booking.quick_service.title|default:'' }}">
-                    <td><strong>#{{ booking.id }}</strong></td>
-                    <td>
-                      <strong style="color:#0f172a; font-size:13.5px;">{{ booking.quick_service.title|default:"Quick Service" }}</strong><br>
-                      <span class="tiny muted">{{ booking.package_name }}</span>
+                  <tr data-row data-status="{{ booking.status }}" data-search="{{ booking.id }} {% if not booking.contact_locked %}{{ booking.customer.get_full_name }} {{ booking.customer.username }} {{ booking.customer_phone }}{% endif %} {{ booking.quick_service.title|default:'' }} {{ booking.package_name }} {{ booking.total_amount }}">
+                    <td class="col-id">
+                      <span class="booking-tag">#{{ booking.id }}</span>
                     </td>
-                    <td>
+                    <td class="col-service">
+                      <div class="service-cell">
+                        <div class="service-title">{{ booking.quick_service.title|default:"Quick Service" }}</div>
+                        <div class="service-pkg">
+                          <span style="font-size:11px;">📦</span>
+                          <span>{{ booking.package_name }}</span>
+                        </div>
+                      </div>
+                    </td>
+                    <td class="col-customer">
                       {% if booking.contact_locked %}
-                      <strong>Customer</strong><br>
-                      <span class="tiny muted">🔒 Details shared after you accept</span>
+                      <div>
+                        <div style="font-weight:650; color:#64748b; font-size:13px;">Customer</div>
+                        <div class="small muted" style="display:inline-flex; align-items:center; gap:4px; font-size:11px; color:#94a3b8; margin-top:2px;">
+                          <span>🔒</span> <span>Details shared after accept</span>
+                        </div>
+                      </div>
                       {% else %}
-                      <strong>{{ booking.customer.get_full_name|default:booking.customer.username }}</strong><br>
-                      <span class="tiny muted">📞 {{ booking.customer_phone }}</span>
+                      <div class="customer-cell">
+                        <div class="cust-avatar">
+                          {{ booking.customer.get_full_name|default:booking.customer.username|make_list|first|upper }}
+                        </div>
+                        <div>
+                          <div class="cust-name">{{ booking.customer.get_full_name|default:booking.customer.username }}</div>
+                          <div class="cust-phone">
+                            <span style="font-size:11px; color:#0f8a7c;">📞</span>
+                            <span>{{ booking.customer_phone }}</span>
+                          </div>
+                        </div>
+                      </div>
                       {% endif %}
                     </td>
-                    <td>
-                      {{ booking.scheduled_date|date:"d M Y" }}<br>
-                      <span class="tiny muted">{{ booking.scheduled_time|default:"Flexible time slot" }}</span>
+                    <td class="col-datetime">
+                      <div class="datetime-cell">
+                        <div class="sched-date">{{ booking.scheduled_date|date:"d M Y" }}</div>
+                        <div class="sched-time">
+                          <span style="font-size:11px;">🕒</span>
+                          <span>{{ booking.scheduled_time|default:"Flexible time slot" }}</span>
+                        </div>
+                      </div>
                     </td>
-                    <td><strong style="color:#059669; font-size:14.5px;">₹{{ booking.total_amount }}</strong></td>
-                    <td><span class="badge badge-{{ booking.status }}">{{ booking.get_status_display }}</span></td>
-                    <td style="text-align:center;">
-                      <div style="display:flex; gap:6px; justify-content:center; align-items:center; flex-wrap:wrap;">
+                    <td class="col-amount">
+                      <div class="amount-value">₹{{ booking.total_amount }}</div>
+                    </td>
+                    <td class="col-status">
+                      <div style="display:flex; justify-content:center;">
+                        <span class="badge badge-{{ booking.status }}">{{ booking.get_status_display }}</span>
+                      </div>
+                    </td>
+                    <td class="col-action">
+                      <div class="cell-actions" style="display:flex; gap:6px; justify-content:flex-end; align-items:center; flex-wrap:nowrap;">
+                        {% if booking.status == 'pending' %}
+                        <form method="POST" action="{% url 'dashboard' 'vendor/bookings/index.html' %}" style="display:inline-flex; gap:6px; margin:0;">
+                          {% csrf_token %}
+                          <input type="hidden" name="booking_id" value="{{ booking.id }}">
+                          <button type="submit" name="action" value="accept" class="btn btn-primary btn-sm" style="padding:5px 11px; font-weight:700; border-radius:7px;">Accept</button>
+                          <button type="submit" name="action" value="cancel" class="btn btn-secondary btn-sm" style="color:#dc2626; border-color:#fca5a5; background:#fff; padding:5px 9px; font-weight:700; border-radius:7px;">Reject</button>
+                        </form>
+                        {% elif booking.status == 'accepted' %}
+                        <button type="button" class="btn-complete-bill" onclick="openCompleteBookingModal('{{ booking.id }}', '{{ booking.total_amount }}', '{{ booking.quick_service.title|default:'Quick Service'|escapejs }}', '{{ booking.customer.get_full_name|default:booking.customer.username|escapejs }}')">
+                          <span>✓</span> Complete &amp; Bill
+                        </button>
+                        {% endif %}
+
                         <!-- View Button -->
-                        <button type="button" class="btn btn-secondary btn-sm" onclick="openVendorBookingModal(this)"
+                        <button type="button" class="btn-view-booking" onclick="openVendorBookingModal(this)"
                           data-id="{{ booking.id }}"
                           data-service="{{ booking.quick_service.title|default:'Quick Service' }}"
                           data-package="{{ booking.package_name }}"
@@ -154,32 +436,18 @@
                           data-clean-address="{% if not booking.contact_locked %}{{ booking.clean_address }}{% endif %}"
                           data-lat="{% if not booking.contact_locked %}{{ booking.latitude|default:'' }}{% endif %}"
                           data-lng="{% if not booking.contact_locked %}{{ booking.longitude|default:'' }}{% endif %}"
-                          data-map-url="{% if not booking.contact_locked %}{{ booking.map_url }}{% endif %}"
-                          style="font-weight:700; padding:5px 10px;">
-                          👁️ View
+                          data-map-url="{% if not booking.contact_locked %}{{ booking.map_url }}{% endif %}">
+                          <span>👁️</span> View
                         </button>
-
-                        {% if booking.status == 'pending' %}
-                        <form method="POST" action="{% url 'dashboard' 'vendor/bookings/index.html' %}" style="display:inline;">
-                          {% csrf_token %}
-                          <input type="hidden" name="booking_id" value="{{ booking.id }}">
-                          <button type="submit" name="action" value="accept" class="btn btn-primary btn-sm" style="padding:5px 10px;">Accept</button>
-                          <button type="submit" name="action" value="cancel" class="btn btn-secondary btn-sm" style="color:red; border-color:red; padding:5px 8px;">Reject</button>
-                        </form>
-                        {% elif booking.status == 'accepted' %}
-                        <button type="button" class="btn btn-primary btn-sm" onclick="openCompleteBookingModal('{{ booking.id }}', '{{ booking.total_amount }}', '{{ booking.quick_service.title|default:'Quick Service'|escapejs }}', '{{ booking.customer.get_full_name|default:booking.customer.username|escapejs }}')" style="padding:5px 10px; background:#059669; border-color:#059669; font-weight:700;">
-                          ✓ Complete & Bill
-                        </button>
-                        {% endif %}
                       </div>
                     </td>
                   </tr>
                 {% empty %}
                   <tr>
                     <td colspan="7" style="text-align: center; padding: 48px 20px; color: var(--text-muted);">
-                      <div style="font-size:32px; margin-bottom:8px;">📋</div>
-                      <strong style="font-size:15px; color:#1e293b; display:block;">No bookings at the moment</strong>
-                      <p style="font-size:13px; margin:4px 0 0;">When customers book your services, appointments will appear here.</p>
+                      <div style="font-size:36px; margin-bottom:10px;">📋</div>
+                      <strong style="font-size:15px; color:#1e293b; display:block; margin-bottom:4px;">No bookings at the moment</strong>
+                      <p style="font-size:13px; color:#64748b; margin:0;">When customers book your services, appointments will appear here.</p>
                     </td>
                   </tr>
                 {% endfor %}

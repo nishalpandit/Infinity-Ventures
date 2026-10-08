@@ -170,24 +170,9 @@
           <h1 style="margin:4px 0 6px; font-size:24px; font-weight:800; color:var(--ink);">{{ vendor_name }}</h1>
           <p class="muted" style="margin:0; font-size:13px;">Manage your account credentials, public vendor profile, security settings, and notifications.</p>
         </div>
-        <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
-          {% if is_kyc_verified %}
-            <span class="badge badge-kyc-approved" style="padding:6px 12px; font-size:11px; font-weight:700;">
-              <span data-icon="award"></span> Verified Pro Vendor
-            </span>
-          {% elif kyc and kyc.status == 'pending' %}
-            <span class="badge badge-kyc-pending" style="padding:6px 12px; font-size:11px; font-weight:700;">
-              <span data-icon="clock"></span> KYC Under Review
-            </span>
-          {% elif kyc and kyc.status == 'rejected' %}
-            <span class="badge badge-kyc-rejected" style="padding:6px 12px; font-size:11px; font-weight:700;">
-              <span data-icon="alert"></span> KYC Needs Attention
-            </span>
-          {% else %}
-            <span class="badge badge-kyc-unverified" style="padding:6px 12px; font-size:11px; font-weight:700;">
-              <span data-icon="shield"></span> Unverified
-            </span>
-          {% endif %}
+          <span class="badge badge-kyc-approved" style="padding:6px 12px; font-size:11px; font-weight:700;">
+            <span data-icon="award"></span> Verified Pro Vendor
+          </span>
 
           <span class="meta-pill">
             <span data-icon="user"></span> ID: {{ vendor_profile.vendor_code|default:"Not Assigned" }}
@@ -218,9 +203,6 @@
             </button>
             <button type="button" class="settings-tab-btn" data-tab="security" onclick="switchSettingsTab('security')">
               <span data-icon="shield"></span> Security &amp; Password
-            </button>
-            <button type="button" class="settings-tab-btn" data-tab="kyc" onclick="switchSettingsTab('kyc')">
-              <span data-icon="award"></span> KYC Verification
             </button>
             <button type="button" class="settings-tab-btn" data-tab="notifications" onclick="switchSettingsTab('notifications')">
               <span data-icon="bell"></span> Notifications
@@ -505,89 +487,7 @@
             </div>
           </div>
 
-          <!-- TAB PANEL 4: KYC VERIFICATION -->
-          <div class="settings-tab-panel" id="panel-kyc">
-            <section class="card">
-              <div class="card-head">
-                <div>
-                  <h2>Verification &amp; Compliance Status (KYC)</h2>
-                  <p>Identity proof and business registration verification with Sugu Platform.</p>
-                </div>
-                <a href="/vendor/kyc/index.html" class="btn btn-primary btn-sm">
-                  <span data-icon="award"></span> Open Full KYC Portal
-                </a>
-              </div>
-              <div class="card-body">
-                <div class="setting-row">
-                  <div>
-                    <h4>Overall KYC Status</h4>
-                    <p>
-                      {% if is_kyc_verified %}
-                        All government identity and business documentation verified &amp; approved.
-                      {% elif kyc and kyc.status == 'pending' %}
-                        Documents submitted on {{ kyc.submitted_at|date:"d M Y" }}. Verification is currently under review by Sugu Admins.
-                      {% elif kyc and kyc.status == 'rejected' %}
-                        Previous verification was rejected: {{ kyc.admin_notes|default:"Please upload clear, valid government documents." }}
-                      {% else %}
-                        No verification documents submitted yet. Get verified to unlock higher customer trust and more leads.
-                      {% endif %}
-                    </p>
-                  </div>
-                  <div>
-                    {% if is_kyc_verified %}
-                      <span class="badge badge-kyc-approved" style="padding:6px 12px; font-weight:700;"><span data-icon="award"></span> Verified Pro Vendor</span>
-                    {% elif kyc and kyc.status == 'pending' %}
-                      <span class="badge badge-kyc-pending" style="padding:6px 12px; font-weight:700;"><span data-icon="clock"></span> Under Review</span>
-                    {% elif kyc and kyc.status == 'rejected' %}
-                      <span class="badge badge-kyc-rejected" style="padding:6px 12px; font-weight:700;"><span data-icon="alert"></span> Action Required</span>
-                    {% else %}
-                      <a href="/vendor/kyc/index.html" class="btn btn-secondary btn-sm">Submit Documents</a>
-                    {% endif %}
-                  </div>
-                </div>
-
-                <div class="setting-row">
-                  <div>
-                    <h4>Vendor Registration Code</h4>
-                    <p>Unique platform identifier: <strong>{{ vendor_profile.vendor_code|default:"VEN001" }}</strong></p>
-                  </div>
-                  <span class="badge badge-purple">Registered {{ vendor_profile.registered_date|date:"M Y" }}</span>
-                </div>
-
-                <div class="setting-row">
-                  <div>
-                    <h4>Government Identity Document</h4>
-                    <p>ID Type: {{ kyc.id_type|default:"Aadhaar Card"|title }} · Number: {{ kyc.id_number|default:"Not submitted" }}</p>
-                  </div>
-                  {% if kyc.id_document_front %}
-                    <span class="badge badge-success">Document Uploaded</span>
-                  {% else %}
-                    <span class="badge badge-pending">Pending Upload</span>
-                  {% endif %}
-                </div>
-
-                <div class="setting-row">
-                  <div>
-                    <h4>Trade License / GST Registration</h4>
-                    <p>Business legitimacy proof for commercial operations.</p>
-                  </div>
-                  {% if kyc.business_license or kyc.gst_certificate %}
-                    <span class="badge badge-success">Uploaded</span>
-                  {% else %}
-                    <span class="badge badge-neutral">Optional</span>
-                  {% endif %}
-                </div>
-              </div>
-
-              <div class="form-actions" style="margin-top:20px;">
-                <a href="/vendor/kyc/index.html" class="btn btn-primary">
-                  <span data-icon="award"></span> Go To KYC Document Manager
-                </a>
-              </div>
-            </section>
-          </div>
-
-          <!-- TAB PANEL 5: NOTIFICATION PREFERENCES -->
+          <!-- TAB PANEL 4: NOTIFICATION PREFERENCES -->
           <div class="settings-tab-panel" id="panel-notifications">
             <form method="POST" action="/vendor/settings/index.html">
               {% csrf_token %}
@@ -654,7 +554,7 @@
 <!-- Tab Switching & Interactive Scripts -->
 <script>
   function switchSettingsTab(tabName, updateHash = true) {
-    const validTabs = ['account', 'profile', 'security', 'kyc', 'notifications'];
+    const validTabs = ['account', 'profile', 'security', 'notifications'];
     if (!validTabs.includes(tabName)) tabName = 'account';
 
     // Hide all tab panels
@@ -692,7 +592,7 @@
     let initialTab = 'account';
     if (window.location.hash) {
       const hashTab = window.location.hash.replace('#', '').toLowerCase();
-      if (['account', 'profile', 'security', 'kyc', 'notifications'].includes(hashTab)) {
+      if (['account', 'profile', 'security', 'notifications'].includes(hashTab)) {
         initialTab = hashTab;
       }
     }
@@ -702,7 +602,7 @@
     window.addEventListener('hashchange', function() {
       if (window.location.hash) {
         const hashTab = window.location.hash.replace('#', '').toLowerCase();
-        if (['account', 'profile', 'security', 'kyc', 'notifications'].includes(hashTab)) {
+        if (['account', 'profile', 'security', 'notifications'].includes(hashTab)) {
           switchSettingsTab(hashTab, false);
         }
       }

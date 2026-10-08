@@ -9,6 +9,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
   <style>
     :root {
       --indigo: #4F46E5;
@@ -308,6 +309,288 @@
       font-size: 12px;
     }
 
+    /* Multi-select Category Component */
+    .category-multiselect-container {
+      position: relative;
+      width: 100%;
+    }
+    .category-select-trigger {
+      width: 100%;
+      min-height: 46px;
+      background: var(--bg);
+      border: 1px solid var(--line);
+      color: var(--ink);
+      padding: 10px 42px 10px 42px;
+      border-radius: var(--radius-md);
+      font-family: inherit;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      transition: all 0.15s ease;
+      user-select: none;
+      position: relative;
+    }
+    .category-select-trigger:hover {
+      border-color: #D1D5DB;
+      background: #FFFFFF;
+    }
+    .category-select-trigger.active {
+      border-color: var(--indigo);
+      background: #FFFFFF;
+      box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.12);
+    }
+    .category-select-trigger.has-error {
+      border-color: var(--rose) !important;
+      box-shadow: 0 0 0 4px rgba(225, 29, 72, 0.12) !important;
+    }
+    .cat-trigger-content {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      overflow: hidden;
+      flex: 1;
+    }
+    .cat-trigger-text {
+      color: #9CA3AF;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      font-size: 14px;
+    }
+    .cat-trigger-text.selected {
+      color: var(--navy);
+      font-weight: 600;
+    }
+    .cat-badge-count {
+      display: inline-flex;
+      align-items: center;
+      background: var(--indigo-light);
+      color: var(--indigo);
+      border: 1px solid var(--indigo-border);
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+    .cat-chevron {
+      position: absolute;
+      right: 14px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: #9CA3AF;
+      font-size: 12px;
+      transition: transform 0.2s ease, color 0.15s ease;
+      pointer-events: none;
+    }
+    .category-select-trigger.active .cat-chevron {
+      transform: translateY(-50%) rotate(180deg);
+      color: var(--indigo);
+    }
+    .category-dropdown-panel {
+      position: absolute;
+      top: calc(100% + 6px);
+      left: 0;
+      right: 0;
+      background: #FFFFFF;
+      border: 1px solid var(--line);
+      border-radius: var(--radius-md);
+      box-shadow: 0 16px 36px -6px rgba(15, 23, 42, 0.18), 0 4px 12px rgba(15, 23, 42, 0.06);
+      z-index: 1050;
+      display: none;
+      overflow: hidden;
+      animation: catDropdownFade 0.18s ease-out;
+    }
+    .category-dropdown-panel.show {
+      display: block;
+    }
+    @keyframes catDropdownFade {
+      from { opacity: 0; transform: translateY(-6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .cat-dropdown-header {
+      padding: 10px 12px;
+      background: #F8FAFC;
+      border-bottom: 1px solid var(--line);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .cat-search-wrap {
+      position: relative;
+      flex: 1;
+    }
+    .cat-search-input {
+      width: 100%;
+      padding: 8px 10px 8px 32px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      font-size: 13px;
+      outline: none;
+      background: #FFFFFF;
+      color: var(--ink);
+      font-family: inherit;
+      transition: border-color 0.15s;
+    }
+    .cat-search-input:focus {
+      border-color: var(--indigo);
+      box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.1);
+    }
+    .cat-search-icon {
+      position: absolute;
+      left: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 12px;
+      color: #94A3B8;
+      pointer-events: none;
+    }
+    .cat-quick-actions {
+      display: flex;
+      gap: 4px;
+    }
+    .cat-action-btn {
+      background: #EEF2FF;
+      border: 1px solid var(--indigo-border);
+      color: var(--indigo);
+      font-size: 11.5px;
+      font-weight: 700;
+      cursor: pointer;
+      padding: 5px 9px;
+      border-radius: 6px;
+      transition: all 0.15s ease;
+      font-family: inherit;
+    }
+    .cat-action-btn:hover {
+      background: var(--indigo);
+      color: #FFFFFF;
+      border-color: var(--indigo);
+    }
+    .cat-options-list {
+      max-height: 250px;
+      overflow-y: auto;
+      padding: 6px;
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+    .cat-option-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 9px 12px;
+      border-radius: 8px;
+      cursor: pointer;
+      user-select: none;
+      transition: all 0.15s ease;
+    }
+    .cat-option-item:hover {
+      background: #F1F5F9;
+    }
+    .cat-option-item.selected {
+      background: var(--indigo-light);
+    }
+    .cat-checkbox {
+      width: 18px;
+      height: 18px;
+      border-radius: 5px;
+      border: 1.5px solid #CBD5E1;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      color: #FFFFFF;
+      font-size: 11px;
+      transition: all 0.15s ease;
+      background: #FFFFFF;
+      flex-shrink: 0;
+    }
+    .cat-checkbox i {
+      opacity: 0;
+      transform: scale(0.6);
+      transition: all 0.15s ease;
+    }
+    .cat-option-item.selected .cat-checkbox {
+      background: var(--indigo);
+      border-color: var(--indigo);
+    }
+    .cat-option-item.selected .cat-checkbox i {
+      opacity: 1;
+      transform: scale(1);
+    }
+    .cat-option-icon {
+      width: 30px;
+      height: 30px;
+      border-radius: 7px;
+      background: #F1F5F9;
+      color: var(--muted);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      flex-shrink: 0;
+      transition: all 0.15s ease;
+    }
+    .cat-option-item.selected .cat-option-icon {
+      background: #E0E7FF;
+      color: var(--indigo);
+    }
+    .cat-option-label {
+      font-size: 13.5px;
+      font-weight: 600;
+      color: var(--navy);
+      flex: 1;
+    }
+    .cat-chips-container {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 8px;
+      min-height: 0;
+    }
+    .cat-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: #EEF2FF;
+      border: 1px solid #C7D2FE;
+      color: var(--indigo-dark);
+      padding: 4px 10px;
+      border-radius: 16px;
+      font-size: 12px;
+      font-weight: 600;
+      box-shadow: 0 1px 2px rgba(79, 70, 229, 0.08);
+      animation: catChipPop 0.18s ease-out;
+    }
+    @keyframes catChipPop {
+      0% { transform: scale(0.85); opacity: 0; }
+      100% { transform: scale(1); opacity: 1; }
+    }
+    .cat-chip-icon {
+      font-size: 12px;
+      color: var(--indigo);
+    }
+    .cat-chip-remove {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: rgba(79, 70, 229, 0.12);
+      color: var(--indigo-dark);
+      cursor: pointer;
+      font-size: 10px;
+      transition: all 0.15s ease;
+      margin-left: 2px;
+    }
+    .cat-chip-remove:hover {
+      background: var(--rose);
+      color: #FFFFFF;
+    }
+
     /* File upload */
     input[type="file"].form-control {
       padding: 8px 12px 8px 42px;
@@ -509,17 +792,53 @@
         </div>
 
         <div class="form-group">
-          <label for="category">Main Service Category <em>*</em></label>
-          <div class="input-wrap">
-            <select id="category" name="category" class="form-control" required>
-              <option value="" disabled selected>Select a category</option>
-              {% for cat in categories %}
-              <option value="{{ cat.name }}" {% if request.POST.category == cat.name %}selected{% endif %}>{{ cat.name }}</option>
-              {% endfor %}
-              <option value="Other" {% if request.POST.category == 'Other' %}selected{% endif %}>Other / General Services</option>
-            </select>
-            <i class="fa-solid fa-tags icon-left"></i>
-            <i class="fa-solid fa-chevron-down icon-chevron"></i>
+          <label for="categoryTrigger">Main Service Category <em>*</em> <span style="font-size:12px; font-weight:500; color:var(--subtle); margin-left:6px;">(Multi-select)</span></label>
+          <div class="category-multiselect-container" id="categoryMultiSelect">
+            <div class="category-select-trigger" id="categoryTrigger" tabindex="0" role="button" aria-haspopup="listbox" aria-expanded="false">
+              <i class="fa-solid fa-tags icon-left"></i>
+              <div class="cat-trigger-content">
+                <span class="cat-trigger-text" id="catTriggerText">Select service categories...</span>
+              </div>
+              <i class="fa-solid fa-chevron-down cat-chevron"></i>
+            </div>
+
+            <!-- Dropdown Panel -->
+            <div class="category-dropdown-panel" id="categoryDropdownPanel">
+              <div class="cat-dropdown-header">
+                <div class="cat-search-wrap">
+                  <i class="fa-solid fa-magnifying-glass cat-search-icon"></i>
+                  <input type="text" class="cat-search-input" id="catSearchInput" placeholder="Search categories..." autocomplete="off">
+                </div>
+                <div class="cat-quick-actions">
+                  <button type="button" class="cat-action-btn" id="btnSelectAllCats" title="Select all visible">Select All</button>
+                  <button type="button" class="cat-action-btn" id="btnClearCats" title="Clear selection">Clear</button>
+                </div>
+              </div>
+              <div class="cat-options-list" id="catOptionsList" role="listbox">
+                {% for cat in categories %}
+                <div class="cat-option-item" data-value="{{ cat.name }}" role="option">
+                  <div class="cat-checkbox"><i class="fa-solid fa-check"></i></div>
+                  <div class="cat-option-icon"><i class="bi {{ cat.icon_class }}"></i></div>
+                  <span class="cat-option-label">{{ cat.name }}</span>
+                </div>
+                {% endfor %}
+                <div class="cat-option-item" data-value="Other" role="option">
+                  <div class="cat-checkbox"><i class="fa-solid fa-check"></i></div>
+                  <div class="cat-option-icon"><i class="fa-solid fa-screwdriver-wrench"></i></div>
+                  <span class="cat-option-label">Other / General Services</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Hidden inputs container for POST -->
+            <div id="hiddenCategoriesInputs"></div>
+            <input type="hidden" id="category" name="category" value="">
+
+            <!-- Selected Category Chips Display -->
+            <div class="cat-chips-container" id="catChipsContainer"></div>
+            <div id="categoryErrorMsg" style="display:none; color:var(--rose); font-size:12px; font-weight:600; margin-top:6px;">
+              <i class="fa-solid fa-circle-exclamation"></i> Please select at least one main service category.
+            </div>
           </div>
         </div>
 
@@ -706,6 +1025,225 @@
         }
       }
     });
+
+    // Multi-Select Category Logic
+    (function() {
+      const categoryTrigger = document.getElementById('categoryTrigger');
+      const categoryDropdownPanel = document.getElementById('categoryDropdownPanel');
+      const catSearchInput = document.getElementById('catSearchInput');
+      const catOptionsList = document.getElementById('catOptionsList');
+      const catChipsContainer = document.getElementById('catChipsContainer');
+      const catTriggerText = document.getElementById('catTriggerText');
+      const hiddenCategoriesInputs = document.getElementById('hiddenCategoriesInputs');
+      const primaryCategoryInput = document.getElementById('category');
+      const categoryErrorMsg = document.getElementById('categoryErrorMsg');
+      const btnSelectAllCats = document.getElementById('btnSelectAllCats');
+      const btnClearCats = document.getElementById('btnClearCats');
+
+      if (!categoryTrigger || !categoryDropdownPanel) return;
+
+      const selectedCategories = new Set();
+
+      // Pre-populate if previous selected categories exist
+      const initialCategories = {{ selected_categories_json|default:'[]'|safe }};
+      if (Array.isArray(initialCategories) && initialCategories.length > 0) {
+        initialCategories.forEach(c => { if (c) selectedCategories.add(c.trim()); });
+      } else {
+        const prevSingleCat = "{{ request.POST.category|default:'' }}";
+        if (prevSingleCat) {
+          prevSingleCat.split(',').forEach(c => {
+            if (c.trim()) selectedCategories.add(c.trim());
+          });
+        }
+      }
+
+      function syncCategoryUI() {
+        // Update option items selected state
+        const items = catOptionsList.querySelectorAll('.cat-option-item');
+        items.forEach(item => {
+          const val = item.getAttribute('data-value');
+          if (selectedCategories.has(val)) {
+            item.classList.add('selected');
+            item.setAttribute('aria-selected', 'true');
+          } else {
+            item.classList.remove('selected');
+            item.setAttribute('aria-selected', 'false');
+          }
+        });
+
+        // Update chips and hidden inputs
+        catChipsContainer.innerHTML = '';
+        hiddenCategoriesInputs.innerHTML = '';
+        
+        const selectedArray = Array.from(selectedCategories);
+
+        selectedArray.forEach(catName => {
+          // Hidden input for POST
+          const hInput = document.createElement('input');
+          hInput.type = 'hidden';
+          hInput.name = 'categories';
+          hInput.value = catName;
+          hiddenCategoriesInputs.appendChild(hInput);
+
+          // Interactive Chip
+          const chip = document.createElement('div');
+          chip.className = 'cat-chip';
+          chip.innerHTML = `
+            <span>${catName}</span>
+            <span class="cat-chip-remove" title="Remove ${catName}" data-remove="${catName}">
+              <i class="fa-solid fa-xmark"></i>
+            </span>
+          `;
+          catChipsContainer.appendChild(chip);
+        });
+
+        // Primary input with comma-separated values
+        primaryCategoryInput.value = selectedArray.join(', ');
+
+        // Update Trigger text
+        if (selectedArray.length === 0) {
+          catTriggerText.className = 'cat-trigger-text';
+          catTriggerText.textContent = 'Select service categories...';
+        } else if (selectedArray.length === 1) {
+          catTriggerText.className = 'cat-trigger-text selected';
+          catTriggerText.innerHTML = `<span>${selectedArray[0]}</span> <span class="cat-badge-count">1 category</span>`;
+        } else {
+          catTriggerText.className = 'cat-trigger-text selected';
+          catTriggerText.innerHTML = `<span>${selectedArray[0]} +${selectedArray.length - 1} more</span> <span class="cat-badge-count">${selectedArray.length} categories</span>`;
+        }
+
+        if (selectedArray.length > 0) {
+          categoryTrigger.classList.remove('has-error');
+          if (categoryErrorMsg) categoryErrorMsg.style.display = 'none';
+        }
+      }
+
+      function openDropdown() {
+        categoryDropdownPanel.classList.add('show');
+        categoryTrigger.classList.add('active');
+        categoryTrigger.setAttribute('aria-expanded', 'true');
+        setTimeout(() => catSearchInput && catSearchInput.focus(), 50);
+      }
+
+      function closeDropdown() {
+        categoryDropdownPanel.classList.remove('show');
+        categoryTrigger.classList.remove('active');
+        categoryTrigger.setAttribute('aria-expanded', 'false');
+        if (catSearchInput) {
+          catSearchInput.value = '';
+          filterCategoryOptions('');
+        }
+      }
+
+      // Toggle dropdown on trigger click or enter/space key
+      categoryTrigger.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const isOpen = categoryDropdownPanel.classList.contains('show');
+        if (isOpen) {
+          closeDropdown();
+        } else {
+          openDropdown();
+        }
+      });
+
+      categoryTrigger.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          categoryTrigger.click();
+        } else if (e.key === 'Escape') {
+          closeDropdown();
+        }
+      });
+
+      // Click outside to close
+      document.addEventListener('click', (e) => {
+        if (!categoryTrigger.contains(e.target) && !categoryDropdownPanel.contains(e.target)) {
+          closeDropdown();
+        }
+      });
+
+      // Option item click
+      catOptionsList.addEventListener('click', (e) => {
+        const item = e.target.closest('.cat-option-item');
+        if (!item) return;
+        const val = item.getAttribute('data-value');
+        if (selectedCategories.has(val)) {
+          selectedCategories.delete(val);
+        } else {
+          selectedCategories.add(val);
+        }
+        syncCategoryUI();
+      });
+
+      // Remove chip click
+      catChipsContainer.addEventListener('click', (e) => {
+        const removeBtn = e.target.closest('.cat-chip-remove');
+        if (!removeBtn) return;
+        const val = removeBtn.getAttribute('data-remove');
+        if (val && selectedCategories.has(val)) {
+          selectedCategories.delete(val);
+          syncCategoryUI();
+        }
+      });
+
+      // Filter categories by search
+      function filterCategoryOptions(query) {
+        const q = query.toLowerCase().trim();
+        const items = catOptionsList.querySelectorAll('.cat-option-item');
+        items.forEach(item => {
+          const text = item.getAttribute('data-value').toLowerCase();
+          if (!q || text.includes(q)) {
+            item.style.display = 'flex';
+          } else {
+            item.style.display = 'none';
+          }
+        });
+      }
+
+      if (catSearchInput) {
+        catSearchInput.addEventListener('input', (e) => {
+          filterCategoryOptions(e.target.value);
+        });
+      }
+
+      // Quick Actions
+      if (btnSelectAllCats) {
+        btnSelectAllCats.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const items = catOptionsList.querySelectorAll('.cat-option-item');
+          items.forEach(item => {
+            if (item.style.display !== 'none') {
+              selectedCategories.add(item.getAttribute('data-value'));
+            }
+          });
+          syncCategoryUI();
+        });
+      }
+
+      if (btnClearCats) {
+        btnClearCats.addEventListener('click', (e) => {
+          e.stopPropagation();
+          selectedCategories.clear();
+          syncCategoryUI();
+        });
+      }
+
+      // Form validation on submit
+      const vendorForm = categoryTrigger.closest('form');
+      if (vendorForm) {
+        vendorForm.addEventListener('submit', (e) => {
+          if (selectedCategories.size === 0) {
+            e.preventDefault();
+            categoryTrigger.classList.add('has-error');
+            if (categoryErrorMsg) categoryErrorMsg.style.display = 'block';
+            categoryTrigger.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
+        });
+      }
+
+      // Initialize UI on load
+      syncCategoryUI();
+    })();
   </script>
 
   <footer style="width:100%; margin-top:40px; padding:16px 24px; display:flex; justify-content:flex-end; align-items:center; font-size:12px; color:#64748b; border-top:1px solid #e2e8f0; background:#fff;">

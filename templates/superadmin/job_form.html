@@ -1,6 +1,8 @@
 {% extends 'superadmin/base.html' %}
+{% load static %}
+
 {% block title %}{% if mode == 'create' %}Create Job{% else %}Edit Job{% endif %}{% endblock %}
-{% block header_title %}{% if mode == 'create' %}Create Job{% else %}Edit Job{% endif %}{% endblock %}
+{% block header_title %}{% if mode == 'create' %}Create Job Requirement{% else %}Edit Job: {{ job.title }}{% endif %}{% endblock %}
 
 {% block header_actions %}
 <a href="{% url 'super_admin_jobs' %}" class="btn btn-outline btn-sm">
@@ -10,123 +12,653 @@
 {% endblock %}
 
 {% block content %}
-<div class="card form-card">
-  <h3 style="font-size: 20px; font-weight: 700; margin-bottom: 24px;">
-    {% if mode == 'create' %}Post New Project / Job{% else %}Edit: {{ job.title }}{% endif %}
-  </h3>
-  
-  <form method="POST">
-    {% csrf_token %}
-    
-    {% if mode == 'create' %}
-    <div class="form-row">
-      <div class="form-group">
-        <label>Customer Account</label>
-        <select name="user" class="form-control" required>
-          <option value="">-- Select Customer --</option>
-          {% for u in users %}
-          <option value="{{ u.id }}">{{ u.username }} ({{ u.get_full_name|default:u.email }})</option>
-          {% endfor %}
-        </select>
-      </div>
-      <div class="form-group">
-        <label>Job Location</label>
-        <select name="location" class="form-control">
-          <option value="">-- Select Location --</option>
-          {% for loc in locations %}
-          <option value="{{ loc.id }}">{{ loc.city }}, {{ loc.state }}</option>
-          {% endfor %}
-        </select>
-      </div>
-    </div>
-    {% endif %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
 
-    <div class="form-group">
-      <label>Job Title</label>
-      <input type="text" name="title" class="form-control" value="{{ job.title|default:'' }}" placeholder="e.g. Complete 3BHK Home Renovation" required>
-    </div>
-    
-    <div class="form-row">
-      <div class="form-group">
-        <label>Category</label>
-        <select name="category" class="form-control">
-          <option value="">-- None --</option>
-          {% for cat in categories %}
-          <option value="{{ cat.id }}" {% if job.category_id == cat.id %}selected{% endif %}>{{ cat.name }}</option>
-          {% endfor %}
-        </select>
+<style>
+  .job-create-wrap {
+    max-width: 1080px;
+    margin: 0 auto;
+  }
+
+  /* Category & Subcategory Card Grid */
+  .cat-card-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(135px, 1fr));
+    gap: 12px;
+  }
+  .cat-card {
+    border: 1.5px solid var(--border);
+    border-radius: var(--r-sm);
+    padding: 16px 12px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    background: #ffffff;
+    user-select: none;
+    position: relative;
+  }
+  .cat-card:hover {
+    border-color: var(--accent);
+    background: var(--bg-surface-hover);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-sm);
+  }
+  .cat-card input[type="radio"] {
+    display: none;
+  }
+  .cat-card.selected,
+  .cat-card:has(input[type="radio"]:checked) {
+    border-color: var(--accent);
+    background: rgba(79, 70, 229, 0.06);
+    box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.16);
+  }
+  .cat-card .card-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+  }
+  .cat-card .card-content i {
+    font-size: 28px;
+    color: var(--text-muted);
+    transition: color 0.2s, transform 0.2s;
+  }
+  .cat-card:hover .card-content i {
+    color: var(--accent);
+    transform: scale(1.08);
+  }
+  .cat-card.selected .card-content i,
+  .cat-card:has(input[type="radio"]:checked) .card-content i {
+    color: var(--accent);
+    transform: scale(1.1);
+  }
+  .cat-card .cat-title {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-main);
+    line-height: 1.3;
+  }
+  .cat-card.selected .cat-title,
+  .cat-card:has(input[type="radio"]:checked) .cat-title {
+    color: var(--accent);
+    font-weight: 700;
+  }
+
+  /* Location Box & Live GPS */
+  .loc-picker-box {
+    background: #f8fafc;
+    border: 1.5px dashed #cbd5e1;
+    border-radius: var(--r-md);
+    padding: 18px;
+    margin-top: 6px;
+  }
+  .gps-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    padding: 10px 16px;
+    border-radius: var(--r-sm);
+    font-weight: 700;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-family: inherit;
+  }
+  .gps-btn:hover {
+    background: var(--accent-hover);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);
+  }
+  .quick-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 7px;
+    margin-top: 12px;
+  }
+  .quick-chip {
+    background: #fff;
+    border: 1px solid var(--border);
+    padding: 5px 12px;
+    border-radius: var(--r-xs);
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-main);
+    cursor: pointer;
+    transition: all 0.15s;
+    font-family: inherit;
+  }
+  .quick-chip:hover, .quick-chip.active {
+    background: rgba(79, 70, 229, 0.08);
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+  .loc-active-pill {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 10px;
+    background: #ecfdf5;
+    border: 1px solid #a7f3d0;
+    color: #047857;
+    padding: 12px 16px;
+    border-radius: var(--r-sm);
+    font-size: 13.5px;
+    font-weight: 600;
+    margin-top: 14px;
+  }
+  @keyframes pulseLive {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.35; transform: scale(1.2); }
+  }
+  .live-dot {
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background: #10b981;
+    display: inline-block;
+    animation: pulseLive 1.5s infinite;
+  }
+
+  /* Input Prefix Addon */
+  .input-prefix-box {
+    position: relative;
+    display: flex;
+    align-items: center;
+  }
+  .input-prefix-box .prefix {
+    position: absolute;
+    left: 14px;
+    font-weight: 700;
+    color: var(--text-muted);
+    font-size: 15px;
+    pointer-events: none;
+  }
+  .input-prefix-box input.with-prefix {
+    padding-left: 32px;
+  }
+
+  /* Admin Section Styling */
+  .admin-rules-box {
+    background: #f8fafc;
+    border: 1px solid var(--border);
+    border-radius: var(--r-md);
+    padding: 20px;
+    margin-bottom: 24px;
+  }
+</style>
+
+<div class="job-create-wrap">
+  <div class="card form-card">
+    <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom: 24px; border-bottom: 1px solid var(--border); padding-bottom: 16px;">
+      <div>
+        <h2 style="font-size: 22px; font-weight: 800; color: var(--text-main); margin-bottom: 4px;">
+          {% if mode == 'create' %}Post a New Job Requirement{% else %}Edit: {{ job.title }}{% endif %}
+        </h2>
+        <p style="color: var(--text-muted); font-size: 13.5px; margin: 0;">
+          Create a verified service requirement on behalf of a customer with live GPS positioning and competitive bidding rules.
+        </p>
       </div>
-      <div class="form-group">
-        <label>Status</label>
-        <select name="status" class="form-control">
-          <option value="open" {% if job.status == 'open' %}selected{% endif %}>Open for Bidding</option>
-          <option value="progress" {% if job.status == 'progress' %}selected{% endif %}>In Progress</option>
-          <option value="selected" {% if job.status == 'selected' %}selected{% endif %}>Vendor Selected</option>
-          <option value="completed" {% if job.status == 'completed' %}selected{% endif %}>Completed</option>
-          <option value="cancelled" {% if job.status == 'cancelled' %}selected{% endif %}>Cancelled</option>
-          <option value="closed" {% if job.status == 'closed' %}selected{% endif %}>Closed</option>
-        </select>
-      </div>
-    </div>
-    
-    <div class="form-row">
-      <div class="form-group">
-        <label>Budget (₹)</label>
-        <input type="number" step="0.01" name="budget" class="form-control" value="{{ job.budget|default:0 }}" required>
-      </div>
-      <div class="form-group">
-        <label>Address / Landmark</label>
-        <input type="text" name="address" class="form-control" value="{{ job.address|default:'' }}" placeholder="e.g. Main Road, Ranchi">
-      </div>
+      <span class="badge {% if mode == 'create' %}active{% else %}info{% endif %}" style="font-size: 12px;">
+        <i class="fa-solid fa-bolt"></i> Superadmin Control
+      </span>
     </div>
 
-    <!-- BIDDING PARAMETERS & VENDOR ASSIGNMENT -->
-    <div style="background: #f8fafc; border: 1px solid var(--border); border-radius: 8px; padding: 18px; margin-bottom: 20px;">
-      <h4 style="font-size: 14.5px; font-weight: 700; color: var(--text-main); margin-bottom: 14px; display: flex; align-items: center; gap: 8px;">
-        <i class="fa-solid fa-sliders" style="color: var(--accent);"></i> Bidding Rules &amp; Vendor Assignment
-      </h4>
-      
-      <div class="form-row">
-        <div class="form-group">
-          <label>Max Bids Limit (Vendor Capacity)</label>
-          <input type="number" min="1" max="100" name="max_bids" class="form-control" value="{{ job.max_bids|default:10 }}" placeholder="e.g. 5 or 10">
-          <small style="color: var(--text-muted); font-size: 11.5px;">Bidding automatically stops when this number of bids is reached.</small>
-        </div>
-        <div class="form-group">
-          <label>Assign Vendor (Direct Selection)</label>
-          <select name="assigned_vendor" class="form-control">
-            <option value="">-- No Vendor Assigned (Open to Bids) --</option>
-            {% for v in vendors %}
-            <option value="{{ v.id }}" {% if job.assigned_vendor_id == v.id %}selected{% endif %}>
-              {{ v.vendor_profile.company_name|default:v.username }} ({{ v.username }})
+    <form method="POST" id="adminJobForm">
+      {% csrf_token %}
+
+      <!-- 1. Customer Account Selector & Phone -->
+      <div class="form-row" style="margin-bottom: 22px;">
+        <div class="form-group" style="margin-bottom: 0;">
+          <label class="form-label" style="display:flex; align-items:center; gap:6px;">
+            <i class="fa-solid fa-user-check" style="color:var(--accent);"></i>
+            Customer Account <span style="color:var(--danger);">*</span>
+          </label>
+          <select name="user" id="customerSelect" class="form-control" required onchange="onCustomerChange(this)">
+            <option value="">-- Select Customer Account --</option>
+            {% for u in users %}
+            <option value="{{ u.id }}"
+                    data-name="{{ u.get_full_name|default:u.username }}"
+                    data-mobile="{{ u.mobile|default:u.user_profile.phone_number|default:'' }}"
+                    {% if mode == 'edit' and job.user_id == u.id %}selected{% elif mode == 'create' and forloop.first %}selected{% endif %}>
+              {{ u.username }} {% if u.get_full_name %}({{ u.get_full_name }}){% endif %} — {{ u.mobile|default:u.user_profile.phone_number|default:u.email|default:'No phone' }}
             </option>
             {% endfor %}
           </select>
-          <small style="color: var(--text-muted); font-size: 11.5px;">Superadmin can directly assign or change the chosen vendor.</small>
+        </div>
+
+        <div class="form-group" style="margin-bottom: 0;">
+          <label class="form-label" style="display:flex; align-items:center; gap:6px;">
+            <i class="fa-solid fa-phone" style="color:var(--accent);"></i>
+            Customer Contact Phone <span style="color:var(--danger);">*</span>
+          </label>
+          <input type="text" name="contact_mobile" id="contactMobileInput" class="form-control" value="{{ job.contact_mobile|default:'' }}" placeholder="+91 98765 43210" required>
+          <input type="hidden" name="contact_name" id="contactNameInput" value="{{ job.contact_name|default:'' }}">
         </div>
       </div>
 
-      <div class="form-row" style="margin-top: 10px;">
-        <div class="form-group">
-          <label>Min Allowed Bid Price (₹) <span style="font-weight: 400; color: var(--text-muted);">(Optional)</span></label>
-          <input type="number" step="0.01" name="min_bid_amount" class="form-control" value="{{ job.min_bid_amount|default:'' }}" placeholder="Minimum price vendor can quote">
-        </div>
-        <div class="form-group">
-          <label>Max Allowed Bid Price (₹) <span style="font-weight: 400; color: var(--text-muted);">(Optional)</span></label>
-          <input type="number" step="0.01" name="max_bid_amount" class="form-control" value="{{ job.max_bid_amount|default:'' }}" placeholder="Maximum price vendor can quote">
+      <!-- 2. Interactive Category Cards Grid -->
+      <div class="form-group" style="margin-bottom: 24px;">
+        <label class="form-label" style="display:flex; align-items:center; gap:6px; margin-bottom: 12px;">
+          <i class="fa-solid fa-layer-group" style="color:var(--accent);"></i>
+          Select Category <span style="color:var(--danger);">*</span>
+        </label>
+        
+        <div class="cat-card-grid">
+          {% for cat in categories %}
+          <label class="cat-card {% if job.category_id == cat.id %}selected{% endif %}" onclick="selectCategory('{{ cat.id }}')">
+            <input type="radio" name="category" value="{{ cat.id }}" {% if job.category_id == cat.id %}checked{% endif %} required>
+            <div class="card-content">
+              <i class="bi {{ cat.icon_class }}"></i>
+              <span class="cat-title">{{ cat.name }}</span>
+            </div>
+          </label>
+          {% endfor %}
         </div>
       </div>
-    </div>
-    
-    <div class="form-group">
-      <label>Description & Scope of Work</label>
-      <textarea name="description" class="form-control" placeholder="Detailed project scope...">{{ job.description|default:'' }}</textarea>
-    </div>
-    
-    <div class="form-actions">
-      <button type="submit" class="btn btn-primary"><i class="fa-solid fa-check"></i> {% if mode == 'create' %}Create Job{% else %}Save Changes{% endif %}</button>
-      <a href="{% url 'super_admin_jobs' %}" class="btn btn-outline">Cancel</a>
-    </div>
-  </form>
+
+      <!-- 3. Dynamic Subcategory Cards Grid -->
+      <div class="form-group" id="subcat-container" style="display: none; margin-bottom: 24px;">
+        <label class="form-label" style="display:flex; align-items:center; gap:6px; margin-bottom: 12px;">
+          <i class="fa-solid fa-tags" style="color:var(--accent);"></i>
+          Select Subcategory <span style="color:var(--text-muted); font-weight:normal;">(Optional)</span>
+        </label>
+        <div class="cat-card-grid" id="subcategory_grid">
+          <!-- Injected dynamically via JavaScript -->
+        </div>
+      </div>
+
+      <!-- 4. Job Title -->
+      <div class="form-group">
+        <label class="form-label">
+          What service is needed? (Job Title) <span style="color:var(--danger);">*</span>
+        </label>
+        <input type="text" class="form-control" name="title" id="jobTitleInput" value="{{ job.title|default:'' }}" required placeholder="e.g. Full Bathroom Renovation, Bridal Makeup, AC Deep Cleaning" autocomplete="off">
+      </div>
+
+      <!-- 5. Preferred Start Date & Budget -->
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">
+            When to start? (Preferred Start Date) <span style="color:var(--danger);">*</span>
+          </label>
+          <input type="date" class="form-control" name="preferred_start_date" id="prefStartDate" value="{{ job.preferred_start_date|date:'Y-m-d'|default:today_str }}" min="{{ today_str }}" required>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">
+            Expected Budget / Price (₹) <span style="color:var(--danger);">*</span>
+          </label>
+          <div class="input-prefix-box">
+            <span class="prefix">₹</span>
+            <input type="number" class="form-control with-prefix" name="budget" value="{{ job.budget|default:'1500' }}" min="50" step="1" placeholder="e.g. 1500" required>
+          </div>
+        </div>
+      </div>
+
+      <!-- 6. Worksite Location Picker (Live 10 KM Range & GPS) -->
+      <div class="form-group" style="margin-bottom: 26px;">
+        <label class="form-label" style="display:flex; align-items:center; justify-content:space-between;">
+          <span>
+            <i class="fa-solid fa-location-dot" style="color:var(--accent); margin-right:4px;"></i>
+            Worksite Location <span style="color:var(--danger);">*</span>
+          </span>
+          <span style="font-size:11.5px; color:var(--text-muted); text-transform:none; font-weight:500;">
+            Radius: 10 km live proximity filter
+          </span>
+        </label>
+
+        <div class="loc-picker-box">
+          <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
+            <button type="button" class="gps-btn" id="btnAdminGps" onclick="detectAdminJobGps()">
+              <i class="fa-solid fa-crosshairs" id="adminGpsIcon"></i>
+              <span id="adminGpsText">Use Live GPS Location</span>
+            </button>
+
+            <div style="flex:1; min-width:240px; position:relative;">
+              <input type="text" id="jobLocSearchInput" class="form-control" placeholder="Search colony name (e.g. Lalpur, Doranda, Harmu, Namkum)..." autocomplete="off" oninput="handleJobLocSearch(this.value)">
+              <div id="jobLocSearchSpinner" style="display:none; position:absolute; right:12px; top:12px; color:var(--accent);">
+                <i class="fa-solid fa-circle-notch fa-spin"></i>
+              </div>
+              <div id="jobLocSearchResults" style="display:none; position:absolute; left:0; right:0; top:46px; z-index:50; background:#fff; border:1px solid var(--border); border-radius:8px; box-shadow:0 10px 25px rgba(0,0,0,0.1); max-height:220px; overflow-y:auto;"></div>
+            </div>
+          </div>
+
+          <!-- Quick Localities in Ranchi -->
+          <div class="quick-chips">
+            <span style="font-size:11.5px; color:var(--text-muted); font-weight:700; align-self:center;">Popular Areas:</span>
+            <button type="button" class="quick-chip" onclick="selectJobLocality('RIADA Road, Namkum', 23.3555, 85.3609)">Namkum</button>
+            <button type="button" class="quick-chip" onclick="selectJobLocality('Lalpur, Circular Road', 23.3697, 85.3346)">Lalpur</button>
+            <button type="button" class="quick-chip" onclick="selectJobLocality('Harmu Housing Colony', 23.3550, 85.3050)">Harmu</button>
+            <button type="button" class="quick-chip" onclick="selectJobLocality('Doranda High Court Area', 23.3340, 85.3218)">Doranda</button>
+            <button type="button" class="quick-chip" onclick="selectJobLocality('Morabadi Grounds', 23.3850, 85.3250)">Morabadi</button>
+            <button type="button" class="quick-chip" onclick="selectJobLocality('Bariatu Medical Road', 23.3950, 85.3500)">Bariatu</button>
+            <button type="button" class="quick-chip" onclick="selectJobLocality('Ashok Nagar, Kadru', 23.3380, 85.3120)">Ashok Nagar</button>
+            <button type="button" class="quick-chip" onclick="selectJobLocality('Main Road, Albert Ekka', 23.3500, 85.3250)">Main Road</button>
+            <button type="button" class="quick-chip" onclick="selectJobLocality('Kokar Industrial Area', 23.3750, 85.3550)">Kokar</button>
+          </div>
+
+          <!-- Live Active Location Pill -->
+          <div class="loc-active-pill" id="jobLocActiveDisplay">
+            <div style="display:flex; align-items:center; gap:10px;">
+              <span class="live-dot"></span>
+              <div>
+                <strong id="jobDisplayLocName">{{ job.locality|default:'Lalpur, Circular Road' }}</strong>
+                <span style="color:#059669; font-size:12px; margin-left:6px;" id="jobDisplayCoords">({{ job.latitude|default:'23.3697' }}, {{ job.longitude|default:'85.3346' }})</span>
+              </div>
+            </div>
+            <a id="jobLocMapsLink" href="https://maps.google.com/?q={{ job.latitude|default:'23.3697' }},{{ job.longitude|default:'85.3346' }}" target="_blank" rel="noopener noreferrer" style="font-size:12px; color:#2563eb; font-weight:700; text-decoration:underline; display:inline-flex; align-items:center; gap:5px;">
+              <i class="fa-solid fa-map-location-dot"></i> Google Maps ↗
+            </a>
+          </div>
+
+          <!-- Hidden Coordinate & Locality Form Fields -->
+          <input type="hidden" name="locality" id="jobInputLocality" value="{{ job.locality|default:'Lalpur, Circular Road' }}">
+          <input type="hidden" name="latitude" id="jobInputLat" value="{{ job.latitude|default:'23.3697' }}">
+          <input type="hidden" name="longitude" id="jobInputLon" value="{{ job.longitude|default:'85.3346' }}">
+          <input type="hidden" name="address" id="jobInputAddress" value="{{ job.address|default:'Lalpur, Circular Road, Ranchi' }}">
+          <input type="hidden" name="pincode" id="jobInputPincode" value="{{ job.pincode|default:'834001' }}">
+          
+          {% if locations %}
+          <input type="hidden" name="location" id="jobLocationFk" value="{{ job.location_id|default:locations.first.id }}">
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- 7. Bidding Rules & Vendor Assignment (Admin Controls) -->
+      <div class="admin-rules-box">
+        <h4 style="font-size: 14.5px; font-weight: 700; color: var(--text-main); margin-bottom: 16px; display: flex; align-items: center; gap: 8px;">
+          <i class="fa-solid fa-sliders" style="color: var(--accent);"></i>
+          Bidding Rules &amp; Vendor Assignment
+        </h4>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Job Status</label>
+            <select name="status" class="form-control">
+              <option value="open" {% if job.status == 'open' or not job %}selected{% endif %}>Open for Bidding</option>
+              <option value="progress" {% if job.status == 'progress' %}selected{% endif %}>In Progress</option>
+              <option value="selected" {% if job.status == 'selected' %}selected{% endif %}>Vendor Selected</option>
+              <option value="completed" {% if job.status == 'completed' %}selected{% endif %}>Completed</option>
+              <option value="cancelled" {% if job.status == 'cancelled' %}selected{% endif %}>Cancelled</option>
+              <option value="closed" {% if job.status == 'closed' %}selected{% endif %}>Closed</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Max Bids Limit (Vendor Capacity)</label>
+            <input type="number" min="1" max="100" name="max_bids" class="form-control" value="{{ job.max_bids|default:10 }}" placeholder="e.g. 5 or 10">
+            <small style="color: var(--text-muted); font-size: 11.5px; display:block; margin-top:4px;">Bidding stops automatically when this number of bids is reached.</small>
+          </div>
+        </div>
+
+        <div class="form-row" style="margin-top: 6px;">
+          <div class="form-group">
+            <label class="form-label">Assign Vendor (Direct Selection)</label>
+            <select name="assigned_vendor" class="form-control">
+              <option value="">-- No Vendor Assigned (Open to Bids) --</option>
+              {% for v in vendors %}
+              <option value="{{ v.id }}" {% if job.assigned_vendor_id == v.id %}selected{% endif %}>
+                {{ v.vendor_profile.company_name|default:v.username }} ({{ v.username }})
+              </option>
+              {% endfor %}
+            </select>
+            <small style="color: var(--text-muted); font-size: 11.5px; display:block; margin-top:4px;">Superadmin can directly assign or change the chosen vendor.</small>
+          </div>
+
+          <div class="form-group">
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px;">
+              <div>
+                <label class="form-label">Min Allowed Bid (₹)</label>
+                <input type="number" step="1" name="min_bid_amount" class="form-control" value="{{ job.min_bid_amount|default:'' }}" placeholder="Min bid">
+              </div>
+              <div>
+                <label class="form-label">Max Allowed Bid (₹)</label>
+                <input type="number" step="1" name="max_bid_amount" class="form-control" value="{{ job.max_bid_amount|default:'' }}" placeholder="Max bid">
+              </div>
+            </div>
+            <small style="color: var(--text-muted); font-size: 11.5px; display:block; margin-top:4px;">Optional minimum and maximum quotation limits.</small>
+          </div>
+        </div>
+      </div>
+
+      <!-- 8. Description & Scope of Work -->
+      <div class="form-group" style="margin-bottom: 26px;">
+        <label class="form-label">
+          Description &amp; Scope of Work <span style="color:var(--text-muted); font-weight:normal;">(Optional)</span>
+        </label>
+        <textarea name="description" class="form-control" placeholder="Provide detailed project scope, specific requirements, or material preferences..." style="min-height: 100px;">{{ job.description|default:'' }}</textarea>
+      </div>
+
+      <!-- 9. Submit Actions -->
+      <div class="form-actions" style="display:flex; align-items:center; gap:12px;">
+        <button type="submit" class="btn btn-primary btn-lg" style="padding: 12px 28px;">
+          <i class="fa-solid fa-paper-plane"></i>
+          {% if mode == 'create' %}Publish Job &amp; Open for Bids{% else %}Save Changes{% endif %}
+        </button>
+        <a href="{% url 'super_admin_jobs' %}" class="btn btn-outline btn-lg">
+          Cancel
+        </a>
+      </div>
+    </form>
+  </div>
 </div>
+
+<script>
+  // Subcategories mapping
+  const subcats = {
+    {% for cat in categories %}
+    '{{ cat.id }}': [
+      {% for sub in cat.subcategories.all %}
+      { id: '{{ sub.id }}', name: '{{ sub.name|escapejs }}' }{% if not forloop.last %},{% endif %}
+      {% endfor %}
+    ]{% if not forloop.last %},{% endif %}
+    {% endfor %}
+  };
+
+  function selectCategory(catId) {
+    // Update active highlight on cards
+    document.querySelectorAll('.cat-card').forEach(c => {
+      const radio = c.querySelector('input[type="radio"]');
+      if (radio && radio.value == catId) {
+        c.classList.add('selected');
+        radio.checked = true;
+      } else {
+        c.classList.remove('selected');
+      }
+    });
+
+    updateSubcats(catId);
+  }
+
+  function updateSubcats(catId, selectedSubId) {
+    const container = document.getElementById('subcat-container');
+    const grid = document.getElementById('subcategory_grid');
+    grid.innerHTML = '';
+
+    if (subcats[catId] && subcats[catId].length > 0) {
+      subcats[catId].forEach(s => {
+        const isChecked = (selectedSubId && selectedSubId == s.id);
+        grid.innerHTML += `
+          <label class="cat-card ${isChecked ? 'selected' : ''}" onclick="onSubcatClick(this, '${s.name.replace(/'/g, "\\'")}')">
+            <input type="radio" name="subcategory" value="${s.id}" ${isChecked ? 'checked' : ''}>
+            <div class="card-content">
+              <i class="bi bi-tag"></i>
+              <span class="cat-title">${s.name}</span>
+            </div>
+          </label>
+        `;
+      });
+      container.style.display = 'block';
+    } else {
+      container.style.display = 'none';
+    }
+  }
+
+  function onSubcatClick(el, subName) {
+    document.querySelectorAll('#subcategory_grid .cat-card').forEach(c => c.classList.remove('selected'));
+    el.classList.add('selected');
+    const radio = el.querySelector('input[type="radio"]');
+    if (radio) radio.checked = true;
+
+    // Suggest in title if empty
+    const titleInput = document.getElementById('jobTitleInput');
+    if (titleInput && (!titleInput.value || titleInput.value.trim() === '')) {
+      titleInput.value = subName;
+    }
+  }
+
+  // Customer account change handler
+  function onCustomerChange(sel) {
+    const opt = sel.options[sel.selectedIndex];
+    if (opt && opt.value) {
+      const mobile = opt.getAttribute('data-mobile');
+      const name = opt.getAttribute('data-name');
+      const phoneInput = document.getElementById('contactMobileInput');
+      const nameInput = document.getElementById('contactNameInput');
+      if (phoneInput && mobile) phoneInput.value = mobile;
+      if (nameInput && name) nameInput.value = name;
+    }
+  }
+
+  // Worksite Location Selector
+  function selectJobLocality(name, lat, lon) {
+    document.getElementById('jobInputLocality').value = name;
+    document.getElementById('jobInputLat').value = lat;
+    document.getElementById('jobInputLon').value = lon;
+    const mapsUrl = `https://maps.google.com/?q=${lat},${lon}`;
+    document.getElementById('jobInputAddress').value = `${name}, Ranchi [GPS: ${lat}, ${lon} | Maps: ${mapsUrl}]`;
+
+    document.getElementById('jobDisplayLocName').textContent = name;
+    document.getElementById('jobDisplayCoords').textContent = `(${parseFloat(lat).toFixed(4)}, ${parseFloat(lon).toFixed(4)})`;
+    const mapsLink = document.getElementById('jobLocMapsLink');
+    if (mapsLink) mapsLink.href = mapsUrl;
+
+    const searchInput = document.getElementById('jobLocSearchInput');
+    if (searchInput) searchInput.value = '';
+    const searchRes = document.getElementById('jobLocSearchResults');
+    if (searchRes) searchRes.style.display = 'none';
+  }
+
+  // Device GPS Location Detection for Superadmin
+  function detectAdminJobGps() {
+    const icon = document.getElementById('adminGpsIcon');
+    const text = document.getElementById('adminGpsText');
+
+    if (!navigator.geolocation) {
+      alert("Geolocation is not supported by your browser. Please choose an area from the quick list.");
+      return;
+    }
+
+    if (icon) icon.className = "fa-solid fa-circle-notch fa-spin";
+    if (text) text.textContent = "Detecting GPS...";
+
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        const lat = pos.coords.latitude;
+        const lon = pos.coords.longitude;
+
+        try {
+          const res = await fetch(`/api/detect-location/?lat=${lat}&lon=${lon}`);
+          const data = await res.json();
+          const locName = data.primary ? `${data.primary}, ${data.city || 'Ranchi'}` : `${lat.toFixed(4)}, ${lon.toFixed(4)}`;
+
+          selectJobLocality(locName, lat, lon);
+
+          if (icon) icon.className = "fa-solid fa-check";
+          if (text) text.textContent = "Live GPS Set!";
+          setTimeout(() => {
+            if (icon) icon.className = "fa-solid fa-crosshairs";
+            if (text) text.textContent = "Use Live GPS Location";
+          }, 2000);
+        } catch(e) {
+          selectJobLocality("Current Live Worksite", lat, lon);
+          if (icon) icon.className = "fa-solid fa-check";
+          if (text) text.textContent = "GPS Set!";
+        }
+      },
+      (err) => {
+        if (icon) icon.className = "fa-solid fa-crosshairs";
+        if (text) text.textContent = "Use Live GPS Location";
+        alert("Could not retrieve GPS position. Please allow browser location access or choose a locality below.");
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+    );
+  }
+
+  // Colony / Locality Autocomplete Search
+  let jobLocTimer = null;
+  function handleJobLocSearch(query) {
+    clearTimeout(jobLocTimer);
+    const spinner = document.getElementById('jobLocSearchSpinner');
+    const resultsBox = document.getElementById('jobLocSearchResults');
+
+    if (!query || query.length < 2) {
+      if (spinner) spinner.style.display = 'none';
+      if (resultsBox) resultsBox.style.display = 'none';
+      return;
+    }
+
+    if (spinner) spinner.style.display = 'block';
+
+    jobLocTimer = setTimeout(async () => {
+      try {
+        const res = await fetch(`/api/search-locations/?q=${encodeURIComponent(query)}`);
+        const data = await res.json();
+        if (spinner) spinner.style.display = 'none';
+
+        if (data && data.results && data.results.length > 0) {
+          resultsBox.innerHTML = data.results.map(r => `
+            <div style="padding:10px 14px; border-bottom:1px solid #f1f5f9; cursor:pointer; font-size:12.5px; transition:background 0.15s;"
+                 onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='white'"
+                 onclick="selectJobLocality('${(r.primary || r.name).replace(/'/g, "\\'")}', ${r.lat || 23.3697}, ${r.lon || 85.3346})">
+              <strong style="color:#0f172a; display:block;">${r.primary || r.name}</strong>
+              <span style="color:#64748b; font-size:11px;">${r.secondary || ''}</span>
+            </div>
+          `).join('');
+          resultsBox.style.display = 'block';
+        } else {
+          resultsBox.innerHTML = `
+            <div style="padding:12px; color:#64748b; font-size:12px; text-align:center; cursor:pointer;"
+                 onclick="selectJobLocality('${query.replace(/'/g, "\\'")}, Ranchi', 23.3697, 85.3346)">
+              Use "<strong>${query}</strong>" as worksite
+            </div>
+          `;
+          resultsBox.style.display = 'block';
+        }
+      } catch(e) {
+        if (spinner) spinner.style.display = 'none';
+      }
+    }, 300);
+  }
+
+  // Initialize on page load
+  document.addEventListener('DOMContentLoaded', () => {
+    // Check initial customer
+    const custSel = document.getElementById('customerSelect');
+    if (custSel && !document.getElementById('contactMobileInput').value) {
+      onCustomerChange(custSel);
+    }
+
+    // Pre-expand selected category if present
+    {% if job.category_id %}
+    selectCategory('{{ job.category_id }}');
+    {% else %}
+    // Select first category by default on create
+    const firstCat = document.querySelector('.cat-card input[type="radio"]');
+    if (firstCat) {
+      selectCategory(firstCat.value);
+    }
+    {% endif %}
+  });
+</script>
 {% endblock %}

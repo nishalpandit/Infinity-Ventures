@@ -7,6 +7,7 @@
   <title>My Services Catalog · Sugu Vendor</title>
   <link rel="stylesheet" href="/infinity-vendor-dashboard/assets/styles.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
   <script defer src="/infinity-vendor-dashboard/assets/app.js"></script>
   <style>
     /* Service Form & Live Preview Layout */
@@ -61,6 +62,105 @@
       font-size: 12px;
       color: #64748b;
       margin: 2px 0 0;
+    }
+
+    /* Category Cards Grid (Matching Post Jobs UI) */
+    .cat-card-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(115px, 1fr));
+      gap: 12px;
+    }
+    .cat-card {
+      border: 1.5px solid #cbd5e1;
+      border-radius: 12px;
+      padding: 14px 10px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      background: #fff;
+      position: relative;
+      user-select: none;
+    }
+    .cat-card:hover {
+      border-color: #0f8a7c;
+      background: #f0fdfa;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(15, 138, 124, 0.1);
+    }
+    .cat-card input[type="radio"] {
+      display: none;
+    }
+    .cat-card.active, .cat-card:has(input[type="radio"]:checked) {
+      border-color: #0f8a7c;
+      background: #ecfdf5;
+      box-shadow: 0 0 0 3px rgba(15, 138, 124, 0.18);
+    }
+    .cat-card .card-content {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      width: 100%;
+    }
+    .cat-card .card-content i {
+      font-size: 26px;
+      color: #64748b;
+      transition: all 0.2s;
+    }
+    .cat-card.active .card-content i, .cat-card:has(input[type="radio"]:checked) .card-content i {
+      color: #0f8a7c;
+      transform: scale(1.08);
+    }
+    .cat-card .cat-title {
+      display: block;
+      margin-top: 6px;
+      font-size: 12px;
+      font-weight: 600;
+      color: #334155;
+      line-height: 1.25;
+      transition: color 0.2s;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 100%;
+    }
+    .cat-card.active .cat-title, .cat-card:has(input[type="radio"]:checked) .cat-title {
+      color: #065f46;
+      font-weight: 700;
+    }
+    .cat-card .cat-check-badge {
+      position: absolute;
+      top: 6px;
+      right: 6px;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: #0f8a7c;
+      color: #fff;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      font-size: 10px;
+    }
+    .cat-card.active .cat-check-badge, .cat-card:has(input[type="radio"]:checked) .cat-check-badge {
+      display: flex;
+    }
+    .cat-selected-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      background: #ecfdf5;
+      border: 1px solid #a7f3d0;
+      border-radius: 20px;
+      color: #047857;
+      font-size: 12px;
+      font-weight: 700;
+      margin-top: 10px;
     }
 
     /* Image Preset Selector */
@@ -785,44 +885,56 @@
                 <!-- ============================================== -->
                 <div class="builder-controls-col">
                   
-                  <!-- STEP 1: BASIC INFORMATION -->
+                  <!-- STEP 1: SELECT CATEGORY (CARDS) -->
                   <div class="builder-step-card">
                     <div class="builder-step-head">
                       <div class="step-badge">1</div>
                       <div>
-                        <h4 class="step-title">Basic Information</h4>
-                        <p class="step-subtitle">What service are you offering to customers?</p>
+                        <h4 class="step-title">Select Service Category</h4>
+                        <p class="step-subtitle">Choose the service domain you are offering</p>
                       </div>
                     </div>
 
-                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-bottom:14px;">
-                      <!-- Category -->
-                      <div class="field" style="margin:0;">
-                        <label>Category <span class="required">*</span></label>
-                        <select name="category_id" id="formCategory" class="select" required onchange="handleCategoryChange(this)">
-                          <option value="">Select Category</option>
-                          {% for cat in categories %}
-                            <option value="{{ cat.id }}" data-name="{{ cat.name }}">{{ cat.name }}</option>
-                          {% endfor %}
-                        </select>
-                      </div>
+                    <div class="cat-card-grid" id="createCategoryCardGrid">
+                      {% for cat in categories %}
+                      <label class="cat-card {% if forloop.first %}active{% endif %}" onclick="selectCreateCategoryCard(this, '{{ cat.id }}', '{{ cat.name|escapejs }}')">
+                        <input type="radio" name="category_radio" value="{{ cat.id }}" {% if forloop.first %}checked{% endif %}>
+                        <div class="card-content">
+                          <i class="bi {{ cat.icon_class }}"></i>
+                          <span class="cat-title">{{ cat.name }}</span>
+                        </div>
+                        <span class="cat-check-badge"><i class="fa-solid fa-check"></i></span>
+                      </label>
+                      {% endfor %}
+                    </div>
+                    <input type="hidden" name="category_id" id="formCategory" value="{% if categories %}{{ categories.0.id }}{% endif %}">
+                  </div>
 
-                      <!-- Service Title -->
-                      <div class="field" style="margin:0;">
-                        <label>Service Title <span class="required">*</span></label>
-                        <input type="text" name="title" id="formTitle" class="input" placeholder="e.g. Switchboard Repair" required autocomplete="off" oninput="updateLivePreview()">
+                  <!-- STEP 2: SERVICE DETAILS & STATUS -->
+                  <div class="builder-step-card">
+                    <div class="builder-step-head">
+                      <div class="step-badge">2</div>
+                      <div>
+                        <h4 class="step-title">Service Details & Listing Status</h4>
+                        <p class="step-subtitle">Customer-facing title, tagline description and visibility mode</p>
                       </div>
+                    </div>
+
+                    <!-- Service Title -->
+                    <div class="field" style="margin:0 0 14px;">
+                      <label>Service Title <span class="required">*</span></label>
+                      <input type="text" name="title" id="formTitle" class="input" placeholder="e.g. Switchboard Repair" required autocomplete="off" oninput="updateLivePreview()">
                     </div>
 
                     <!-- Category Quick Suggestions -->
                     <div style="margin-bottom:14px;">
                       <span style="font-size:11px; color:#64748b; font-weight:600; display:block; margin-bottom:6px;">Quick Title Suggestions:</span>
                       <div class="quick-chips" id="quickTitleChips">
-                        <button type="button" class="quick-chip" onclick="applyTitleSuggestion('Switchboard Repair', 'Electrical')">Switchboard Repair</button>
-                        <button type="button" class="quick-chip" onclick="applyTitleSuggestion('Ceiling Fan Repair & Install', 'Electrical')">Ceiling Fan Repair</button>
-                        <button type="button" class="quick-chip" onclick="applyTitleSuggestion('Tap & Mixer Repair', 'Plumbing')">Tap & Mixer Repair</button>
-                        <button type="button" class="quick-chip" onclick="applyTitleSuggestion('Water Tank Cleaning', 'Cleaning')">Water Tank Cleaning</button>
-                        <button type="button" class="quick-chip" onclick="applyTitleSuggestion('AC Filter Clean & Gas Check', 'AC & Appliance')">AC Service</button>
+                        <button type="button" class="quick-chip" onclick="applyTitleSuggestion('Switchboard Repair', 149)">Switchboard Repair</button>
+                        <button type="button" class="quick-chip" onclick="applyTitleSuggestion('Ceiling Fan Repair & Install', 199)">Ceiling Fan Repair</button>
+                        <button type="button" class="quick-chip" onclick="applyTitleSuggestion('Tap & Mixer Repair', 149)">Tap & Mixer Repair</button>
+                        <button type="button" class="quick-chip" onclick="applyTitleSuggestion('Water Tank Cleaning', 499)">Water Tank Cleaning</button>
+                        <button type="button" class="quick-chip" onclick="applyTitleSuggestion('AC Filter Clean & Gas Check', 399)">AC Service</button>
                       </div>
                     </div>
 
@@ -833,7 +945,7 @@
                     </div>
 
                     <!-- Listing Status -->
-                    <div class="field" style="margin:0 0 14px;">
+                    <div class="field" style="margin:0;">
                       <label style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
                         <span style="font-weight:700;">Listing Status <span class="required">*</span></span>
                         <span style="font-size:11px; color:#64748b; font-weight:normal;">Active = immediately bookable by customers</span>
@@ -871,24 +983,12 @@
                         </label>
                       </div>
                     </div>
-
-                    <!-- Locality & Service Radius -->
-                    <div style="display:grid; grid-template-columns:2fr 1fr; gap:14px; margin:0;">
-                      <div class="field" style="margin:0;">
-                        <label>Locality / Service Area</label>
-                        <input type="text" name="locality" id="formLocality" class="input" placeholder="e.g. Lalpur, Ranchi or Indiranagar, Bengaluru" value="{{ user.vendor_profile.location|default:user.assigned_city|default:'Ranchi' }}">
-                      </div>
-                      <div class="field" style="margin:0;">
-                        <label>Service Radius (km)</label>
-                        <input type="number" name="service_radius_km" class="input" value="15" min="1" max="100">
-                      </div>
-                    </div>
                   </div>
 
-                  <!-- STEP 2: SERVICE COVER PHOTO -->
+                  <!-- STEP 3: SERVICE COVER PHOTO -->
                   <div class="builder-step-card">
                     <div class="builder-step-head">
-                      <div class="step-badge">2</div>
+                      <div class="step-badge">3</div>
                       <div>
                         <h4 class="step-title">Service Cover Photo</h4>
                         <p class="step-subtitle">Select from curated photo presets or upload your own work photo.</p>
@@ -937,11 +1037,11 @@
                     </div>
                   </div>
 
-                  <!-- STEP 3: PACKAGE OPTIONS BUILDER (URBAN COMPANY PARITY) -->
+                  <!-- STEP 4: PACKAGE OPTIONS BUILDER (URBAN COMPANY PARITY) -->
                   <div class="builder-step-card">
                     <div class="builder-step-head" style="justify-content:space-between;">
                       <div style="display:flex; align-items:center; gap:10px;">
-                        <div class="step-badge">3</div>
+                        <div class="step-badge">4</div>
                         <div>
                           <h4 class="step-title">Package Options Builder</h4>
                           <p class="step-subtitle">Offer 1 to 4 package tiers with clear scopes & pricing.</p>
@@ -1053,10 +1153,10 @@
                     </div>
                   </div>
 
-                  <!-- STEP 4: WHAT'S INCLUDED & PROTECTION GUARANTEES -->
+                  <!-- STEP 5: WHAT'S INCLUDED & PROTECTION GUARANTEES -->
                   <div class="builder-step-card">
                     <div class="builder-step-head">
-                      <div class="step-badge">4</div>
+                      <div class="step-badge">5</div>
                       <div>
                         <h4 class="step-title">Inclusions & Guarantee Checklist</h4>
                         <p class="step-subtitle">Check the verified trust assurances customers will see on your service modal.</p>
@@ -1103,10 +1203,10 @@
                     </div>
                   </div>
 
-                  <!-- STEP 5: 10 KM LIVE DELIVERY LOCATION -->
+                  <!-- STEP 6: 10 KM LIVE DELIVERY LOCATION -->
                   <div class="builder-step-card">
                     <div class="builder-step-head">
-                      <div class="step-badge">5</div>
+                      <div class="step-badge">6</div>
                       <div>
                         <h4 class="step-title">Service Base Location (10 km Delivery Zone)</h4>
                         <p class="step-subtitle">Customers within 10 km radius of this location can discover and book your service.</p>
@@ -1776,11 +1876,17 @@
       `).join('');
     }
 
-    // Category Change Handler
-    function handleCategoryChange(select) {
-      const catName = select.options[select.selectedIndex]?.getAttribute('data-name') || '';
-      const titleInput = document.getElementById('formTitle');
-      const descInput = document.getElementById('formDescription');
+    function selectCreateCategoryCard(cardEl, catId, catName) {
+      document.querySelectorAll('#createCategoryCardGrid .cat-card').forEach(c => c.classList.remove('active'));
+      cardEl.classList.add('active');
+      const radio = cardEl.querySelector('input[type="radio"]');
+      if (radio) radio.checked = true;
+
+      const catInput = document.getElementById('formCategory');
+      if (catInput) {
+        catInput.value = catId;
+        catInput.setAttribute('data-name', catName);
+      }
 
       // Populate dynamic suggestions and inclusions
       populateTitleSuggestions(catName);
@@ -1789,6 +1895,8 @@
       // Auto-fill title if empty or default
       const key = getCatKey(catName);
       const suggestions = CATEGORY_SUGGESTIONS[key] || CATEGORY_SUGGESTIONS['_default'];
+      const titleInput = document.getElementById('formTitle');
+      const descInput = document.getElementById('formDescription');
       if (!titleInput.value || titleInput.value === 'Switchboard Repair' || titleInput.value === 'Professional Home Service') {
         titleInput.value = suggestions[0].title;
         descInput.value = suggestions[0].desc;
@@ -1806,11 +1914,20 @@
       updateLivePreview();
     }
 
+    // Category Change Handler backward-compat
+    function handleCategoryChange(select) {
+      const catName = select.options ? (select.options[select.selectedIndex]?.getAttribute('data-name') || '') : '';
+      populateTitleSuggestions(catName);
+      populateInclusions(catName);
+      updateLivePreview();
+    }
+
     // Quick Title Suggestions
     function applyTitleSuggestion(title, basePrice) {
       document.getElementById('formTitle').value = title;
-      const catSelect = document.getElementById('formCategory');
-      const catName = catSelect.options[catSelect.selectedIndex]?.getAttribute('data-name') || '';
+      const activeCard = document.querySelector('#createCategoryCardGrid .cat-card.active .cat-title');
+      const catInput = document.getElementById('formCategory');
+      const catName = activeCard ? activeCard.textContent.trim() : (catInput ? catInput.getAttribute('data-name') || '' : '');
       const key = getCatKey(catName);
       const suggestions = CATEGORY_SUGGESTIONS[key] || CATEGORY_SUGGESTIONS['_default'];
       const match = suggestions.find(s => s.title === title);
@@ -2048,8 +2165,9 @@
         `;
       });
       // Standard exclusions
-      const catSelect = document.getElementById('formCategory');
-      const currentCat = catSelect.options[catSelect.selectedIndex]?.getAttribute('data-name') || '';
+      const activeCard = document.querySelector('#createCategoryCardGrid .cat-card.active .cat-title');
+      const catInput = document.getElementById('formCategory');
+      const currentCat = activeCard ? activeCard.textContent.trim() : (catInput ? (catInput.getAttribute('data-name') || '') : '');
       const catKey = getCatKey(currentCat);
       let exclusion1 = 'Major civil masonry, pipe embedding or wall tearing excluded';
       let exclusion2 = 'Spare parts / extra hardware to be purchased or charged separately';
@@ -2409,9 +2527,21 @@
 
     // Initial Live Preview & Listeners on Page Load
     document.addEventListener('DOMContentLoaded', () => {
-      // Populate initial suggestions and inclusions based on current category
-      const catSelect = document.getElementById('formCategory');
-      const initialCat = catSelect.options[catSelect.selectedIndex]?.getAttribute('data-name') || '';
+      // Initialize active category card if present
+      const firstActiveCard = document.querySelector('#createCategoryCardGrid .cat-card.active') || document.querySelector('#createCategoryCardGrid .cat-card');
+      let initialCat = '';
+      if (firstActiveCard) {
+        firstActiveCard.classList.add('active');
+        const radio = firstActiveCard.querySelector('input[type="radio"]');
+        if (radio) radio.checked = true;
+        const titleSpan = firstActiveCard.querySelector('.cat-title');
+        initialCat = titleSpan ? titleSpan.textContent.trim() : '';
+        const catInput = document.getElementById('formCategory');
+        if (catInput && radio) {
+          catInput.value = radio.value;
+          catInput.setAttribute('data-name', initialCat);
+        }
+      }
       populateTitleSuggestions(initialCat);
       populateInclusions(initialCat);
       document.querySelectorAll('#packageCardsList .pkg-card').forEach(updateCardBreakdown);

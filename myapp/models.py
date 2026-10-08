@@ -18,7 +18,7 @@ class VendorProfile(models.Model):
     vendor_code = models.CharField(max_length=50, unique=True, null=True, blank=True)
     mobile = models.CharField(max_length=20, null=True, blank=True)
     company_name = models.CharField(max_length=255, blank=True, null=True)
-    category = models.CharField(max_length=100)
+    category = models.CharField(max_length=500, default='General')
     location = models.CharField(max_length=255)
     
     VENDOR_TYPE_CHOICES = (
@@ -45,6 +45,21 @@ class VendorProfile(models.Model):
 
     def __str__(self):
         return self.company_name or self.user.username
+
+    @property
+    def categories_list(self):
+        if not self.category:
+            return []
+        return [c.strip() for c in str(self.category).split(',') if c.strip()]
+
+    def matches_category(self, cat_name):
+        if not cat_name:
+            return False
+        cats = [c.lower() for c in self.categories_list]
+        cat_lower = str(cat_name).strip().lower()
+        if any(g in cats for g in ['other', 'general', 'other / general services', 'general services']):
+            return True
+        return any(c in cat_lower or cat_lower in c for c in cats)
 
     def save(self, *args, **kwargs):
         super().save(*args, **kwargs)

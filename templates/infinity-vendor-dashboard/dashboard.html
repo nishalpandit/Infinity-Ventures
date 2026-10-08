@@ -36,90 +36,20 @@
               <div class="eyebrow">{{ current_date }}</div>
               <h1 style="display:flex; align-items:center; flex-wrap:wrap; gap:8px;">
                 Welcome back, {{ vendor_name }}!
-                {% if is_kyc_verified %}
-                  <span class="badge" style="background:#ecfdf5; color:#065f46; font-size:12px; font-weight:700; padding:4px 10px; border-radius:16px; border:1px solid #a7f3d0; display:inline-flex; align-items:center; gap:5px;" title="Identity and business credentials verified">
-                    <span data-icon="award"></span> Verified Pro
-                  </span>
-                {% elif kyc and kyc.status == 'pending' %}
-                  <span class="badge" style="background:#fef3c7; color:#92400e; font-size:12px; font-weight:700; padding:4px 10px; border-radius:16px; border:1px solid #fde68a; display:inline-flex; align-items:center; gap:5px;" title="KYC verification in review">
-                    <span data-icon="shield"></span> Under Review
-                  </span>
-                {% elif kyc and kyc.status == 'rejected' %}
-                  <span class="badge" style="background:#fee2e2; color:#991b1b; font-size:12px; font-weight:700; padding:4px 10px; border-radius:16px; border:1px solid #fca5a5; display:inline-flex; align-items:center; gap:5px;" title="KYC documents rejected">
-                    <span data-icon="alert"></span> Action Required
-                  </span>
-                {% else %}
-                  <span class="badge" style="background:#f3f4f6; color:#4b5563; font-size:12px; font-weight:700; padding:4px 10px; border-radius:16px; border:1px solid #e5e7eb; display:inline-flex; align-items:center; gap:5px;" title="KYC not yet submitted">
-                    <span data-icon="shield"></span> Unverified
-                  </span>
-                {% endif %}
+                <span class="badge" style="background:#ecfdf5; color:#065f46; font-size:12px; font-weight:700; padding:4px 10px; border-radius:16px; border:1px solid #a7f3d0; display:inline-flex; align-items:center; gap:5px;" title="Document and business identity verified">
+                  <span data-icon="award"></span> Verified Pro
+                </span>
               </h1>
               <p><span data-icon="map"></span> {{ vendor_type }} · {{ vendor_location }} · New customer opportunities are waiting nearby.</p>
             </div>
           </div>
           <div class="hero-actions">
-            <a class="btn btn-primary" href="/vendor/quick-services/nearby.html"><span data-icon="bolt"></span> Find Quick Services</a>
+            <a class="btn btn-primary" href="/vendor/catalog/index.html"><span data-icon="bolt"></span> My Services</a>
             <a class="btn btn-secondary" href="/vendor/jobs/available.html"><span data-icon="briefcase"></span> Browse Jobs</a>
             <a class="btn btn-secondary" href="/vendor/wallet/index.html"><span data-icon="wallet"></span> Wallet &amp; Payouts</a>
-            <a class="btn btn-secondary" href="/vendor/kyc/index.html"><span data-icon="shield"></span> KYC Verification</a>
             <a class="btn btn-secondary" href="/vendor/bid-credits/packages.html"><span data-icon="bolt"></span> Buy Credits</a>
           </div>
         </section>
-
-        <!-- KYC Dynamic Alert Callout Banner -->
-        {% if not is_kyc_verified %}
-          {% if kyc and kyc.status == 'rejected' %}
-            <div class="callout warning" style="margin: 18px 0; background: #fff1f2; border: 1px solid #fecdd3; color: #9f1239; border-radius: 12px; padding: 16px 20px; display:flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap;">
-              <div style="display:flex; gap:12px; align-items:flex-start;">
-                <span data-icon="alert" style="color: #e11d48; width: 22px; height: 22px; flex-shrink: 0; margin-top: 2px;"></span>
-                <div>
-                  <strong style="font-size: 15px; color: #9f1239;">KYC Verification Action Required</strong>
-                  <div style="font-size: 13px; color: #881337; margin-top: 3px; line-height: 1.5;">
-                    Your verification was rejected by admin. <strong>Reason: {{ kyc.admin_notes|default:"Please upload clearer identity documents." }}</strong>
-                  </div>
-                </div>
-              </div>
-              <a href="/vendor/kyc/upload.html" class="btn btn-sm" style="background: #e11d48; color: #fff; border:none; padding: 8px 16px; border-radius: 8px; font-weight: 600; white-space: nowrap;">Re-upload Documents &rarr;</a>
-            </div>
-          {% elif kyc and kyc.status == 'pending' %}
-            <div class="callout" style="margin: 18px 0; background: #eff6ff; border: 1px solid #bfdbfe; color: #1e40af; border-radius: 12px; padding: 16px 20px; display:flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap;">
-              <div style="display:flex; gap:12px; align-items:flex-start;">
-                <span data-icon="shield" style="color: #2563eb; width: 22px; height: 22px; flex-shrink: 0; margin-top: 2px;"></span>
-                <div>
-                  <strong style="font-size: 15px; color: #1e40af;">KYC Verification Under Review</strong>
-                  <div style="font-size: 13px; color: #1e3a8a; margin-top: 3px; line-height: 1.5;">
-                    Your {{ kyc.get_id_type_display|default:kyc.id_type|upper }} ({{ kyc.id_number }}) submitted on {{ kyc.submitted_at|date:"d M Y" }} is being reviewed. Verified Pro badge will activate upon approval.
-                  </div>
-                </div>
-              </div>
-              <a href="/vendor/kyc/index.html" class="btn btn-secondary btn-sm" style="white-space: nowrap;">View Details</a>
-            </div>
-          {% else %}
-            <div class="callout warning" style="margin: 18px 0; background: #fffbeb; border: 1px solid #fde68a; color: #92400e; border-radius: 12px; padding: 16px 20px; display:flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap;">
-              <div style="display:flex; gap:12px; align-items:flex-start;">
-                <span data-icon="shield" style="color: #d97706; width: 22px; height: 22px; flex-shrink: 0; margin-top: 2px;"></span>
-                <div>
-                  <strong style="font-size: 15px; color: #92400e;">Unlock Verified Pro Status &amp; Automated Payouts</strong>
-                  <div style="font-size: 13px; color: #78350f; margin-top: 3px; line-height: 1.5;">
-                    Verify your identity to get the trusted green Verified Pro badge, stand out to premium clients, and withdraw earnings to your bank account.
-                  </div>
-                </div>
-              </div>
-              <a href="/vendor/kyc/upload.html" class="btn btn-sm" style="background: #d97706; color: #fff; border:none; padding: 8px 16px; border-radius: 8px; font-weight: 600; white-space: nowrap;">Complete KYC &rarr;</a>
-            </div>
-          {% endif %}
-        {% else %}
-          <div class="callout success" style="margin: 18px 0; background: #ecfdf5; border: 1px solid #a7f3d0; color: #065f46; border-radius: 12px; padding: 14px 20px; display:flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap;">
-            <div style="display:flex; gap:10px; align-items:center;">
-              <span data-icon="award" style="color: #059669; width: 20px; height: 20px; flex-shrink: 0;"></span>
-              <div>
-                <strong style="color: #065f46; font-size: 14px;">Verified Pro Vendor Active</strong>
-                <span style="font-size: 12px; color: #047857;">Your credentials and business identity are verified. You have priority listing on quotations and automated wallet payouts enabled.</span>
-              </div>
-            </div>
-            <a href="/vendor/kyc/index.html" class="link small" style="color: #047857; font-weight:600; white-space:nowrap;">View KYC Profile &rarr;</a>
-          </div>
-        {% endif %}
 
         <!-- Module 2: Vendor Wallet & Payout Cards -->
         <div style="margin: 22px 0 12px;">
@@ -181,11 +111,11 @@
             <h2 style="font-size:16px; font-weight:700; margin:0;">Project &amp; Bidding Activity</h2>
           </div>
           <div class="grid grid-6 stats" style="grid-template-columns: repeat(6, minmax(0, 1fr)); margin: 0;">
-            <article class="card stat-card">
+            <a href="/vendor/catalog/index.html" class="card stat-card" style="text-decoration:none; color:inherit;">
               <span class="stat-icon"><span data-icon="bolt"></span></span>
-              <div class="stat-value">{{ available_qs }}</div>
-              <div class="stat-label">Available Quick Services</div>
-            </article>
+              <div class="stat-value">{{ my_services_count|default:0 }}</div>
+              <div class="stat-label">My Listed Services</div>
+            </a>
             <article class="card stat-card">
               <span class="stat-icon teal"><span data-icon="briefcase"></span></span>
               <div class="stat-value">{{ available_jobs }}</div>
@@ -279,41 +209,41 @@
               </div>
             </section>
 
-            <!-- Recent Quick Services Nearby -->
+            <!-- Available Customer Jobs / Quotations -->
             <section class="card">
               <div class="card-head">
                 <div>
-                  <h2 style="font-size:16px;">Nearby Quick Services</h2>
-                  <p>Immediate service requests ready for quotation</p>
+                  <h2 style="font-size:16px;">Available Customer Jobs</h2>
+                  <p>Open customer requests in your trade ready for quotations</p>
                 </div>
-                <a class="link small" href="/vendor/quick-services/nearby.html">Browse all →</a>
+                <a class="link small" href="/vendor/jobs/available.html">Explore all jobs →</a>
               </div>
               <div class="table-wrap">
                 <table class="data-table">
                   <thead>
                     <tr>
-                      <th>Service</th>
+                      <th>Job</th>
                       <th>Location</th>
                       <th>Budget</th>
                       <th>Action</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {% for qs in recent_quick_services %}
+                    {% for job in recent_jobs %}
                     <tr>
                       <td>
-                        <div class="table-title">{{ qs.title }}</div>
-                        <div class="table-sub">QS-{{ qs.id|stringformat:"04d" }} · {{ qs.category.name|default:"General" }}</div>
+                        <div class="table-title">{{ job.title }}</div>
+                        <div class="table-sub">JOB-{{ job.id|stringformat:"04d" }} · {{ job.category.name|default:"General" }}</div>
                       </td>
-                      <td>{% if qs.locality %}{{ qs.locality }}{% elif qs.location %}{{ qs.location.city }}{% else %}Local{% endif %}</td>
-                      <td><strong>₹{{ qs.budget|floatformat:0 }}</strong></td>
+                      <td>{% if job.locality %}{{ job.locality }}{% elif job.location %}{{ job.location.city }}{% elif job.city %}{{ job.city }}{% else %}Local{% endif %}</td>
+                      <td><strong>{% if job.budget %}₹{{ job.budget|floatformat:0 }}{% else %}Open Quote{% endif %}</strong></td>
                       <td>
-                        <a href="/vendor/quick-services/details.html?id={{ qs.id }}" class="btn btn-primary btn-sm">Submit Bid</a>
+                        <a href="/vendor/jobs/send-quotation.html?job_id={{ job.id }}" class="btn btn-primary btn-sm">Submit Quotation</a>
                       </td>
                     </tr>
                     {% empty %}
                     <tr>
-                      <td colspan="4" style="text-align:center; padding:24px; color:var(--text-muted);">No open quick services right now. Check back soon!</td>
+                      <td colspan="4" style="text-align:center; padding:24px; color:var(--text-muted);">No open customer jobs right now. Check back soon!</td>
                     </tr>
                     {% endfor %}
                   </tbody>
@@ -326,79 +256,41 @@
           <!-- Aside / Right Column -->
           <aside class="stack" style="gap: 18px;">
             
-            <!-- KYC Account Verification Status -->
+            <!-- Partner Verification Status Card -->
             <section class="card">
               <div class="card-head">
-                <h3 style="font-size:15px; margin:0;">KYC &amp; Trust Status</h3>
+                <h3 style="font-size:15px; margin:0;">Partner Trust &amp; Status</h3>
               </div>
               <div class="card-body">
                 <div style="text-align:center; padding: 12px 0 16px;">
-                  {% if is_kyc_verified %}
-                    <div style="width:54px; height:54px; border-radius:50%; background:#ecfdf5; color:#059669; display:grid; place-items:center; margin: 0 auto 12px; border:2px solid #a7f3d0;">
-                      <span data-icon="award" style="width:28px; height:28px;"></span>
-                    </div>
-                    <h4 style="margin:0 0 4px; font-size:16px; color:#065f46;">Verified Pro Vendor</h4>
-                    <p style="margin:0; font-size:12px; color:var(--muted);">All identity checks cleared. Your profile displays the verified badge to customers.</p>
-                  {% elif kyc and kyc.status == 'pending' %}
-                    <div style="width:54px; height:54px; border-radius:50%; background:#eff6ff; color:#2563eb; display:grid; place-items:center; margin: 0 auto 12px; border:2px solid #bfdbfe;">
-                      <span data-icon="shield" style="width:28px; height:28px;"></span>
-                    </div>
-                    <h4 style="margin:0 0 4px; font-size:16px; color:#1e40af;">Verification In Progress</h4>
-                    <p style="margin:0; font-size:12px; color:var(--muted);">Documents submitted. Pending administrative review.</p>
-                  {% elif kyc and kyc.status == 'rejected' %}
-                    <div style="width:54px; height:54px; border-radius:50%; background:#fff1f2; color:#e11d48; display:grid; place-items:center; margin: 0 auto 12px; border:2px solid #fecdd3;">
-                      <span data-icon="alert" style="width:28px; height:28px;"></span>
-                    </div>
-                    <h4 style="margin:0 0 4px; font-size:16px; color:#9f1239;">Action Required</h4>
-                    <p style="margin:0; font-size:12px; color:var(--muted);">Please re-submit your ID documents.</p>
-                  {% else %}
-                    <div style="width:54px; height:54px; border-radius:50%; background:#fffbeb; color:#d97706; display:grid; place-items:center; margin: 0 auto 12px; border:2px solid #fde68a;">
-                      <span data-icon="shield" style="width:28px; height:28px;"></span>
-                    </div>
-                    <h4 style="margin:0 0 4px; font-size:16px; color:#92400e;">Unverified Profile</h4>
-                    <p style="margin:0; font-size:12px; color:var(--muted);">Complete KYC to get verified pro badge and unlock bank payouts.</p>
-                  {% endif %}
+                  <div style="width:54px; height:54px; border-radius:50%; background:#ecfdf5; color:#059669; display:grid; place-items:center; margin: 0 auto 12px; border:2px solid #a7f3d0;">
+                    <span data-icon="award" style="width:28px; height:28px;"></span>
+                  </div>
+                  <h4 style="margin:0 0 4px; font-size:16px; color:#065f46;">Verified Pro Partner</h4>
+                  <p style="margin:0; font-size:12px; color:var(--muted);">Document verification complete. Your account is fully certified with verified vendor privileges.</p>
                 </div>
 
                 <div class="divider" style="margin: 12px 0;"></div>
 
                 <div class="info-list" style="grid-template-columns: 1fr; gap: 8px;">
                   <div class="info-item" style="display:flex; justify-content:space-between; padding:8px 0;">
-                    <span class="info-label" style="margin:0;">KYC Status</span>
+                    <span class="info-label" style="margin:0;">Partner Status</span>
                     <span class="info-value">
-                      {% if is_kyc_verified %}
-                        <span class="badge badge-success">Approved</span>
-                      {% elif kyc and kyc.status == 'pending' %}
-                        <span class="badge badge-pending">Pending Review</span>
-                      {% elif kyc and kyc.status == 'rejected' %}
-                        <span class="badge badge-danger">Rejected</span>
-                      {% else %}
-                        <span class="badge badge-gray">Not Submitted</span>
-                      {% endif %}
+                      <span class="badge badge-success">Verified Active</span>
                     </span>
                   </div>
-                  {% if kyc %}
                   <div class="info-item" style="display:flex; justify-content:space-between; padding:8px 0;">
-                    <span class="info-label" style="margin:0;">ID Type</span>
-                    <span class="info-value">{{ kyc.get_id_type_display|default:kyc.id_type|upper }}</span>
+                    <span class="info-label" style="margin:0;">Account Type</span>
+                    <span class="info-value">{{ vendor_type }}</span>
                   </div>
                   <div class="info-item" style="display:flex; justify-content:space-between; padding:8px 0;">
-                    <span class="info-label" style="margin:0;">ID Number</span>
-                    <span class="info-value">{{ kyc.id_number }}</span>
+                    <span class="info-label" style="margin:0;">Operating City</span>
+                    <span class="info-value">{{ vendor_location }}</span>
                   </div>
-                  {% endif %}
                 </div>
 
                 <div style="margin-top:16px;">
-                  {% if is_kyc_verified %}
-                    <a href="/vendor/kyc/index.html" class="btn btn-secondary" style="width:100%;">View KYC Details</a>
-                  {% elif kyc and kyc.status == 'rejected' %}
-                    <a href="/vendor/kyc/upload.html" class="btn btn-primary" style="width:100%; background:#e11d48; border-color:#e11d48;">Re-upload Documents</a>
-                  {% elif kyc and kyc.status == 'pending' %}
-                    <a href="/vendor/kyc/index.html" class="btn btn-secondary" style="width:100%;">Check Status</a>
-                  {% else %}
-                    <a href="/vendor/kyc/upload.html" class="btn btn-primary" style="width:100%;">Submit KYC Now</a>
-                  {% endif %}
+                  <a href="/vendor/profile/index.html" class="btn btn-secondary" style="width:100%;">View Public Profile</a>
                 </div>
               </div>
             </section>
