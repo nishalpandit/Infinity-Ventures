@@ -2212,7 +2212,7 @@ def services_nearby_api(request):
         page = int(request.GET.get('page', 1))
         page_size = min(int(request.GET.get('page_size', 20)), 50)
 
-        qs = QuickService.objects.filter(status='active').select_related(
+        qs = QuickService.objects.all().select_related(
             'vendor', 'vendor__vendor_profile', 'category', 'location'
         )
 
@@ -4109,6 +4109,7 @@ def user_submit_review_api(request):
         review, created = submit_booking_review(
             customer=user,
             booking_id=data.get('booking_id'),
+            job_id=data.get('job_id'),
             rating=data.get('rating'),
             comment=data.get('comment') or data.get('review') or '',
             title=data.get('title') or data.get('review_title') or '',
@@ -4120,6 +4121,7 @@ def user_submit_review_api(request):
             'review': {
                 'id': review.id,
                 'booking_id': review.booking_id,
+                'job_id': review.job_id,
                 'rating': review.rating,
                 'title': review.review_title or '',
                 'comment': review.comment or '',
@@ -4683,6 +4685,9 @@ def user_bookings_api(request):
         return JsonResponse({'status': 'error', 'message': err}, status=401)
     
     try:
+        from .models import ServiceBooking, Job
+        
+        # 1. Fetch ServiceBookings
         bookings = ServiceBooking.objects.filter(customer=user).select_related('vendor', 'quick_service', 'review').order_by('-created_at')
         bookings_list = []
         for b in bookings:
@@ -4698,6 +4703,7 @@ def user_bookings_api(request):
             
             bookings_list.append({
                 'id': b.id,
+                'booking_type': 'quick_service',
                 'service_title': b.quick_service.title if b.quick_service else 'Unknown Service',
                 'vendor_id': b.vendor.id if b.vendor else None,
                 'vendor_name': vendor_name,
@@ -4712,8 +4718,52 @@ def user_bookings_api(request):
                 'payment_status': b.payment_status,
                 'review_rating': review.rating if review else None,
                 'review_comment': review.comment if review else '',
-                'created_at': b.created_at.isoformat()
+                'created_at': b.created_at.isoformat(),
+                'created_at_dt': b.created_at # for sorting
             })
+            
+        # 2. Fetch Assigned Jobs
+        jobs = Job.objects.filter(user=user, assigned_vendor__isnull=False).select_related('assigned_vendor').prefetch_related('bids')
+        for job in jobs:
+            vendor_name = job.assigned_vendor.get_full_name() or job.assigned_vendor.username if job.assigned_vendor else 'Unknown Vendor'
+            vendor_phone = ''
+            if job.assigned_vendor:
+                if hasattr(job.assigned_vendor, 'user_profile') and job.assigned_vendor.user_profile:
+                    vendor_phone = job.assigned_vendor.user_profile.phone_number or ''
+                if not vendor_phone and hasattr(job.assigned_vendor, 'phone_number'):
+                    vendor_phone = getattr(job.assigned_vendor, 'phone_number', '')
+
+            selected_bid = next((bid for bid in job.bids.all() if bid.status == 'selected'), None)
+            amount = float(selected_bid.display_customer_total) if selected_bid else float(job.budget)
+
+            bookings_list.append({
+                'id': job.id,
+                'booking_type': 'job',
+                'service_title': job.title,
+                'vendor_id': job.assigned_vendor.id if job.assigned_vendor else None,
+                'vendor_name': vendor_name,
+                'vendor_phone': vendor_phone,
+                'package_name': 'Custom Job',
+                'total_amount': amount,
+                'total_price': amount,
+                'scheduled_date': str(job.preferred_start_date) if job.preferred_start_date else '',
+                'scheduled_time': str(job.expected_completion) if job.expected_completion else '',
+                'service_address': job.address or job.locality or '',
+                'status': job.status,
+                'payment_status': 'pending',  # Default for jobs without explicit payment status tracking
+                'review_rating': None,
+                'review_comment': '',
+                'created_at': job.created_at.isoformat(),
+                'created_at_dt': job.created_at
+            })
+
+        # Sort the combined list by created_at_dt descending
+        bookings_list.sort(key=lambda x: x['created_at_dt'], reverse=True)
+        
+        # Remove the temporary datetime object before returning JSON
+        for b in bookings_list:
+            del b['created_at_dt']
+
         return JsonResponse({'status': 'success', 'bookings': bookings_list}, status=200)
     except Exception as e:
         return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
