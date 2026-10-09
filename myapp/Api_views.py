@@ -3249,6 +3249,9 @@ def vendor_dashboard_api(request):
                     )
             open_jobs_qs = open_jobs_qs.filter(cat_filter)
 
+        from .views import is_job_in_vendor_city
+        open_jobs_filtered = [j for j in open_jobs_qs if is_job_in_vendor_city(vp, j, city_radius_km=35.0)[0]]
+
         active_qs_qs = QuickService.objects.filter(status__in=['active', 'open']).select_related('category', 'location').order_by('-created_at')
 
         # Bids counts
@@ -3257,7 +3260,7 @@ def vendor_dashboard_api(request):
         completed_bids_count = Bid.objects.filter(vendor=user, status='completed').count()
 
         # Serialized lists
-        jobs_list = [_serialize_job_summary(j, vendor_user=user, request=request) for j in open_jobs_qs]
+        jobs_list = [_serialize_job_summary(j, vendor_user=user, request=request) for j in open_jobs_filtered]
         qs_list = [_serialize_quick_service_summary(q, vendor_user=user, request=request) for q in active_qs_qs[:12]]
 
         # Next Appointment / In-Progress Task
@@ -3387,7 +3390,15 @@ def vendor_jobs_api(request):
         if category_filter:
             jobs_qs = jobs_qs.filter(category__name__iexact=category_filter)
 
-        jobs_list = [_serialize_job_summary(j, vendor_user=user, request=request) for j in jobs_qs]
+        from .views import is_job_in_vendor_city
+        filtered_jobs = []
+        for j in jobs_qs:
+            is_in_city, dist = is_job_in_vendor_city(vp, j, city_radius_km=35.0)
+            if is_in_city:
+                j.distance_km = dist
+                filtered_jobs.append(j)
+
+        jobs_list = [_serialize_job_summary(j, vendor_user=user, request=request) for j in filtered_jobs]
         return JsonResponse({
             'status': 'success',
             'count': len(jobs_list),

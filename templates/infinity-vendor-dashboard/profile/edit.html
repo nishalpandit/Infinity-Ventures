@@ -6,65 +6,166 @@
   window.PROFILE_IMAGE_URL = "{{ profile_image_url|default:''|escapejs }}" || null;
   window.VENDOR_WALLET_BALANCE = "{{ wallet_balance|default:'0.00'|escapejs }}";
   window.VENDOR_CREDITS = {{ available_bids|default:0 }};
-</script><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.css"><script defer src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.js"></script><script defer src="/infinity-vendor-dashboard/assets/app.js"></script></head><body data-page="profile-edit" data-title="Edit Profile" data-root="../"><div class="app-shell"><div id="sidebar-root"></div><div class="workspace"><div id="topbar-root"></div><main class="page">
-<section class="card" style="max-width:980px">
-  <form method="POST" action="" enctype="multipart/form-data">
+</script><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.css"><script defer src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.js"></script><script defer src="/infinity-vendor-dashboard/assets/app.js"></script>
+<style>
+  .profile-form-card { max-width: 960px; margin: 0 auto; background: #fff; border-radius: 12px; border: 1px solid #e2e8f0; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+  .profile-section-header { display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #f1f5f9; padding: 18px 24px; }
+  .profile-section-header h2 { font-size: 17px; font-weight: 700; color: #0f172a; margin: 0; }
+  .profile-section-body { padding: 24px; }
+  .autofetch-location-box { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 16px 20px; margin-bottom: 22px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
+  .readonly-input { background: #f8fafc !important; color: #334155 !important; cursor: not-allowed !important; border-color: #cbd5e1 !important; font-weight: 500; }
+</style>
+</head><body data-page="profile-edit" data-title="Edit Profile" data-root="../"><div class="app-shell"><div id="sidebar-root"></div><div class="workspace"><div id="topbar-root"></div><main class="page">
+
+<div class="profile-form-card">
+  <div class="profile-section-header">
+    <div>
+      <h2>Edit Vendor Profile</h2>
+      <p style="margin:4px 0 0; font-size:13px; color:#64748b;">Manage your contact details, workshop address, and business information.</p>
+    </div>
+    <a href="index.html" class="btn btn-secondary btn-sm" style="display:inline-flex; align-items:center; gap:6px;">
+      View Profile
+    </a>
+  </div>
+
+  <form method="POST" action="" enctype="multipart/form-data" id="profile-edit-form">
     {% csrf_token %}
     <input type="hidden" name="profile_image_base64" id="profile_image_base64">
     <input type="hidden" name="remove_profile_image" id="remove_profile_image" value="0">
-    <div class="form-section">
-      <div class="field">
-        <label>Profile Image</label>
-        <div class="cell-user">
+
+    <div class="profile-section-body">
+      <!-- Section 1: Avatar -->
+      <div style="display:flex; align-items:center; gap:20px; padding-bottom:24px; border-bottom:1px solid #f1f5f9; margin-bottom:24px; flex-wrap:wrap;">
+        <div>
           {% if vendor_profile and vendor_profile.profile_image %}
-            <img src="{{ vendor_profile.profile_image.url }}" alt="Profile" class="avatar xl vendor" style="object-fit:cover;" id="profile-preview-img">
+            <img src="{{ vendor_profile.profile_image.url }}" alt="Profile" class="avatar xl vendor" style="object-fit:cover; width:88px; height:88px; border-radius:50%; box-shadow:0 4px 10px rgba(0,0,0,0.06);" id="profile-preview-img">
           {% else %}
-            <span class="avatar xl vendor" id="profile-preview-span">{{ vendor_profile.company_name|default:user.first_name|slice:":2"|upper|default:"V" }}</span>
+            <span class="avatar xl vendor" id="profile-preview-span" style="width:88px; height:88px; font-size:28px; border-radius:50%; display:inline-grid; place-items:center; background:#2563eb; color:#fff; font-weight:700;">{{ vendor_profile.company_name|default:user.first_name|slice:":2"|upper|default:"V" }}</span>
           {% endif %}
-          <div class="stack" style="gap:8px">
-            <label class="btn btn-secondary btn-sm"><span data-icon="camera"></span> Change Image
+        </div>
+        <div style="flex:1; min-width:220px;">
+          <h4 style="margin:0 0 4px; font-size:15px; font-weight:600; color:#0f172a;">Profile / Brand Image</h4>
+          <p style="margin:0 0 12px; font-size:12.5px; color:#64748b;">Square JPG or PNG, max 5MB. Visible to clients when submitting bids.</p>
+          <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+            <label class="btn btn-secondary btn-sm" style="cursor:pointer; display:inline-flex; align-items:center; gap:6px;">
+              <span data-icon="camera"></span> Choose New Photo
               <input type="file" name="profile_image" accept="image/*" hidden data-preview="profile-image">
             </label>
-            <button type="button" class="btn btn-ghost btn-sm" id="btn-remove-avatar" style="color:var(--red);">Remove</button>
+            <button type="button" class="btn btn-ghost btn-sm" id="btn-remove-avatar" style="color:#ef4444;">Remove Photo</button>
           </div>
         </div>
-        <div class="preview-list" id="profile-image"></div>
       </div>
-    </div>
-    <div class="form-section">
-      <div class="form-grid">
+
+      <!-- Section 2: Basic & Business Info -->
+      <h3 style="font-size:15px; font-weight:700; color:#0f172a; margin:0 0 16px;">Business &amp; Contact Details</h3>
+      <div class="form-grid" style="display:grid; grid-template-columns:repeat(2, 1fr); gap:16px; margin-bottom:28px;">
         <div class="field">
-          <label>Business / Trade Name (Optional)</label>
-          <input class="input" type="text" name="company_name" value="{% if vendor_profile.company_name and vendor_profile.company_name != user.first_name %}{{ vendor_profile.company_name }}{% endif %}" placeholder="Leave blank to use personal name ({{ user.first_name|default:user.username }})">
+          <label style="font-size:13px; font-weight:600; color:#334155;">Business / Company Trade Name</label>
+          <input class="input" type="text" name="company_name" value="{% if vendor_profile.company_name and vendor_profile.company_name != user.first_name %}{{ vendor_profile.company_name }}{% endif %}" placeholder="e.g. Ranchi Home Care Solutions (or leave blank to use personal name)">
         </div>
         <div class="field">
-          <label>Contact Person <span class="required">*</span></label>
-          <input class="input" type="text" name="first_name" required value="{{ user.first_name }}">
+          <label style="font-size:13px; font-weight:600; color:#334155;">Contact Person Name <span class="required" style="color:#ef4444;">*</span></label>
+          <input class="input" type="text" name="first_name" required value="{{ user.first_name|default:user.username }}">
         </div>
         <div class="field">
-          <label>Mobile <span class="required">*</span></label>
-          <input class="input" type="text" name="phone_number" required value="{{ user_profile.phone_number|default:'' }}">
+          <label style="font-size:13px; font-weight:600; color:#334155;">Contact Mobile Number <span class="required" style="color:#ef4444;">*</span></label>
+          <input class="input" type="tel" name="phone_number" required value="{{ user_profile.phone_number|default:'' }}" placeholder="+91 98765 43210">
         </div>
         <div class="field">
-          <label>Email <span class="required">*</span></label>
+          <label style="font-size:13px; font-weight:600; color:#334155;">Email Address <span class="required" style="color:#ef4444;">*</span></label>
           <input class="input" type="email" name="email" required value="{{ user.email }}">
         </div>
-        <div class="field full">
-          <label>Address <span class="required">*</span></label>
-          <textarea class="textarea" name="address" required>{{ vendor_profile.address|default:'' }}</textarea>
+        <div class="field">
+          <label style="font-size:13px; font-weight:600; color:#334155;">Years of Experience</label>
+          <input class="input" type="number" name="experience" min="0" max="60" value="{{ vendor_profile.experience|default:5 }}" placeholder="e.g. 5">
         </div>
       </div>
-    </div>
-    <div class="form-actions">
-      <a class="btn btn-secondary" href="index.html">Cancel</a>
-      <button class="btn btn-primary" type="submit"><span data-icon="check"></span> Save</button>
+
+      <!-- Section 3: Current Location (Autofetched, Not Manually Editable) -->
+      <div style="display:flex; justify-content:space-between; align-items:center; margin:0 0 12px;">
+        <h3 style="font-size:15px; font-weight:700; color:#0f172a; margin:0; display:flex; align-items:center; gap:8px;">
+          <span>📍 Current Location</span>
+          <span style="font-size:11px; font-weight:600; color:#0369a1; background:#e0f2fe; padding:2px 8px; border-radius:10px;">Autofetched via GPS</span>
+        </h3>
+        <button type="button" class="btn btn-secondary btn-sm" id="btn-refetch-gps" style="font-size:12px; display:inline-flex; align-items:center; gap:6px;">
+          <span data-icon="map"></span> Re-fetch Location
+        </button>
+      </div>
+
+      <div class="autofetch-location-box">
+        <div style="display:flex; align-items:center; gap:12px;">
+          <div id="gps-indicator-icon" style="width:12px; height:12px; border-radius:50%; background:#10b981; box-shadow:0 0 0 3px rgba(16,185,129,0.2);"></div>
+          <div>
+            <div id="gps-status-title" style="font-weight:700; font-size:13px; color:#0f172a;">Current Location Autofetched</div>
+            <div id="gps-status-feedback" style="font-size:12px; color:#64748b; margin-top:2px;">
+              {% if vendor_profile.latitude and vendor_profile.longitude %}
+                📍 {{ vendor_profile.city|default:"Ranchi" }}{% if vendor_profile.location and vendor_profile.location != vendor_profile.city %}, {{ vendor_profile.location }}{% endif %} (Lat: {{ vendor_profile.latitude }}, Lon: {{ vendor_profile.longitude }})
+              {% else %}
+                Autofetching live coordinates via browser GPS...
+              {% endif %}
+            </div>
+          </div>
+        </div>
+        <span style="font-size:11.5px; color:#64748b; background:#fff; padding:4px 10px; border-radius:6px; border:1px solid #e2e8f0;">🔒 Locked to device location</span>
+      </div>
+
+      <div class="form-grid" style="display:grid; grid-template-columns:repeat(2, 1fr); gap:16px; margin-bottom:24px;">
+        <div class="field">
+          <label style="font-size:13px; font-weight:600; color:#334155;">
+            Service City <span style="font-size:11px; font-weight:400; color:#64748b;">(Autofetched)</span>
+          </label>
+          <input class="input readonly-input" type="text" name="city" id="input-city" readonly value="{{ vendor_profile.city|default:'Ranchi' }}">
+        </div>
+
+        <div class="field">
+          <label style="font-size:13px; font-weight:600; color:#334155;">
+            Locality / Area <span style="font-size:11px; font-weight:400; color:#64748b;">(Autofetched)</span>
+          </label>
+          <input class="input readonly-input" type="text" name="location" id="input-locality" readonly value="{{ vendor_profile.location|default:'' }}">
+        </div>
+
+        <div class="field">
+          <label style="font-size:13px; font-weight:600; color:#334155;">
+            Latitude <span style="font-size:11px; font-weight:400; color:#64748b;">(Autofetched)</span>
+          </label>
+          <input class="input readonly-input" type="text" name="latitude" id="input-latitude" readonly value="{{ vendor_profile.latitude|default:'' }}">
+        </div>
+
+        <div class="field">
+          <label style="font-size:13px; font-weight:600; color:#334155;">
+            Longitude <span style="font-size:11px; font-weight:400; color:#64748b;">(Autofetched)</span>
+          </label>
+          <input class="input readonly-input" type="text" name="longitude" id="input-longitude" readonly value="{{ vendor_profile.longitude|default:'' }}">
+        </div>
+
+        <div class="field full" style="grid-column:1/-1;">
+          <label style="font-size:13px; font-weight:600; color:#334155;">Physical Workshop / Business Street Address <span class="required" style="color:#ef4444;">*</span></label>
+          <textarea class="textarea" name="address" rows="3" required placeholder="Shop/House number, Street, Landmark, City, Pincode">{{ vendor_profile.address|default:'' }}</textarea>
+        </div>
+      </div>
+
+      <!-- Section 4: About / Bio -->
+      <div class="field full" style="margin-top:20px;">
+        <label style="font-size:13px; font-weight:600; color:#334155;">About Your Business &amp; Work Expertise</label>
+        <textarea class="textarea" name="about" rows="4" placeholder="Briefly describe your team, equipment, guarantees, and years of experience...">{{ vendor_profile.about|default:'' }}</textarea>
+      </div>
+
+      <!-- Actions -->
+      <div style="display:flex; justify-content:flex-end; gap:12px; margin-top:32px; padding-top:20px; border-top:1px solid #f1f5f9;">
+        <a class="btn btn-secondary" href="index.html" style="padding:10px 20px;">Cancel</a>
+        <button class="btn btn-primary" type="submit" style="padding:10px 24px; font-weight:600; display:inline-flex; align-items:center; gap:8px;">
+          <span data-icon="check"></span> Save Profile
+        </button>
+      </div>
     </div>
   </form>
-</section>
+</div>
+
+<!-- Cropper Modal -->
 <div class="modal-backdrop" id="cropper-modal" style="display:none; z-index:9999;background:rgba(0,0,0,0.8);position:fixed;top:0;left:0;width:100%;height:100%;align-items:center;justify-content:center;">
   <div class="modal" style="background:#fff;border-radius:8px;padding:20px;max-width:500px;width:100%;">
     <div class="modal-header" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:15px;">
-      <h3 class="modal-title" style="margin:0;">Adjust Image Position</h3>
+      <h3 class="modal-title" style="margin:0;">Adjust Profile Photo</h3>
       <button type="button" class="btn btn-ghost" onclick="closeCropper()" style="border:none;background:none;font-size:18px;cursor:pointer;">✕</button>
     </div>
     <div class="modal-body" style="margin-bottom:15px;">
@@ -74,11 +175,104 @@
     </div>
     <div class="modal-footer" style="display:flex;justify-content:flex-end;gap:10px;">
       <button type="button" class="btn btn-secondary" onclick="closeCropper()">Cancel</button>
-      <button type="button" class="btn btn-primary" id="save-crop-btn">Save Image</button>
+      <button type="button" class="btn btn-primary" id="save-crop-btn">Crop &amp; Apply</button>
     </div>
   </div>
 </div>
+
 <script>
+  // Automatic GPS Location Fetching (Not manually editable)
+  const inputLat = document.getElementById('input-latitude');
+  const inputLon = document.getElementById('input-longitude');
+  const inputCity = document.getElementById('input-city');
+  const inputLocality = document.getElementById('input-locality');
+  const gpsStatusTitle = document.getElementById('gps-status-title');
+  const gpsStatusFeedback = document.getElementById('gps-status-feedback');
+  const gpsIndicatorIcon = document.getElementById('gps-indicator-icon');
+  const btnRefetchGps = document.getElementById('btn-refetch-gps');
+
+  function autofetchLocation() {
+    if (!navigator.geolocation) {
+      if (gpsStatusFeedback) gpsStatusFeedback.textContent = "Geolocation is not supported by your browser.";
+      if (gpsIndicatorIcon) gpsIndicatorIcon.style.background = "#f59e0b";
+      return;
+    }
+
+    if (gpsStatusTitle) gpsStatusTitle.textContent = "Autofetching GPS Location...";
+    if (gpsStatusFeedback) gpsStatusFeedback.textContent = "Reading device GPS sensors...";
+    if (gpsIndicatorIcon) {
+      gpsIndicatorIcon.style.background = "#3b82f6";
+      gpsIndicatorIcon.style.boxShadow = "0 0 0 3px rgba(59,130,246,0.2)";
+    }
+    if (btnRefetchGps) btnRefetchGps.disabled = true;
+
+    navigator.geolocation.getCurrentPosition(
+      async function(pos) {
+        const lat = pos.coords.latitude.toFixed(6);
+        const lon = pos.coords.longitude.toFixed(6);
+        if (inputLat) inputLat.value = lat;
+        if (inputLon) inputLon.value = lon;
+
+        let detectedCity = "";
+        let detectedArea = "";
+
+        // Reverse geocoding via Nominatim OpenStreetMap
+        try {
+          const resp = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json`);
+          if (resp.ok) {
+            const data = await resp.json();
+            if (data && data.address) {
+              detectedCity = data.address.city || data.address.town || data.address.district || data.address.state_district || "";
+              detectedArea = data.address.suburb || data.address.neighbourhood || data.address.road || "";
+              if (detectedCity && inputCity) inputCity.value = detectedCity;
+              if (detectedArea && inputLocality) inputLocality.value = detectedArea + (detectedCity ? ', ' + detectedCity : '');
+            }
+          }
+        } catch(err) {
+          console.warn("Reverse geocode network note:", err);
+        }
+
+        if (gpsStatusTitle) gpsStatusTitle.textContent = "Current Location Autofetched";
+        if (gpsStatusFeedback) {
+          const cName = detectedCity || (inputCity ? inputCity.value : 'Detected');
+          const aName = detectedArea || (inputLocality ? inputLocality.value : '');
+          gpsStatusFeedback.textContent = `📍 ${cName}${aName ? ', ' + aName : ''} (Lat: ${lat}, Lon: ${lon})`;
+        }
+        if (gpsIndicatorIcon) {
+          gpsIndicatorIcon.style.background = "#10b981";
+          gpsIndicatorIcon.style.boxShadow = "0 0 0 3px rgba(16,185,129,0.2)";
+        }
+        if (btnRefetchGps) btnRefetchGps.disabled = false;
+      },
+      function(err) {
+        if (btnRefetchGps) btnRefetchGps.disabled = false;
+        if (gpsIndicatorIcon) {
+          gpsIndicatorIcon.style.background = "#f59e0b";
+          gpsIndicatorIcon.style.boxShadow = "0 0 0 3px rgba(245,158,11,0.2)";
+        }
+        if (gpsStatusTitle) gpsStatusTitle.textContent = "GPS Location Unavailable";
+        let msg = "Could not autofetch location. ";
+        if (err.code === 1) msg += "Permission was denied. Please allow location permissions in your browser.";
+        else if (err.code === 2) msg += "Position unavailable.";
+        else if (err.code === 3) msg += "Request timed out.";
+        if (gpsStatusFeedback) gpsStatusFeedback.textContent = msg;
+      },
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+    );
+  }
+
+  // Autofetch on page load
+  window.addEventListener('DOMContentLoaded', function() {
+    autofetchLocation();
+  });
+
+  if (btnRefetchGps) {
+    btnRefetchGps.addEventListener('click', function() {
+      autofetchLocation();
+    });
+  }
+
+  // Cropper logic
   let cropper;
   const cropperModal = document.getElementById('cropper-modal');
   const cropperImage = document.getElementById('cropper-image');
@@ -90,38 +284,38 @@
       cropper.destroy();
       cropper = null;
     }
-    document.querySelector('input[name="profile_image"]').value = '';
+    const fileInput = document.querySelector('input[name="profile_image"]');
+    if (fileInput) fileInput.value = '';
   }
 
-  document.querySelector('input[name="profile_image"]').addEventListener('change', function(e) {
-    if (e.target.files && e.target.files[0]) {
-      const reader = new FileReader();
-      reader.onload = function(e) {
-        cropperImage.src = e.target.result;
-        cropperModal.style.display = 'flex';
-        
-        if (cropper) cropper.destroy();
-        cropper = new Cropper(cropperImage, {
-          aspectRatio: 1,
-          viewMode: 1,
-          dragMode: 'move',
-          autoCropArea: 1,
-          cropBoxMovable: false,
-          cropBoxResizable: false,
-        });
-      };
-      reader.readAsDataURL(e.target.files[0]);
-    }
-  });
+  const fileInput = document.querySelector('input[name="profile_image"]');
+  if (fileInput) {
+    fileInput.addEventListener('change', function(e) {
+      if (e.target.files && e.target.files[0]) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+          cropperImage.src = e.target.result;
+          cropperModal.style.display = 'flex';
+          
+          if (cropper) cropper.destroy();
+          cropper = new Cropper(cropperImage, {
+            aspectRatio: 1,
+            viewMode: 1,
+            dragMode: 'move',
+            autoCropArea: 1,
+            cropBoxMovable: false,
+            cropBoxResizable: false,
+          });
+        };
+        reader.readAsDataURL(e.target.files[0]);
+      }
+    });
+  }
 
-  document.getElementById('save-crop-btn').addEventListener('click', function() {
+  document.getElementById('save-crop-btn')?.addEventListener('click', function() {
     if (cropper) {
-      const canvas = cropper.getCroppedCanvas({
-        width: 400,
-        height: 400,
-      });
+      const canvas = cropper.getCroppedCanvas({ width: 400, height: 400 });
       const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
-      
       base64Input.value = dataUrl;
       
       let img = document.getElementById('profile-preview-img');
@@ -133,14 +327,14 @@
         newImg.id = 'profile-preview-img';
         newImg.className = 'avatar xl vendor';
         newImg.style.objectFit = 'cover';
+        newImg.style.width = '88px';
+        newImg.style.height = '88px';
+        newImg.style.borderRadius = '50%';
         newImg.src = dataUrl;
         newImg.alt = 'Profile';
         span.parentNode.replaceChild(newImg, span);
       }
-      
-      cropperModal.style.display = 'none';
-      cropper.destroy();
-      cropper = null;
+      closeCropper();
     }
   });
 
@@ -152,10 +346,18 @@
       const span = document.createElement('span');
       span.id = 'profile-preview-span';
       span.className = 'avatar xl vendor';
-      span.textContent = '{{ vendor_initials|default:"VN" }}';
+      span.style.width = '88px';
+      span.style.height = '88px';
+      span.style.fontSize = '28px';
+      span.style.borderRadius = '50%';
+      span.style.display = 'inline-grid';
+      span.style.placeItems = 'center';
+      span.style.background = '#2563eb';
+      span.style.color = '#fff';
+      span.style.fontWeight = '700';
+      span.textContent = 'VN';
       img.parentNode.replaceChild(span, img);
     }
-    if (window.showToast) window.showToast('Photo Marked for Removal', 'Click Save to apply changes.', 'info');
   });
 </script>
 </main></div></div></body></html>

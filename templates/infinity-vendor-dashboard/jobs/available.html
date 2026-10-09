@@ -39,8 +39,8 @@
             <span data-icon="briefcase"></span> Categories: <strong>{{ vendor_categories|join:", " }}</strong>
           </span>
           {% endif %}
-          <a href="/vendor/settings/index.html#profile" class="btn btn-secondary btn-sm" title="Change operating city in profile settings">
-            <span data-icon="settings"></span> Change City
+          <a href="/vendor/settings/index.html#profile" class="btn btn-primary btn-sm" title="Update Profile & Location in Settings">
+            <span data-icon="settings"></span> Location Settings
           </a>
         </div>
       </div>
@@ -122,7 +122,7 @@
 
                 <div class="service-meta">
                   <span><span data-icon="rupee"></span> Budget <strong>₹{{ job.budget }}</strong> ({{ job.get_budget_type_display|default:'Fixed' }})</span>
-                  <span><span data-icon="map"></span> {% if job.location %}{{ job.location.city }}{% else %}{{ vendor_city|default:"Unknown Location" }}{% endif %}{% if job.locality %}, {{ job.locality }}{% endif %}{% if job.latitude and job.longitude %} <a href="https://maps.google.com/?q={{ job.latitude }},{{ job.longitude }}" target="_blank" rel="noopener noreferrer" style="color:#2563eb; font-weight:700; margin-left:4px; text-decoration:none;" title="Open in Google Maps">📍 Map ↗</a>{% endif %}</span>
+                  <span><span data-icon="map"></span> {% if job.location %}{{ job.location.city }}{% else %}{{ vendor_city|default:"Unknown Location" }}{% endif %}{% if job.locality %}, {{ job.locality }}{% endif %}{% if job.latitude and job.longitude %} <a href="https://maps.google.com/?q={{ job.latitude }},{{ job.longitude }}" target="_blank" rel="noopener noreferrer" style="color:#2563eb; font-weight:700; margin-left:4px; text-decoration:none;" title="Open in Google Maps">📍 Map ↗</a>{% endif %}{% if job.distance_km %}<span class="badge" style="background:#f0fdf4; color:#166534; font-size:11px; padding:2px 8px; border-radius:12px; margin-left:6px; font-weight:600;">{{ job.distance_km }} km</span>{% endif %}</span>
                   <span><span data-icon="calendar"></span> Posted {{ job.created_at|date:"d-m-Y" }}</span>
                 </div>
 
@@ -146,10 +146,12 @@
               <div style="grid-column: 1 / -1; text-align: center; padding: 50px 20px; background:#f8fafc; border-radius:12px; border:1.5px dashed #cbd5e1;">
                 <div style="font-size:38px; margin-bottom:12px;">📍</div>
                 <h3 style="font-size:17px; font-weight:700; color:var(--ink); margin-bottom:6px;">No Active Jobs in {% if vendor_city %}{{ vendor_city }}{% elif vendor_location %}{{ vendor_location }}{% else %}your city{% endif %}</h3>
-                <p class="muted" style="max-width:440px; margin:0 auto 16px; font-size:13px;">There are no open customer requests in your city right now. New customer leads posted in {% if vendor_city %}{{ vendor_city }}{% elif vendor_location %}{{ vendor_location }}{% else %}your city{% endif %} will automatically appear here.</p>
-                <a href="/vendor/settings/index.html#profile" class="btn btn-secondary btn-sm">
-                  <span data-icon="settings"></span> Update Operating City
-                </a>
+                <p class="muted" style="max-width:440px; margin:0 auto 16px; font-size:13px;">There are no open customer requests in your city territory right now. Jobs posted from outside your city territory are hidden automatically.</p>
+                <div style="display:flex; justify-content:center; gap:10px;">
+                  <a href="/vendor/settings/index.html#profile" class="btn btn-primary btn-sm">
+                    <span data-icon="settings"></span> Update Location in Settings
+                  </a>
+                </div>
               </div>
             {% endfor %}
           </div>

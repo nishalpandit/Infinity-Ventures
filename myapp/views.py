@@ -351,9 +351,67 @@ def resolve_coordinates_for_location(loc_string, default_coords=(23.3697, 85.334
             return coords
     return default_coords
 
+def is_job_in_vendor_city(vendor_profile, job, city_radius_km=35.0):
+    """
+    Determines if a job is within the vendor's city territory using GPS coordinates
+    (latitude & longitude) and city fallback.
+    - If job and vendor both have coordinates: checks if distance <= 35km (whole city).
+    - If coordinates place the job > 35km away, it is strictly OUTSIDE the city.
+    - If job lacks coordinates, falls back to text city/locality matching.
+    """
+    if not vendor_profile:
+        return True, None
+    
+    # 1. Vendor coordinates
+    v_lat = float(vendor_profile.latitude) if vendor_profile.latitude else None
+    v_lon = float(vendor_profile.longitude) if vendor_profile.longitude else None
+    vendor_city = (vendor_profile.city or (vendor_profile.location.split(',')[0] if vendor_profile.location else 'Ranchi')).strip()
+    
+    if v_lat is None or v_lon is None:
+        coords = resolve_coordinates_for_location(vendor_city or vendor_profile.location or 'Ranchi')
+        if coords:
+            v_lat, v_lon = coords[0], coords[1]
+        
+    # 2. Job coordinates
+    j_lat = float(job.latitude) if job.latitude else None
+    j_lon = float(job.longitude) if job.longitude else None
+    
+    # 3. If job has coordinates, compute distance
+    if j_lat is not None and j_lon is not None and v_lat is not None and v_lon is not None:
+        dist = haversine_distance_km(v_lat, v_lon, j_lat, j_lon)
+        if dist is not None:
+            if dist <= city_radius_km:
+                return True, dist
+            else:
+                # Outside city territory (> 35km)
+                return False, dist
+                
+    # 4. If job coordinates missing, resolve from job's city/locality/address
+    job_loc_str = ((job.city or '') + ' ' + (job.locality or '') + ' ' + (job.location.city if job.location else '') + ' ' + (job.address or '')).strip()
+    resolved_j_coords = resolve_coordinates_for_location(job_loc_str, default_coords=None)
+    if resolved_j_coords and v_lat is not None and v_lon is not None:
+        dist = haversine_distance_km(v_lat, v_lon, resolved_j_coords[0], resolved_j_coords[1])
+        if dist is not None:
+            if dist <= city_radius_km:
+                return True, dist
+            else:
+                return False, dist
+
+    # 5. Fallback text city matching
+    if vendor_city:
+        v_lower = vendor_city.lower()
+        j_city = (job.city or (job.location.city if job.location else '') or '').lower()
+        j_addr = ((job.locality or '') + ' ' + (job.address or '')).lower()
+        if v_lower in j_city or j_city in v_lower or (not j_city and v_lower in j_addr):
+            return True, None
+        return False, None
+        
+    return True, None
+
 def save_vendor_profile_changes(request, user):
     """
-    Saves vendor profile details, contact information, and handles profile image upload/removal.
+    Saves vendor profile details, contact information, GPS location coordinates,
+    and handles profile image upload/removal.
     Works seamlessly for both settings/index and profile/edit views.
     """
     v_prof, _ = VendorProfile.objects.get_or_create(user=user)
@@ -375,10 +433,37 @@ def save_vendor_profile_changes(request, user):
         category = request.POST.get('category')
         if category is not None and category.strip():
             v_prof.category = category.strip()
+
+    # City & Location
+    city = request.POST.get('city')
+    if city is not None and city.strip():
+        v_prof.city = city.strip()
+        u_prof.city = city.strip()
         
     location = request.POST.get('location')
     if location is not None and location.strip():
         v_prof.location = location.strip()
+        if not v_prof.city:
+            v_prof.city = location.strip().split(',')[0].strip()
+            u_prof.city = v_prof.city
+    elif v_prof.city and not v_prof.location:
+        v_prof.location = v_prof.city
+
+    # Latitude & Longitude (GPS Location Coordinates)
+    lat_val = request.POST.get('latitude')
+    lon_val = request.POST.get('longitude')
+    if lat_val and lon_val:
+        try:
+            v_prof.latitude = round(float(lat_val), 6)
+            v_prof.longitude = round(float(lon_val), 6)
+        except (ValueError, TypeError):
+            pass
+    elif not v_prof.latitude or not v_prof.longitude:
+        # Fallback to geocoding from city or location name
+        coords = resolve_coordinates_for_location(v_prof.city or v_prof.location or 'Ranchi')
+        if coords:
+            v_prof.latitude = round(float(coords[0]), 6)
+            v_prof.longitude = round(float(coords[1]), 6)
         
     address = request.POST.get('address')
     if address is not None:
@@ -399,7 +484,6 @@ def save_vendor_profile_changes(request, user):
     if phone_number is not None and phone_number.strip():
         v_prof.mobile = phone_number.strip()
         u_prof.phone_number = phone_number.strip()
-        u_prof.save()
         
     first_name = request.POST.get('first_name')
     if first_name is not None and first_name.strip():
@@ -410,6 +494,7 @@ def save_vendor_profile_changes(request, user):
         user.email = email.strip()
         
     user.save()
+    u_prof.save()
     
     # Profile picture handling: Remove / Base64 / File upload
     remove_img = request.POST.get('remove_profile_image') in ['1', 'true', 'yes', True]
@@ -679,6 +764,10 @@ def dashboard_view(request, path=''):
             try: lon = float(lon_val)
             except (ValueError, TypeError): pass
 
+        city_val = request.POST.get('city', '').strip()
+        if not city_val:
+            city_val = locality.split(',')[0].strip() if locality else "Ranchi"
+
         job = Job(
             title=title or "Home Service Job",
             description=description or f"Requirement for {title}",
@@ -694,6 +783,7 @@ def dashboard_view(request, path=''):
             shift_availability=request.POST.get('shift_availability', 'Day shift'),
             working_hours=request.POST.get('working_hours', 'Regular'),
             locality=locality,
+            city=city_val,
             latitude=lat,
             longitude=lon,
             address=address,
@@ -711,9 +801,10 @@ def dashboard_view(request, path=''):
         if loc_id:
             try: job.location_id = int(loc_id)
             except: pass
-        if not job.location_id:
-            first_loc = Location.objects.filter(status='active').first()
-            if first_loc: job.location = first_loc
+        if not job.location_id and city_val:
+            matching_loc = Location.objects.filter(city__iexact=city_val, status='active').first()
+            if matching_loc:
+                job.location = matching_loc
 
         uploaded_files = request.FILES.getlist('images') or request.FILES.getlist('image')
         if uploaded_files:
@@ -1773,11 +1864,12 @@ def dashboard_view(request, path=''):
 
     if path in ['vendor/profile/edit', 'vendor/profile/edit.html']:
         if not request.user.is_authenticated:
-            return redirect('/login/?next=/vendor/profile/edit.html')
+            return redirect('/login/?next=/vendor/settings/index.html%23profile')
         if request.method == 'POST':
             save_vendor_profile_changes(request, request.user)
             messages.success(request, "Profile updated successfully!")
-            return redirect('/vendor/profile/index.html')
+            return redirect('/vendor/settings/index.html#profile')
+        return redirect('/vendor/settings/index.html#profile')
 
     if path.startswith('vendor/kyc'):
         return redirect('/vendor/dashboard.html')
@@ -1840,31 +1932,23 @@ def dashboard_view(request, path=''):
         
         vendor_city = None
         vendor_categories = []
+        v_prof = None
         if request.user.is_authenticated:
             v_prof = getattr(request.user, 'vendor_profile', None)
             if not v_prof and getattr(request.user, 'role', '') == 'VENDOR':
                 v_prof, _ = VendorProfile.objects.get_or_create(user=request.user)
             if v_prof:
-                if v_prof.location and v_prof.location.strip():
-                    vendor_city = v_prof.location.strip().split(',')[0].strip()
-                elif getattr(v_prof, 'address', None):
-                    vendor_city = v_prof.address.strip().split(',')[0].strip()
+                vendor_city = (v_prof.city or (v_prof.location.strip().split(',')[0].strip() if v_prof.location else 'Ranchi')).strip()
                 if v_prof.category and v_prof.category.strip():
                     vendor_categories = v_prof.categories_list
-                
-        if vendor_city:
-            city_filter = (
-                Q(location__city__iexact=vendor_city) |
-                Q(city__iexact=vendor_city) |
-                (Q(location__isnull=True) & (Q(address__icontains=vendor_city) | Q(locality__icontains=vendor_city)))
-            )
-            jobs_qs = jobs_qs.filter(city_filter)
-            context['vendor_city'] = vendor_city
-            context['vendor_location'] = vendor_city
-        else:
-            context.setdefault('vendor_city', context.get('vendor_location') or 'Ranchi')
-            context.setdefault('vendor_location', context.get('vendor_city') or 'Ranchi')
 
+        context['vendor_city'] = vendor_city or 'Ranchi'
+        context['vendor_location'] = (v_prof.location if v_prof and v_prof.location else vendor_city) or 'Ranchi'
+        if v_prof and v_prof.latitude and v_prof.longitude:
+            context['vendor_lat'] = float(v_prof.latitude)
+            context['vendor_lon'] = float(v_prof.longitude)
+
+        # 1. Filter by category if vendor has specific trades
         if vendor_categories:
             cat_filter = Q()
             has_general = any(c.lower() in ['other', 'general', 'other / general services', 'general services'] for c in vendor_categories)
@@ -1881,7 +1965,15 @@ def dashboard_view(request, path=''):
             jobs_qs = jobs_qs.filter(cat_filter)
             context['vendor_categories'] = vendor_categories
 
-        context['available_jobs'] = jobs_qs
+        # 2. Filter by Whole City (<= 35km radius) using latitude & longitude
+        city_filtered_jobs = []
+        for j in jobs_qs:
+            is_in_city, dist = is_job_in_vendor_city(v_prof, j, city_radius_km=35.0)
+            if is_in_city:
+                j.distance_km = dist
+                city_filtered_jobs.append(j)
+
+        context['available_jobs'] = city_filtered_jobs
         context['all_categories'] = Category.objects.filter(status='active').order_by('name')
 
     if path == 'vendor/quick-services/nearby':
@@ -2792,6 +2884,8 @@ def dashboard_view(request, path=''):
         context['total_bids_count'] = Bid.objects.filter(vendor=u).count()
         context['selected_bids_count'] = Bid.objects.filter(vendor=u, status='selected').count()
         context['completed_jobs_count'] = Bid.objects.filter(vendor=u, status='completed').count()
+        context['all_categories'] = Category.objects.filter(status='active').order_by('name')
+        context['all_locations'] = Location.objects.filter(status='active').order_by('city')
 
     elif 'profile' in path: # for user or admin profile
         u = request.user
@@ -3502,7 +3596,10 @@ def public_browse_services(request):
         if user_lat and user_lon:
             dist = calculate_distance(user_lat, user_lon, s_lat, s_lon)
             if dist is not None:
-                is_within_range = dist <= radius
+                is_within_range = dist <= min(radius, 10.0)
+                if dist > 10.0:
+                    # Quick services work strictly under 10km
+                    continue
         
         enriched_services.append({
             'id': s.id,
@@ -3968,15 +4065,7 @@ def vendor_dashboard(request):
         if vendor_profile.category and vendor_profile.category.strip():
             vendor_categories = vendor_profile.categories_list
 
-    jobs_base = Job.objects.filter(status='open')
-    if vendor_city:
-        city_filter = (
-            Q(location__city__iexact=vendor_city) |
-            Q(city__iexact=vendor_city) |
-            (Q(location__isnull=True) & (Q(address__icontains=vendor_city) | Q(locality__icontains=vendor_city)))
-        )
-        jobs_base = jobs_base.filter(city_filter)
-
+    jobs_base = Job.objects.filter(status='open').select_related('category', 'location', 'user')
     if vendor_categories:
         cat_filter = Q()
         has_general = any(c.lower() in ['other', 'general', 'other / general services', 'general services'] for c in vendor_categories)
@@ -3991,8 +4080,16 @@ def vendor_dashboard(request):
                 )
         jobs_base = jobs_base.filter(cat_filter)
 
+    available_jobs_list = [j for j in jobs_base if is_job_in_vendor_city(vendor_profile, j, city_radius_km=35.0)[0]]
+    available_jobs = len(available_jobs_list)
+
     # Quick services strictly under 10km
-    v_lat, v_lon = resolve_coordinates_for_location(vendor_city or (vendor_profile.location if vendor_profile else ''))
+    v_lat = float(vendor_profile.latitude) if (vendor_profile and vendor_profile.latitude) else None
+    v_lon = float(vendor_profile.longitude) if (vendor_profile and vendor_profile.longitude) else None
+    if v_lat is None or v_lon is None:
+        coords = resolve_coordinates_for_location(vendor_city or (vendor_profile.location if vendor_profile else ''))
+        if coords:
+            v_lat, v_lon = coords[0], coords[1]
     all_active_qs = QuickService.objects.filter(status__in=['active', 'open']).select_related('category', 'location', 'vendor')
     nearby_qs = []
     for qs in all_active_qs:

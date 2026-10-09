@@ -7,23 +7,49 @@
   window.VENDOR_WALLET_BALANCE = "{{ wallet_balance|default:'0.00'|escapejs }}";
   window.VENDOR_CREDITS = {{ available_bids|default:0 }};
 </script><script defer src="/infinity-vendor-dashboard/assets/app.js"></script></head><body data-page="profile" data-title="Vendor Profile" data-root="../"><div class="app-shell"><div id="sidebar-root"></div><div class="workspace"><div id="topbar-root"></div><main class="page">
-<section class="card profile-hero">
-  {% if vendor_profile and vendor_profile.profile_image %}
-    <img src="{{ vendor_profile.profile_image.url }}" alt="Profile" class="avatar xl vendor" style="object-fit:cover;">
-  {% else %}
-    <span class="avatar xl vendor">{{ vendor_profile.company_name|default:user.first_name|slice:":2"|upper|default:"V" }}</span>
-  {% endif %}
-  <div class="profile-main" style="position:relative; width:100%;">
-    <div class="eyebrow">Verified {{ vendor_type }}</div>
-    <h1>{{ vendor_name }} <span class="verified"><span data-icon="check"></span></span></h1>
-    <div class="profile-meta">
-      <span><span data-icon="user"></span> {{ user.first_name }} · Contact Person</span>
-      <span><span data-icon="map"></span> {{ vendor_profile.location|default:"Unknown Location" }}</span>
-      <span><span data-icon="calendar"></span> Member since {{ vendor_profile.registered_date|date:"M Y" }}</span>
+<section class="card profile-hero" style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:20px; padding:24px 28px;">
+  <div style="display:flex; align-items:center; gap:20px; flex-wrap:wrap;">
+    {% if vendor_profile and vendor_profile.profile_image %}
+      <img src="{{ vendor_profile.profile_image.url }}" alt="Profile" class="avatar xl vendor" style="object-fit:cover; width:84px; height:84px; border-radius:50%; box-shadow:0 4px 12px rgba(0,0,0,0.08);">
+    {% else %}
+      <span class="avatar xl vendor" style="width:84px; height:84px; font-size:28px; border-radius:50%; display:inline-grid; place-items:center; background:#2563eb; color:#fff; font-weight:700;">{{ vendor_profile.company_name|default:user.first_name|slice:":2"|upper|default:"V" }}</span>
+    {% endif %}
+    <div class="profile-main" style="min-width:240px;">
+      <div class="eyebrow" style="display:inline-flex; align-items:center; gap:6px; font-size:12px; font-weight:600; text-transform:uppercase; letter-spacing:0.04em; color:#2563eb; margin-bottom:4px;">
+        <span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#10b981;"></span>
+        Verified {{ vendor_type }} Partner
+      </div>
+      <h1 style="margin:2px 0 6px; font-size:24px; font-weight:700; color:#0f172a; display:flex; align-items:center; gap:8px;">
+        {{ vendor_name }} <span class="verified" title="Verified Provider" style="color:#2563eb;"><span data-icon="check"></span></span>
+      </h1>
+      <div class="profile-meta" style="display:flex; flex-wrap:wrap; gap:16px; font-size:13px; color:#64748b; margin-top:6px;">
+        <span><span data-icon="user"></span> {{ user.first_name }} · Contact Person</span>
+        <span><span data-icon="map"></span> {{ vendor_profile.location|default:vendor_location|default:"Ranchi" }}</span>
+        {% if vendor_profile.latitude and vendor_profile.longitude %}
+          <span style="color:#059669; font-weight:500;">
+            📍 GPS: {{ vendor_profile.latitude|floatformat:4 }}, {{ vendor_profile.longitude|floatformat:4 }}
+            <a href="https://maps.google.com/?q={{ vendor_profile.latitude }},{{ vendor_profile.longitude }}" target="_blank" rel="noopener" style="color:#2563eb; text-decoration:underline; margin-left:4px;">Map ↗</a>
+          </span>
+        {% else %}
+          <span style="color:#d97706; font-weight:500;">
+            📍 Live GPS Not Set · <a href="/vendor/settings/index.html#profile" style="color:#2563eb; text-decoration:underline;">Set Location</a>
+          </span>
+        {% endif %}
+        <span><span data-icon="calendar"></span> Member since {{ vendor_profile.registered_date|date:"M Y" }}</span>
+      </div>
+      <div class="rating" style="margin-top:8px; font-size:13px; font-weight:600; color:#0f172a; display:flex; align-items:center; gap:6px;">
+        <span class="star" style="color:#f59e0b;">★</span>{{ vendor_profile.rating|default:"0.0" }} <span class="small muted" style="color:#64748b; font-weight:400;">· Active Sugu Provider</span>
+      </div>
     </div>
-    <div class="rating" style="margin-top:9px">
-      <span class="star">★</span>{{ vendor_profile.rating|default:"0.0" }} <span class="small muted">0 customer reviews</span>
-    </div>
+  </div>
+  
+  <div style="display:flex; align-items:center; gap:10px; margin-left:auto; flex-wrap:wrap;">
+    <a href="/vendor/settings/index.html#profile" class="btn btn-primary" style="display:inline-flex; align-items:center; gap:8px; padding:10px 18px; font-weight:600; box-shadow:0 2px 8px rgba(37,99,235,0.25);">
+      <span data-icon="edit"></span> Edit Profile in Settings
+    </a>
+    <a href="/vendor/settings/index.html" class="btn btn-secondary" style="display:inline-flex; align-items:center; gap:8px; padding:10px 16px;">
+      <span data-icon="settings"></span> Settings
+    </a>
   </div>
 </section>
 
@@ -35,31 +61,74 @@
   <article class="card stat-card credit-balance"><div class="stat-label">Remaining Credits</div><div class="stat-value">{{ vendor_profile.available_bids|default:"0" }}</div></article>
 </section>
 
-<div class="grid grid-2">
+<div class="grid grid-2" style="display:grid; grid-template-columns:1fr 1fr; gap:18px;">
   <section class="card">
-    <div class="card-head"><h2>Business Information</h2><a class="link small" href="edit.html">Edit</a></div>
-    <div class="card-body"><div class="info-list">
-      <div class="info-item"><div class="info-label">Vendor Name</div><div class="info-value">{{ vendor_name }}</div></div>
-      <div class="info-item"><div class="info-label">Vendor Type</div><div class="info-value">{{ vendor_type }}</div></div>
-      <div class="info-item"><div class="info-label">Mobile</div><div class="info-value">{{ user_profile.phone_number|default:"Not specified" }}</div></div>
-      <div class="info-item"><div class="info-label">Email</div><div class="info-value">{{ user.email }}</div></div>
-      <div class="info-item" style="grid-column:1/-1"><div class="info-label">Address</div><div class="info-value">{{ vendor_profile.address|default:"Not specified" }}</div></div>
-      <div class="info-item"><div class="info-label">Registration Date</div><div class="info-value">{{ vendor_profile.registered_date|date:"d F Y" }}</div></div>
-    </div></div>
-  </section>
-
-  <section class="card">
-    <div class="card-head"><h2>About</h2></div>
-    <div class="card-body">
-      <h3 class="section-title">Primary Services</h3>
-      <div class="chips">
-        {% if vendor_profile.category %}
-        <span class="chip">{{ vendor_profile.category }}</span>
-        {% else %}
-        <span class="chip">General Services</span>
-        {% endif %}
+    <div class="card-head" style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #f1f5f9; padding-bottom:12px;">
+      <h2>Business Information</h2>
+      <a class="btn btn-sm btn-secondary" href="/vendor/settings/index.html#profile" style="font-size:12px; display:inline-flex; align-items:center; gap:6px;">
+        <span data-icon="edit"></span> Edit
+      </a>
+    </div>
+    <div class="card-body" style="padding-top:16px;">
+      <div class="info-list" style="display:grid; grid-template-columns:repeat(2, 1fr); gap:16px;">
+        <div class="info-item"><div class="info-label" style="font-size:12px; color:#64748b; font-weight:500;">Business Name</div><div class="info-value" style="font-size:14px; font-weight:600; color:#0f172a; margin-top:3px;">{{ vendor_name }}</div></div>
+        <div class="info-item"><div class="info-label" style="font-size:12px; color:#64748b; font-weight:500;">Provider Type</div><div class="info-value" style="font-size:14px; font-weight:600; color:#0f172a; margin-top:3px;">{{ vendor_type }}</div></div>
+        <div class="info-item"><div class="info-label" style="font-size:12px; color:#64748b; font-weight:500;">Mobile</div><div class="info-value" style="font-size:14px; font-weight:600; color:#0f172a; margin-top:3px;">{{ user_profile.phone_number|default:"Not specified" }}</div></div>
+        <div class="info-item"><div class="info-label" style="font-size:12px; color:#64748b; font-weight:500;">Email</div><div class="info-value" style="font-size:14px; font-weight:600; color:#0f172a; margin-top:3px;">{{ user.email }}</div></div>
+        <div class="info-item" style="grid-column:1/-1;">
+          <div class="info-label" style="font-size:12px; color:#64748b; font-weight:500;">Service Territory / Operating City</div>
+          <div class="info-value" style="font-size:14px; font-weight:600; color:#0f172a; margin-top:3px; display:flex; align-items:center; gap:8px;">
+            <span>🏙️ {{ vendor_profile.city|default:vendor_city|default:"Ranchi" }}</span>
+            <span style="font-size:12px; color:#2563eb; background:#eff6ff; padding:2px 8px; border-radius:12px; font-weight:500;">Whole City Coverage (35 km for Jobs)</span>
+          </div>
+        </div>
+        <div class="info-item" style="grid-column:1/-1;">
+          <div class="info-label" style="font-size:12px; color:#64748b; font-weight:500;">Current GPS Coordinates</div>
+          <div class="info-value" style="font-size:14px; font-weight:600; color:#0f172a; margin-top:3px;">
+            {% if vendor_profile.latitude and vendor_profile.longitude %}
+              <span style="color:#059669;">📍 Lat: {{ vendor_profile.latitude }}, Lon: {{ vendor_profile.longitude }}</span>
+              <a href="https://maps.google.com/?q={{ vendor_profile.latitude }},{{ vendor_profile.longitude }}" target="_blank" rel="noopener" style="font-size:12px; color:#2563eb; text-decoration:underline; margin-left:8px;">Google Maps ↗</a>
+            {% else %}
+              <span style="color:#d97706;">Not set yet</span> · <a href="/vendor/settings/index.html#profile" style="font-size:12px; color:#2563eb; text-decoration:underline;">Click to set live GPS</a>
+            {% endif %}
+          </div>
+        </div>
+        <div class="info-item" style="grid-column:1/-1;"><div class="info-label" style="font-size:12px; color:#64748b; font-weight:500;">Address / Workshop</div><div class="info-value" style="font-size:14px; color:#334155; margin-top:3px;">{{ vendor_profile.address|default:"Not specified" }}</div></div>
+        <div class="info-item"><div class="info-label" style="font-size:12px; color:#64748b; font-weight:500;">Registration Date</div><div class="info-value" style="font-size:14px; font-weight:600; color:#0f172a; margin-top:3px;">{{ vendor_profile.registered_date|date:"d F Y" }}</div></div>
       </div>
     </div>
   </section>
-</div>
 
+  <section class="card">
+    <div class="card-head" style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #f1f5f9; padding-bottom:12px;">
+      <h2>Services &amp; Bio</h2>
+      <a class="btn btn-sm btn-secondary" href="/vendor/settings/index.html#profile" style="font-size:12px; display:inline-flex; align-items:center; gap:6px;">
+        <span data-icon="edit"></span> Edit
+      </a>
+    </div>
+    <div class="card-body" style="padding-top:16px;">
+      <h3 class="section-title" style="font-size:13px; font-weight:600; color:#64748b; margin-bottom:8px; text-transform:uppercase; letter-spacing:0.04em;">Primary Trade Categories</h3>
+      <div class="chips" style="display:flex; flex-wrap:wrap; gap:8px; margin-bottom:20px;">
+        {% if vendor_profile.category %}
+          {% for cat in vendor_profile.categories_list %}
+            <span class="chip" style="background:#f1f5f9; color:#0f172a; font-size:13px; font-weight:500; padding:6px 12px; border-radius:20px; border:1px solid #e2e8f0;">{{ cat }}</span>
+          {% endfor %}
+        {% else %}
+          <span class="chip" style="background:#f1f5f9; color:#0f172a; font-size:13px; font-weight:500; padding:6px 12px; border-radius:20px; border:1px solid #e2e8f0;">General Services</span>
+        {% endif %}
+      </div>
+
+      <h3 class="section-title" style="font-size:13px; font-weight:600; color:#64748b; margin-bottom:8px; text-transform:uppercase; letter-spacing:0.04em;">Years of Experience</h3>
+      <div style="font-size:14px; font-weight:600; color:#0f172a; margin-bottom:20px;">
+        {{ vendor_profile.experience|default:"5" }} years
+      </div>
+
+      <h3 class="section-title" style="font-size:13px; font-weight:600; color:#64748b; margin-bottom:8px; text-transform:uppercase; letter-spacing:0.04em;">About / Company Bio</h3>
+      <div style="font-size:13.5px; line-height:1.6; color:#475569; background:#f8fafc; padding:14px 16px; border-radius:8px; border:1px solid #f1f5f9;">
+        {{ vendor_profile.about|default:"Professional home service provider delivering high-quality craftsmanship, fast response times, and dependable solutions across the city." }}
+      </div>
+
+    </div>
+  </section>
+</div>
+</main></div></div></body></html>

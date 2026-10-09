@@ -170,6 +170,7 @@
           <h1 style="margin:4px 0 6px; font-size:24px; font-weight:800; color:var(--ink);">{{ vendor_name }}</h1>
           <p class="muted" style="margin:0; font-size:13px;">Manage your account credentials, public vendor profile, security settings, and notifications.</p>
         </div>
+        <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
           <span class="badge badge-kyc-approved" style="padding:6px 12px; font-size:11px; font-weight:700;">
             <span data-icon="award"></span> Verified Pro Vendor
           </span>
@@ -195,11 +196,11 @@
         <aside class="card" style="padding:10px 8px; position:sticky; top:80px;">
           <div class="settings-nav-group-title">SETTINGS SECTIONS</div>
           <nav style="display:flex; flex-direction:column; gap:3px;">
-            <button type="button" class="settings-tab-btn active" data-tab="account" onclick="switchSettingsTab('account')">
-              <span data-icon="user"></span> Account Details
+            <button type="button" class="settings-tab-btn active" data-tab="profile" onclick="switchSettingsTab('profile')">
+              <span data-icon="edit"></span> Edit Profile &amp; Location
             </button>
-            <button type="button" class="settings-tab-btn" data-tab="profile" onclick="switchSettingsTab('profile')">
-              <span data-icon="edit"></span> Profile &amp; Branding
+            <button type="button" class="settings-tab-btn" data-tab="account" onclick="switchSettingsTab('account')">
+              <span data-icon="user"></span> Account Details
             </button>
             <button type="button" class="settings-tab-btn" data-tab="security" onclick="switchSettingsTab('security')">
               <span data-icon="shield"></span> Security &amp; Password
@@ -227,7 +228,7 @@
         <div class="settings-content-wrapper">
 
           <!-- TAB PANEL 1: ACCOUNT DETAILS -->
-          <div class="settings-tab-panel active" id="panel-account">
+          <div class="settings-tab-panel" id="panel-account">
             <form method="POST" action="/vendor/settings/index.html">
               {% csrf_token %}
               <input type="hidden" name="active_tab" value="account">
@@ -286,8 +287,8 @@
             </form>
           </div>
 
-          <!-- TAB PANEL 2: PROFILE & BRANDING -->
-          <div class="settings-tab-panel" id="panel-profile">
+          <!-- TAB PANEL 2: EDIT PROFILE & LOCATION -->
+          <div class="settings-tab-panel active" id="panel-profile">
             <form method="POST" action="/vendor/settings/index.html" enctype="multipart/form-data" id="vendor-profile-form">
               {% csrf_token %}
               <input type="hidden" name="active_tab" value="profile">
@@ -297,8 +298,8 @@
               <section class="card">
                 <div class="card-head">
                   <div>
-                    <h2>Public Business Profile &amp; Branding</h2>
-                    <p>Business identity, company avatar logo, trade categories, and bio displayed to customers on bids.</p>
+                    <h2>Edit Profile &amp; Location</h2>
+                    <p>Business identity, company logo, bio, and autofetched GPS location for job matching.</p>
                   </div>
                   <div style="display:flex; gap:8px;">
                     <a href="/vendor/profile/index.html" class="btn btn-secondary btn-sm" title="Preview Public Profile">
@@ -345,33 +346,41 @@
                       <div class="field-hint">Leave blank if operating under your individual name ({{ user.first_name|default:user.username }}).</div>
                     </div>
 
+
                     <div class="field">
-                      <label for="vendor_type">Vendor Classification / Entity Type <span class="required">*</span></label>
-                      <select class="select" id="vendor_type" name="vendor_type" required>
-                        <option value="vendor" {% if vendor_profile.vendor_type == 'vendor' or not vendor_profile.vendor_type %}selected{% endif %}>Individual Professional / Sole Proprietor</option>
-                        <option value="company" {% if vendor_profile.vendor_type == 'company' %}selected{% endif %}>Registered Company / Agency / Contractor</option>
-                      </select>
-                      <div class="field-hint">Select whether you offer services as an individual or a registered company.</div>
+                      <label for="city">Service City <span style="font-size:11px; font-weight:400; color:#64748b;">(Autofetched)</span></label>
+                      <input class="input" type="text" id="city" name="city" readonly value="{{ vendor_profile.city|default:'Ranchi' }}" style="background:#f8fafc; color:#334155; cursor:not-allowed; border-color:#cbd5e1;">
+                      <div class="field-hint">City territory autofetched from device GPS.</div>
                     </div>
 
                     <div class="field">
-                      <label for="category">Primary Service Category / Trade <span class="required">*</span></label>
-                      <select class="select" id="category" name="category" required>
-                        <option value="">Select primary category</option>
-                        {% for cat in all_categories %}
-                          <option value="{{ cat.name }}" {% if vendor_profile.category == cat.name %}selected{% endif %}>{{ cat.name }}</option>
-                        {% endfor %}
-                        {% if vendor_profile.category and not all_categories %}
-                          <option value="{{ vendor_profile.category }}" selected>{{ vendor_profile.category }}</option>
-                        {% endif %}
-                      </select>
-                      <div class="field-hint">Your main service trade for new lead matching.</div>
+                      <label for="location">Locality / Area <span style="font-size:11px; font-weight:400; color:#64748b;">(Autofetched)</span></label>
+                      <input class="input" type="text" id="location" name="location" readonly value="{{ vendor_profile.location|default:'' }}" style="background:#f8fafc; color:#334155; cursor:not-allowed; border-color:#cbd5e1;">
+                      <div class="field-hint">Neighborhood / area base of operations.</div>
                     </div>
 
                     <div class="field">
-                      <label for="location">Service City / Operational Territory <span class="required">*</span></label>
-                      <input class="input" type="text" id="location" name="location" required value="{{ vendor_profile.location|default:'Ranchi' }}" placeholder="e.g. Mumbai, Maharashtra">
-                      <div class="field-hint">The primary territory where your team delivers services.</div>
+                      <label for="latitude">Latitude <span style="font-size:11px; font-weight:400; color:#64748b;">(Autofetched)</span></label>
+                      <input class="input" type="text" id="latitude" name="latitude" readonly value="{{ vendor_profile.latitude|default:'' }}" style="background:#f8fafc; color:#334155; cursor:not-allowed; border-color:#cbd5e1;">
+                      <div class="field-hint">Autofetched via device GPS.</div>
+                    </div>
+
+                    <div class="field">
+                      <label for="longitude">Longitude <span style="font-size:11px; font-weight:400; color:#64748b;">(Autofetched)</span></label>
+                      <input class="input" type="text" id="longitude" name="longitude" readonly value="{{ vendor_profile.longitude|default:'' }}" style="background:#f8fafc; color:#334155; cursor:not-allowed; border-color:#cbd5e1;">
+                      <div class="field-hint">Autofetched via device GPS.</div>
+                    </div>
+
+                    <div class="field full" style="grid-column:1/-1;">
+                      <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:12px 16px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px;">
+                        <div>
+                          <div style="font-weight:700; font-size:13px; color:#0f172a;">📍 Device Location Autofetch</div>
+                          <div style="font-size:12px; color:#64748b;" id="settings-gps-status">Location is autofetched from your current device GPS and cannot be edited manually.</div>
+                        </div>
+                        <button type="button" class="btn btn-sm btn-secondary" id="btn-settings-gps">
+                          <span data-icon="map"></span> Re-fetch Location
+                        </button>
+                      </div>
                     </div>
 
                     <div class="field">
@@ -588,8 +597,8 @@
   }
 
   document.addEventListener('DOMContentLoaded', function() {
-    // 1. Initial tab selection based on URL hash
-    let initialTab = 'account';
+    // 1. Initial tab selection based on URL hash (defaults to Edit Profile & Location)
+    let initialTab = 'profile';
     if (window.location.hash) {
       const hashTab = window.location.hash.replace('#', '').toLowerCase();
       if (['account', 'profile', 'security', 'notifications'].includes(hashTab)) {
@@ -717,6 +726,74 @@
           strengthLabel.style.color = 'var(--green)';
         }
       });
+    }
+
+    // 5b. Settings GPS Detector
+    const btnSettingsGps = document.getElementById('btn-settings-gps');
+    const settingsGpsStatus = document.getElementById('settings-gps-status');
+    const setLatInput = document.getElementById('latitude');
+    const setLonInput = document.getElementById('longitude');
+    const setCityInput = document.getElementById('city');
+    const setLocInput = document.getElementById('location');
+
+    function fetchSettingsGps() {
+      if (!navigator.geolocation) {
+        if (settingsGpsStatus) settingsGpsStatus.textContent = "Geolocation is not supported by your browser.";
+        return;
+      }
+      if (btnSettingsGps) {
+        btnSettingsGps.disabled = true;
+        btnSettingsGps.textContent = "Autofetching GPS...";
+      }
+      if (settingsGpsStatus) settingsGpsStatus.textContent = "Querying device GPS sensors...";
+
+      navigator.geolocation.getCurrentPosition(
+        async function(pos) {
+          const lat = pos.coords.latitude.toFixed(6);
+          const lon = pos.coords.longitude.toFixed(6);
+          if (setLatInput) setLatInput.value = lat;
+          if (setLonInput) setLonInput.value = lon;
+          if (settingsGpsStatus) settingsGpsStatus.textContent = `📍 Captured: ${lat}, ${lon}`;
+
+          try {
+            const resp = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json`);
+            if (resp.ok) {
+              const data = await resp.json();
+              if (data && data.address) {
+                const detectedCity = data.address.city || data.address.town || data.address.district;
+                const detectedArea = data.address.suburb || data.address.neighbourhood || data.address.road || '';
+                if (detectedCity && setCityInput) setCityInput.value = detectedCity;
+                if (detectedArea && setLocInput) setLocInput.value = detectedArea + (detectedCity ? ', ' + detectedCity : '');
+                if (settingsGpsStatus) settingsGpsStatus.textContent = `📍 Captured: ${lat}, ${lon} (${detectedCity || 'Coordinates locked'})`;
+              }
+            }
+          } catch(e) {
+            console.warn(e);
+          }
+
+          if (btnSettingsGps) {
+            btnSettingsGps.disabled = false;
+            btnSettingsGps.textContent = "Re-fetch Location";
+          }
+          if (window.showToast) window.showToast('Location Autofetched', `Coordinates: ${lat}, ${lon}`, 'success');
+        },
+        function(err) {
+          if (btnSettingsGps) {
+            btnSettingsGps.disabled = false;
+            btnSettingsGps.textContent = "Re-fetch Location";
+          }
+          if (settingsGpsStatus) settingsGpsStatus.textContent = "Could not access location. Please check browser permissions.";
+        },
+        { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+      );
+    }
+
+    if (btnSettingsGps) {
+      btnSettingsGps.addEventListener('click', fetchSettingsGps);
+    }
+    // Auto-fetch if not already calibrated
+    if (!setLatInput?.value || !setLonInput?.value) {
+      fetchSettingsGps();
     }
 
     // 6. Render server Django messages as toasts
