@@ -38,17 +38,43 @@ def mask_customer_name(user):
     return parts[0] if parts else 'Customer'
 
 
-def submit_booking_review(customer, booking_id, rating, comment='', title='', image=None):
-    """Create or update the review for a completed booking. Returns (review, created)."""
-    try:
-        booking = ServiceBooking.objects.select_related('vendor', 'quick_service').get(id=booking_id)
-    except (ServiceBooking.DoesNotExist, ValueError, TypeError):
-        raise ReviewError('Booking not found.', 404)
+def submit_booking_review(customer, booking_id=None, job_id=None, rating=5, comment='', title='', image=None):
+    """Create or update the review for a completed booking or job. Returns (review, created)."""
+    if not booking_id and not job_id:
+        raise ReviewError('Either booking_id or job_id must be provided.', 400)
 
-    if booking.customer_id != customer.id:
-        raise ReviewError('You can only review your own bookings.', 403)
-    if booking.status != 'completed':
-        raise ReviewError('You can review a service only after it has been completed.', 400)
+    booking = None
+    job = None
+    vendor = None
+    quick_service = None
+
+    if booking_id:
+        try:
+            booking = ServiceBooking.objects.select_related('vendor', 'quick_service').get(id=booking_id)
+        except (ServiceBooking.DoesNotExist, ValueError, TypeError):
+            raise ReviewError('Booking not found.', 404)
+
+        if booking.customer_id != customer.id:
+            raise ReviewError('You can only review your own bookings.', 403)
+        if booking.status != 'completed':
+            raise ReviewError('You can review a service only after it has been completed.', 400)
+        vendor = booking.vendor
+        quick_service = booking.quick_service
+
+    elif job_id:
+        from .models import Job
+        try:
+            job = Job.objects.select_related('assigned_vendor').get(id=job_id)
+        except (Job.DoesNotExist, ValueError, TypeError):
+            raise ReviewError('Job not found.', 404)
+
+        if job.user_id != customer.id:
+            raise ReviewError('You can only review your own jobs.', 403)
+        if job.status not in ('completed', 'closed'):
+            raise ReviewError('You can review a job only after it has been completed or closed.', 400)
+        if not job.assigned_vendor:
+            raise ReviewError('This job has no assigned vendor.', 400)
+        vendor = job.assigned_vendor
 
     try:
         rating = int(rating)
@@ -62,8 +88,8 @@ def submit_booking_review(customer, booking_id, rating, comment='', title='', im
 
     defaults = {
         'customer': customer,
-        'vendor': booking.vendor,
-        'quick_service': booking.quick_service,
+        'vendor': vendor,
+        'quick_service': quick_service,
         'rating': rating,
         'review_title': title,
         'comment': comment,
@@ -72,7 +98,11 @@ def submit_booking_review(customer, booking_id, rating, comment='', title='', im
     if image:
         defaults['review_image'] = image
 
-    review, created = ServiceReview.objects.update_or_create(booking=booking, defaults=defaults)
+    if booking:
+        review, created = ServiceReview.objects.update_or_create(booking=booking, defaults=defaults)
+    else:
+        review, created = ServiceReview.objects.update_or_create(job=job, defaults=defaults)
+        
     return review, created
 
 
