@@ -68,12 +68,21 @@
     color: var(--text-muted);
     transition: color 0.2s, transform 0.2s;
   }
-  .cat-card:hover .card-content i {
+  .cat-card .card-content img.cat-card-img {
+    width: 36px;
+    height: 36px;
+    object-fit: contain;
+    transition: transform 0.2s;
+  }
+  .cat-card:hover .card-content i,
+  .cat-card:hover .card-content img.cat-card-img {
     color: var(--accent);
     transform: scale(1.08);
   }
   .cat-card.selected .card-content i,
-  .cat-card:has(input[type="radio"]:checked) .card-content i {
+  .cat-card:has(input[type="radio"]:checked) .card-content i,
+  .cat-card.selected .card-content img.cat-card-img,
+  .cat-card:has(input[type="radio"]:checked) .card-content img.cat-card-img {
     color: var(--accent);
     transform: scale(1.1);
   }
@@ -258,7 +267,11 @@
           <label class="cat-card {% if job.category_id == cat.id %}selected{% endif %}" onclick="selectCategory('{{ cat.id }}')">
             <input type="radio" name="category" value="{{ cat.id }}" {% if job.category_id == cat.id %}checked{% endif %} required>
             <div class="card-content">
-              <i class="bi {{ cat.icon_class }}"></i>
+              {% if cat.image %}
+                <img src="{{ cat.image.url }}" alt="{{ cat.name }}" class="cat-card-img">
+              {% else %}
+                <i class="bi {{ cat.icon_class }}"></i>
+              {% endif %}
               <span class="cat-title">{{ cat.name }}</span>
             </div>
           </label>

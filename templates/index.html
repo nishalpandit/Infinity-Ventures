@@ -1,3233 +1,1600 @@
-{% load static %}
-<!doctype html>
-<html lang="en">
-
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{{ branding.site_title|default:"Sugu Services" }} Home services, sorted</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SUGU Services | India's First Quick-Service Booking & Smart Project Bidding Platform</title>
+  <meta name="description" content="SUGU Services offers dual-engine home solutions: 15-minute quick services booking and smart project bidding for custom renovations." />
+  
+  <!-- Google Fonts: Inter, Outfit, Space Grotesk & Caveat -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link
-    href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Manrope:wght@400;500;600;700;800&display=swap"
-    rel="stylesheet">
-  <link rel="icon" type="image/png" href="{% static 'images/logo.png' %}">
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
-  <style>
-    :root {
-      --n: #0a1a3c;
-      --n2: #10285a;
-      --n3: #1b3d80;
-      --t1: #f0f3fa;
-      --t2: #dfe6f4;
-      --mute: #5a6a8a;
-      --w: #fff
-    }
-
-    @keyframes spin {
-      to {
-        transform: rotate(360deg);
-      }
-    }
-
-    .spin {
-      display: inline-block;
-      animation: spin 0.8s linear infinite;
-    }
-
-    * {
-      box-sizing: border-box
-    }
-
-    html {
-      scroll-padding-top: 90px;
-      overflow-x: clip;
-    }
-
-    body {
-      margin: 0;
-      font-family: Manrope, system-ui, sans-serif;
-      color: var(--n);
-      background: var(--w);
-      line-height: 1.6;
-      overflow-x: clip;
-    }
-
-    /* Hardware-accelerated smooth animations */
-    [data-aos] {
-      will-change: transform, opacity;
-      transform: translateZ(0);
-      backface-visibility: hidden;
-    }
-
-    h1,
-    h2,
-    h3 {
-      font-family: "Bricolage Grotesque", sans-serif;
-      margin: 0;
-      letter-spacing: -.03em;
-      font-weight: 800;
-      line-height: 1.05
-    }
-
-    button,
-    input,
-    textarea {
-      font: inherit;
-      color: inherit
-    }
-
-    button {
-      cursor: pointer
-    }
-
-    a {
-      color: inherit;
-      text-decoration: none
-    }
-
-    :focus-visible {
-      outline: 3px solid #8fb0ff;
-      outline-offset: 3px
-    }
-
-    .wrap {
-      width: min(1200px, calc(100% - 40px));
-      margin: auto
-    }
-
-    .btn {
-      border: 0;
-      border-radius: 999px;
-      padding: 14px 26px;
-      font-weight: 700;
-      background: var(--n);
-      color: #fff;
-      transition: .2s;
-      display: inline-block
-    }
-
-    .btn:hover {
-      background: var(--n3)
-    }
-
-    .btn.w {
-      background: #fff;
-      color: var(--n)
-    }
-
-    .btn.w:hover {
-      background: var(--t2)
-    }
-
-    .btn.o {
-      background: transparent;
-      color: #fff;
-      box-shadow: inset 0 0 0 1.5px #ffffff66
-    }
-
-    .btn.o:hover {
-      background: #ffffff1a
-    }
-
-    .btn.s {
-      background: var(--t1);
-      color: var(--n)
-    }
-
-    .btn.s:hover {
-      background: var(--t2)
-    }
-
-    /* hero */
-    .hero {
-      background: url('{% static "images/hero.jpg" %}') center 25% / cover no-repeat;
-      color: #fff;
-      position: relative;
-      overflow: hidden;
-    }
-
-    .hero::after {
-      content: "";
-      position: absolute;
-      inset: 0;
-      background: rgba(16, 32, 64, 0.75);
-      z-index: 0;
-    }
-
-    .hero>* {
-      position: relative;
-      z-index: 1;
-    }
-
-    header {
-      position: sticky;
-      top: 0;
-      z-index: 1000;
-      background: whitesmoke;
-      background: rgba(245, 245, 245, 0.96);
-      backdrop-filter: blur(12px);
-      -webkit-backdrop-filter: blur(12px);
-      border-bottom: 1px solid rgba(0, 0, 0, 0.08);
-      box-shadow: 0 2px 14px rgba(0, 0, 0, 0.04);
-      color: var(--n);
-      transition: background 0.2s ease, box-shadow 0.2s ease;
-    }
-
-    .nav {
-      display: flex;
-      align-items: center;
-      gap: 28px;
-      height: 84px;
-    }
-
-    .logo {
-      font: 800 28px "Bricolage Grotesque";
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-
-    .logo i {
-      width: 38px;
-      height: 38px;
-      border-radius: 12px;
-      background: #fff;
-      color: var(--n);
-      display: grid;
-      place-items: center;
-      font-style: normal;
-      font-size: 21px;
-    }
-
-    .nav-loc {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      background: #ffffff;
-      color: var(--n);
-      padding: 8px 16px;
-      border-radius: 999px;
-      border: 1px solid rgba(0, 0, 0, 0.08);
-      cursor: pointer;
-      transition: all 0.2s ease;
-      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
-    }
-
-    .nav-loc:hover {
-      background: #f0f3fa;
-      border-color: rgba(0, 0, 0, 0.15);
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.07);
-    }
-
-    .nav-loc-icon {
-      color: #2563eb;
-      font-size: 15px;
-      display: inline-flex;
-      align-items: center;
-    }
-
-    .nav-loc-text {
-      font-size: 14px;
-      font-weight: 700;
-      color: var(--n);
-      max-width: 180px;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-
-    .nav-loc-arrow {
-      color: var(--mute);
-      font-size: 12px;
-      display: inline-flex;
-      align-items: center;
-    }
-
-    .nav .sp {
-      flex: 1;
-    }
-
-    .nav a.l {
-      font-size: 14.5px;
-      font-weight: 600;
-      color: #334155;
-      transition: color 0.2s ease;
-    }
-
-    .nav a.l:hover {
-      color: var(--n);
-    }
-
-    .nav .btn {
-      padding: 10px 22px;
-      font-size: 14px;
-    }
-
-    .nav .btn.w {
-      background: var(--n);
-      color: #fff;
-      box-shadow: 0 2px 8px rgba(10, 26, 60, 0.15);
-    }
-
-    .nav .btn.w:hover {
-      background: var(--n3);
-      color: #fff;
-    }
-
-    .nav .btn.o {
-      color: var(--n);
-      box-shadow: inset 0 0 0 1.5px rgba(10, 26, 60, 0.22);
-    }
-
-    .nav .btn.o:hover {
-      background: rgba(10, 26, 60, 0.06);
-    }
-
-    .hg {
-      display: grid;
-      grid-template-columns: 1.15fr .85fr;
-      gap: 40px;
-      align-items: end;
-      padding: 48px 0 0;
-      position: relative;
-      z-index: 2
-    }
-
-    .hero h1 {
-      font-size: clamp(46px, 7.4vw, 98px);
-      line-height: .95
-    }
-
-    .hero h1 span {
-      display: block;
-      color: #8fb0ff
-    }
-
-    .lead {
-      font-size: 19px;
-      color: #b8c7e8;
-      max-width: 520px;
-      margin: 24px 0 30px
-    }
-
-    .sbar {
-      display: flex;
-      gap: 6px;
-      background: #fff;
-      border-radius: 999px;
-      padding: 7px;
-      max-width: 600px;
-      color: var(--n)
-    }
-
-    .sbar input {
-      border: 0;
-      outline: 0;
-      background: none;
-      padding: 0 18px;
-      min-width: 0
-    }
-
-    .sbar input#hs {
-      flex: 1
-    }
-
-    .sbar .loc {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      padding: 0 14px;
-      background: var(--t1);
-      border-radius: 999px;
-      font-weight: 700;
-      font-size: 14px;
-      white-space: nowrap
-    }
-
-    .tags {
-      display: flex;
-      gap: 10px;
-      flex-wrap: wrap;
-      margin: 20px 0 52px;
-      color: #9db0d8;
-      font-size: 14px;
-      align-items: center
-    }
-
-    .tags button {
-      background: #ffffff14;
-      border: 0;
-      color: #fff;
-      border-radius: 999px;
-      padding: 7px 15px;
-      font-size: 13px;
-      font-weight: 600
-    }
-
-    .tags button:hover {
-      background: #ffffff2e
-    }
-
-    .stage {
-      position: relative;
-      height: 560px;
-      display: flex;
-      justify-content: center;
-      align-items: flex-end
-    }
-
-    .arch {
-      width: 400px;
-      height: 520px;
-      background: linear-gradient(180deg, #e6edfb, #bccbee);
-      border-radius: 200px 200px 0 0;
-      position: relative;
-      display: flex;
-      justify-content: center;
-      align-items: flex-end;
-      overflow: hidden
-    }
-
-    .arch:before {
-      content: "";
-      position: absolute;
-      width: 300px;
-      height: 300px;
-      border-radius: 50%;
-      background: #ffffff80;
-      top: 60px
-    }
-
-    .phone {
-      width: 250px;
-      height: 440px;
-      background: #fff;
-      border-radius: 34px 34px 0 0;
-      position: relative;
-      box-shadow: 0 0 0 8px var(--n), 0 30px 60px -20px #0a1a3c99;
-      padding: 22px 16px;
-      color: var(--n)
-    }
-
-    .phone h4 {
-      margin: 0 0 12px;
-      font: 800 17px "Bricolage Grotesque"
-    }
-
-    .pl {
-      display: flex;
-      gap: 10px;
-      align-items: center;
-      background: var(--t1);
-      border-radius: 14px;
-      padding: 10px;
-      margin-bottom: 8px;
-      font-size: 13px;
-      font-weight: 700
-    }
-
-    .pl.on {
-      background: var(--n);
-      color: #fff
-    }
-
-    .pl span {
-      font-size: 20px
-    }
-
-    .pl em {
-      margin-left: auto;
-      font-style: normal;
-      font-size: 12px
-    }
-
-    .pmap {
-      height: 84px;
-      border-radius: 14px;
-      background: repeating-linear-gradient(45deg, #dfe6f4 0 8px, #eaf0fb 8px 16px);
-      margin: 12px 0;
-      display: grid;
-      place-items: center;
-      font-size: 12px;
-      font-weight: 700
-    }
-
-    .pbtn {
-      background: var(--n);
-      color: #fff;
-      text-align: center;
-      border-radius: 14px;
-      padding: 12px;
-      font-weight: 700;
-      font-size: 13px
-    }
-
-    .fl {
-      position: absolute;
-      background: #fff;
-      color: var(--n);
-      border-radius: 16px;
-      padding: 12px 16px;
-      font-size: 13px;
-      font-weight: 700;
-      box-shadow: 0 20px 40px -15px #000a;
-      display: flex;
-      gap: 10px;
-      align-items: center
-    }
-
-    .fl small {
-      display: block;
-      font-weight: 500;
-      color: var(--mute)
-    }
-
-    .f1 {
-      left: -20px;
-      top: 140px
-    }
-
-    .f2 {
-      right: -30px;
-      top: 300px;
-      background: var(--n3);
-      color: #fff
-    }
-
-    .f2 small {
-      color: #c3d0ee
-    }
-
-    .fl .dot {
-      width: 34px;
-      height: 34px;
-      border-radius: 50%;
-      background: var(--n);
-      color: #fff;
-      display: grid;
-      place-items: center;
-      font-size: 15px
-    }
-
-    .f2 .dot {
-      background: #fff;
-      color: var(--n)
-    }
-
-    /* marquee */
-    .mq {
-      background: #fff;
-      overflow: hidden;
-      padding: 22px 0;
-      white-space: nowrap
-    }
-
-    .mq div {
-      display: inline-block;
-      animation: mq 40s linear infinite;
-      font: 800 22px "Bricolage Grotesque";
-      color: var(--n)
-    }
-
-    .mq span {
-      margin: 0 26px
-    }
-
-    .mq span:nth-child(even) {
-      color: #8fb0ff
-    }
-
-    @keyframes mq {
-      to {
-        transform: translateX(-50%)
-      }
-    }
-
-    /* sections */
-    .blk {
-      padding: 100px 0
-    }
-
-    .tint {
-      background: var(--t1)
-    }
-
-    .dark {
-      background: url('{% static "images/project.jpg" %}') center/cover fixed;
-      color: #fff;
-      position: relative;
-    }
-
-    .dark::before {
-      content: '';
-      position: absolute;
-      inset: 0;
-      background: rgba(20, 30, 50, 0.85);
-      z-index: 0;
-    }
-
-    .dark>* {
-      position: relative;
-      z-index: 1;
-    }
-
-    .head {
-      display: flex;
-      justify-content: space-between;
-      align-items: end;
-      gap: 20px;
-      flex-wrap: wrap;
-      margin-bottom: 40px
-    }
-
-    .head h2 {
-      font-size: clamp(34px, 4.8vw, 60px);
-      max-width: 720px
-    }
-
-    .head p {
-      color: var(--mute);
-      max-width: 420px;
-      margin: 0
-    }
-
-    .dark .head p {
-      color: #b8c7e8
-    }
-
-    /* two ways */
-    .ways {
-      display: grid;
-      grid-template-columns: 1fr 1fr
-    }
-
-    .way {
-      padding: 70px 6vw;
-      min-height: 430px;
-      display: flex;
-      flex-direction: column;
-      justify-content: space-between;
-      gap: 30px
-    }
-
-    .way.a {
-      background: url('{% static "images/hero.jpg" %}') center/cover;
-      position: relative;
-    }
-
-    .way.a::before {
-      content: '';
-      position: absolute;
-      inset: 0;
-      background: rgba(255, 255, 255, 0.85);
-      z-index: 0;
-    }
-
-    .way.a>* {
-      position: relative;
-      z-index: 1;
-    }
-
-    .way.b {
-      background: url('{% static "images/quick_services.jpg" %}') center/cover;
-      color: #fff;
-      position: relative;
-    }
-
-    .way.b::before {
-      content: '';
-      position: absolute;
-      inset: 0;
-      background: rgba(16, 32, 64, 0.7);
-      z-index: 0;
-    }
-
-    .way.b>* {
-      position: relative;
-      z-index: 1;
-    }
-
-    .way h2 {
-      font-size: clamp(36px, 4.4vw, 58px)
-    }
-
-    .way p {
-      max-width: 420px;
-      margin: 14px 0 0;
-      color: var(--mute)
-    }
-
-    .b p {
-      color: #c8d5f2
-    }
-
-    .way ul {
-      list-style: none;
-      margin: 0;
-      padding: 0;
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px
-    }
-
-    .way li {
-      padding: 8px 16px;
-      border-radius: 999px;
-      background: #fff;
-      font-weight: 600;
-      font-size: 14px
-    }
-
-    .b li {
-      background: #ffffff1f;
-      color: #fff
-    }
-
-    /* quick */
-    .picks {
-      display: flex;
-      gap: 26px;
-      flex-wrap: wrap;
-      margin-bottom: 34px
-    }
-
-    .pick {
-      background: none;
-      border: 0;
-      text-align: center;
-      font-weight: 700;
-      font-size: 14px;
-      width: 92px
-    }
-
-    .pick span {
-      display: grid;
-      place-items: center;
-      width: 84px;
-      height: 84px;
-      margin: 0 auto 10px;
-      border-radius: 50%;
-      background: #ffffff;
-      box-shadow: 0 4px 12px rgba(10, 26, 60, 0.05), inset 0 2px 4px rgba(255, 255, 255, 0.5);
-      border: 1px solid #eef2fa;
-      font-size: 34px;
-      color: #0a1a3c;
-      transition: .3s cubic-bezier(0.4, 0, 0.2, 1);
-    }
-
-    .pick:hover span,
-    .pick.on span {
-      background: #ffffff;
-      box-shadow: 0 8px 24px rgba(10, 26, 60, 0.12), inset 0 2px 4px rgba(255, 255, 255, 0.5);
-      transform: translateY(-4px) scale(1.02);
-      border-color: #2563eb;
-      color: #2563eb;
-    }
-
-    .chips {
-      display: flex;
-      gap: 8px;
-      overflow-x: auto;
-      padding-bottom: 8px;
-      margin-bottom: 30px
-    }
-
-    .chip {
-      white-space: nowrap;
-      border: 0;
-      background: var(--t1);
-      border-radius: 999px;
-      padding: 10px 20px;
-      font-weight: 700;
-      font-size: 14px
-    }
-
-    .chip.on {
-      background: var(--n);
-      color: #fff
-    }
-
-    .tiles {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 30px 22px
-    }
-
-    .svc {
-      display: flex;
-      flex-direction: column
-    }
-
-    .svc .img {
-      aspect-ratio: 4/3;
-      border-radius: 22px;
-      background: linear-gradient(135deg, var(--n2), var(--n3)) center/cover;
-      display: grid;
-      place-items: center;
-      font-size: 58px;
-      position: relative;
-      overflow: hidden;
-      transition: .3s
-    }
-
-    .svc:hover .img {
-      border-radius: 60px 22px 60px 22px
-    }
-
-    .rt {
-      position: absolute;
-      left: 12px;
-      top: 12px;
-      background: #fff;
-      color: var(--n);
-      border-radius: 999px;
-      font-size: 12px;
-      font-weight: 800;
-      padding: 4px 11px
-    }
-
-    .svc h3 {
-      font: 700 18px Manrope;
-      letter-spacing: 0;
-      margin: 14px 0 2px
-    }
-
-    .svc small {
-      color: var(--mute)
-    }
-
-    .svc .row {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-top: 10px
-    }
-
-    .svc .row b {
-      font: 800 22px "Bricolage Grotesque"
-    }
-
-    .svc .row .btn {
-      padding: 9px 20px;
-      font-size: 13px
-    }
-
-    .empty {
-      grid-column: 1/-1;
-      background: var(--t1);
-      border-radius: 22px;
-      padding: 40px;
-      text-align: center;
-      color: var(--mute)
-    }
-
-    /* category index */
-    .idx {
-      display: grid;
-      gap: 10px
-    }
-
-    .ix {
-      display: flex;
-      align-items: center;
-      gap: 24px;
-      background: rgba(255, 255, 255, .07);
-      border: 0;
-      border-radius: 999px;
-      padding: 18px 34px;
-      text-align: left;
-      color: #fff;
-      transition: .25s;
-      width: 100%
-    }
-
-    .ix h3 {
-      font-size: clamp(26px, 3.6vw, 46px);
-      flex: 1
-    }
-
-    .ix span {
-      color: #b8c7e8;
-      font-size: 14px;
-      max-width: 300px
-    }
-
-    .ix i {
-      font-style: normal;
-      width: 46px;
-      height: 46px;
-      border-radius: 50%;
-      background: #fff;
-      color: var(--n);
-      display: grid;
-      place-items: center;
-      font-size: 20px;
-      flex: none;
-      transition: .25s
-    }
-
-    .ix:hover {
-      background: #fff;
-      color: var(--n)
-    }
-
-    .ix:hover span {
-      color: var(--mute)
-    }
-
-    .ix:hover i {
-      background: var(--n);
-      color: #fff;
-      transform: rotate(-45deg)
-    }
-
-    /* wizard */
-    .wiz {
-      background: #fff;
-      color: var(--n);
-      border-radius: 34px;
-      display: grid;
-      grid-template-columns: 290px 1fr;
-      overflow: hidden;
-      margin-top: 50px
-    }
-
-    .side {
-      background: var(--n3);
-      color: #fff;
-      padding: 36px 30px;
-      position: relative;
-      overflow: hidden
-    }
-
-    .side:after {
-      content: "";
-      position: absolute;
-      width: 300px;
-      height: 300px;
-      border-radius: 50%;
-      background: #ffffff10;
-      right: -140px;
-      bottom: -120px
-    }
-
-    .side h3 {
-      font-size: 28px
-    }
-
-    .side p {
-      color: #c8d5f2;
-      font-size: 14px;
-      margin: 8px 0 28px
-    }
-
-    .stp {
-      display: flex;
-      gap: 14px;
-      align-items: center;
-      padding: 11px 0;
-      opacity: .55;
-      font-weight: 700;
-      font-size: 15px
-    }
-
-    .stp span {
-      width: 34px;
-      height: 34px;
-      border-radius: 50%;
-      box-shadow: inset 0 0 0 2px #fff8;
-      display: grid;
-      place-items: center;
-      font-size: 13px;
-      flex: none
-    }
-
-    .stp.on {
-      opacity: 1
-    }
-
-    .stp.on span {
-      background: #fff;
-      color: var(--n)
-    }
-
-    .stp.done {
-      opacity: 1
-    }
-
-    .stp.done span {
-      background: var(--n);
-      box-shadow: none
-    }
-
-    .main {
-      padding: 38px;
-      min-height: 460px;
-      display: flex;
-      flex-direction: column
-    }
-
-    .main h3 {
-      font-size: 32px
-    }
-
-    .main .sub {
-      color: var(--mute);
-      margin: 8px 0 24px
-    }
-
-    .pane {
-      display: none;
-      flex: 1
-    }
-
-    .pane.on {
-      display: block
-    }
-
-    .opts {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(155px, 1fr));
-      gap: 12px
-    }
-
-    .opt {
-      border: 1px solid #e2e8f0;
-      background: #ffffff;
-      border-radius: 16px;
-      padding: 24px 20px;
-      text-align: left;
-      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-      font-weight: 700;
-      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
-      cursor: pointer;
-      display: flex;
-      flex-direction: column;
-      color: #1e293b;
-    }
-
-    .opt:hover {
-      background: #f8fafc;
-      transform: translateY(-4px);
-      box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
-      border-color: #cbd5e1;
-    }
-
-    .opt.sel {
-      border-color: var(--p);
-      background: #eff6ff;
-      box-shadow: 0 0 0 2px var(--p);
-      color: var(--p);
-    }
-
-    .opt em {
-      font-style: normal;
-      display: block;
-      font-size: 36px;
-      margin-bottom: 16px;
-      line-height: 1;
-    }
-
-    .field {
-      display: grid;
-      gap: 6px;
-      margin-bottom: 14px
-    }
-
-    .field label {
-      font-weight: 700;
-      font-size: 14px
-    }
-
-    input[type=text],
-    input[type=tel],
-    input[type=number],
-    input[type=date],
-    textarea {
-      width: 100%;
-      border: 0;
-      border-radius: 16px;
-      padding: 15px 16px;
-      background: var(--t1);
-      font-family: inherit;
-      font-size: 15px;
-      color: var(--n);
-      box-sizing: border-box;
-    }
-
-    input[type=date] {
-      cursor: pointer;
-    }
-
-    input[type=date]::-webkit-calendar-picker-indicator {
-      cursor: pointer;
-      font-size: 18px;
-      filter: invert(0.2) sepia(1) saturate(5) hue-rotate(200deg);
-      opacity: 0.85;
-      padding: 2px;
-      border-radius: 4px;
-      transition: opacity 0.2s;
-    }
-
-    input[type=date]::-webkit-calendar-picker-indicator:hover {
-      opacity: 1;
-    }
-
-    .when-chip {
-      background: var(--t1);
-      border: 1px solid #e2e8f0;
-      border-radius: 999px;
-      padding: 4px 11px;
-      font-size: 11.5px;
-      font-weight: 600;
-      color: var(--n);
-      cursor: pointer;
-      transition: all 0.15s ease;
-    }
-
-    .when-chip:hover {
-      background: var(--n);
-      color: #fff;
-      border-color: var(--n);
-    }
-
-    input:focus,
-    textarea:focus {
-      outline: 2px solid var(--n)
-    }
-
-    .money {
-      display: flex;
-      align-items: center;
-      background: var(--t1);
-      border-radius: 22px;
-      padding: 0 24px
-    }
-
-    .money span {
-      font: 800 38px "Bricolage Grotesque"
-    }
-
-    .money input {
-      background: none;
-      font: 800 40px "Bricolage Grotesque";
-      padding: 18px 12px;
-      outline: 0 !important
-    }
-
-    .pre {
-      display: flex;
-      gap: 8px;
-      flex-wrap: wrap;
-      margin-top: 14px
-    }
-
-    .two {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 12px
-    }
-
-    .sum {
-      background: var(--t1);
-      border-radius: 16px;
-      padding: 16px;
-      font-size: 14px
-    }
-
-    .nav2 {
-      display: flex;
-      justify-content: space-between;
-      margin-top: 26px
-    }
-
-    .loc2 {
-      background: none;
-      border: 0;
-      color: var(--n3);
-      font-weight: 800;
-      padding: 0;
-      text-align: left
-    }
-
-    /* how */
-    .tog {
-      display: inline-flex;
-      background: var(--t1);
-      border-radius: 999px;
-      padding: 5px;
-      margin-bottom: 46px
-    }
-
-    .tog button {
-      border: 0;
-      background: none;
-      border-radius: 999px;
-      padding: 11px 24px;
-      font-weight: 700
-    }
-
-    .tog button.on {
-      background: var(--n);
-      color: #fff
-    }
-
-    .flow {
-      display: none;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 24px;
-      position: relative
-    }
-
-    .flow.on {
-      display: grid
-    }
-
-    .flow:before {
-      content: "";
-      position: absolute;
-      left: 8%;
-      right: 8%;
-      top: 35px;
-      height: 2px;
-      background: var(--t2)
-    }
-
-    .fs {
-      position: relative;
-      text-align: center
-    }
-
-    .fs b {
-      width: 72px;
-      height: 72px;
-      border-radius: 50%;
-      background: var(--n);
-      color: #fff;
-      display: grid;
-      place-items: center;
-      margin: 0 auto 18px;
-      font: 800 26px "Bricolage Grotesque"
-    }
-
-    .fs h3 {
-      font: 800 18px Manrope;
-      letter-spacing: 0;
-      margin-bottom: 6px
-    }
-
-    .fs p {
-      margin: 0;
-      color: var(--mute);
-      font-size: 14px
-    }
-
-    /* trust */
-    .split {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 70px;
-      align-items: center
-    }
-
-    .split h2 {
-      font-size: clamp(34px, 4.6vw, 56px);
-      margin-bottom: 20px
-    }
-
-    .split>div>p {
-      color: #b8c7e8;
-      margin: 0 0 28px;
-      max-width: 480px
-    }
-
-    .chk {
-      list-style: none;
-      padding: 0;
-      margin: 0;
-      display: grid;
-      gap: 18px
-    }
-
-    .chk li {
-      display: flex;
-      gap: 16px
-    }
-
-    .chk i {
-      width: 30px;
-      height: 30px;
-      border-radius: 50%;
-      background: #fff;
-      color: var(--n);
-      display: grid;
-      place-items: center;
-      font-style: normal;
-      font-weight: 800;
-      font-size: 14px;
-      flex: none
-    }
-
-    .chk b {
-      display: block;
-      font-size: 17px
-    }
-
-    .chk span {
-      color: #b8c7e8;
-      font-size: 14px
-    }
-
-    .seal {
-      aspect-ratio: 1;
-      max-width: 460px;
-      margin: auto;
-      border-radius: 50%;
-      background: radial-gradient(circle, var(--n3), var(--n2));
-      display: grid;
-      place-items: center;
-      position: relative;
-      box-shadow: 0 0 0 40px #ffffff0d, 0 0 0 90px #ffffff07
-    }
-
-    .seal svg {
-      width: 46%
-    }
-
-    .seal .fl {
-      font-size: 13px
-    }
-
-    .seal .a1 {
-      left: -10%;
-      top: 12%
-    }
-
-    .seal .a2 {
-      right: -12%;
-      bottom: 14%
-    }
-
-    /* stats */
-    .stats {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 30px;
-      text-align: center
-    }
-
-    .stats b {
-      display: block;
-      font: 800 clamp(44px, 6vw, 80px) "Bricolage Grotesque";
-      letter-spacing: -.04em;
-      line-height: 1
-    }
-
-    .stats span {
-      color: var(--mute);
-      font-weight: 600
-    }
-
-    /* quotes */
-    .qs {
-      display: grid;
-      grid-template-columns: 1.3fr 1fr;
-      gap: 50px
-    }
-
-    .q big {
-      display: block;
-      font: 700 clamp(26px, 3.2vw, 40px)/1.2 "Bricolage Grotesque";
-      letter-spacing: -.02em
-    }
-
-    .q p {
-      margin: 0 0 14px;
-      color: #dbe4f8;
-      font-size: 17px
-    }
-
-    .q .w {
-      margin-top: 22px;
-      display: flex;
-      gap: 12px;
-      align-items: center;
-      font-weight: 700
-    }
-
-    .av {
-      width: 46px;
-      height: 46px;
-      border-radius: 50%;
-      background: #fff;
-      color: var(--n);
-      display: grid;
-      place-items: center;
-      font-weight: 800
-    }
-
-    .q small {
-      display: block;
-      color: #9db0d8;
-      font-weight: 500
-    }
-
-    .qr {
-      display: grid;
-      gap: 34px;
-      align-content: center
-    }
-
-    /* cities + faq */
-    .city {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 10px
-    }
-
-    .city span {
-      background: var(--t1);
-      padding: 12px 24px;
-      border-radius: 999px;
-      font-weight: 700
-    }
-
-    .city span:first-child {
-      background: var(--n);
-      color: #fff
-    }
-
-    .faq {
-      display: grid;
-      gap: 10px;
-      max-width: 860px
-    }
-
-    details {
-      background: var(--t1);
-      border-radius: 22px;
-      padding: 6px 26px
-    }
-
-    summary {
-      cursor: pointer;
-      font-weight: 800;
-      font-size: 17px;
-      padding: 16px 0;
-      list-style: none;
-      display: flex;
-      justify-content: space-between;
-      gap: 14px
-    }
-
-    summary::-webkit-details-marker {
-      display: none
-    }
-
-    summary:after {
-      content: "+";
-      font-size: 24px;
-      line-height: 1
-    }
-
-    details[open] summary:after {
-      content: "–"
-    }
-
-    details p {
-      margin: 0 0 18px;
-      color: var(--mute)
-    }
-
-    .cta {
-      background: url('{% static "images/cta.jpg" %}') center/cover;
-      color: #fff;
-      border-radius: 40px;
-      padding: 70px 6vw;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 30px;
-      flex-wrap: wrap;
-      position: relative;
-      overflow: hidden;
-      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-    }
-
-    .cta::before {
-      content: "";
-      position: absolute;
-      inset: 0;
-      background: linear-gradient(135deg, rgba(30, 58, 138, 0.95) 0%, rgba(15, 23, 42, 0.85) 100%);
-      z-index: 0;
-    }
-
-    .cta>* {
-      position: relative;
-      z-index: 1;
-    }
-
-    .cta h2 {
-      font-size: clamp(34px, 4.6vw, 58px);
-      max-width: 640px
-    }
-
-    .cta p {
-      color: #c8d5f2;
-      margin: 14px 0 0;
-      max-width: 460px
-    }
-
-    footer {
-      background: var(--n);
-      color: #9db0d8;
-      padding: 70px 0 30px;
-      font-size: 14px
-    }
-
-    .fg {
-      display: grid;
-      grid-template-columns: 1.6fr 1fr 1fr 1fr;
-      gap: 40px
-    }
-
-    footer h4 {
-      color: #fff;
-      margin: 0 0 14px;
-      font-size: 15px
-    }
-
-    footer a {
-      display: block;
-      margin: 8px 0
-    }
-
-    footer a:hover {
-      color: #fff
-    }
-
-    .fb {
-      margin-top: 50px;
-      display: flex;
-      justify-content: space-between;
-      flex-wrap: wrap;
-      gap: 10px;
-      font-size: 13px
-    }
-
-    /* modal */
-    .modal {
-      position: fixed;
-      inset: 0;
-      background: #0a1a3ccc;
-      display: none;
-      place-items: center;
-      padding: 16px;
-      z-index: 9999;
-      backdrop-filter: blur(4px)
-    }
-
-    .modal.show {
-      display: grid
-    }
-
-    .card {
-      background: #fff;
-      border-radius: 30px;
-      padding: 30px;
-      width: min(480px, 100%);
-      max-height: 92vh;
-      overflow: auto;
-      animation: pop .2s
-    }
-
-    @keyframes pop {
-      from {
-        transform: scale(.96);
-        opacity: 0
-      }
-    }
-
-    .card .top {
-      display: flex;
-      justify-content: space-between;
-      margin-bottom: 18px
-    }
-
-    .card h3 {
-      font-size: 28px
-    }
-
-    .x {
-      border: 0;
-      background: var(--t1);
-      width: 38px;
-      height: 38px;
-      border-radius: 50%;
-      font-size: 18px
-    }
-
-    .loc-chip {
-      background: #f1f5f9;
-      border: 1px solid #e2e8f0;
-      border-radius: 999px;
-      padding: 6px 14px;
-      font-size: 13px;
-      font-weight: 600;
-      color: var(--n);
-      cursor: pointer;
-      transition: all 0.2s ease;
-    }
-
-    .loc-chip:hover {
-      background: var(--n);
-      color: #fff;
-      border-color: var(--n);
-    }
-
-    .loc-result-item {
-      padding: 10px 12px;
-      border-radius: 8px;
-      cursor: pointer;
-      transition: background 0.15s ease;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-
-    .loc-result-item:hover {
-      background: #f1f5f9;
-    }
-
-    @keyframes spin {
-      from {
-        transform: rotate(0deg);
-      }
-
-      to {
-        transform: rotate(360deg);
-      }
-    }
-
-    .spin-anim {
-      display: inline-block;
-      animation: spin 1s linear infinite;
-    }
-
-    .slots {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 8px
-    }
-
-    .slots .opt {
-      padding: 12px;
-      text-align: center;
-      border-radius: 16px
-    }
-
-    .slots small {
-      display: block;
-      font-weight: 500;
-      font-size: 12px;
-      opacity: .7
-    }
-
-    .toast {
-      position: fixed;
-      left: 50%;
-      bottom: 24px;
-      transform: translateX(-50%);
-      background: var(--n);
-      color: #fff;
-      padding: 14px 22px;
-      border-radius: 999px;
-      display: none;
-      z-index: 99;
-      max-width: 92vw;
-      box-shadow: 0 20px 40px -10px #0a1a3c88
-    }
-
-    .toast.show {
-      display: block
-    }
-
-    .vendor-ask-card {
-      border: 1.5px solid #cbd5e1;
-      border-radius: 16px;
-      padding: 16px;
-      margin-bottom: 12px;
-      background: #ffffff;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 14px;
-      text-decoration: none;
-      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
-      box-sizing: border-box;
-    }
-
-    .vendor-ask-card:hover {
-      border-color: #2563eb;
-      transform: translateY(-2px);
-      box-shadow: 0 10px 24px -6px rgba(37, 99, 235, 0.16) !important;
-    }
-
-    .vendor-ask-card.highlight {
-      border-color: #93c5fd;
-      background: #f0f7ff;
-    }
-
-    .vendor-ask-card.highlight:hover {
-      border-color: #2563eb;
-      background: #e0f2fe;
-    }
-
-    @media(max-width:980px) {
-
-      .hg,
-      .split,
-      .qs,
-      .ways {
-        grid-template-columns: 1fr
-      }
-
-      .stage {
-        height: auto;
-        margin-top: 20px
-      }
-
-      .tiles {
-        grid-template-columns: repeat(2, 1fr)
-      }
-
-      .stats,
-      .flow.on,
-      .fg {
-        grid-template-columns: repeat(2, 1fr)
-      }
-
-      .flow:before {
-        display: none
-      }
-
-      .wiz {
-        grid-template-columns: 1fr
-      }
-
-      .side {
-        padding: 20px
-      }
-
-      .side p,
-      .stp b {
-        display: none
-      }
-
-      .steps {
-        display: flex;
-        gap: 14px
-      }
-
-      .stp {
-        padding: 0
-      }
-
-      .side h3 {
-        margin-bottom: 12px
-      }
-
-      .ix span {
-        display: none
-      }
-
-      .blk {
-        padding: 70px 0
-      }
-    }
-
-    @media(max-width:640px) {
-      .nav {
-        gap: 12px;
-        height: 68px;
-      }
-
-      .logo img {
-        height: 40px !important;
-      }
-
-      .nav-loc {
-        padding: 6px 10px;
-      }
-
-      .nav-loc-text {
-        max-width: 100px;
-        font-size: 13px;
-      }
-
-      .nav a.l {
-        display: none;
-      }
-
-      .nav .btn {
-        padding: 8px 14px;
-        font-size: 13px;
-      }
-
-      .arch {
-        width: 100%;
-        max-width: 340px;
-        height: 440px
-      }
-
-      .phone {
-        width: 210px;
-        height: 380px
-      }
-
-      .f1 {
-        left: 0
-      }
-
-      .f2 {
-        right: 0
-      }
-
-      .two {
-        grid-template-columns: 1fr
-      }
-
-      .main {
-        padding: 22px
-      }
-
-      .tiles {
-        gap: 22px 12px
-      }
-
-      .sbar .loc {
-        display: none
-      }
-
-      .ix {
-        padding: 14px 18px
-      }
-
-      .stats {
-        gap: 20px
-      }
-    }
-
-    @media(prefers-reduced-motion:reduce) {
-      * {
-        animation: none !important;
-        transition: none !important
-      }
-
-      html {
-        scroll-behavior: auto
-      }
-    }
-  </style>
-  <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-</head>
-
-<body>
-  <header>
-    <nav class="wrap nav">
-      <a class="logo" href="/"><img src="{% static 'images/logo.png' %}" alt="sugu logo"
-          style="height: 52px; width: auto; object-fit: contain;"></a>
-
-      <div class="nav-loc" onclick="openLocationModal()">
-        <span class="nav-loc-icon"><i class="bi bi-geo-alt-fill"></i></span>
-        <span class="nav-loc-text" id="navLocText">Set location</span>
-        <span class="nav-loc-arrow"><i class="bi bi-chevron-down"></i></span>
-      </div>
-
-      <span class="sp"></span>
-      <a class="l" href="#quick">Quick services</a><a class="l" href="#project">Post a requirement</a><a class="l"
-        href="#faq">Help</a>
-      {% if user.is_authenticated %}
-      <a class="l"
-        href="{% if user.role == 'VENDOR' %}/vendor/dashboard{% elif user.role == 'ADMIN' %}/admin-dashboard{% else %}/user/dashboard{% endif %}">Dashboard</a>
-      <a class="btn o" href="/logout/">Log out</a>
-      {% else %}
-      <a class="l" href="/login/">Log in</a><a class="btn w" href="/register/vendor/">Become a vendor</a>
-      {% endif %}
-    </nav>
-  </header>
-  <div class="hero">
-    <div class="wrap hg">
-      <div>
-        <h1>Your home, <span>handled.</span></h1>
-        <p class="lead">Book a haircut, massage or repair at your door in minutes. Planning a renovation? Post your
-          budget and let trusted vendors come to you.</p>
-        <div class="sbar"><input id="hs" placeholder="Search haircut, massage, AC repair"
-            aria-label="Search services"><span class="loc"><i class="bi bi-geo-alt-fill"></i> Ranchi</span><button
-            class="btn" onclick="heroSearch()">Search</button></div>
-        <div class="tags">
-          <span>Popular:</span>
-          {% for cat in categories|slice:":4" %}
-          <button onclick="document.getElementById('quick').scrollIntoView({behavior: 'smooth'}); filterCategory('{{ cat.name|escapejs }}')">{{ cat.name }}</button>
-          {% endfor %}
-        </div>
-      </div>
-      <div class="stage" aria-hidden="true">
-        <div class="arch">
-          <div class="phone">
-            <h4>Book a service</h4>
-            {% for cat in categories|slice:":3" %}
-            <div class="pl {% if forloop.first %}on{% endif %}"><span><i class="bi {{ cat.icon_class }}"></i></span>{{ cat.name }}</div>
-            {% endfor %}
-            <div class="pmap"><i class="bi bi-geo-alt-fill"></i> Your location</div>
-            <div class="pbtn">Confirm booking</div>
-          </div>
-        </div>
-        <div class="fl f1"><span class="dot"><i class="bi bi-check-lg"></i></span>
-          <div>Vendor verified<small>Amit K. ★ 4.9</small></div>
-        </div>
-        <div class="fl f2"><span class="dot"><i class="bi bi-currency-rupee"></i></span>
-          <div>3 offers received<small>Local Vendors</small></div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <div class="mq" aria-hidden="true">
-    <div>
-      {% for cat in categories %}<span>{{ cat.name }}</span><span>✦</span>{% endfor %}
-      {% for cat in categories %}<span>{{ cat.name }}</span><span>✦</span>{% endfor %}
-    </div>
-  </div>
-
-  <div class="ways">
-    <div class="way a" data-aos="fade-right">
-      <div>
-        <h2>Need it today?</h2>
-        <p>Quick services with fixed prices. Pick a vendor, share your location, and they come to you.</p>
-      </div>
-      <ul>
-        {% for cat in categories|slice:":6" %}
-        <li>{{ cat.name }}</li>
-        {% endfor %}
-      </ul><a class="btn" href="#quick" style="align-self:flex-start">Book a service</a>
-    </div>
-    <div class="way b" data-aos="fade-left">
-      <div>
-        <h2>Planning something big?</h2>
-        <p>Post your requirement with a budget. Vendors near you send offers and you choose the best one.</p>
-      </div>
-      <ul>
-        {% for cat in categories|slice:"-5:" %}
-        <li>{{ cat.name }}</li>
-        {% endfor %}
-      </ul><a class="btn w" href="#project" style="align-self:flex-start">Post a requirement</a>
-    </div>
-  </div>
-
-  <section class="blk" id="quick">
-    <div class="wrap">
-      <div class="head" data-aos="fade-up" style="display:flex; justify-content:space-between; align-items:flex-end;">
-        <div>
-          <h2>Book a quick service</h2>
-          <p>Fixed prices, verified vendors, and a slot that suits you. Choose below.</p>
-        </div>
-        {% if user.is_authenticated %}
-        <button class="btn s" onclick="filt('', 'All', 999); this.style.display='none';">View all</button>
-        {% else %}
-        <a class="btn s" href="/login/">View all</a>
-        {% endif %}
-      </div>
-      <div class="picks" id="picks" data-aos="fade-up">
-        {% for cat in categories %}
-        <a class="pick" href="/services/browse?category={{ cat.id }}" title="{{ cat.name }}">
-          <span>
-            {% if cat.icon %}
-            <img src="{{ cat.icon.url }}" alt="{{ cat.name }}" style="width:36px; height:36px; object-fit:contain;" />
-            {% else %}
-            <i class="bi {{ cat.icon_class }}"></i>
-            {% endif %}
-          </span>
-          {{ cat.name }}
-        </a>
-        {% empty %}
-        <div class="empty">No categories available.</div>
-        {% endfor %}
-      </div>
-
-      <div class="tiles" id="grid" style="margin-top: 40px;">
-        {% for service in landing_services|default:top_services %}
-        <article class="svc" data-aos="zoom-in" data-aos-delay="100" data-cat="{{ service.category.name|default:'' }}"
-          data-lat="{{ service.latitude|default:'' }}" data-lon="{{ service.longitude|default:'' }}"
-          data-radius="{{ service.service_radius_km|default:15 }}">
-          <div class="img"{% if service.image %} style="background: url('{{ service.image.url }}') center/cover no-repeat, linear-gradient(135deg, var(--n2), var(--n3));"{% elif service.image_url %} style="background: url('{{ service.image_url }}') center/cover no-repeat, linear-gradient(135deg, var(--n2), var(--n3));"{% endif %}>
-            {% if not service.image and not service.image_url %}<i class="bi bi-image" style="font-size:24px; opacity:0.5;"></i>{% endif %}
-            <span class="rt">★ 4.8</span>
-          </div>
-          <h3>{{ service.title }}</h3>
-          <small><i class="bi bi-shield-check" style="color:#10b981;"></i> Sugu Verified Partner</small>
-          <div class="row">
-            <span><b>₹{{ service.base_price|floatformat:"0" }}</b> <small>onwards</small></span>
-            <a class="btn"
-              href="/services/browse?category={{ service.category.id|default:'' }}#service-{{ service.id }}">View</a>
-          </div>
-        </article>
-        {% empty %}
-        <div class="empty">No services listed yet. Check back soon.</div>
-        {% endfor %}
-      </div>
-
-      <script>
-        function filterCategory(catName) {
-          const svcs = document.querySelectorAll('.svc');
-          let count = 0;
-          svcs.forEach(s => {
-            if (!catName || s.getAttribute('data-cat') === catName) {
-              s.style.display = 'block';
-              count++;
-            } else {
-              s.style.display = 'none';
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Inter:wght@300;400;500;600;700;800;900&family=Outfit:wght@500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Inter"', 'sans-serif'],
+            display: ['"Outfit"', 'sans-serif'],
+            heading: ['"Space Grotesk"', '"Outfit"', 'sans-serif'],
+            script: ['"Caveat"', 'cursive'],
+          },
+          colors: {
+            sugu: {
+              50: '#f0f9ff',
+              100: '#e0f2fe',
+              200: '#bae6fd',
+              300: '#7dd3fc',
+              400: '#38bdf8',
+              500: '#1b75d0',
+              600: '#1b75d0',
+              700: '#135cad',
+              800: '#075985',
+              900: '#0c1a30',
+              950: '#081222',
+              blue: '#1b75d0',
+              blueDark: '#135cad',
+              blueLight: '#eef5fd',
+              navy: '#0c1a30',
+              navyDark: '#081222',
+              cardBg: '#f0f4f9',
+              accent: '#f59e0b',
             }
-          });
-          const emptyMsg = document.querySelector('#grid .empty') || document.createElement('div');
-          if (count === 0) {
-            emptyMsg.className = 'empty';
-            emptyMsg.textContent = 'No services found for ' + catName;
-            if (!document.querySelector('#grid .empty')) document.getElementById('grid').appendChild(emptyMsg);
-            emptyMsg.style.display = 'block';
-          } else {
-            emptyMsg.style.display = 'none';
           }
         }
-      </script>
-    </div>
-  </section>
+      }
+    }
+  </script>
 
-  <section class="blk dark" id="project">
-    <div class="wrap">
-      <div class="head" data-aos="fade-up">
-        <h2>Big job? Tell us what you need.</h2>
-        <p>Pick a category to begin. Four steps: category, type of work, budget, location.</p>
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  
+  <!-- Three.js CDN for 3D Hero Particles -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+  <!-- Bootstrap Icons CDN for dynamic category fallback icons -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+
+  <!-- Custom Stylesheet -->
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body class="bg-slate-50 text-slate-800 font-sans antialiased selection:bg-blue-600 selection:text-white">
+
+  <!-- ================= TOP NOTIFICATION BAR ================= -->
+  <div class="bg-sugu-navy text-slate-300 text-xs py-2 px-4 border-b border-slate-800">
+    <div class="max-w-7xl mx-auto flex items-center justify-between">
+      <div class="flex items-center space-x-2">
+        <span class="px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-400 font-semibold border border-blue-500/30 text-[10px]">NEW</span>
+        <span>Dual-Engine Platform: Choose <strong class="text-white">15-Min Quick Service</strong> or <strong class="text-amber-300">Smart Contractor Bidding</strong></span>
       </div>
-      <div class="idx" id="idx" data-aos="fade-up"></div>
-      <div class="wiz" id="wiz" data-aos="fade-up">
-        <aside class="side">
-          <h3>Your project</h3>
-          <p>Takes about a minute. Vendors reply with offers.</p>
-          <div class="steps" id="steps">
-            <div class="stp"><span>1</span><b>Category</b></div>
-            <div class="stp"><span>2</span><b>Type of work</b></div>
-            <div class="stp"><span>3</span><b>Budget</b></div>
-            <div class="stp"><span>4</span><b>Location</b></div>
-          </div>
-        </aside>
-        <div class="main">
-          <div class="pane" data-p="0">
-            <h3>What do you need done?</h3>
-            <p class="sub">Choose a category.</p>
-            <div class="opts" id="cats"></div>
-          </div>
-          <div class="pane" data-p="1">
-            <h3 id="t1">Type of work</h3>
-            <p class="sub">Choose the one that fits best.</p>
-            <div class="opts" id="subs"></div>
-          </div>
-          <div class="pane" data-p="2">
-            <h3>What is your budget?</h3>
-            <p class="sub">Enter what you are ready to pay. Vendors quote around it.</p>
-            <div class="money"><span>₹</span><input type="number" id="budget" min="0" inputmode="numeric"
-                placeholder="250000"></div>
-            <div class="pre" id="pre"></div>
-          </div>
-          <div class="pane" data-p="3">
-            <h3>Where is the work?</h3>
-            <p class="sub">Vendors near this address will be notified.</p>
-            <div class="field">
-              <label for="addr">Address</label>
-              <textarea id="addr" rows="2" placeholder="House no, street, area, city"></textarea>
-              <input type="hidden" id="job_lat" name="latitude">
-              <input type="hidden" id="job_lon" name="longitude">
-
-              <div
-                style="display: flex; align-items: center; justify-content: space-between; margin-top: 6px; flex-wrap: wrap; gap: 8px;">
-                <button class="loc2" type="button" onclick="useLoc('addr')" id="btnUseLoc"
-                  style="display: inline-flex; align-items: center; gap: 6px; cursor: pointer;">
-                  <i class="bi bi-crosshair" id="locCrosshairIcon"></i> Use my current location
-                </button>
-                <div id="locGpsPill"
-                  style="display: none; align-items: center; gap: 6px; font-size: 11.5px; background: #eff6ff; border: 1.5px solid #bfdbfe; padding: 4px 11px; border-radius: 999px; color: #1e40af;">
-                  <span
-                    style="width: 7px; height: 7px; border-radius: 50%; background: #22c55e; display: inline-block;"></span>
-                  <span id="locGpsText">Lat: 23.3555, Lon: 85.3609</span>
-                  <a id="locGpsMapsLink" href="#" target="_blank" rel="noopener noreferrer"
-                    style="color: #2563eb; font-weight: 700; text-decoration: underline; margin-left: 4px; display: inline-flex; align-items: center; gap: 3px;">
-                    <i class="bi bi-geo-alt-fill"></i> Google Maps ↗
-                  </a>
-                </div>
-              </div>
-            </div>
-            <div class="two">
-              <div class="field"><label for="ph">Mobile number</label><input type="tel" id="ph"
-                  placeholder="10-digit number"></div>
-              <div class="field">
-                <label for="when" style="display: flex; justify-content: space-between; align-items: center;">
-                  <span>When to start</span>
-                  <span style="font-size: 11.5px; font-weight: 600; color: #2563eb;"><i class="bi bi-calendar3"></i>
-                    Pick date</span>
-                </label>
-                <input type="date" id="when" onclick="if(this.showPicker) this.showPicker()" style="cursor: pointer;">
-                <div class="when-chips" style="display: flex; gap: 6px; margin-top: 6px; flex-wrap: wrap;">
-                  <button type="button" class="when-chip" onclick="setWhenDate(0)">Today</button>
-                  <button type="button" class="when-chip" onclick="setWhenDate(1)">Tomorrow</button>
-                  <button type="button" class="when-chip" onclick="setWhenDate(7)">Next week</button>
-                </div>
-              </div>
-            </div>
-            <div class="sum" id="sum"></div>
-          </div>
-          <div class="nav2"><button class="btn s" id="back" onclick="go(-1)">Back</button><button class="btn" id="next"
-              onclick="go(1)">Continue</button></div>
-        </div>
+      <div class="hidden sm:flex items-center space-x-4 text-slate-400 text-xs">
+        <span class="flex items-center"><i data-lucide="shield" class="w-3.5 h-3.5 mr-1 text-emerald-400"></i> ₹25,000 Sugu Cover</span>
+        <span class="flex items-center"><i data-lucide="phone" class="w-3.5 h-3.5 mr-1 text-blue-400"></i> 24/7 Helpline: 1800-SUGU-FIX</span>
       </div>
     </div>
-  </section>
+  </div>
 
-  <section class="blk">
-    <div class="wrap">
-      <div class="head" data-aos="fade-up">
-        <h2>How Sugu works</h2>
-        <p>Two simple ways to get things done at home.</p>
-      </div>
-      <div class="tog" id="tog"><button class="on" data-t="f1">Quick service</button><button data-t="f2">Post a
-          requirement</button></div>
-      <div class="flow on" id="f1">
-        <div class="fs" data-aos="fade-up"><b>1</b>
-          <h3>Choose a service</h3>
-          <p>Browse haircuts, massage, cleaning and more.</p>
-        </div>
-        <div class="fs" data-aos="fade-up" data-aos-delay="50"><b>2</b>
-          <h3>Pick a vendor and slot</h3>
-          <p>See ratings and prices, then choose a time.</p>
-        </div>
-        <div class="fs" data-aos="fade-up" data-aos-delay="100"><b>3</b>
-          <h3>Share your location</h3>
-          <p>Type your address or pin it on the map.</p>
-        </div>
-        <div class="fs" data-aos="fade-up" data-aos-delay="150"><b>4</b>
-          <h3>Relax at home</h3>
-          <p>Your vendor arrives. Pay after the service.</p>
-        </div>
-      </div>
-      <div class="flow" id="f2">
-        <div class="fs" data-aos="fade-up"><b>1</b>
-          <h3>Select category</h3>
-          <p>Renovation, painting, electrical and more.</p>
-        </div>
-        <div class="fs" data-aos="fade-up" data-aos-delay="50"><b>2</b>
-          <h3>Choose type of work</h3>
-          <p>1 BHK, 2 BHK, 3 BHK or a villa.</p>
-        </div>
-        <div class="fs" data-aos="fade-up" data-aos-delay="100"><b>3</b>
-          <h3>Set budget and location</h3>
-          <p>Tell vendors what you can spend and where.</p>
-        </div>
-        <div class="fs" data-aos="fade-up" data-aos-delay="150"><b>4</b>
-          <h3>Compare offers</h3>
-          <p>Pick the vendor that suits you best.</p>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <section class="blk dark">
-    <div class="wrap split">
-      <div data-aos="fade-right">
-        <h2>Every vendor is checked before they reach you.</h2>
-        <p>We verify identity and skills, and keep rating every job, so you always know who is at your door.</p>
-        <ul class="chk">
-          <li><i><i class="bi bi-arrow-right"></i></i>
-            <div><b>ID and address verified</b><span>Government ID checked for every vendor.</span></div>
-          </li>
-          <li><i><i class="bi bi-arrow-right"></i></i>
-            <div><b>Skills assessed</b><span>Vendors are reviewed for the work they offer.</span></div>
-          </li>
-          <li><i><i class="bi bi-arrow-right"></i></i>
-            <div><b>Real ratings</b><span>Only customers who booked can leave a review.</span></div>
-          </li>
-          <li><i><i class="bi bi-arrow-right"></i></i>
-            <div><b>Support when you need it</b><span>Something wrong? Our team helps you sort it out.</span></div>
-          </li>
-        </ul>
-      </div>
-      <div class="seal" aria-hidden="true" data-aos="fade-left"><svg viewBox="0 0 100 120" fill="none">
-          <path d="M50 6 12 20v34c0 28 16 48 38 60 22-12 38-32 38-60V20L50 6Z" fill="#fff" />
-          <path d="m32 58 13 13 24-26" stroke="#0a1a3c" stroke-width="9" stroke-linecap="round"
-            stroke-linejoin="round" />
-        </svg>
-        <div class="fl a1"><span class="dot">★</span>
-          <div>4.9 rating<small>312 jobs</small></div>
-        </div>
-        <div class="fl a2"><span class="dot">✓</span>
-          <div>Background checked<small>Verified</small></div>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <section class="blk">
-    <div class="wrap">
-      <div class="stats" data-aos="fade-up">
-        <div><b>50K+</b><span>Services booked</span></div>
-        <div><b>1,200+</b><span>Verified vendors</span></div>
-        <div><b>4.8★</b><span>Average rating</span></div>
-        <div><b>30 min</b><span>Typical arrival</span></div>
-      </div>
-    </div>
-  </section>
-
-  <section class="blk dark">
-    <div class="wrap">
-      <div class="head" data-aos="fade-down">
-        <h2>People who already sorted it.</h2>
-      </div>
-      {% if cms_testimonials %}
-      <div class="qs">
-        {% with feat=cms_testimonials|first %}
-        <div class="q" data-aos="fade-right">
-          <div style="color: #ffb400; font-size: 24px; margin-bottom: 16px; letter-spacing: 2px;">
-            {% if feat.rating >= 5 %}★ ★ ★ ★ ★
-            {% elif feat.rating >= 4.5 %}★ ★ ★ ★ ½
-            {% elif feat.rating >= 4 %}★ ★ ★ ★ ☆
-            {% elif feat.rating >= 3 %}★ ★ ★ ☆ ☆
-            {% else %}★ ★ ★ ★ ★{% endif %}
-          </div>
-          <big>"{{ feat.review_text }}"</big>
-          <div class="w">
-            {% if feat.avatar %}
-            <img class="av" src="{{ feat.avatar.url }}" alt="{{ feat.client_name }}"
-              style="object-fit: cover; border: 2px solid #fff;">
+  <!-- ================= MAIN NAVIGATION BAR (URBAN COMPANY STYLE ROUTER) ================= -->
+  <header class="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200/80 shadow-sm transition-all duration-300">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex items-center justify-between h-20 gap-4">
+        
+        <!-- Logo & Location -->
+        <div class="flex items-center space-x-6">
+          <a href="/" class="flex items-center space-x-3 group">
+            {% if branding.logo %}
+              <img src="{{ branding.logo.url }}" alt="{{ branding.site_title|default:'SUGU Services' }}" class="h-10 sm:h-12 w-auto object-contain transition-transform group-hover:scale-105">
             {% else %}
-            <div class="av"
-              style="border: 2px solid #fff; background: linear-gradient(135deg, #2563eb, #1e3a8a); color: #fff; font-weight: 800; font-size: 15px; display: grid; place-items: center; border-radius: 50%;">
-              {{ feat.client_name|slice:":2"|upper }}
-            </div>
+              <img src="/static/images/logo.png" alt="SUGU Services" class="h-10 sm:h-12 w-auto object-contain transition-transform group-hover:scale-105" onerror="this.src='/media/cms/branding/logo.png'">
             {% endif %}
-            <div>
-              {{ feat.client_name }}
-              <small>{{ feat.service_taken|default:feat.client_role_or_company }}</small>
+            <div class="hidden sm:block">
+              <span class="text-xl font-black font-heading tracking-tight text-sugu-navy block leading-tight">{{ branding.site_title|default:'SUGU' }} <span class="text-sugu-blue">Services</span></span>
+              <span class="text-[10px] uppercase tracking-widest font-extrabold text-sugu-blue block -mt-0.5">{{ branding.tagline|default:'Your Home. Our Priority.' }}</span>
+            </div>
+          </a>
+
+          <!-- Location Selector -->
+          <div class="flex items-center space-x-2 pl-4 border-l border-slate-200 cursor-pointer" onclick="openLocationPicker()" title="Click to change location">
+            <div class="w-8 h-8 rounded-full bg-blue-50 text-sugu-blue flex items-center justify-center shrink-0">
+              <i data-lucide="map-pin" class="w-4 h-4"></i>
+            </div>
+            <div class="text-left">
+              <span class="block text-[11px] text-slate-400 font-medium">Location</span>
+              <span class="block text-xs font-bold text-slate-800 hover:text-sugu-blue transition flex items-center">
+                <span id="header-location-text">{% if user_city %}{{ user_city }}{% if user_state %}, {{ user_state }}{% endif %}{% else %}Detecting...{% endif %}</span>
+                <i data-lucide="chevron-down" class="w-3.5 h-3.5 ml-1 text-slate-400"></i>
+              </span>
             </div>
           </div>
         </div>
-        {% endwith %}
 
-        <div class="qr" data-aos="fade-left" data-aos-delay="200">
-          {% for item in cms_testimonials|slice:"1:5" %}
-          <div class="q">
-            <div style="color: #ffb400; font-size: 18px; margin-bottom: 8px; letter-spacing: 2px;">
-              {% if item.rating >= 5 %}★ ★ ★ ★ ★
-              {% elif item.rating >= 4.5 %}★ ★ ★ ★ ½
-              {% elif item.rating >= 4 %}★ ★ ★ ★ ☆
-              {% elif item.rating >= 3 %}★ ★ ★ ☆ ☆
-              {% else %}★ ★ ★ ★ ★{% endif %}
+        <!-- Primary Dual Mode Switcher Tabs (Urban Company Style Route Switching) -->
+        <div class="flex items-center space-x-1.5 p-1 bg-slate-100 rounded-2xl border border-slate-200 shadow-inner">
+          <button onclick="switchRoute('home')" data-mode="home" 
+            class="nav-mode-btn px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center space-x-1.5 bg-sugu-blue text-white shadow-md">
+            <i data-lucide="home" class="w-3.5 h-3.5"></i>
+            <span class="hidden sm:inline">Home</span>
+          </button>
+          
+          <button onclick="switchRoute('quick-service')" data-mode="quick-service" 
+            class="nav-mode-btn px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center space-x-1.5 text-slate-600 hover:bg-slate-200">
+            <i data-lucide="zap" class="w-3.5 h-3.5 text-amber-500 fill-amber-500"></i>
+            <span>Quick Service</span>
+          </button>
+
+          <button onclick="switchRoute('bidding')" data-mode="bidding" 
+            class="nav-mode-btn px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center space-x-1.5 text-slate-600 hover:bg-slate-200">
+            <i data-lucide="gavel" class="w-3.5 h-3.5 text-sugu-blue"></i>
+            <span>Bidding</span>
+          </button>
+        </div>
+
+        <!-- Profile / Auth (Cart removed as requested) -->
+        <div class="flex items-center space-x-3">
+
+          {% if user.is_authenticated %}
+          <!-- User profile badge & dashboard dropdown -->
+          <div class="relative group">
+            <a href="{% if user.role == 'VENDOR' %}/vendor/dashboard{% elif user.role == 'ADMIN' or user.is_superuser %}/admin-dashboard{% else %}/user/dashboard{% endif %}" class="flex items-center space-x-2 pl-2 border-l border-slate-200 hover:opacity-90 transition">
+              <div class="w-9 h-9 rounded-full bg-sugu-blue text-white font-bold flex items-center justify-center border-2 border-blue-400 shadow-sm text-xs">
+                {{ user.first_name|default:user.username|slice:":1"|upper }}
+              </div>
+              <div class="hidden xl:block text-left">
+                <span class="block text-xs font-bold text-slate-900 leading-tight">{{ user.first_name|default:user.username }}</span>
+                <span class="block text-[10px] font-semibold text-emerald-600">
+                  {% if user.role == 'VENDOR' %}Vendor Partner{% elif user.role == 'ADMIN' or user.is_superuser %}Admin{% else %}Verified Customer{% endif %}
+                </span>
+              </div>
+              <i data-lucide="chevron-down" class="w-3.5 h-3.5 text-slate-400 hidden xl:block"></i>
+            </a>
+
+            <!-- Dropdown Menu -->
+            <div class="absolute right-0 mt-2 w-48 bg-white rounded-2xl shadow-xl border border-slate-100 py-2 hidden group-hover:block transition-all z-50">
+              <a href="{% if user.role == 'VENDOR' %}/vendor/dashboard{% elif user.role == 'ADMIN' or user.is_superuser %}/admin-dashboard{% else %}/user/dashboard{% endif %}" class="flex items-center space-x-2 px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-blue-50 hover:text-sugu-blue">
+                <i data-lucide="layout-dashboard" class="w-4 h-4"></i>
+                <span>My Dashboard</span>
+              </a>
+              <a href="/logout/" class="flex items-center space-x-2 px-4 py-2 text-xs font-semibold text-rose-600 hover:bg-rose-50">
+                <i data-lucide="log-out" class="w-4 h-4"></i>
+                <span>Log Out</span>
+              </a>
             </div>
-            <p>"{{ item.review_text }}"</p>
-            <div class="w">
-              {% if item.avatar %}
-              <img class="av" src="{{ item.avatar.url }}" alt="{{ item.client_name }}"
-                style="object-fit: cover; border: 2px solid #fff;">
+          </div>
+          {% else %}
+          <!-- Guest Login / Partner Buttons -->
+          <div class="flex items-center space-x-2 pl-2 border-l border-slate-200">
+            <a href="/login/" class="px-3 py-2 rounded-xl text-xs font-bold text-slate-700 hover:text-sugu-blue hover:bg-slate-100 transition flex items-center space-x-1">
+              <i data-lucide="user" class="w-3.5 h-3.5"></i>
+              <span>Log In</span>
+            </a>
+            <a href="/register/vendor/" class="hidden sm:inline-flex px-3.5 py-2 rounded-xl text-xs font-bold bg-sugu-navy text-white hover:bg-slate-800 transition items-center space-x-1 shadow-sm">
+              <i data-lucide="briefcase" class="w-3.5 h-3.5 text-amber-400"></i>
+              <span>Become a Partner</span>
+            </a>
+          </div>
+          {% endif %}
+        </div>
+
+      </div>
+    </div>
+  </header>
+
+
+  <!-- ======================================================== -->
+  <!-- 1. VIEW: HOME PAGE                                       -->
+  <!-- ======================================================== -->
+  <main id="view-home" class="transition-opacity duration-300">
+
+    <!-- HERO SECTION (DARK NAVY GRADIENT, REAL TECHNICIAN IMAGE, SCRIPT BADGE) -->
+    <section class="relative bg-gradient-to-r from-[#0c1a30] via-[#0f2445] to-[#122e58] text-white overflow-hidden py-14 lg:py-20">
+      <!-- 3D Canvas Background -->
+      <div id="threejs-hero-canvas"></div>
+      <div class="absolute inset-0 opacity-20 bg-[radial-gradient(#1b75d0_1px,transparent_1px)] [background-size:20px_20px]"></div>
+
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-10 items-center">
+          
+          <!-- Hero Left Column: Headline, Dual Engine Highlights, CTAs -->
+          <div class="lg:col-span-6 space-y-6 text-center lg:text-left">
+            
+            <!-- Blue Pill Badge -->
+            <div class="inline-flex items-center space-x-2 px-4 py-1.5 rounded-full bg-sugu-blue/80 text-white text-xs sm:text-sm font-semibold tracking-wide shadow-sm backdrop-blur-sm border border-blue-400/30">
+              <span class="flex h-2.5 w-2.5 relative">
+                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+              </span>
+              <span>India's Dual-Engine Home Services Platform</span>
+            </div>
+
+            <!-- Main Hero Heading -->
+            <h1 class="text-3xl sm:text-4xl lg:text-[44px] font-extrabold tracking-tight text-white leading-tight font-heading">
+              India's First<br />
+              <span class="text-blue-300">Quick-Service Booking</span> &amp;<br />
+              <span class="text-amber-300">Smart Project Bidding Platform</span>
+            </h1>
+
+            <!-- Tagline Subtitle -->
+            <p class="text-base sm:text-lg text-blue-100/90 font-medium">
+              Quick Booking for Today. Smart Bidding for Tomorrow's Projects.
+            </p>
+
+            <!-- Dual Highlights: Lightning (Quick) & Gavel (Bidding) -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+              <!-- Highlight 1: Quick Services -->
+              <div onclick="switchRoute('quick-service')" class="flex items-center space-x-3 bg-white/10 hover:bg-white/15 cursor-pointer backdrop-blur-md p-3.5 rounded-2xl border border-white/15 transition">
+                <div class="w-10 h-10 rounded-full bg-sugu-blue text-white flex items-center justify-center shrink-0 shadow">
+                  <i data-lucide="zap" class="w-5 h-5 fill-current"></i>
+                </div>
+                <div class="text-left text-sm font-bold text-white leading-snug">
+                  Get Instant Help<br /><span class="text-xs font-normal text-blue-200">for Everyday Needs (15-min arrival)</span>
+                </div>
+              </div>
+
+              <!-- Highlight 2: Project Bidding -->
+              <div onclick="switchRoute('bidding')" class="flex items-center space-x-3 bg-white/10 hover:bg-white/15 cursor-pointer backdrop-blur-md p-3.5 rounded-2xl border border-white/15 transition">
+                <div class="w-10 h-10 rounded-full bg-amber-500 text-white flex items-center justify-center shrink-0 shadow">
+                  <i data-lucide="gavel" class="w-5 h-5"></i>
+                </div>
+                <div class="text-left text-sm font-bold text-white leading-snug">
+                  Competitive Offers<br /><span class="text-xs font-normal text-amber-200">for Bigger Projects (Save 40%)</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Explainer Sentence -->
+            <p class="text-xs sm:text-sm text-slate-300 max-w-xl leading-relaxed mx-auto lg:mx-0">
+              From 15-minute standard technician visits to reverse-auction bidding for home painting, carpentry, and full renovations.
+            </p>
+
+            <!-- CTA Buttons -->
+            <div class="flex flex-wrap items-center justify-center lg:justify-start gap-4 pt-2">
+              <button onclick="switchRoute('quick-service')" class="flex items-center space-x-2 bg-sugu-blue hover:bg-sugu-blueDark text-white px-6 py-3.5 rounded-full font-bold text-sm shadow-lg shadow-blue-500/30 transition transform hover:-translate-y-0.5">
+                <i data-lucide="zap" class="w-4 h-4 fill-white"></i>
+                <span>Book a Quick Service &rarr;</span>
+              </button>
+
+              <button onclick="switchRoute('bidding')" class="flex items-center space-x-2 bg-amber-600 hover:bg-amber-700 text-white px-6 py-3.5 rounded-full font-bold text-sm shadow-lg shadow-amber-600/30 transition transform hover:-translate-y-0.5">
+                <i data-lucide="gavel" class="w-4 h-4"></i>
+                <span>Explore Projects &rarr;</span>
+              </button>
+            </div>
+
+          </div>
+
+          <!-- Hero Right Column: FIRST IMAGE ON HOME PAGE (Official SUGU SERVICE Landscape Poster from User) -->
+          <div class="lg:col-span-6 relative flex justify-center lg:justify-end">
+            <div class="relative w-full max-w-xl">
+              
+              <!-- First Image Frame with subtle glow and shadow -->
+              <div class="relative rounded-2xl sm:rounded-3xl overflow-hidden shadow-2xl border-2 sm:border-4 border-white/25 bg-slate-950 flex items-center justify-center group">
+                <img 
+                  src="assets/branding/sugu_hero_poster.png" 
+                  alt="SUGU Service - Local Services Simplified - Your Home Our Priority" 
+                  class="w-full h-auto object-contain rounded-xl sm:rounded-2xl group-hover:scale-[1.02] transition-transform duration-500 drop-shadow-2xl" 
+                />
+              </div>
+
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- ======================================================== -->
+    <!-- OUR SERVICES (EXACT 8 REALISTIC TILES FROM USER MOCKUP)  -->
+    <!-- ======================================================== -->
+    <section class="py-12 bg-white border-b border-slate-100">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        
+        <div class="mb-8">
+          <h2 class="text-2xl sm:text-3xl font-extrabold text-sugu-navy tracking-tight font-heading">Our Services</h2>
+          <p class="text-xs sm:text-sm text-slate-500 mt-1">Professional, reliable and affordable home services — at your fingertips.</p>
+        </div>
+
+        <!-- Dynamic Service Category Cards created by Super Admin -->
+        <div class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-3 sm:gap-4">
+          {% for cat in categories %}
+          <div onclick="switchRoute('quick-service', '{{ cat.id }}')" class="bg-[#f0f4f9] hover:bg-[#e4ebf5] border border-slate-200/80 rounded-2xl p-3 sm:p-4 flex flex-col items-center justify-between text-center transition-all duration-300 hover:shadow-lg hover:-translate-y-1 cursor-pointer group">
+            <div class="w-16 h-16 sm:w-20 sm:h-20 flex items-center justify-center p-1">
+              {% if cat.image %}
+                <img src="{{ cat.image.url }}" alt="{{ cat.name }}" class="max-w-full max-h-full object-contain group-hover:scale-108 transition-transform duration-300 drop-shadow-sm" />
               {% else %}
-              <div class="av"
-                style="border: 2px solid #fff; background: linear-gradient(135deg, #2563eb, #1e3a8a); color: #fff; font-weight: 800; font-size: 14px; display: grid; place-items: center; border-radius: 50%;">
-                {{ item.client_name|slice:":2"|upper }}
-              </div>
+                <div class="w-14 h-14 rounded-2xl bg-white shadow-sm flex items-center justify-center text-sugu-blue text-2xl group-hover:scale-108 transition-transform">
+                  <i class="bi {{ cat.icon_class }}"></i>
+                </div>
               {% endif %}
-              <div>
-                {{ item.client_name }}
-                <small>{{ item.service_taken|default:item.client_role_or_company }}</small>
+            </div>
+            <span class="text-xs font-bold text-slate-800 mt-2 line-clamp-1">{{ cat.name }}</span>
+          </div>
+          {% empty %}
+          <div class="col-span-full py-8 text-center text-slate-400 text-sm">
+            No active categories found. Categories created by Super Admin will appear here.
+          </div>
+          {% endfor %}
+        </div>
+
+      </div>
+    </section>
+
+    <!-- KEY STATS BANNER (BLUE STRIP) -->
+    <section class="bg-sugu-blue text-white py-6 shadow-inner">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-6 text-center sm:text-left divide-y sm:divide-y-0 sm:divide-x divide-blue-400/40">
+          
+          <div class="flex items-center justify-center sm:justify-start space-x-3.5 sm:px-4 pt-3 sm:pt-0">
+            <div class="w-12 h-12 rounded-xl bg-white/15 flex items-center justify-center shrink-0">
+              <i data-lucide="users" class="w-6 h-6 text-white"></i>
+            </div>
+            <div>
+              <div class="text-2xl font-extrabold font-display leading-tight">5000+</div>
+              <div class="text-xs text-blue-100 font-medium">Happy Customers</div>
+            </div>
+          </div>
+
+          <div class="flex items-center justify-center sm:justify-start space-x-3.5 sm:px-4 pt-3 sm:pt-0">
+            <div class="w-12 h-12 rounded-xl bg-white/15 flex items-center justify-center shrink-0">
+              <i data-lucide="award" class="w-6 h-6 text-white"></i>
+            </div>
+            <div>
+              <div class="text-2xl font-extrabold font-display leading-tight">10+</div>
+              <div class="text-xs text-blue-100 font-medium">Years of Experience</div>
+            </div>
+          </div>
+
+          <div class="flex items-center justify-center sm:justify-start space-x-3.5 sm:px-4 pt-3 sm:pt-0">
+            <div class="w-12 h-12 rounded-xl bg-white/15 flex items-center justify-center shrink-0">
+              <i data-lucide="clock" class="w-6 h-6 text-white"></i>
+            </div>
+            <div>
+              <div class="text-2xl font-extrabold font-display leading-tight">24/7</div>
+              <div class="text-xs text-blue-100 font-medium">Emergency Support</div>
+            </div>
+          </div>
+
+          <div class="flex items-center justify-center sm:justify-start space-x-3.5 sm:px-4 pt-3 sm:pt-0">
+            <div class="w-12 h-12 rounded-xl bg-white/15 flex items-center justify-center shrink-0">
+              <i data-lucide="shield-check" class="w-6 h-6 text-white"></i>
+            </div>
+            <div>
+              <div class="text-2xl font-extrabold font-display leading-tight">100%</div>
+              <div class="text-xs text-blue-100 font-medium">Quality Work</div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- THE TWO DUAL-ENGINE OPTIONS (SIDE-BY-SIDE CARDS) -->
+    <section class="py-16 bg-[#f8fafc]">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="text-center max-w-3xl mx-auto mb-12">
+          <span class="px-3.5 py-1 text-xs font-bold uppercase tracking-wider bg-blue-100 text-sugu-blue rounded-full">Dual Booking Engines</span>
+          <h2 class="text-3xl font-extrabold font-heading text-sugu-navy mt-2">Choose the Right Option For Your Need</h2>
+          <p class="text-sm text-slate-500 mt-1">Instant standard repairs for today or competitive multi-bid projects for tomorrow.</p>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 items-stretch auto-rows-fr">
+          
+          <!-- OPTION 1: QUICK SERVICE BOOKING CARD (WITH REALISTIC PHOTO) -->
+          <div onclick="switchRoute('quick-service')" class="h-full bg-white rounded-3xl p-6 sm:p-7 lg:p-8 shadow-sm hover:shadow-xl transition-all duration-300 border border-slate-200/90 hover:border-blue-300/80 flex flex-col md:flex-row items-center justify-between gap-6 overflow-hidden relative group cursor-pointer">
+            <div class="space-y-4 flex-1 flex flex-col justify-between h-full w-full">
+              <div class="space-y-3">
+                <div>
+                  <span class="inline-flex items-center space-x-1.5 px-3 py-1 rounded-full text-xs font-bold bg-blue-50 text-sugu-blue border border-blue-200/60">
+                    <i data-lucide="zap" class="w-3.5 h-3.5 fill-current"></i>
+                    <span>Option 1: Quick Service Booking</span>
+                  </span>
+                </div>
+                <h3 class="text-2xl sm:text-3xl font-extrabold text-sugu-navy tracking-tight font-heading">Need Help Today?</h3>
+                <p class="text-xs sm:text-sm text-slate-500 leading-relaxed">Book skilled &amp; verified technicians for all your standard home service needs with 15-minute guaranteed arrival.</p>
+                
+                <ul class="space-y-2.5 pt-1 text-xs sm:text-sm text-slate-700 font-medium">
+                  <li class="flex items-center space-x-2.5">
+                    <span class="w-5 h-5 rounded-full bg-blue-100 text-sugu-blue flex items-center justify-center shrink-0">
+                      <i data-lucide="check" class="w-3.5 h-3.5 stroke-[3]"></i>
+                    </span>
+                    <span>15-Minute Response (all metro cities)</span>
+                  </li>
+                  <li class="flex items-center space-x-2.5">
+                    <span class="w-5 h-5 rounded-full bg-blue-100 text-sugu-blue flex items-center justify-center shrink-0">
+                      <i data-lucide="check" class="w-3.5 h-3.5 stroke-[3]"></i>
+                    </span>
+                    <span>Transparent Upfront Fixed Rate Cards</span>
+                  </li>
+                  <li class="flex items-center space-x-2.5">
+                    <span class="w-5 h-5 rounded-full bg-blue-100 text-sugu-blue flex items-center justify-center shrink-0">
+                      <i data-lucide="check" class="w-3.5 h-3.5 stroke-[3]"></i>
+                    </span>
+                    <span>7-Step Police &amp; Skill Verified Technicians</span>
+                  </li>
+                  <li class="flex items-center space-x-2.5">
+                    <span class="w-5 h-5 rounded-full bg-blue-100 text-sugu-blue flex items-center justify-center shrink-0">
+                      <i data-lucide="check" class="w-3.5 h-3.5 stroke-[3]"></i>
+                    </span>
+                    <span>30-Day Money-Back &amp; Free Re-work Guarantee</span>
+                  </li>
+                </ul>
+              </div>
+              
+              <div class="pt-4 mt-auto">
+                <button class="inline-flex items-center space-x-2 bg-sugu-blue hover:bg-sugu-blueDark text-white px-6 py-3 rounded-full font-bold text-sm shadow-md shadow-blue-500/25 transition">
+                  <i data-lucide="calendar" class="w-4 h-4"></i>
+                  <span>Browse Quick Services &rarr;</span>
+                </button>
               </div>
             </div>
+            
+            <!-- Real photo of technician working - full 1:1 square view -->
+            <div class="w-full max-w-[240px] md:max-w-none md:w-52 lg:w-52 xl:w-60 aspect-square rounded-2xl overflow-hidden shrink-0 shadow-md border border-slate-100 bg-slate-50 relative group-hover:shadow-lg transition-all self-center">
+              <img src="assets/realistic/photo_plumber_sink.png" alt="Sugu Verified Technician" class="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-500" />
+            </div>
+          </div>
+
+          <!-- OPTION 2: PROJECT BIDDING CARD (WITH REALISTIC PHOTO) -->
+          <div onclick="switchRoute('bidding')" class="h-full bg-gradient-to-br from-slate-900 via-slate-900 to-slate-950 text-white rounded-3xl p-6 sm:p-7 lg:p-8 shadow-sm hover:shadow-xl transition-all duration-300 border border-slate-800 hover:border-amber-500/40 flex flex-col md:flex-row items-center justify-between gap-6 overflow-hidden relative group cursor-pointer">
+            <div class="space-y-4 flex-1 flex flex-col justify-between h-full w-full">
+              <div class="space-y-3">
+                <div>
+                  <span class="inline-flex items-center space-x-1.5 px-3 py-1 rounded-full text-xs font-bold bg-amber-500/10 text-amber-400 border border-amber-500/30">
+                    <i data-lucide="gavel" class="w-3.5 h-3.5"></i>
+                    <span>Option 2: Smart Contractor Bidding</span>
+                  </span>
+                </div>
+                <h3 class="text-2xl sm:text-3xl font-extrabold text-white tracking-tight font-heading">Have a Bigger Project?</h3>
+                <p class="text-xs sm:text-sm text-slate-300 leading-relaxed">Post your requirement for home painting, custom carpentry, complete remodeling, and septic desilting. Receive competing bids.</p>
+                
+                <ul class="space-y-2.5 pt-1 text-xs sm:text-sm text-slate-200 font-medium">
+                  <li class="flex items-center space-x-2.5">
+                    <span class="w-5 h-5 rounded-full bg-amber-500/20 text-amber-400 flex items-center justify-center shrink-0">
+                      <i data-lucide="check" class="w-3.5 h-3.5 stroke-[3]"></i>
+                    </span>
+                    <span>Multiple Verified Quotes in 30 Mins</span>
+                  </li>
+                  <li class="flex items-center space-x-2.5">
+                    <span class="w-5 h-5 rounded-full bg-amber-500/20 text-amber-400 flex items-center justify-center shrink-0">
+                      <i data-lucide="check" class="w-3.5 h-3.5 stroke-[3]"></i>
+                    </span>
+                    <span>Save Up to 40% via Reverse Auction Bidding</span>
+                  </li>
+                  <li class="flex items-center space-x-2.5">
+                    <span class="w-5 h-5 rounded-full bg-amber-500/20 text-amber-400 flex items-center justify-center shrink-0">
+                      <i data-lucide="check" class="w-3.5 h-3.5 stroke-[3]"></i>
+                    </span>
+                    <span>Direct Chat &amp; Instant Counter-Offer Feature</span>
+                  </li>
+                  <li class="flex items-center space-x-2.5">
+                    <span class="w-5 h-5 rounded-full bg-amber-500/20 text-amber-400 flex items-center justify-center shrink-0">
+                      <i data-lucide="check" class="w-3.5 h-3.5 stroke-[3]"></i>
+                    </span>
+                    <span>Milestone Escrow: Pay Only on Final Sign-Off</span>
+                  </li>
+                </ul>
+              </div>
+              
+              <div class="pt-4 mt-auto">
+                <button class="inline-flex items-center space-x-2 bg-amber-500 hover:bg-amber-600 text-slate-950 px-6 py-3 rounded-full font-bold text-sm shadow-md shadow-amber-500/25 transition">
+                  <i data-lucide="gavel" class="w-4 h-4"></i>
+                  <span>Explore Bidding Marketplace &rarr;</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Real photo of contractor on renovation site - full 1:1 square view -->
+            <div class="w-full max-w-[240px] md:max-w-none md:w-52 lg:w-52 xl:w-60 aspect-square rounded-2xl overflow-hidden shrink-0 shadow-md border border-slate-700 bg-slate-800/80 relative group-hover:shadow-lg transition-all self-center">
+              <img src="assets/realistic/photo_contractor_bidding.png" alt="Sugu Verified Contractor on Site" class="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-500" />
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- ======================================================== -->
+    <!-- POPULAR QUICK SERVICES (EXACT 6 CARDS FROM ATTACHMENT)   -->
+    <!-- ======================================================== -->
+    <section class="py-12 bg-white border-b border-slate-100">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        
+        <div class="flex items-center justify-between mb-8">
+          <div>
+            <h2 class="text-2xl sm:text-3xl font-extrabold text-sugu-navy tracking-tight font-heading">Popular Quick Services</h2>
+            <p class="text-xs sm:text-sm text-slate-500 mt-1">Most booked services for your daily home needs.</p>
+          </div>
+          <button onclick="switchRoute('quick-service')" class="text-xs sm:text-sm font-bold text-sugu-blue hover:text-sugu-blueDark flex items-center space-x-1 group">
+            <span>View All Services</span>
+            <i data-lucide="arrow-right" class="w-4 h-4 group-hover:translate-x-1 transition-transform"></i>
+          </button>
+        </div>
+
+        <!-- Dynamic Popular Quick Services Cards -->
+        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
+          {% for s in popular_services %}
+          <div onclick="switchRoute('quick-service', '{{ s.category.id }}')" class="bg-white rounded-2xl border border-slate-200/80 overflow-hidden shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 cursor-pointer group flex flex-col justify-between">
+            <div class="aspect-[4/3] overflow-hidden bg-slate-100 relative">
+              <img src="{% if s.image %}{{ s.image.url }}{% elif s.image_url %}{{ s.image_url }}{% elif s.category and s.category.image %}{{ s.category.image.url }}{% else %}assets/realistic/popular_tap_repair.png{% endif %}" alt="{{ s.title }}" class="w-full h-full object-cover group-hover:scale-108 transition-transform duration-500" />
+              {% if s.base_price %}
+              <span class="absolute top-2 left-2 px-2 py-0.5 rounded-lg bg-white/95 backdrop-blur text-[10px] font-bold text-slate-800 shadow-sm border border-slate-100">
+                ₹{{ s.base_price|floatformat:0 }}
+              </span>
+              {% endif %}
+            </div>
+            <div class="p-3 flex items-center justify-between gap-2">
+              <div class="min-w-0 flex-1">
+                <span class="text-xs sm:text-sm font-bold text-slate-800 truncate block group-hover:text-sugu-blue transition" title="{{ s.title }}">{{ s.title }}</span>
+                {% if s.category %}
+                <span class="text-[10px] text-slate-400 block truncate">{{ s.category.name }}</span>
+                {% endif %}
+              </div>
+              <div class="w-6 h-6 rounded-full border border-sugu-blue text-sugu-blue flex items-center justify-center group-hover:bg-sugu-blue group-hover:text-white transition shrink-0">
+                <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
+              </div>
+            </div>
+          </div>
+          {% empty %}
+          <div class="col-span-full py-8 text-center text-slate-400 text-sm">
+            No popular services available right now.
+          </div>
+          {% endfor %}
+        </div>
+
+      </div>
+    </section>
+
+    <!-- EXPLORE ALL MAIN CATEGORIES SHOWCASE WITH REALISTIC 3D ICONS -->
+    <section class="py-14 bg-white">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        
+        <div class="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-8">
+          <div>
+            <span class="px-3.5 py-1 text-xs font-bold uppercase tracking-wider bg-blue-100 text-sugu-blue rounded-full">All Core Categories</span>
+            <h2 class="text-2xl sm:text-3xl font-extrabold text-sugu-navy tracking-tight mt-1">Our Core Services &amp; Categories</h2>
+            <p class="text-sm text-slate-500 mt-1">Click any category below to view verified upfront pricing and book in 60 seconds.</p>
+          </div>
+          <button onclick="switchRoute('quick-service')" class="text-xs sm:text-sm font-bold text-sugu-blue hover:underline flex items-center gap-1 self-start sm:self-auto">
+            <span>View Quick Services Catalog</span>
+            <i data-lucide="arrow-up-right" class="w-4 h-4"></i>
+          </button>
+        </div>
+
+        <!-- Dynamic Category Grid created by Super Admin in Database -->
+        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4 sm:gap-6">
+          {% for cat in categories %}
+          <div onclick="switchRoute('quick-service', '{{ cat.id }}')" class="sugu-category-card group cursor-pointer transition-all duration-300 hover:shadow-xl hover:-translate-y-1 bg-white border border-slate-200/90 rounded-2xl overflow-hidden flex flex-col justify-between">
+            <div class="relative overflow-hidden bg-slate-50 aspect-square flex items-center justify-center p-3">
+              {% if cat.image %}
+                <img src="{{ cat.image.url }}" alt="{{ cat.name }}" class="w-full h-full object-contain rounded-2xl group-hover:scale-108 transition-transform duration-300">
+              {% else %}
+                <div class="w-16 h-16 rounded-2xl bg-white shadow-sm flex items-center justify-center text-sugu-blue text-3xl group-hover:scale-108 transition-transform">
+                  <i class="bi {{ cat.icon_class }}"></i>
+                </div>
+              {% endif %}
+            </div>
+            <div class="p-3.5 bg-white border-t border-slate-100 flex flex-col justify-between flex-1">
+              <div>
+                <div class="flex items-center justify-between text-xs text-slate-500 mb-1">
+                  <span class="flex items-center font-semibold text-amber-600"><i data-lucide="star" class="w-3.5 h-3.5 fill-amber-400 mr-0.5"></i> 4.88</span>
+                  <span class="text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full text-[10px] font-bold border border-emerald-200">15 Min</span>
+                </div>
+                <h4 class="font-bold text-slate-900 group-hover:text-sugu-blue transition text-sm mb-1 line-clamp-1">{{ cat.name }}</h4>
+                <p class="text-[11px] text-slate-500 line-clamp-1">
+                  {% if cat.subcategories.all %}
+                    {% for sub in cat.subcategories.all|slice:":3" %}{{ sub.name }}{% if not forloop.last %}, {% endif %}{% endfor %}
+                  {% else %}
+                    Verified instant doorstep service
+                  {% endif %}
+                </p>
+              </div>
+              <div class="mt-2.5 pt-2 border-t border-slate-100 flex items-center justify-between">
+                <span class="text-xs font-black text-sugu-blue">
+                  {% if cat.min_price %}
+                    Starts ₹{{ cat.min_price }}
+                  {% else %}
+                    Starts ₹199
+                  {% endif %}
+                </span>
+                <span class="text-xs font-bold text-sugu-blue flex items-center group-hover:translate-x-1 transition">Book &rarr;</span>
+              </div>
+            </div>
+          </div>
+          {% empty %}
+          <div class="col-span-full py-12 text-center text-slate-400 text-sm">
+            No active categories found. Categories created by Super Admin will appear here.
           </div>
           {% endfor %}
         </div>
       </div>
-      {% else %}
-      <div class="qs">
-        <div class="q" data-aos="fade-right">
-          <div style="color: #ffb400; font-size: 24px; margin-bottom: 16px; letter-spacing: 2px;">★ ★ ★ ★ ★</div>
-          <big>"I posted my 2 BHK renovation in the evening and had three offers by morning. Chose one and
-            the work started that week. Extremely professional!"</big>
-          <div class="w">
-            <img class="av" src="{% static 'images/avatar.jpg' %}" alt="Priya Sinha"
-              style="object-fit: cover; border: 2px solid #fff;">
-            <div>Priya Sinha<small>Home renovation, Ranchi</small></div>
-          </div>
-        </div>
-        <div class="qr" data-aos="fade-left" data-aos-delay="200">
-          <div class="q">
-            <div style="color: #ffb400; font-size: 18px; margin-bottom: 8px;">★ ★ ★ ★ ★</div>
-            <p>"Haircut and beard trim at home before a function. On time and very neat. Highly recommend the grooming
-              services."</p>
-            <div class="w">
-              <img class="av" src="{% static 'images/avatar.jpg' %}" alt="Rahul Kumar"
-                style="object-fit: cover; border: 2px solid #fff;">
-              <div>Rahul Kumar<small>Quick service</small></div>
-            </div>
-          </div>
-          <div class="q">
-            <div style="color: #ffb400; font-size: 18px; margin-bottom: 8px;">★ ★ ★ ★ ★</div>
-            <p>"The pest control team was professional and the price matched what was shown. Will use Infinity Ventures
-              again."</p>
-            <div class="w">
-              <img class="av" src="{% static 'images/avatar.jpg' %}" alt="Anita Mahto"
-                style="object-fit: cover; border: 2px solid #fff;">
-              <div>Anita Mahto<small>Pest control</small></div>
-            </div>
-          </div>
-        </div>
-      </div>
-      {% endif %}
-    </div>
-  </section>
+    </section>
 
-  <section class="blk">
-    <div class="wrap">
-      <div class="head" data-aos="fade-up">
-        <h2>Now serving your state.</h2>
-        <p>We are constantly expanding our footprint. Not listed? Post a requirement and tell us where you are.</p>
+    <!-- SECTION: HOW QUICK SERVICE WORKS VS HOW BIDDING WORKS -->
+    <section class="py-16 bg-slate-100/70 border-y border-slate-200">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="text-center max-w-3xl mx-auto mb-14">
+          <span class="px-3.5 py-1 text-xs font-bold uppercase tracking-wider bg-slate-200 text-slate-800 rounded-full">Comparison &amp; Guide</span>
+          <h2 class="text-3xl font-extrabold font-heading text-slate-900 mt-2">
+            How Quick Service Works vs How Bidding Works
+          </h2>
+          <p class="text-sm text-slate-600 mt-2 leading-relaxed">
+            Choose the workflow that matches your job requirements. Simple on-demand booking for standard jobs, or competitive bids for custom scopes.
+          </p>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 items-stretch">
+          
+          <!-- Column A: Quick Service Flow -->
+          <div class="bg-white rounded-3xl p-8 border-2 border-sugu-blue/30 shadow-xl flex flex-col justify-between">
+            <div>
+              <div class="flex items-center justify-between pb-6 border-b border-slate-100 mb-6">
+                <div class="flex items-center space-x-3">
+                  <div class="w-12 h-12 rounded-2xl bg-blue-100 text-sugu-blue flex items-center justify-center font-bold">
+                    <i data-lucide="zap" class="w-6 h-6 fill-sugu-blue"></i>
+                  </div>
+                  <div>
+                    <h3 class="text-xl font-bold text-slate-900">⚡ Quick Service Flow</h3>
+                    <span class="text-xs text-slate-500">For standard, fixed-price repairs &amp; grooming</span>
+                  </div>
+                </div>
+                <span class="text-xs font-bold bg-blue-50 text-sugu-blue px-3 py-1 rounded-full border border-blue-200">
+                  Fixed Pricing
+                </span>
+              </div>
+              <!-- Steps List Rendered Dynamically -->
+              <div id="how-qs-steps" class="space-y-4"></div>
+            </div>
+
+            <div class="mt-8 pt-6 border-t border-slate-100 text-center">
+              <button onclick="switchRoute('quick-service')" class="w-full py-3.5 bg-sugu-blue hover:bg-sugu-blueDark text-white rounded-xl font-bold text-sm shadow-lg shadow-blue-500/25 transition flex items-center justify-center space-x-2">
+                <span>Select a Quick Service Now</span>
+                <i data-lucide="arrow-right" class="w-4 h-4"></i>
+              </button>
+            </div>
+          </div>
+
+          <!-- Column B: Bidding Flow -->
+          <div class="bg-white rounded-3xl p-8 border-2 border-amber-500/30 shadow-xl flex flex-col justify-between">
+            <div>
+              <div class="flex items-center justify-between pb-6 border-b border-slate-100 mb-6">
+                <div class="flex items-center space-x-3">
+                  <div class="w-12 h-12 rounded-2xl bg-amber-100 text-amber-600 flex items-center justify-center font-bold">
+                    <i data-lucide="gavel" class="w-6 h-6"></i>
+                  </div>
+                  <div>
+                    <h3 class="text-xl font-bold text-slate-900">🏷️ Bidding Flow</h3>
+                    <span class="text-xs text-slate-500">For renovations, full painting &amp; large projects</span>
+                  </div>
+                </div>
+                <span class="text-xs font-bold bg-amber-50 text-amber-700 px-3 py-1 rounded-full border border-amber-200">
+                  Save Up to 40%
+                </span>
+              </div>
+              <!-- Steps List Rendered Dynamically -->
+              <div id="how-bidding-steps" class="space-y-4"></div>
+            </div>
+
+            <div class="mt-8 pt-6 border-t border-slate-100 text-center">
+              <button onclick="switchRoute('bidding')" class="w-full py-3.5 bg-amber-600 hover:bg-amber-700 text-white rounded-xl font-bold text-sm shadow-lg shadow-amber-600/25 transition flex items-center justify-center space-x-2">
+                <span>Go to End-User Bidding Hub</span>
+                <i data-lucide="arrow-right" class="w-4 h-4"></i>
+              </button>
+            </div>
+          </div>
+
+        </div>
       </div>
-      <div class="city" data-aos="fade-up">
-        {% regroup locations by state as state_list %}
-        {% for s in state_list %}
-        <span>{{ s.grouper }}</span>
+    </section>
+
+    <!-- SECTION: CUSTOMER REVIEWS & PLAYABLE VIDEO SHOWCASE -->
+    <section class="py-16 bg-white">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        
+        <div class="flex flex-col md:flex-row md:items-end justify-between mb-10">
+          <div>
+            <span class="px-3.5 py-1 text-xs font-bold uppercase tracking-wider bg-rose-100 text-rose-800 rounded-full">Real Customer Stories</span>
+            <h2 class="text-3xl font-extrabold font-heading text-slate-900 mt-2">
+              Watch How Sugu Transforms Homes
+            </h2>
+            <p class="text-sm text-slate-500 mt-1">Unscripted video testimonials and project walkthroughs across India.</p>
+          </div>
+          <div class="mt-4 md:mt-0 flex items-center space-x-2">
+            <span class="text-xs font-bold text-slate-500">Over 50,000+ 5-star video reviews</span>
+          </div>
+        </div>
+
+        <!-- Video Testimonial Cards Grid -->
+        <div id="home-videos-grid" class="grid grid-cols-1 md:grid-cols-3 gap-8 mb-16"></div>
+
+        <!-- Customer Written Reviews -->
+        <div class="border-t border-slate-200 pt-14">
+          <div class="text-center max-w-2xl mx-auto mb-10">
+            <h3 class="text-2xl font-bold font-heading text-slate-900">What Our Verified Customers Say</h3>
+            <p class="text-xs text-slate-500 mt-1">Authentic feedback from verified homeowners and apartment managers.</p>
+          </div>
+          <div id="home-reviews-grid" class="grid grid-cols-1 md:grid-cols-3 gap-8">
+            {% for t in cms_testimonials %}
+            <div class="p-6 rounded-2xl bg-white border border-slate-200 shadow-md hover:shadow-xl transition-all duration-300 flex flex-col justify-between">
+              <div>
+                <div class="flex items-center justify-between mb-4">
+                  <div class="flex items-center space-x-3 min-w-0 pr-2">
+                    {% if t.avatar %}
+                      <img src="{{ t.avatar.url }}" alt="{{ t.client_name }}" class="w-12 h-12 rounded-full object-cover border-2 border-sky-500 shadow-sm shrink-0">
+                    {% else %}
+                      <div class="w-12 h-12 rounded-full bg-gradient-to-tr from-sky-600 to-indigo-600 text-white font-bold flex items-center justify-center text-sm border-2 border-sky-400 shadow-sm shrink-0">
+                        {{ t.client_name|slice:":1"|upper }}
+                      </div>
+                    {% endif %}
+                    <div class="min-w-0">
+                      <h5 class="font-bold text-slate-900 leading-tight truncate">{{ t.client_name }}</h5>
+                      <span class="text-xs text-slate-500 block truncate">{{ t.client_role_or_company }}</span>
+                    </div>
+                  </div>
+                  <span class="px-2 py-0.5 text-[11px] font-semibold rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 whitespace-nowrap flex-shrink-0 self-start">
+                    Verified Customer
+                  </span>
+                </div>
+                <div class="flex items-center space-x-1 text-amber-400 mb-3">
+                  <i data-lucide="star" class="w-4 h-4 fill-amber-400"></i>
+                  <i data-lucide="star" class="w-4 h-4 fill-amber-400"></i>
+                  <i data-lucide="star" class="w-4 h-4 fill-amber-400"></i>
+                  <i data-lucide="star" class="w-4 h-4 fill-amber-400"></i>
+                  <i data-lucide="star" class="w-4 h-4 fill-amber-400"></i>
+                </div>
+                <p class="text-sm text-slate-700 leading-relaxed">"{{ t.review_text }}"</p>
+              </div>
+              <div class="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-400">
+                <span>Service: <strong class="text-slate-600">{{ t.service_taken }}</strong></span>
+                <span>{{ t.created_at|date:"d M Y" }}</span>
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+
+    <!-- SECTION: SUGU SERVICES VS UNORGANIZED LOCAL HANDYMEN -->
+    <section class="py-16 bg-slate-50">
+      <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="text-center mb-10">
+          <h2 class="text-3xl font-extrabold font-heading text-slate-900">Why Choose Sugu Services?</h2>
+          <p class="text-sm text-slate-500 mt-1">A transparent comparison between Sugu Services and unverified roadside technicians.</p>
+        </div>
+
+        <div class="bg-white rounded-3xl border border-slate-200 shadow-lg overflow-hidden">
+          <table class="w-full text-left text-xs sm:text-sm">
+            <thead class="bg-slate-100 text-slate-700 font-bold border-b border-slate-200">
+              <tr>
+                <th class="p-4 sm:p-5">Feature</th>
+                <th class="p-4 sm:p-5 text-sugu-navy bg-blue-50/60">Sugu Services (Quick &amp; Bidding)</th>
+                <th class="p-4 sm:p-5 text-slate-500">Unorganized Local Technicians</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100">
+              <tr>
+                <td class="p-4 sm:p-5 font-semibold text-slate-800">Technician Background Check</td>
+                <td class="p-4 sm:p-5 text-emerald-700 font-bold bg-blue-50/30">✓ 7-Step Police &amp; Skill Verified</td>
+                <td class="p-4 sm:p-5 text-rose-500">✗ Zero verification or background check</td>
+              </tr>
+              <tr>
+                <td class="p-4 sm:p-5 font-semibold text-slate-800">Pricing Transparency</td>
+                <td class="p-4 sm:p-5 text-emerald-700 font-bold bg-blue-50/30">✓ Upfront fixed rate or competitive pro bids</td>
+                <td class="p-4 sm:p-5 text-rose-500">✗ Random arbitrary pricing &amp; hidden charges</td>
+              </tr>
+              <tr>
+                <td class="p-4 sm:p-5 font-semibold text-slate-800">Post-Service Warranty</td>
+                <td class="p-4 sm:p-5 text-emerald-700 font-bold bg-blue-50/30">✓ 30-Day Money-Back &amp; Free Re-work</td>
+                <td class="p-4 sm:p-5 text-rose-500">✗ No warranty once technician leaves</td>
+              </tr>
+              <tr>
+                <td class="p-4 sm:p-5 font-semibold text-slate-800">Damage Protection</td>
+                <td class="p-4 sm:p-5 text-emerald-700 font-bold bg-blue-50/30">✓ Up to ₹10,000 Free Insurance Cover</td>
+                <td class="p-4 sm:p-5 text-rose-500">✗ Customer bears 100% loss</td>
+              </tr>
+              <tr>
+                <td class="p-4 sm:p-5 font-semibold text-slate-800">Payment Security</td>
+                <td class="p-4 sm:p-5 text-emerald-700 font-bold bg-blue-50/30">✓ Pay After Service or Milestone Escrow</td>
+                <td class="p-4 sm:p-5 text-rose-500">✗ Demands high non-refundable cash advance</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+
+  <!-- ======================================================== -->
+  <!-- 2. VIEW: QUICK SERVICE (URBAN COMPANY NAVIGATION & FLOW) -->
+  <!-- ======================================================== -->
+  <main id="view-quick-service" class="hidden transition-opacity duration-300">
+    
+    <!-- SUB-VIEW A: 13 CATEGORY CARDS GRID -->
+    <section id="qs-category-grid-section" class="py-12 bg-slate-50 min-h-screen">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        
+        <!-- Header Banner -->
+        <div class="mb-10 text-center sm:text-left flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-6 sm:p-8 rounded-3xl text-white shadow-xl"
+          style="background: linear-gradient(135deg, #0c1a30 0%, #102a54 50%, #1b75d0 100%);">
+          <div>
+            <div class="flex items-center space-x-2 mb-1.5">
+              <span class="px-2.5 py-0.5 text-xs font-bold bg-white text-sugu-navy rounded-full">⚡ Instant Booking</span>
+              <span class="text-xs text-blue-200">15-Minute Guaranteed Arrival</span>
+            </div>
+            <h2 class="text-2xl sm:text-3xl font-extrabold font-heading">⚡ Sugu Quick Services Catalog</h2>
+            <p class="text-xs sm:text-sm text-blue-100 mt-1">Select a category below to browse verified services, view transparent prices, and book in 60 seconds.</p>
+          </div>
+          <button onclick="switchRoute('bidding')" class="px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-bold border border-white/20 transition flex items-center space-x-1.5 self-start sm:self-auto">
+            <span>Need Custom Bidding?</span>
+            <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
+          </button>
+        </div>
+
+        <!-- THE DYNAMIC 13 CATEGORY CARDS (WITH REALISTIC 3D ICONS FROM ASSETS/ICONS/) -->
+        <div id="qs-12-icons-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4 sm:gap-6">
+          <!-- Rendered dynamically by app.js from data.js -->
+        </div>
+
+      </div>
+    </section>
+
+    <!-- SUB-VIEW B: URBAN COMPANY CATEGORY DETAIL & BOOKING SCREEN -->
+    <section id="qs-uc-detail-section" class="hidden py-8 bg-slate-100 min-h-screen">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        
+        <!-- Top Back Bar & Category Header -->
+        <div class="mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-5 rounded-3xl border border-slate-200 shadow-sm">
+          <div class="flex items-center space-x-4">
+            <button onclick="backToCategories()" class="p-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 transition" title="Back to all categories">
+              <i data-lucide="arrow-left" class="w-5 h-5"></i>
+            </button>
+            <img id="uc-cat-icon-thumb" src="" alt="Icon" class="w-14 h-14 object-contain rounded-xl border border-slate-200 p-1 bg-slate-50">
+            <div>
+              <div class="flex items-center space-x-2">
+                <h2 id="uc-cat-title" class="text-2xl font-bold font-heading text-slate-900">Category Name</h2>
+                <span id="uc-cat-rating" class="flex items-center text-xs font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200"></span>
+              </div>
+              <p id="uc-cat-tagline" class="text-xs text-slate-500 mt-0.5">Tagline</p>
+            </div>
+          </div>
+          <div class="flex items-center space-x-3 text-xs text-slate-500">
+            <span class="flex items-center text-emerald-700 font-semibold bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200">
+              <i data-lucide="shield-check" class="w-3.5 h-3.5 mr-1 text-emerald-600"></i> Sugu 30-Day Guarantee
+            </span>
+          </div>
+        </div>
+
+        <!-- Dedicated Beauty Service Dual Navigation Bar (Home Services vs Premium Parlour Services) -->
+        <div id="beauty-service-mode-bar" class="hidden mb-6">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            
+            <!-- Option 1: Home Services -->
+            <div id="beauty-mode-home-card" onclick="setBeautyServiceMode('home')" 
+              class="p-5 rounded-3xl border-2 border-sugu-blue bg-blue-50/60 shadow-md ring-2 ring-blue-400/20 cursor-pointer transition-all duration-300 flex items-center justify-between">
+              <div class="flex items-center space-x-3.5">
+                <div id="beauty-home-icon-box" class="w-12 h-12 rounded-2xl bg-blue-100 text-sugu-blue flex items-center justify-center font-bold text-xl flex-shrink-0">
+                  <i data-lucide="home" class="w-6 h-6"></i>
+                </div>
+                <div>
+                  <div class="flex items-center space-x-2">
+                    <h4 id="beauty-home-title" class="font-bold text-slate-900 text-base">1. Salon at Home</h4>
+                    <span id="beauty-home-badge" class="px-2 py-0.5 text-[10px] font-bold uppercase rounded-full bg-blue-100 text-sugu-blue">All Services Available</span>
+                  </div>
+                  <p id="beauty-home-desc" class="text-xs text-slate-600 mt-0.5">Certified beautician visits your home • 100% sealed mono-kits</p>
+                </div>
+              </div>
+              <div id="beauty-home-check" class="w-6 h-6 rounded-full bg-sugu-blue text-white flex items-center justify-center shadow">
+                <i data-lucide="check" class="w-3.5 h-3.5 stroke-[3]"></i>
+              </div>
+            </div>
+
+            <!-- Option 2: Premium Parlour Services -->
+            <div id="beauty-mode-parlour-card" onclick="setBeautyServiceMode('parlour')" 
+              class="p-5 rounded-3xl border-2 border-slate-200 bg-white hover:border-amber-400 hover:bg-amber-50/30 cursor-pointer transition-all duration-300 flex items-center justify-between">
+              <div class="flex items-center space-x-3.5">
+                <div id="beauty-parlour-icon-box" class="w-12 h-12 rounded-2xl bg-amber-100 text-amber-600 flex items-center justify-center font-bold text-xl flex-shrink-0">
+                  <i data-lucide="crown" class="w-6 h-6"></i>
+                </div>
+                <div>
+                  <div class="flex items-center space-x-2">
+                    <h4 id="beauty-parlour-title" class="font-bold text-slate-900 text-base">2. Premium Parlour Services</h4>
+                    <span id="beauty-parlour-badge" class="px-2 py-0.5 text-[10px] font-bold uppercase rounded-full bg-amber-100 text-amber-800">Luxury Salon Brands</span>
+                  </div>
+                  <p id="beauty-parlour-desc" class="text-xs text-slate-500 mt-0.5">Book visit at Lakmé Luxe, Enrich, BBlunt, Toni &amp; Guy in your area</p>
+                </div>
+              </div>
+              <div id="beauty-parlour-check" class="hidden w-6 h-6 rounded-full bg-amber-600 text-white flex items-center justify-center shadow">
+                <i data-lucide="check" class="w-3.5 h-3.5 stroke-[3]"></i>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- Horizontal Category Pills Strip (Quick Switch across all 13 categories) -->
+        <div id="uc-category-pills" class="flex items-center space-x-2 overflow-x-auto pb-4 mb-6 scrollbar-none"></div>
+
+        <!-- STANDARD LAYOUT: Left Subcategory Sidebar + Right Services Feed -->
+        <div id="uc-standard-layout" class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+          
+          <!-- Left Subcategory Sidebar -->
+          <div class="lg:col-span-4 bg-white rounded-3xl p-5 border border-slate-200 shadow-sm sticky top-28">
+            <h4 class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3 px-2">Subcategories</h4>
+            <div id="uc-subcat-nav" class="space-y-1"></div>
+
+            <!-- Perks Banner -->
+            <div class="mt-6 pt-5 border-t border-slate-100 text-xs text-slate-600 space-y-2">
+              <div class="flex items-center space-x-2 text-sugu-navy font-semibold">
+                <i data-lucide="check-circle" class="w-4 h-4 text-sugu-blue"></i>
+                <span>Standardized Industrial Tools</span>
+              </div>
+              <div class="flex items-center space-x-2 text-sugu-navy font-semibold">
+                <i data-lucide="check-circle" class="w-4 h-4 text-sugu-blue"></i>
+                <span>Fixed Transparent Pricing</span>
+              </div>
+              <div class="flex items-center space-x-2 text-sugu-navy font-semibold">
+                <i data-lucide="check-circle" class="w-4 h-4 text-sugu-blue"></i>
+                <span>Zero Mess Post-Service Cleanup</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Right Services Feed -->
+          <div class="lg:col-span-8">
+            <div class="mb-4 flex items-center justify-between">
+              <h3 id="uc-subcat-heading" class="text-xl font-bold font-heading text-slate-900">Services</h3>
+              <span class="text-xs text-slate-400">All prices inclusive of taxes</span>
+            </div>
+            
+            <div id="uc-services-list"></div>
+          </div>
+
+        </div>
+
+        <!-- DEDICATED LAYOUT: PREMIUM PARLOUR SERVICES -->
+        <div id="beauty-parlours-layout" class="hidden">
+          <div id="beauty-parlours-content"></div>
+        </div>
+
+      </div>
+    </section>
+
+  </main>
+
+
+  <!-- ======================================================== -->
+  <!-- 3. VIEW: BIDDING HUB (END-USER BIDDING MARKETPLACE)       -->
+  <!-- ======================================================== -->
+  <main id="view-bidding" class="hidden transition-opacity duration-300">
+    <section class="py-10 bg-slate-50 min-h-screen">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        
+        <!-- Bidding Hub Header -->
+        <div class="mb-8 p-8 rounded-3xl bg-gradient-to-r from-[#0c1a30] via-slate-900 to-amber-950 text-white shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-6">
+          <div class="max-w-2xl">
+            <div class="flex items-center space-x-2 mb-2">
+              <span class="px-2.5 py-0.5 text-xs font-bold bg-amber-500 text-slate-950 rounded-full">For End-Users</span>
+              <span class="text-xs text-amber-200">Save up to 40% vs Traditional Contractors</span>
+            </div>
+            <h2 class="text-3xl font-extrabold font-heading text-white">🏷️ Sugu Bidding Marketplace</h2>
+            <p class="text-xs sm:text-sm text-slate-300 mt-1">
+              Have a big painting job, custom modular woodwork, complete renovation, or septic job? Post your requirement once and let certified local contractors submit competitive itemized quotes. Compare bids, chat, counter-offer, and hire with Escrow protection!
+            </p>
+          </div>
+
+          <!-- Bidding Sub-Tabs -->
+          <div class="flex flex-wrap items-center gap-2 bg-slate-800/90 p-2 rounded-2xl border border-slate-700/80 flex-shrink-0">
+            <button id="bid-tab-tenders-btn" onclick="setBiddingTab('tenders')" 
+              class="px-4 py-2.5 rounded-xl text-xs font-bold transition flex items-center space-x-1.5 bg-amber-600 text-white shadow">
+              <i data-lucide="layers" class="w-4 h-4"></i>
+              <span>Active Quotes &amp; Bids</span>
+              <span id="bid-badge-count" class="px-1.5 py-0.2 bg-white/20 text-white text-[10px] rounded-full font-black">5</span>
+            </button>
+            <button id="bid-tab-post-btn" onclick="setBiddingTab('post-job')" 
+              class="px-4 py-2.5 rounded-xl text-xs font-bold transition flex items-center space-x-1.5 bg-white text-slate-700 hover:bg-slate-100">
+              <i data-lucide="sparkles" class="w-4 h-4 text-amber-600"></i>
+              <span>⚡ Post Job (3 Easy Taps)</span>
+            </button>
+            <button id="bid-tab-templates-btn" onclick="setBiddingTab('templates')" 
+              class="px-4 py-2.5 rounded-xl text-xs font-bold transition flex items-center space-x-1.5 bg-white text-slate-700 hover:bg-slate-100">
+              <i data-lucide="bookmark-check" class="w-4 h-4 text-emerald-600"></i>
+              <span>💡 1-Tap Ready Templates</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- 3-STEP EASY GUIDED BANNER FOR END-USERS -->
+        <div class="mb-8 p-4 rounded-2xl bg-amber-50/80 border border-amber-200/80 text-amber-950 flex flex-col md:flex-row items-center justify-between gap-4">
+          <div class="flex items-center space-x-3">
+            <div class="w-10 h-10 rounded-xl bg-amber-500 text-white flex items-center justify-center font-black flex-shrink-0">
+              <i data-lucide="shield-check" class="w-5 h-5"></i>
+            </div>
+            <div>
+              <span class="text-xs font-bold uppercase tracking-wider text-amber-700 block">How Bidding Works for You</span>
+              <p class="text-xs text-amber-900 font-medium">1. Tap your service &rarr; 2. Get 3-5 verified contractor quotes in 30 mins &rarr; 3. Negotiate &amp; Pay in Escrow only on satisfaction!</p>
+            </div>
+          </div>
+          <div class="flex items-center space-x-2 text-xs font-bold text-amber-800 bg-white/80 px-3 py-1.5 rounded-xl border border-amber-300">
+            <i data-lucide="lock" class="w-3.5 h-3.5 text-emerald-600"></i>
+            <span>100% Escrow Protection Guaranteed</span>
+          </div>
+        </div>
+
+        <!-- TAB 1: ACTIVE TENDERS & LIVE INCOMING BIDS -->
+        <div id="bidding-tenders-section">
+          <div id="bidding-filter-bar" class="mb-6 flex flex-wrap items-center gap-2"></div>
+          <div id="active-tenders-list"></div>
+        </div>
+
+        <!-- TAB 2: POST A NEW JOB REQUIREMENT WIZARD -->
+        <div id="bidding-post-section" class="hidden">
+          <div id="bidding-post-form-container"></div>
+        </div>
+
+        <!-- TAB 3: 1-TAP READY TEMPLATES -->
+        <div id="bidding-templates-section" class="hidden">
+          <div id="bidding-templates-container"></div>
+        </div>
+
+      </div>
+    </section>
+  </main>
+
+
+  <!-- ======================================================== -->
+  <!-- FLOATING BOTTOM CART BAR (URBAN COMPANY STYLE)           -->
+  <!-- ======================================================== -->
+  <div id="floating-cart-bar" class="hidden fixed bottom-0 inset-x-0 z-30 translate-y-full transition-transform duration-300 ease-in-out">
+    <div class="max-w-4xl mx-auto px-4 pb-4">
+      <div class="p-4 rounded-2xl bg-slate-900 text-white shadow-2xl flex items-center justify-between border border-slate-700/80 backdrop-blur-md">
+        <div class="flex items-center space-x-3">
+          <div class="w-10 h-10 rounded-xl bg-sugu-blue text-white flex items-center justify-center font-bold">
+            <i data-lucide="shopping-cart" class="w-5 h-5"></i>
+          </div>
+          <div>
+            <span id="cart-bar-count" class="text-xs text-blue-300 font-semibold block">0 services added</span>
+            <div class="flex items-baseline space-x-1.5">
+              <span class="text-xs text-slate-400">Total:</span>
+              <span id="cart-bar-total" class="text-lg font-black text-white">₹0</span>
+            </div>
+          </div>
+        </div>
+
+        <button onclick="openCheckoutModal()" class="px-6 py-2.5 rounded-xl bg-sugu-blue hover:bg-sugu-blueDark text-white font-bold text-xs sm:text-sm shadow-lg shadow-blue-500/30 transition flex items-center space-x-2">
+          <span>View Cart &amp; Book</span>
+          <i data-lucide="arrow-right" class="w-4 h-4"></i>
+        </button>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ======================================================== -->
+  <!-- MODAL: CHECKOUT FLOW (URBAN COMPANY STEPPER)             -->
+  <!-- ======================================================== -->
+  <div id="checkout-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm">
+    <div class="relative w-full max-w-lg bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden modal-enter modal-enter-active">
+      <div class="px-6 py-4 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
+        <div class="flex items-center space-x-2">
+          <span class="w-2.5 h-2.5 rounded-full bg-sugu-blue"></span>
+          <h4 class="font-bold text-slate-900 text-sm">Sugu Quick Service Checkout</h4>
+        </div>
+        <button onclick="closeCheckoutModal()" class="p-1 rounded-lg text-slate-400 hover:text-slate-600 transition">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+      <div id="checkout-step-content" class="p-6"></div>
+    </div>
+  </div>
+
+
+  <!-- ======================================================== -->
+  <!-- MODAL: ORDER SUCCESS & LIVE PRO DISPATCH TRACKER         -->
+  <!-- ======================================================== -->
+  <div id="order-success-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm">
+    <div class="relative w-full max-w-md bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden p-6 modal-enter modal-enter-active">
+      <div id="order-tracking-content"></div>
+    </div>
+  </div>
+
+
+  <!-- ======================================================== -->
+  <!-- MODAL: COUNTER-OFFER DIALOG (FOR BIDDING)                -->
+  <!-- ======================================================== -->
+  <div id="counter-offer-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm">
+    <div class="relative w-full max-w-md bg-white rounded-3xl shadow-2xl border border-slate-200 p-6 modal-enter modal-enter-active">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="font-bold text-lg text-slate-900">Send Counter-Offer</h3>
+        <button onclick="closeCounterOfferModal()" class="text-slate-400 hover:text-slate-600">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <div class="p-3 rounded-xl bg-amber-50 border border-amber-200 mb-4 text-xs">
+        <span class="text-amber-800 block">Pro: <strong id="counter-modal-pro-name">Contractor</strong></span>
+        <span class="text-amber-800 block">Current Quoted Bid: <strong id="counter-modal-current-bid">₹0</strong></span>
+      </div>
+
+      <div class="space-y-4">
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1.5">Quick Counter Presets (1-Tap):</label>
+          <div id="counter-presets-container"></div>
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">Your Proposed Counter Price (₹)</label>
+          <input type="number" id="counter-offer-price" class="w-full px-3 py-2.5 rounded-xl border border-slate-300 text-sm font-bold focus:outline-none focus:border-amber-600 bg-white">
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">Note to Contractor (Optional)</label>
+          <textarea id="counter-offer-note" rows="2" placeholder="e.g. Can you match ₹20,000 if we supply primer?" class="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 focus:outline-none focus:border-amber-600 bg-white"></textarea>
+        </div>
+        <button onclick="submitCounterOffer()" class="w-full py-3 bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-xl text-xs transition shadow-md">
+          Send Counter-Offer
+        </button>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ======================================================== -->
+  <!-- MODAL: DIRECT CONTRACTOR CHAT                            -->
+  <!-- ======================================================== -->
+  <div id="chat-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm">
+    <div class="relative w-full max-w-md bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden modal-enter modal-enter-active flex flex-col h-[520px]">
+      <div class="p-4 bg-slate-900 text-white flex items-center justify-between">
+        <div class="flex items-center space-x-3">
+          <img id="chat-pro-avatar" src="" alt="Pro" class="w-10 h-10 rounded-full object-cover border border-amber-400">
+          <div>
+            <h4 id="chat-pro-name" class="font-bold text-sm text-white leading-tight">Contractor Name</h4>
+            <span class="text-[10px] text-emerald-400 flex items-center">
+              <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 mr-1 animate-pulse"></span> Online Now
+            </span>
+          </div>
+        </div>
+        <button onclick="closeChatModal()" class="text-slate-400 hover:text-white">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <div id="chat-stream" class="flex-1 p-4 overflow-y-auto bg-slate-50 space-y-3">
+        <div class="text-center my-2">
+          <span class="text-[10px] bg-slate-200 text-slate-600 px-2.5 py-0.5 rounded-full">Encrypted Direct Chat</span>
+        </div>
+        <div class="flex justify-start">
+          <div class="bg-white text-slate-800 rounded-2xl rounded-tl-none px-4 py-2.5 text-xs max-w-xs border border-slate-200 shadow-sm">
+            "Hello! I reviewed your project details. We have 5 master craftsmen available and can start right away."
+          </div>
+        </div>
+      </div>
+
+      <form onsubmit="sendChatMessage(event)" class="p-3 bg-white border-t border-slate-200 flex gap-2">
+        <input type="text" id="chat-input" placeholder="Type a message or inquiry..." class="flex-1 px-3 py-2 text-xs rounded-xl border border-slate-200 focus:outline-none focus:border-sugu-blue bg-slate-50">
+        <button type="submit" class="px-3.5 py-2 bg-sugu-blue hover:bg-sugu-blueDark text-white rounded-xl text-xs font-bold transition">
+          <i data-lucide="send" class="w-4 h-4"></i>
+        </button>
+      </form>
+    </div>
+  </div>
+
+
+  <!-- ======================================================== -->
+  <!-- MODAL: PREMIUM PARLOUR APPOINTMENT BOOKING               -->
+  <!-- ======================================================== -->
+  <div id="parlour-booking-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm">
+    <div class="relative w-full max-w-lg bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden modal-enter modal-enter-active">
+      <div class="px-6 py-4 bg-gradient-to-r from-amber-900 to-slate-900 text-white flex items-center justify-between">
+        <div class="flex items-center space-x-2">
+          <i data-lucide="crown" class="w-5 h-5 text-amber-400"></i>
+          <h4 id="parlour-modal-title" class="font-bold text-sm">Book Parlour Appointment</h4>
+        </div>
+        <button onclick="closeParlourBookingModal()" class="p-1 rounded-lg text-slate-400 hover:text-white transition">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+      <div id="parlour-booking-content" class="p-6"></div>
+    </div>
+  </div>
+
+
+  <!-- ======================================================== -->
+  <!-- MODAL: VIDEO STORY PLAYER                                -->
+  <!-- ======================================================== -->
+  <div id="video-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md">
+    <div class="relative w-full max-w-2xl bg-slate-900 rounded-3xl overflow-hidden shadow-2xl border border-slate-700 modal-enter modal-enter-active">
+      <button onclick="closeVideoModal()" class="absolute top-4 right-4 z-20 w-8 h-8 rounded-full bg-slate-800/80 text-white flex items-center justify-center hover:bg-slate-700 transition">
+        <i data-lucide="x" class="w-4 h-4"></i>
+      </button>
+
+      <div class="relative aspect-video bg-black flex items-center justify-center">
+        <video id="video-modal-player" controls autoplay class="w-full h-full object-contain"></video>
+      </div>
+
+      <div class="p-6 text-white">
+        <h4 id="video-modal-title" class="text-xl font-bold font-heading mb-1">Video Title</h4>
+        <span id="video-modal-author" class="text-xs text-blue-400 font-semibold block mb-3">Customer City</span>
+        <p id="video-modal-quote" class="text-xs text-slate-300 italic">"Customer Quote"</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======================================================== -->
+  <!-- MODAL: CITY LOCATION PICKER                              -->
+  <!-- ======================================================== -->
+  <div id="location-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm">
+    <div class="relative w-full max-w-md bg-white rounded-3xl shadow-2xl border border-slate-200 p-6 modal-enter modal-enter-active">
+      <div class="flex items-center justify-between mb-4">
+        <div>
+          <h3 class="font-bold text-lg text-slate-900">Select Your Location</h3>
+          <p class="text-xs text-slate-500">Choose your area or detect exact address via GPS</p>
+        </div>
+        <button onclick="closeLocationPicker()" class="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 flex items-center justify-center transition">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      </div>
+
+      <!-- Live GPS Detection Button -->
+      <button id="modal-detect-gps-btn" onclick="detectUserLiveLocation()" class="w-full mb-4 p-3.5 rounded-2xl bg-gradient-to-r from-sugu-blue to-indigo-600 hover:from-sugu-blueDark hover:to-indigo-700 text-white font-bold text-xs flex items-center justify-between shadow-md hover:shadow-lg transition group">
+        <div class="flex items-center space-x-3">
+          <div class="w-8 h-8 rounded-xl bg-white/20 flex items-center justify-center shrink-0">
+            <i data-lucide="crosshair" id="modal-gps-icon" class="w-4 h-4 text-white group-hover:scale-110 transition-transform"></i>
+          </div>
+          <div class="text-left">
+            <div class="font-bold text-xs text-white" id="modal-gps-text">Use My Current Location</div>
+            <div class="text-[10px] text-blue-100 font-normal" id="modal-gps-sub">High accuracy GPS &amp; reverse geocoding</div>
+          </div>
+        </div>
+        <span class="text-[10px] font-bold bg-white/20 px-2 py-0.5 rounded-full uppercase tracking-wider">GPS</span>
+      </button>
+
+      <!-- City Search Input -->
+      <div class="relative mb-3">
+        <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2"></i>
+        <input type="text" id="modal-city-search-input" oninput="filterModalCities(this.value)" placeholder="Search city or state..." class="w-full pl-9 pr-4 py-2 text-xs rounded-xl border border-slate-200 focus:outline-none focus:border-sugu-blue focus:ring-1 focus:ring-sugu-blue">
+      </div>
+
+      <!-- Database Locations List -->
+      <div class="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider mb-2">Serviceable Areas</div>
+      <div id="modal-cities-list" class="space-y-1.5 max-h-60 overflow-y-auto pr-1">
+        {% for loc in locations %}
+        <button onclick="setLocation('{{ loc.city }}, {{ loc.state }}')" class="modal-city-item w-full text-left p-3 rounded-xl border border-slate-200 hover:bg-blue-50/70 hover:border-sugu-blue transition text-xs font-bold text-slate-800 flex items-center justify-between group">
+          <div class="flex items-center space-x-2.5">
+            <div class="w-7 h-7 rounded-lg bg-slate-100 group-hover:bg-blue-100 text-sugu-blue flex items-center justify-center shrink-0 transition">
+              <i data-lucide="map-pin" class="w-3.5 h-3.5"></i>
+            </div>
+            <div>
+              <span class="city-name font-bold text-slate-900 group-hover:text-sugu-blue transition">{{ loc.city }}</span>
+              <span class="state-name text-slate-500 font-normal block text-[11px]">{{ loc.state }}</span>
+            </div>
+          </div>
+          <span class="text-[10px] text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full font-bold border border-emerald-200 shrink-0">Available</span>
+        </button>
+        {% empty %}
+        <div class="text-xs text-slate-400 p-4 text-center">No locations active yet.</div>
         {% endfor %}
       </div>
     </div>
-  </section>
+  </div>
 
-  <section class="blk tint" id="faq">
-    <div class="wrap">
-      <div class="head" data-aos="fade-up">
-        <h2>Questions, answered.</h2>
-      </div>
-      <div class="faq" data-aos="fade-up">
-        <details>
-          <summary>How do I book a quick service?</summary>
-          <p>Choose a service, pick a time slot, share your location and confirm. Your vendor arrives at the slot you
-            chose.</p>
-        </details>
-        <details>
-          <summary>How does posting a requirement work?</summary>
-          <p>Select a category and type of work, enter your budget and location, and submit. Vendors near you send
-            offers and you pick one.</p>
-        </details>
-        <details>
-          <summary>Are the prices fixed?</summary>
-          <p>Quick services show a fixed starting price. For big projects, vendors quote based on your budget and the
-            scope of work.</p>
-        </details>
-        <details>
-          <summary>Are vendors verified?</summary>
-          <p>Yes. Every vendor goes through ID and skill checks before taking jobs on Sugu.</p>
-        </details>
-        <details>
-          <summary>Can I cancel or reschedule?</summary>
-          <p>Yes. You can change your booking from your dashboard before the vendor is on the way.</p>
-        </details>
-      </div>
-    </div>
-  </section>
 
-  <section class="blk">
-    <div class="wrap">
-      <div class="cta" data-aos="fade-up">
-        <div>
-          <h2>Own a service business? Grow with Sugu.</h2>
-          <p>Take quick bookings, bid on projects near you and build your ratings.</p>
-        </div><a class="btn w" href="/register/vendor/">Become a vendor</a>
-      </div>
-    </div>
-  </section>
+  <!-- ======================================================== -->
+  <!-- FOOTER                                                   -->
+  <!-- ======================================================== -->
+  <footer class="bg-sugu-navy text-slate-300 pt-16 pb-12 border-t border-slate-800">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-10 pb-12 border-b border-slate-800">
+        
+        <div class="lg:col-span-2 space-y-4">
+          <div class="flex items-center space-x-3">
+            <div class="w-10 h-10 rounded-xl bg-sugu-blue text-white flex items-center justify-center font-bold">
+              <svg class="w-6 h-6 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M3 9.5L12 3l9 6.5V20a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9.5z" />
+                <polyline points="9 21 9 12 15 12 15 21" />
+              </svg>
+            </div>
+            <div>
+              <span class="text-xl font-bold font-heading text-white">SUGU Services</span>
+              <span class="block text-[11px] text-blue-300">Your Home. Our Priority.</span>
+            </div>
+          </div>
+          <p class="text-xs text-slate-400 leading-relaxed max-w-sm">
+            India's premier dual-engine home platform: 15-minute quick emergency service bookings and reverse-auction contractor bidding for custom interior projects.
+          </p>
+          <div class="flex items-center space-x-4 pt-2">
+            <span class="text-xs font-bold text-white">Helpline:</span>
+            <span class="text-xs font-mono text-blue-400 font-bold">1800-SUGU-FIX (24/7)</span>
+          </div>
+        </div>
 
-  <footer>
-    <div class="wrap">
-      <div class="fg">
-        <div><a class="logo" href="/"><img src="{% static 'images/logo.png' %}" alt="sugu logo"
-              style="height: 64px; width: auto; object-fit: contain;"></a>
-          <p style="max-width:300px;margin-top:14px">Home services, sorted. Quick bookings and big projects, all in one
-            place.</p>
-        </div>
         <div>
-          <h4>Customers</h4><a href="#quick">Quick services</a><a href="#project">Post a requirement</a><a
-            href="/user/dashboard">My bookings</a>
+          <h5 class="text-sm font-bold text-white uppercase tracking-wider mb-4">Quick Services</h5>
+          <ul class="space-y-2 text-xs text-slate-400">
+            {% for cat in categories|slice:":6" %}
+            <li>
+              <a href="javascript:void(0)" onclick="switchRoute('quick-service', '{{ cat.id }}')" class="hover:text-white transition flex items-center gap-1.5">
+                {% if cat.image %}
+                  <img src="{{ cat.image.url }}" class="w-3.5 h-3.5 object-contain rounded-sm" alt="{{ cat.name }}">
+                {% else %}
+                  <i class="bi {{ cat.icon_class }} text-blue-400"></i>
+                {% endif %}
+                <span>{{ cat.name }}</span>
+              </a>
+            </li>
+            {% empty %}
+            <li><a href="javascript:void(0)" onclick="switchRoute('quick-service')" class="hover:text-white transition">Quick Services</a></li>
+            {% endfor %}
+          </ul>
         </div>
+
         <div>
-          <h4>Vendors</h4><a href="/register/vendor/">Join as a vendor</a><a href="/login/">Vendor login</a><a
-            href="#faq">Vendor help</a>
+          <h5 class="text-sm font-bold text-white uppercase tracking-wider mb-4">Bidding Hub</h5>
+          <ul class="space-y-2 text-xs text-slate-400">
+            <li><a href="javascript:void(0)" onclick="switchRoute('bidding')" class="hover:text-white transition">🎨 Full Home Painting</a></li>
+            <li><a href="javascript:void(0)" onclick="switchRoute('bidding')" class="hover:text-white transition">🏠 Home Renovation</a></li>
+            <li><a href="javascript:void(0)" onclick="switchRoute('bidding')" class="hover:text-white transition">🍳 Modular Kitchen</a></li>
+            <li><a href="javascript:void(0)" onclick="switchRoute('bidding')" class="hover:text-white transition">🚽 Septic Desilting</a></li>
+            <li><a href="javascript:void(0)" onclick="switchRoute('bidding')" class="hover:text-white transition">🛡️ Escrow Protection</a></li>
+          </ul>
         </div>
+
         <div>
-          <h4>Company</h4><a href="#">About Sugu</a><a href="#faq">Help centre</a><a href="#">Terms and privacy</a>
+          <h5 class="text-sm font-bold text-white uppercase tracking-wider mb-4">Trust &amp; Security</h5>
+          <ul class="space-y-2 text-xs text-slate-400">
+            <li class="flex items-center space-x-2"><i data-lucide="check" class="w-3.5 h-3.5 text-emerald-400"></i><span>30-Day Guarantee</span></li>
+            <li class="flex items-center space-x-2"><i data-lucide="check" class="w-3.5 h-3.5 text-emerald-400"></i><span>₹25,000 Insurance</span></li>
+            <li class="flex items-center space-x-2"><i data-lucide="check" class="w-3.5 h-3.5 text-emerald-400"></i><span>7-Step Verification</span></li>
+            <li class="flex items-center space-x-2"><i data-lucide="check" class="w-3.5 h-3.5 text-emerald-400"></i><span>Pay After Service</span></li>
+          </ul>
         </div>
+
       </div>
-      <div class="fb" style="align-items: center;">
-        <span>Copyright &copy; 2026 <a href="https://www.brightcodess.com/" target="_blank"
-            style="color: #3b82f6; text-decoration: none; font-weight: 600; display: inline;">Brightcode Software
-            Services Pvt.Ltd.</a> All rights reserved.</span>
-        <span>Designed By - <a href="https://www.brightcodess.com/" target="_blank"
-            style="text-decoration: none; display: inline;"><b style="color: #1e3a8a; font-size: 1.1em;">Bright</b><b
-              style="color: #e11d48; font-size: 1.1em;">code</b></a></span>
+
+      <div class="pt-8 flex flex-col sm:flex-row items-center justify-between text-xs text-slate-500">
+        <div>&copy; 2026 SUGU Services India Private Limited. All rights reserved.</div>
+        <div class="flex space-x-6 mt-4 sm:mt-0">
+          <a href="#" class="hover:text-slate-300 transition">Privacy Policy</a>
+          <a href="#" class="hover:text-slate-300 transition">Terms of Service</a>
+          <a href="#" class="hover:text-slate-300 transition">Safety Standards</a>
+        </div>
       </div>
     </div>
   </footer>
 
-  <div class="modal" id="bm">
-    <div class="card">
-      <div class="top">
-        <div>
-          <h3 id="bt">Book service</h3><small id="bp" style="color:var(--mute)"></small>
-        </div><button class="x" onclick="shut('bm')" aria-label="Close">Ã—</button>
-      </div>
-      <div class="field"><label>Time slot</label>
-        <div class="slots" id="slots"><button class="opt sel" type="button">Now<small>Within 1
-              hr</small></button><button class="opt" type="button">Today<small>Evening</small></button><button
-            class="opt" type="button">Tomorrow<small>Morning</small></button></div>
-      </div>
-      <div class="field"><label for="baddr">Your location</label><textarea id="baddr" rows="2"
-          placeholder="Where should the vendor come?"></textarea><button class="loc2" type="button"
-          onclick="useLoc('baddr')">Use my current location</button></div>
-      <div class="field"><label for="bph">Mobile number</label><input type="tel" id="bph" placeholder="10-digit number">
-      </div>
-      <button class="btn" style="width:100%" onclick="confirmBook()">Confirm booking</button>
-    </div>
-  </div>
-
-  <!-- Location Modal with Interactive Map -->
-  <div class="modal" id="locModal">
-    <div class="card"
-      style="width: min(500px, 95vw); max-height: 92vh; padding: 22px; border-radius: 20px; display: flex; flex-direction: column;">
-      <div class="top" style="margin-bottom: 12px; align-items: center;">
-        <div>
-          <h3 style="font-size: 20px; font-weight: 800; margin: 0;">Select your location</h3>
-          <p style="font-size: 12px; color: var(--mute); margin: 2px 0 0;">Drag pin on map or search for your exact
-            building</p>
+  <!-- ======================================================== -->
+  <!-- MODAL: VENDOR AUTH REQUIRED PROMPT                       -->
+  <!-- ======================================================== -->
+  <div id="vendor-auth-prompt-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm">
+    <div class="relative w-full max-w-md bg-white rounded-3xl shadow-2xl border border-slate-200 p-6 sm:p-7 modal-enter modal-enter-active">
+      <div class="flex items-center justify-between pb-4 border-b border-slate-100">
+        <div class="flex items-center space-x-3">
+          <div class="w-10 h-10 rounded-2xl bg-amber-100 text-amber-700 flex items-center justify-center font-bold">
+            <i data-lucide="lock" class="w-5 h-5"></i>
+          </div>
+          <div>
+            <h3 class="font-bold text-base text-slate-900 leading-tight">Vendor Login Required</h3>
+            <span class="text-xs text-slate-500">Verified Contractor Access</span>
+          </div>
         </div>
-        <button class="x" onclick="shut('locModal')" aria-label="Close">×</button>
-      </div>
-
-      <!-- Real-time Location Search Input -->
-      <div class="search-box" style="margin-bottom: 8px; position: relative;">
-        <i class="bi bi-search"
-          style="position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--mute);"></i>
-        <input type="text" class="input" id="locSearch" placeholder="Search society, colony, street or landmark..."
-          style="width: 100%; border-radius: 12px; border: 1.5px solid #e2e8f0; padding: 11px 14px 11px 38px; outline: none; box-sizing: border-box; font-size: 14px;"
-          oninput="onSearchLocation(this.value)">
-      </div>
-      <div id="locSearchResults"
-        style="display: none; max-height: 180px; overflow-y: auto; margin-bottom: 10px; border: 1px solid #e2e8f0; border-radius: 12px; padding: 4px; background: #fff; z-index: 10;">
-      </div>
-
-      <!-- Interactive Leaflet Map Picker -->
-      <div
-        style="position: relative; width: 100%; height: 220px; border-radius: 14px; overflow: hidden; border: 1.5px solid #cbd5e1; box-shadow: inset 0 2px 4px rgba(0,0,0,0.06);">
-        <div id="liveMapPicker" style="width: 100%; height: 100%;"></div>
-        <div
-          style="position: absolute; top: 10px; left: 50%; transform: translateX(-50%); z-index: 999; background: rgba(15, 23, 42, 0.85); color: #fff; padding: 4px 14px; border-radius: 20px; font-size: 11px; font-weight: 700; pointer-events: none; backdrop-filter: blur(4px); box-shadow: 0 2px 8px rgba(0,0,0,0.25); white-space: nowrap;">
-          📍 Tap map or drag pin to exact building
-        </div>
-        <!-- Locate Me Map Button -->
-        <button type="button" onclick="fetchLiveLocation()" title="Detect device GPS"
-          style="position: absolute; bottom: 12px; right: 12px; z-index: 999; width: 38px; height: 38px; border-radius: 10px; background: #fff; border: 1.5px solid #cbd5e1; box-shadow: 0 4px 12px rgba(0,0,0,0.15); display: flex; align-items: center; justify-content: center; cursor: pointer; color: #2563eb; font-size: 18px;">
-          <i class="bi bi-crosshair" id="mapLocateIcon"></i>
+        <button onclick="closeVendorAuthPromptModal()" class="text-slate-400 hover:text-slate-600 transition p-1 rounded-lg">
+          <i data-lucide="x" class="w-5 h-5"></i>
         </button>
       </div>
 
-      <!-- Selected Live Pin Address Card -->
-      <div id="pinSelectedCard"
-        style="margin-top: 10px; background: #f8fafc; border: 1.5px solid #22c55e; border-radius: 12px; padding: 10px 14px;">
-        <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
-          <div style="flex: 1; min-width: 0;">
-            <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 2px;">
-              <span
-                style="width: 7px; height: 7px; border-radius: 50%; background: #22c55e; display: inline-block;"></span>
-              <span
-                style="font-size: 10px; font-weight: 800; color: #15803d; text-transform: uppercase; letter-spacing: 0.5px;">Pinned
-                Exact Location</span>
-            </div>
-            <div id="pinPrimaryText"
-              style="font-size: 13.5px; font-weight: 800; color: var(--n); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
-              Loading location...</div>
-            <div id="pinSecondaryText"
-              style="font-size: 11px; color: var(--mute); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
-              Tap map or drag pin to adjust</div>
+      <div class="py-5 space-y-4">
+        <div class="p-3.5 rounded-2xl bg-amber-50/80 border border-amber-200/80 text-xs">
+          <div class="text-[10px] uppercase font-bold text-amber-700 mb-0.5 tracking-wider">Target Project</div>
+          <div id="vendor-prompt-job-title" class="font-bold text-amber-950 text-sm">General Service</div>
+          <div id="vendor-prompt-job-budget" class="text-amber-800 font-semibold mt-0.5">Target Budget: ₹25,000</div>
+        </div>
+
+        <p id="vendor-prompt-message" class="text-xs text-slate-600 leading-relaxed">
+          To submit a proposal and itemized quotation for this project, you must be logged into your verified <strong>Sugu Vendor Partner</strong> account.
+        </p>
+
+        <div class="space-y-2 pt-1 text-xs text-slate-600">
+          <div class="flex items-center space-x-2">
+            <i data-lucide="check-circle" class="w-4 h-4 text-emerald-600 shrink-0"></i>
+            <span>Direct contract negotiation with verified homeowner</span>
           </div>
-          <button type="button" class="btn"
-            style="padding: 9px 16px; font-size: 13px; background: #16a34a; color: #fff; font-weight: 700; flex-shrink: 0;"
-            onclick="confirmMapPinLocation()">
-            Confirm &amp; Use
+          <div class="flex items-center space-x-2">
+            <i data-lucide="check-circle" class="w-4 h-4 text-emerald-600 shrink-0"></i>
+            <span>100% Escrow protected payouts upon milestone completion</span>
+          </div>
+          <div class="flex items-center space-x-2">
+            <i data-lucide="check-circle" class="w-4 h-4 text-emerald-600 shrink-0"></i>
+            <span>Zero platform fee on your first 3 approved bids</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="space-y-2 pt-2 border-t border-slate-100">
+        <a id="vendor-prompt-login-btn" href="/login/?next=/#view-bidding" class="w-full py-3 bg-sugu-navy hover:bg-slate-800 text-white rounded-xl font-bold text-xs shadow-md transition flex items-center justify-center space-x-2">
+          <i data-lucide="log-in" class="w-4 h-4 text-amber-400"></i>
+          <span>Log In as Vendor Partner</span>
+        </a>
+        <a href="/register/vendor/" class="w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-xl font-bold text-xs transition flex items-center justify-center space-x-1.5">
+          <i data-lucide="briefcase" class="w-3.5 h-3.5 text-sugu-blue"></i>
+          <span>Become a Verified Vendor Partner</span>
+        </a>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ======================================================== -->
+  <!-- MODAL: SEND BID / SUBMIT QUOTATION FORM                  -->
+  <!-- ======================================================== -->
+  <div id="send-bid-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/75 backdrop-blur-sm overflow-y-auto">
+    <div class="relative w-full max-w-lg bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden modal-enter modal-enter-active my-8">
+      
+      <!-- Modal Header -->
+      <div class="px-6 py-4 bg-gradient-to-r from-slate-900 via-sugu-navy to-slate-900 text-white flex items-center justify-between">
+        <div class="flex items-center space-x-3">
+          <div class="w-10 h-10 rounded-2xl bg-amber-500 text-white flex items-center justify-center font-bold shadow-sm">
+            <i data-lucide="gavel" class="w-5 h-5"></i>
+          </div>
+          <div>
+            <h3 class="font-bold text-base text-white leading-tight">Send Project Bid</h3>
+            <span class="text-xs text-blue-200">Submit competitive quotation directly to customer</span>
+          </div>
+        </div>
+        <button onclick="closeSendBidModal()" class="p-1 rounded-lg text-slate-400 hover:text-white transition">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <!-- Target Job Summary Badge -->
+      <div class="px-6 py-3.5 bg-slate-50 border-b border-slate-200 flex flex-wrap items-center justify-between gap-3 text-xs">
+        <div>
+          <span id="send-bid-job-id" class="px-2 py-0.5 rounded font-mono font-bold bg-slate-200 text-slate-700 text-[11px] mr-1.5">JOB-51</span>
+          <strong id="send-bid-job-title" class="text-slate-900 font-bold">General Service</strong>
+          <span id="send-bid-job-category" class="text-slate-500 block text-[11px] mt-0.5">Plumbing • Namkum, Ranchi</span>
+        </div>
+        <div class="text-right">
+          <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Client Budget</span>
+          <span id="send-bid-job-budget" class="text-sm font-extrabold text-emerald-700">₹25,000</span>
+        </div>
+      </div>
+
+      <!-- Form Content -->
+      <div id="send-bid-form-container" class="p-6 space-y-4">
+        <form id="vendor-quotation-form" onsubmit="submitVendorQuotation(event)">
+          <input type="hidden" id="send-bid-job-dbid" value="">
+
+          <!-- Quoted Price Input -->
+          <div class="space-y-1.5">
+            <div class="flex items-center justify-between">
+              <label class="text-xs font-bold text-slate-800">Your Quoted Amount (₹) <span class="text-rose-500">*</span></label>
+              <span id="send-bid-price-bounds" class="text-[11px] text-slate-500 font-medium"></span>
+            </div>
+            <div class="relative">
+              <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center text-slate-400 font-bold text-base">₹</span>
+              <input type="number" id="send-bid-amount-input" required min="1" step="1"
+                placeholder="Enter quotation amount"
+                oninput="updateBidCalculationBreakdown()"
+                class="w-full pl-8 pr-4 py-3 rounded-xl border border-slate-300 font-extrabold text-lg text-slate-900 focus:outline-none focus:border-sugu-blue bg-white shadow-xs">
+            </div>
+          </div>
+
+          <!-- Live Financial Breakdown -->
+          <div class="p-3 rounded-xl bg-blue-50/70 border border-blue-100 space-y-1.5 text-xs text-slate-600">
+            <div class="flex justify-between">
+              <span>Your Base Quotation:</span>
+              <strong id="calc-bid-base" class="text-slate-900">₹0</strong>
+            </div>
+            <div class="flex justify-between text-slate-500 text-[11px]">
+              <span>Platform Facilitation & Escrow Fee (10%):</span>
+              <span id="calc-bid-fee">- ₹0</span>
+            </div>
+            <div class="flex justify-between pt-1 border-t border-blue-200/60 font-bold text-slate-900 text-xs">
+              <span>Estimated Net Payout to Vendor:</span>
+              <span id="calc-bid-net" class="text-emerald-700 font-black">₹0</span>
+            </div>
+          </div>
+
+          <!-- Delivery Timeline Selection -->
+          <div class="space-y-1.5 pt-1">
+            <label class="text-xs font-bold text-slate-800">Estimated Work Timeline <span class="text-rose-500">*</span></label>
+            <div class="grid grid-cols-4 gap-1.5 mb-2">
+              <button type="button" onclick="setBidTimelinePreset('1-2 Days')" class="timeline-preset-btn py-1.5 px-2 text-xs font-semibold rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 transition text-center">1-2 Days</button>
+              <button type="button" onclick="setBidTimelinePreset('3-5 Days')" class="timeline-preset-btn py-1.5 px-2 text-xs font-semibold rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 transition text-center">3-5 Days</button>
+              <button type="button" onclick="setBidTimelinePreset('1 Week')" class="timeline-preset-btn py-1.5 px-2 text-xs font-semibold rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 transition text-center">1 Week</button>
+              <button type="button" onclick="setBidTimelinePreset('2 Weeks')" class="timeline-preset-btn py-1.5 px-2 text-xs font-semibold rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 transition text-center">2 Weeks</button>
+            </div>
+            <input type="text" id="send-bid-timeline-input" required placeholder="e.g. 3-5 Working Days" value="3-5 Working Days"
+              class="w-full px-3.5 py-2 text-xs rounded-xl border border-slate-300 focus:outline-none focus:border-sugu-blue bg-white">
+          </div>
+
+          <!-- Proposal & Scope Details -->
+          <div class="space-y-1.5 pt-1">
+            <div class="flex items-center justify-between">
+              <label class="text-xs font-bold text-slate-800">Scope of Work & Proposal Note</label>
+              <button type="button" onclick="insertProBidTemplate()" class="text-[11px] text-sugu-blue hover:underline font-bold flex items-center">
+                <i data-lucide="sparkles" class="w-3 h-3 mr-0.5"></i> Insert Template
+              </button>
+            </div>
+            <textarea id="send-bid-proposal-input" rows="3" required
+              placeholder="Detail what is included: labor, materials, cleanup, warranty terms..."
+              class="w-full px-3.5 py-2.5 text-xs rounded-xl border border-slate-300 focus:outline-none focus:border-sugu-blue bg-white leading-relaxed"></textarea>
+          </div>
+
+          <!-- Optional Quotation File Attachment -->
+          <div class="space-y-1 pt-1">
+            <label class="text-xs font-semibold text-slate-700">Attach Detailed Estimate / PDF (Optional)</label>
+            <input type="file" id="send-bid-attachment-input" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+              class="w-full text-xs text-slate-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-sugu-blue hover:file:bg-blue-100 cursor-pointer">
+          </div>
+
+          <!-- Alert / Error Banner inside modal -->
+          <div id="send-bid-error-banner" class="hidden p-3 rounded-xl bg-rose-50 border border-rose-200 text-xs text-rose-700 font-medium"></div>
+
+          <!-- Submit Buttons -->
+          <div class="pt-3 flex items-center justify-end space-x-2">
+            <button type="button" onclick="closeSendBidModal()" class="px-4 py-2.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-50 transition">
+              Cancel
+            </button>
+            <button type="submit" id="send-bid-submit-btn" class="px-6 py-2.5 bg-gradient-to-r from-sugu-navy via-sugu-blue to-blue-600 hover:from-blue-700 hover:to-sugu-navy text-white rounded-xl text-xs font-bold shadow-md hover:shadow-lg transition flex items-center space-x-2">
+              <i data-lucide="send" class="w-4 h-4"></i>
+              <span>Send Bid to Client</span>
+            </button>
+          </div>
+        </form>
+      </div>
+
+      <!-- Success Screen (Replaces form on successful bid submission) -->
+      <div id="send-bid-success-container" class="hidden p-8 text-center space-y-4">
+        <div class="w-16 h-16 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto shadow-sm animate-bounce">
+          <i data-lucide="check" class="w-8 h-8 stroke-[3]"></i>
+        </div>
+        <div>
+          <h4 class="text-xl font-black text-slate-900 font-heading">Bid Transmitted Successfully!</h4>
+          <p id="send-bid-success-msg" class="text-xs text-slate-600 mt-1.5 max-w-sm mx-auto leading-relaxed">
+            Your quotation has been delivered directly to the client. The client will be notified via SMS and push notification.
+          </p>
+        </div>
+        <div class="p-3 rounded-2xl bg-slate-50 border border-slate-200 text-xs text-slate-600 text-left space-y-1">
+          <div class="flex items-center text-emerald-700 font-bold">
+            <i data-lucide="shield-check" class="w-4 h-4 mr-1"></i> Sugu Escrow Protection Active
+          </div>
+          <p class="text-[11px] text-slate-500">Upon client acceptance, full contract funds will be locked into escrow before you begin work.</p>
+        </div>
+        <div class="pt-2 flex flex-col sm:flex-row gap-2 justify-center">
+          <a href="/vendor/dashboard" class="px-5 py-2.5 bg-sugu-navy hover:bg-slate-800 text-white rounded-xl text-xs font-bold transition shadow-sm flex items-center justify-center space-x-1.5">
+            <i data-lucide="layout-dashboard" class="w-4 h-4"></i>
+            <span>Track in Vendor Dashboard</span>
+          </a>
+          <button onclick="closeSendBidModal()" class="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition">
+            Close &amp; Continue Browsing
           </button>
         </div>
       </div>
+
     </div>
   </div>
 
-  <!-- Modal: Vendor Requirement Action Modal -->
-  <div class="modal" id="vendorAskModal">
-    <div class="card"
-      style="width: min(480px, 94vw); max-height: 92vh; padding: 26px 24px; border-radius: 24px; display: flex; flex-direction: column; position: relative; box-shadow: 0 25px 50px -12px rgba(10, 26, 60, 0.25);">
-      <div style="display: flex; justify-content: flex-end; margin-bottom: 2px;">
-        <button class="x" onclick="shut('vendorAskModal')" aria-label="Close"
-          style="cursor: pointer; border: 0; background: var(--t1); width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 18px;">&times;</button>
-      </div>
-
-      <div style="text-align: center; margin-bottom: 18px;">
-        <div
-          style="width: 58px; height: 58px; border-radius: 18px; background: linear-gradient(135deg, #eff6ff, #dbeafe); color: #2563eb; display: inline-flex; align-items: center; justify-content: center; font-size: 26px; box-shadow: 0 8px 16px -4px rgba(37, 99, 235, 0.2); margin-bottom: 12px;">
-          <i class="bi bi-patch-check-fill"></i>
-        </div>
-        <h3 style="font-size: 22px; font-weight: 800; color: #0a1a3c; margin: 0 0 6px;">Requirement Submitted!</h3>
-        <p style="font-size: 13.5px; color: var(--mute); margin: 0; line-height: 1.45;">
-          Your project details are saved. Are you an existing partner or joining us today?
-        </p>
-      </div>
-
-      <!-- Quick Requirement Summary Preview -->
-      <div
-        style="background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 14px; padding: 12px 16px; margin-bottom: 18px;">
-        <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 4px;">
-          <span
-            style="font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; color: #64748b;">Project
-            Summary</span>
-          <span id="askReqBudget" style="font-size: 14px; font-weight: 800; color: #16a34a;">₹0</span>
-        </div>
-        <div id="askReqCat" style="font-size: 14px; font-weight: 700; color: #0f172a; margin-bottom: 2px;">Category
-        </div>
-        <div id="askReqAddr"
-          style="font-size: 12px; color: #64748b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
-          Address</div>
-        <div id="askReqGpsRow"
-          style="display: flex; align-items: center; justify-content: space-between; margin-top: 6px; font-size: 11.5px; border-top: 1px dashed #e2e8f0; padding-top: 4px;">
-          <span style="color: #15803d; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;"><span
-              style="width: 6px; height: 6px; border-radius: 50%; background: #22c55e;"></span> GPS Attached: <span
-              id="askReqCoords">23.3555, 85.3609</span></span>
-          <a id="askReqMapsLink" href="#" target="_blank" rel="noopener noreferrer"
-            style="color: #2563eb; font-weight: 700; text-decoration: underline;">Open Google Maps ↗</a>
-        </div>
-      </div>
-
-      <!-- Action Choice 1: Already a vendor? Login -->
-      <a id="askLoginLink" href="/login/" class="vendor-ask-card">
-        <div style="display: flex; align-items: center; gap: 12px; min-width: 0;">
-          <div
-            style="width: 44px; height: 44px; border-radius: 12px; background: #e0e7ff; color: #4338ca; display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0;">
-            <i class="bi bi-box-arrow-in-right"></i>
-          </div>
-          <div style="min-width: 0;">
-            <div style="font-size: 15px; font-weight: 800; color: #0a1a3c;">Already a vendor?</div>
-            <div style="font-size: 12px; color: #64748b; line-height: 1.3;">Sign in to view bids and leads</div>
-          </div>
-        </div>
-        <span class="btn"
-          style="padding: 9px 18px; font-size: 13px; font-weight: 700; border-radius: 10px; white-space: nowrap; flex-shrink: 0; background: #0a1a3c; color: #fff; pointer-events: none;">
-          Login
-        </span>
-      </a>
-
-      <!-- Action Choice 2: New here? Create a vendor account -->
-      <a id="askRegisterLink" href="/register/vendor/" class="vendor-ask-card highlight">
-        <div style="display: flex; align-items: center; gap: 12px; min-width: 0;">
-          <div
-            style="width: 44px; height: 44px; border-radius: 12px; background: #2563eb; color: #ffffff; display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0;">
-            <i class="bi bi-person-plus-fill"></i>
-          </div>
-          <div style="min-width: 0;">
-            <div style="font-size: 15px; font-weight: 800; color: #0a1a3c;">New here?</div>
-            <div style="font-size: 12px; color: #2563eb; font-weight: 600; line-height: 1.3;">Start getting local client
-              jobs</div>
-          </div>
-        </div>
-        <span class="btn"
-          style="padding: 9px 18px; font-size: 13px; font-weight: 700; border-radius: 10px; white-space: nowrap; flex-shrink: 0; background: #2563eb; color: #fff; box-shadow: 0 4px 12px rgba(37,99,235,0.25); pointer-events: none;">
-          Create a vendor account
-        </span>
-      </a>
-
-      <!-- Customer Alternative Option -->
-      <div
-        style="text-align: center; border-top: 1px solid #f1f5f9; padding-top: 14px; font-size: 12.5px; color: #64748b;">
-        Customer posting this job?
-        <a id="askCustomerLoginLink" href="/login/"
-          style="color: #2563eb; font-weight: 700; text-decoration: none; margin-left: 3px;">Sign In</a> or
-        <a id="askCustomerRegLink" href="/register/user/"
-          style="color: #2563eb; font-weight: 700; text-decoration: none; margin-left: 2px;">Create Customer Account</a>
-      </div>
-
-      {% if user.is_authenticated %}
-      <div style="margin-top: 14px; padding-top: 12px; border-top: 1px dashed #e2e8f0; text-align: center;">
-        <a href="{% if user.role == 'VENDOR' %}/vendor/dashboard{% elif user.role == 'ADMIN' %}/admin-dashboard{% else %}/user/dashboard{% endif %}"
-          class="btn"
-          style="width: 100%; padding: 11px; font-size: 13.5px; font-weight: 700; background: #0a1a3c; color: #fff; border-radius: 12px; text-decoration: none; display: block; box-sizing: border-box;">
-          Continue to Your Dashboard ({{ user.username }}) &rarr;
-        </a>
-      </div>
-      {% endif %}
-    </div>
-  </div>
-
-  <div class="toast" id="toast" role="status"></div>
-  <form style="display:none">{% csrf_token %}</form>
-
+  <!-- Scripts: Data & Application Logic -->
   <script>
-    function toast(m) {
-      const t = document.getElementById('toast');
-      if (!t) return;
-      t.textContent = m;
-      t.classList.add('show');
-      clearTimeout(window._t);
-      window._t = setTimeout(() => t.classList.remove('show'), 3200);
-    }
-
-    let _locMap = null;
-    let _locMarker = null;
-    let _pendingLocData = null;
-
-    function openLocationModal() {
-      document.getElementById('locModal').classList.add('show');
-      const search = document.getElementById('locSearch');
-      if (search) {
-        search.value = '';
-        setTimeout(() => search.focus(), 150);
-      }
-      const resContainer = document.getElementById('locSearchResults');
-      if (resContainer) resContainer.style.display = 'none';
-
-      // Initialize or refresh map
-      let uLat = parseFloat(localStorage.getItem('suggu_user_lat'));
-      let uLon = parseFloat(localStorage.getItem('suggu_user_lon'));
-      const savedLoc = localStorage.getItem('suggu_user_location') || '';
-      if (!uLat || !uLon || isNaN(uLat) || isNaN(uLon) || savedLoc.toLowerCase().includes('cantonment') || (uLat > 23.6 && uLat < 23.65)) {
-        uLat = 23.3555;
-        uLon = 85.3609;
-      }
-      initMapPicker(uLat, uLon);
-    }
-
-    function initMapPicker(initialLat, initialLon) {
-      const container = document.getElementById('liveMapPicker');
-      if (!container || typeof L === 'undefined') return;
-
-      const lat = initialLat || 23.3555;
-      const lon = initialLon || 85.3609;
-
-      if (!_locMap) {
-        _locMap = L.map('liveMapPicker', {
-          zoomControl: true,
-          attributionControl: false
-        }).setView([lat, lon], 16);
-
-        L.tileLayer('https://{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', {
-          maxZoom: 20,
-          subdomains: ['mt0', 'mt1', 'mt2', 'mt3']
-        }).addTo(_locMap);
-
-        // Custom High-Res Pin Marker
-        const pinHtml = `
-          <div style="position:relative; width:34px; height:34px; transform:translate(-50%, -100%); cursor:grab;">
-            <div style="width:34px; height:34px; background:#ef4444; border:3px solid #fff; border-radius:50% 50% 50% 0; transform:rotate(-45deg); box-shadow:0 4px 14px rgba(0,0,0,0.35); display:flex; align-items:center; justify-content:center;">
-              <div style="width:10px; height:10px; background:#fff; border-radius:50%;"></div>
-            </div>
-            <div style="position:absolute; bottom:-4px; left:50%; transform:translateX(-50%); width:10px; height:5px; background:rgba(0,0,0,0.3); border-radius:50%; filter:blur(1px);"></div>
-          </div>
-        `;
-        const pinIcon = L.divIcon({
-          className: 'sugu-map-pin',
-          html: pinHtml,
-          iconSize: [0, 0],
-          iconAnchor: [0, 0]
-        });
-
-        _locMarker = L.marker([lat, lon], {
-          draggable: true,
-          icon: pinIcon
-        }).addTo(_locMap);
-
-        _locMarker.on('dragend', function () {
-          const pos = _locMarker.getLatLng();
-          reverseGeocodeMapPin(pos.lat, pos.lng);
-        });
-
-        _locMap.on('click', function (e) {
-          _locMarker.setLatLng(e.latlng);
-          reverseGeocodeMapPin(e.latlng.lat, e.latlng.lng);
-        });
-      } else {
-        _locMap.setView([lat, lon], 15);
-        _locMarker.setLatLng([lat, lon]);
-      }
-
-      setTimeout(() => {
-        if (_locMap) _locMap.invalidateSize();
-      }, 200);
-
-      reverseGeocodeMapPin(lat, lon);
-    }
-
-    async function reverseGeocodeMapPin(lat, lon) {
-      const pText = document.getElementById('pinPrimaryText');
-      const sText = document.getElementById('pinSecondaryText');
-      if (pText) pText.textContent = 'Pinpointing exact address...';
-      if (sText) sText.textContent = `Coordinates: ${lat.toFixed(5)}, ${lon.toFixed(5)}`;
-
-      try {
-        const res = await fetch(`/api/detect-location/?lat=${lat}&lon=${lon}`);
-        const data = await res.json();
-        const primary = data.primary || data.name || 'Selected Location';
-        const sec = data.secondary || (data.city + ', ' + data.state);
-
-        if (pText) pText.textContent = primary;
-        if (sText) sText.textContent = sec;
-
-        _pendingLocData = {
-          name: data.name || primary,
-          primary: primary,
-          secondary: sec,
-          city: data.city,
-          state: data.state,
-          lat: lat,
-          lon: lon,
-          is_live: true
-        };
-      } catch (e) {
-        if (pText) pText.textContent = `Pinned Location (${lat.toFixed(4)}, ${lon.toFixed(4)})`;
-        _pendingLocData = {
-          name: `Location (${lat.toFixed(4)}, ${lon.toFixed(4)})`,
-          primary: `Pin (${lat.toFixed(4)}, ${lon.toFixed(4)})`,
-          lat: lat,
-          lon: lon,
-          is_live: true
-        };
-      }
-    }
-
-    function confirmMapPinLocation() {
-      if (!_pendingLocData) return;
-      applyLocation(_pendingLocData.primary || _pendingLocData.name, _pendingLocData.lat, _pendingLocData.lon, _pendingLocData);
-    }
-
-    function jumpToMapLoc(lat, lon, label) {
-      if (_locMap && _locMarker) {
-        _locMap.flyTo([lat, lon], 16, { duration: 1.0 });
-        _locMarker.setLatLng([lat, lon]);
-        reverseGeocodeMapPin(lat, lon);
-      } else {
-        applyLocation(label, lat, lon);
-      }
-    }
-
-    function applyLocation(locName, lat, lon, fullData) {
-      if (!locName) return;
-      document.getElementById('navLocText').textContent = locName;
-      const heroLoc = document.querySelector('.sbar .loc');
-      if (heroLoc) heroLoc.innerHTML = `<i class="bi bi-geo-alt-fill"></i> ${locName}`;
-
-      localStorage.setItem('suggu_user_location', locName);
-      if (lat) localStorage.setItem('suggu_user_lat', lat);
-      if (lon) localStorage.setItem('suggu_user_lon', lon);
-      if (fullData) {
-        try { localStorage.setItem('sugu_selected_location', JSON.stringify(fullData)); } catch (e) { }
-      }
-
-      shut('locModal');
-      toast('Location updated: ' + locName);
-      if (typeof filt === 'function') filt('', 'All');
-    }
-
-    let _locSearchTimer = null;
-    function onSearchLocation(q) {
-      clearTimeout(_locSearchTimer);
-      const resContainer = document.getElementById('locSearchResults');
-      if (!q || q.trim().length < 2) {
-        resContainer.style.display = 'none';
-        resContainer.innerHTML = '';
-        return;
-      }
-
-      _locSearchTimer = setTimeout(async () => {
-        try {
-          const res = await fetch(`/api/search-locations/?q=${encodeURIComponent(q.trim())}`);
-          const data = await res.json();
-          const list = data.results || [];
-          if (list.length === 0) {
-            resContainer.innerHTML = '<div style="padding:10px; color:#64748b; font-size:13px; text-align:center;">No matching locations found.</div>';
-            resContainer.style.display = 'block';
-            return;
-          }
-
-          resContainer.innerHTML = list.map(item => {
-            const safePrimary = (item.primary || item.name || '').replace(/'/g, "\\'");
-            const safeFull = (item.name || '').replace(/'/g, "\\'");
-            const safeSec = (item.secondary || item.name || '').replace(/'/g, "\\'");
-            return `
-              <div class="loc-result-item" onclick="selectSearchResult('${safePrimary}', ${item.lat || 'null'}, ${item.lon || 'null'}, '${safeFull}')">
-                <i class="bi bi-geo-alt-fill" style="color: #2563eb; font-size: 14px;"></i>
-                <div style="flex: 1; min-width: 0;">
-                  <div style="font-weight: 700; font-size: 13.5px; color: var(--n); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${item.primary || item.name}</div>
-                  <div style="font-size: 11.5px; color: var(--mute); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${item.secondary || item.name}</div>
-                </div>
-              </div>
-            `;
-          }).join('');
-          resContainer.style.display = 'block';
-        } catch (e) {
-          console.error('Search location error:', e);
-        }
-      }, 250);
-    }
-
-    function selectSearchResult(name, lat, lon, fullName) {
-      const resContainer = document.getElementById('locSearchResults');
-      if (resContainer) resContainer.style.display = 'none';
-      const search = document.getElementById('locSearch');
-      if (search) search.value = name;
-      if (lat && lon) {
-        jumpToMapLoc(lat, lon, fullName || name);
-      }
-    }
-
-    async function fetchLiveLocation() {
-      const icon = document.getElementById('mapLocateIcon');
-      if (icon) icon.className = "bi bi-arrow-repeat spin-anim";
-      toast('Requesting device high-accuracy GPS...');
-
-      function resetIcon() {
-        if (icon) icon.className = "bi bi-crosshair";
-      }
-
-      let coords = null;
-      if (navigator.geolocation) {
-        try {
-          coords = await new Promise((resolve) => {
-            navigator.geolocation.getCurrentPosition(
-              (pos) => resolve({ lat: pos.coords.latitude, lon: pos.coords.longitude }),
-              (err) => {
-                console.warn('Device GPS unavailable:', err.message);
-                resolve(null);
-              },
-              { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 }
-            );
-          });
-        } catch (e) { coords = null; }
-      }
-
-      if (coords) {
-        jumpToMapLoc(coords.lat, coords.lon);
-        try {
-          const res = await fetch(`/api/detect-location/?lat=${coords.lat}&lon=${coords.lon}`);
-          const data = await res.json();
-          const primary = data.primary || data.name || 'Current Location';
-          const name = data.name || (primary + ', ' + (data.city || 'Namkum'));
-          applyLocation(name, coords.lat, coords.lon, data);
-        } catch (e) { }
-        toast('Exact live location set: ' + (coords.lat.toFixed(4) + ', ' + coords.lon.toFixed(4)));
-        resetIcon();
-      } else {
-        try {
-          const res = await fetch('/api/detect-location/');
-          const data = await res.json();
-          if (data && data.lat && data.lon) {
-            jumpToMapLoc(data.lat, data.lon);
-            toast('Location auto-detected. Tap your exact building on the map or search to adjust.');
-          } else {
-            toast('Please tap your building on the map or search your location.');
-          }
-        } catch (e) {
-          toast('Please tap your building on the map or search your location.');
-        }
-        resetIcon();
-      }
-    }
-
-    document.addEventListener('DOMContentLoaded', () => {
-      let savedLoc = localStorage.getItem('suggu_user_location');
-      const isCantonment = savedLoc && (savedLoc.toLowerCase().includes('cantonment') || savedLoc.toLowerCase().includes('ramgarh'));
-
-      // If already has a clean non-Cantonment location, display immediately
-      if (savedLoc && !isCantonment) {
-        document.getElementById('navLocText').textContent = savedLoc;
-        const heroLoc = document.querySelector('.sbar .loc');
-        if (heroLoc) heroLoc.innerHTML = `<i class="bi bi-geo-alt-fill"></i> ${savedLoc}`;
-      } else {
-        // Purge incorrect Cantonment cached state
-        localStorage.removeItem('suggu_user_location');
-        localStorage.removeItem('suggu_user_lat');
-        localStorage.removeItem('suggu_user_lon');
-        localStorage.removeItem('sugu_selected_location');
-        savedLoc = null;
-      }
-
-      // Automatically query device high-accuracy GPS for exact location
-      if (navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(
-          async (pos) => {
-            const lat = pos.coords.latitude;
-            const lon = pos.coords.longitude;
-            try {
-              const res = await fetch(`/api/detect-location/?lat=${lat}&lon=${lon}`);
-              const data = await res.json();
-              if (data && (data.primary || data.name)) {
-                const name = data.name || (data.primary + ', ' + (data.city || 'Namkum'));
-                applyLocation(name, lat, lon, data);
-              }
-            } catch (e) {
-              console.warn("GPS reverse geocode error:", e);
-            }
-          },
-          (err) => {
-            // If GPS unavailable or denied and no saved location, fetch server auto-detect
-            if (!localStorage.getItem('suggu_user_location')) {
-              fetch('/api/detect-location/')
-                .then(r => r.json())
-                .then(data => {
-                  let name = data.primary || data.name || data.city;
-                  if (!name || name.toLowerCase().includes('cantonment')) {
-                    name = 'RIADA Road, Namkum';
-                  }
-                  applyLocation(name, data.lat || 23.3555, data.lon || 85.3609, data);
-                })
-                .catch(() => { });
-            }
-          },
-          { enableHighAccuracy: true, timeout: 8000, maximumAge: 60000 }
-        );
-      } else if (!savedLoc) {
-        fetch('/api/detect-location/')
-          .then(r => r.json())
-          .then(data => {
-            let name = data.primary || data.name || data.city;
-            if (!name || name.toLowerCase().includes('cantonment')) {
-              name = 'RIADA Road, Namkum';
-            }
-            applyLocation(name, data.lat || 23.3555, data.lon || 85.3609, data);
-          })
-          .catch(() => { });
-      }
-
-      setTimeout(() => filt('', 'All'), 200);
-    });
-
-    const $ = s => document.querySelector(s), $$ = s => [...document.querySelectorAll(s)];
-
-    function getDist(lat1, lon1, lat2, lon2) {
-      if (!lat1 || !lon1 || !lat2 || !lon2) return 0; // If no coords, assume it's global/visible
-      const p = 0.017453292519943295;
-      const a = 0.5 - Math.cos((lat2 - lat1) * p) / 2 + Math.cos(lat1 * p) * Math.cos(lat2 * p) * (1 - Math.cos((lon2 - lon1) * p)) / 2;
-      return 12742 * Math.asin(Math.sqrt(a));
-    }
-
-    function filt(q, cat, limit = 4) {
-      const uLat = localStorage.getItem('suggu_user_lat');
-      const uLon = localStorage.getItem('suggu_user_lon');
-      let n = 0;
-      $$('#grid .svc').forEach(c => {
-        const sLat = c.getAttribute('data-lat');
-        const sLon = c.getAttribute('data-lon');
-        let inRadius = true;
-
-        if (uLat && uLon && sLat && sLon && sLat !== 'None' && sLon !== 'None') {
-          const dist = getDist(uLat, uLon, sLat, sLon);
-          const rad = parseFloat(c.getAttribute('data-radius')) || 15;
-          if (dist > rad) inRadius = false;
-        }
-
-        const match = (!q || c.innerText.toLowerCase().includes(q)) &&
-          (!cat || cat === 'All' || c.dataset.cat === cat) &&
-          inRadius;
-
-        if (match && n < limit) { c.style.display = ''; n++; }
-        else { c.style.display = 'none'; }
-      });
-
-      const emptyMsg = document.querySelector('#grid .empty') || document.createElement('div');
-      if (n === 0) {
-        emptyMsg.className = 'empty';
-        emptyMsg.style.display = 'block';
-        emptyMsg.textContent = uLat ? 'No services found within your area. Try another category.' : 'No services found.';
-        if (!document.querySelector('#grid .empty')) document.getElementById('grid').appendChild(emptyMsg);
-      } else {
-        if (emptyMsg) emptyMsg.style.display = 'none';
-      }
-      return n;
-    }
-    filt('', 'All');
-    $$('.chip[data-f]').forEach(c => c.onclick = () => { $$('#chips .chip').forEach(x => x.classList.remove('on')); c.classList.add('on'); $$('.pick').forEach(x => x.classList.remove('on')); filt('', c.dataset.f) });
-    function quickTag(q) { $('#quick').scrollIntoView({ behavior: 'smooth' }); if (filt(q) === 0) toast('No vendors for that yet. Try another service or post a requirement.') }
-    $$('.pick').forEach(p => p.onclick = () => { const on = p.classList.contains('on'); $$('.pick').forEach(x => x.classList.remove('on')); if (!on) p.classList.add('on'); const q = on ? '' : p.dataset.q; if (filt(q) === 0 && q) toast('No vendors for that yet. Try another service or post a requirement.') });
-    function heroSearch() { const q = $('#hs').value.toLowerCase().trim(); const n = filt(q); $('#quick').scrollIntoView({ behavior: 'smooth' }); if (q && !n) toast('No match yet. Try a category or post a requirement.') }
-    $('#hs').addEventListener('keydown', e => { if (e.key === 'Enter') heroSearch() });
-    $$('#tog button').forEach(b => b.onclick = () => { $$('#tog button').forEach(x => x.classList.toggle('on', x === b)); $$('.flow').forEach(f => f.classList.toggle('on', f.id === b.dataset.t)) });
-    function openBook(t, p) { $('#bt').textContent = t; $('#bp').textContent = 'Starting at ' + p; $('#bm').classList.add('show') }
-    function shut(id) { document.getElementById(id).classList.remove('show') }
-    $$('#slots .opt').forEach(b => b.onclick = () => { $$('#slots .opt').forEach(x => x.classList.remove('sel')); b.classList.add('sel') });
-    function confirmBook() {
-      const a = $('#baddr').value.trim(), p = $('#bph').value.trim(); if (!a || p.length < 10) return toast('Add your location and a 10-digit mobile number.');
-      /* TODO: POST service, slot, address, phone to your booking endpoint (csrf token is in the hidden form) */
-      shut('bm'); toast('Booking confirmed. A vendor will contact you shortly.')
-    }
-    $$('.modal').forEach(m => m.onclick = e => { if (e.target === m) m.classList.remove('show') });
-    async function useLoc(id) {
-      const el = document.getElementById(id);
-      if (!el) return;
-      const btn = document.getElementById('btnUseLoc');
-      const icon = document.getElementById('locCrosshairIcon');
-      if (btn) btn.style.opacity = '0.7';
-      if (icon) icon.className = 'bi bi-arrow-repeat spin';
-      toast('Detecting GPS location...');
-
-      const applyGpsInfo = (addrText, lat, lon) => {
-        el.value = addrText;
-        S.lat = lat;
-        S.lon = lon;
-        const latInput = document.getElementById('job_lat');
-        const lonInput = document.getElementById('job_lon');
-        if (latInput) latInput.value = lat;
-        if (lonInput) lonInput.value = lon;
-
-        try {
-          localStorage.setItem('suggu_user_location', addrText);
-          localStorage.setItem('suggu_user_lat', lat);
-          localStorage.setItem('suggu_user_lon', lon);
-          localStorage.setItem('sugu_selected_location', JSON.stringify({
-            name: addrText,
-            primary: addrText,
-            lat: lat,
-            lon: lon,
-            is_live: true
-          }));
-        } catch (e) { }
-
-        const gpsPill = document.getElementById('locGpsPill');
-        const gpsText = document.getElementById('locGpsText');
-        const gpsLink = document.getElementById('locGpsMapsLink');
-        const mapsUrl = 'https://maps.google.com/?q=' + encodeURIComponent(lat + ',' + lon);
-        if (gpsPill) gpsPill.style.display = 'inline-flex';
-        if (gpsText) gpsText.innerHTML = '<strong>GPS:</strong> ' + Number(lat).toFixed(4) + ', ' + Number(lon).toFixed(4);
-        if (gpsLink) {
-          gpsLink.href = mapsUrl;
-          gpsLink.title = 'Open location in Google Maps';
-        }
-
-        if (typeof upd === 'function') upd();
-      };
-
-      const resetBtn = () => {
-        if (btn) btn.style.opacity = '1';
-        if (icon) icon.className = 'bi bi-crosshair';
-      };
-
-      const reverseGeocode = async (lat, lon) => {
-        try {
-          const res = await fetch(`/api/detect-location/?lat=${lat}&lon=${lon}`);
-          const data = await res.json();
-          const addr = data.full_address || data.name || ((data.primary || data.city) + ', ' + (data.city || ''));
-          applyGpsInfo(addr, lat, lon);
-          toast(`GPS Attached: ${Number(lat).toFixed(4)}, ${Number(lon).toFixed(4)}`);
-        } catch (e) {
-          applyGpsInfo(`Current Worksite (${Number(lat).toFixed(4)}, ${Number(lon).toFixed(4)})`, lat, lon);
-          toast(`GPS Attached: ${Number(lat).toFixed(4)}, ${Number(lon).toFixed(4)}`);
-        }
-        resetBtn();
-      };
-
-      const fallbackLoc = async () => {
-        try {
-          const res = await fetch('/api/detect-location/');
-          const data = await res.json();
-          const lat = data.lat || 23.3555;
-          const lon = data.lon || 85.3609;
-          const addr = data.full_address || data.name || ((data.primary || data.city) + ', ' + (data.city || ''));
-          applyGpsInfo(addr, lat, lon);
-          toast(`GPS Location set: ${addr.split(',')[0]} (${Number(lat).toFixed(4)}, ${Number(lon).toFixed(4)})`);
-        } catch (e) {
-          const savedLoc = localStorage.getItem('suggu_user_location') || 'RIADA Road, Namkum, Ranchi';
-          const savedLat = parseFloat(localStorage.getItem('suggu_user_lat')) || 23.3555;
-          const savedLon = parseFloat(localStorage.getItem('suggu_user_lon')) || 85.3609;
-          applyGpsInfo(savedLoc, savedLat, savedLon);
-          toast('Using saved location with GPS coordinates');
-        }
-        resetBtn();
-      };
-
-      if (navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(
-          (pos) => {
-            const lat = pos.coords.latitude;
-            const lon = pos.coords.longitude;
-            reverseGeocode(lat, lon);
-          },
-          (err) => {
-            console.warn('Geolocation unavailable/denied, falling back:', err);
-            fallbackLoc();
-          },
-          { enableHighAccuracy: true, timeout: 6000, maximumAge: 10000 }
-        );
-      } else {
-        fallbackLoc();
-      }
-    }
-    const DATA = {
-      {% for cat in categories %}
-    '{{ cat.name|escapejs }}': {
-      e: '<i class="bi {{ cat.icon_class }}"></i>',
-        d: '{% for sub in cat.subcategories.all %}{{ sub.name|escapejs }}{% if not forloop.last %}, {% endif %}{% endfor %}',
-          s: [
-            {% for sub in cat.subcategories.all %}
-    ['{{ sub.name|escapejs }}', '<i class="bi bi-caret-right-fill"></i>']{% if not forloop.last %}, {% endif %}
-    {% empty %}
-    ['General Service', '<i class="bi bi-caret-right-fill"></i>']
-    {% endfor %}
-        ],
-    b: [5000, 25000, 80000]
-      }{% if not forloop.last %}, {% endif %}
-    {% endfor %}
+    window.CURRENT_USER = {
+      isAuthenticated: {% if user.is_authenticated %}true{% else %}false{% endif %},
+      id: {% if user.is_authenticated %}{{ user.id }}{% else %}null{% endif %},
+      username: "{{ user.username|default:''|escapejs }}",
+      name: "{{ user.first_name|default:user.username|default:''|escapejs }}",
+      role: "{{ user.role|default:'' }}",
+      isStaff: {% if user.is_staff or user.is_superuser %}true{% else %}false{% endif %}
     };
-    let step = 0, S = { cat: '', sub: '', lat: null, lon: null }; const inr = n => '₹' + Number(n).toLocaleString('en-IN');
-    $('#idx').innerHTML = Object.keys(DATA).map(k => `<button class="ix" type="button" onclick="pickCat('${k}')"><h3>${k}</h3><span>${DATA[k].d}</span><i><i class="bi bi-arrow-right"></i></i></button>`).join('');
-    $('#cats').innerHTML = Object.keys(DATA).map(k => `<button class="opt" type="button" data-k="${k}"><em>${DATA[k].e}</em>${k}</button>`).join('');
-    $$('#cats .opt').forEach(b => b.onclick = () => pickCat(b.dataset.k, true));
-    function pickCat(k, stay) { S.cat = k; S.sub = ''; $('#budget').value = ''; $$('#cats .opt').forEach(x => x.classList.toggle('sel', x.dataset.k === k)); buildSubs(); step = 1; upd(); if (!stay) $('#wiz').scrollIntoView({ behavior: 'smooth', block: 'center' }) }
-    function buildSubs() {
-      const d = DATA[S.cat]; $('#t1').textContent = S.cat + ': what type of work?';
-      $('#subs').innerHTML = d.s.map(([n, i]) => `<button class="opt" type="button" data-n="${n}"><em>${i}</em>${n}</button>`).join('');
-      $$('#subs .opt').forEach(b => b.onclick = () => { S.sub = b.dataset.n; $$('#subs .opt').forEach(x => x.classList.toggle('sel', x === b)); go(1) });
-      $('#pre').innerHTML = d.b.map(v => `<button class="chip" type="button" data-v="${v}">${inr(v)}</button>`).join('');
-      $$('#pre .chip').forEach(c => c.onclick = () => { $('#budget').value = c.dataset.v; upd() })
-    }
-    function go(d) {
-      if (d > 0) { if (step === 0 && !S.cat) return toast('Choose a category first.'); if (step === 1 && !S.sub) return toast('Choose the type of work.'); if (step === 2 && !(+$('#budget').value > 0)) return toast('Enter your budget.'); if (step === 3) return submit() }
-      step = Math.max(0, Math.min(3, step + d)); upd()
-    }
-    function upd() {
-      $$('.pane').forEach(p => p.classList.toggle('on', +p.dataset.p === step));
-      $$('#steps .stp').forEach((s, i) => { s.classList.toggle('on', i === step); s.classList.toggle('done', i < step); s.firstElementChild.textContent = i < step ? '✓' : i + 1 });
-      $('#back').style.visibility = step ? 'visible' : 'hidden'; $('#next').textContent = step === 3 ? 'Post requirement' : 'Continue'; $('#next').style.display = step === 0 ? 'none' : '';
-      $('#sum').innerHTML = `<b>${S.cat}</b> › <br>Budget: <b>${$('#budget').value ? inr($('#budget').value) : '-'}</b>`
-    }
-    function submit() {
-      const a = $('#addr').value.trim(), p = $('#ph').value.trim();
-      if (!a || p.length < 10) return toast('Add your address and a 10-digit mobile number.');
-
-      const latVal = document.getElementById('job_lat')?.value || S.lat || localStorage.getItem('suggu_user_lat') || '23.3555';
-      const lonVal = document.getElementById('job_lon')?.value || S.lon || localStorage.getItem('suggu_user_lon') || '85.3609';
-      const lat = parseFloat(latVal);
-      const lon = parseFloat(lonVal);
-      const mapsUrl = `https://maps.google.com/?q=${lat},${lon}`;
-
-      let formattedAddress = a;
-      if (!formattedAddress.includes('[GPS:') && !isNaN(lat) && !isNaN(lon)) {
-        formattedAddress = `${a} [GPS: ${lat}, ${lon} | Maps: ${mapsUrl}]`;
-      }
-
-      const payload = {
-        category: S.cat,
-        work_type: S.sub,
-        budget: +$('#budget').value,
-        address: a,
-        latitude: lat,
-        longitude: lon,
-        maps_url: mapsUrl,
-        full_address: formattedAddress,
-        phone: p,
-        start: $('#when').value
-      };
-
-      try {
-        localStorage.setItem('suggu_pending_requirement', JSON.stringify(payload));
-      } catch (e) { }
-
-      console.log('requirement', payload);
-
-      // Populate preview details inside the modal
-      const sumCat = document.getElementById('askReqCat');
-      if (sumCat) sumCat.textContent = (S.cat || 'General') + (S.sub ? ' › ' + S.sub : '');
-
-      const sumBudget = document.getElementById('askReqBudget');
-      if (sumBudget) sumBudget.textContent = $('#budget').value ? inr($('#budget').value) : 'Flexible';
-
-      const sumAddr = document.getElementById('askReqAddr');
-      if (sumAddr) sumAddr.textContent = a + (p ? ' (' + p + ')' : '');
-
-      const coordsDisplay = document.getElementById('askReqCoords');
-      if (coordsDisplay) coordsDisplay.textContent = `${lat.toFixed(4)}, ${lon.toFixed(4)}`;
-
-      const modalMapsLink = document.getElementById('askReqMapsLink');
-      if (modalMapsLink) {
-        modalMapsLink.href = mapsUrl;
-        modalMapsLink.title = 'Open work location in Google Maps';
-      }
-
-      // Update link targets with mobile number prefilled
-      const loginLink = document.getElementById('askLoginLink');
-      if (loginLink) loginLink.href = '/login/?phone=' + encodeURIComponent(p) + '&next=' + encodeURIComponent('/vendor/dashboard');
-
-      const regLink = document.getElementById('askRegisterLink');
-      if (regLink) regLink.href = '/register/vendor/?mobile=' + encodeURIComponent(p);
-
-      const custLogin = document.getElementById('askCustomerLoginLink');
-      if (custLogin) custLogin.href = '/login/?phone=' + encodeURIComponent(p) + '&next=' + encodeURIComponent('/user/dashboard');
-
-      const custReg = document.getElementById('askCustomerRegLink');
-      if (custReg) custReg.href = '/register/user/?mobile=' + encodeURIComponent(p);
-
-      // Open the action modal
-      const modal = document.getElementById('vendorAskModal');
-      if (modal) modal.classList.add('show');
-    }
-
-    function setWhenDate(days) {
-      const d = new Date();
-      d.setDate(d.getDate() + days);
-      const val = d.toISOString().split('T')[0];
-      const w = document.getElementById('when');
-      if (w) {
-        w.value = val;
-      }
-    }
-    const todayStr = new Date().toISOString().split('T')[0];
-    const whenInput = document.getElementById('when');
-    if (whenInput) {
-      whenInput.min = todayStr;
-      if (!whenInput.value) whenInput.value = todayStr;
-    }
-    upd();
+    window.CSRF_TOKEN = "{{ csrf_token }}";
+    window.DB_CATEGORIES = {{ categories_data_json|safe }};
+    window.DB_TESTIMONIALS = {{ testimonials_data_json|safe }};
+    window.DB_BIDDING_JOBS = {{ bidding_jobs_data_json|safe }};
+    window.SERVER_USER_LOCATION = "{{ user_city|default:'' }}{% if user_state %}, {{ user_state }}{% endif %}";
   </script>
-  <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
-  <script>
-    AOS.init({
-      duration: 800,
-      once: false,
-      mirror: true,
-      offset: 50,
-      easing: 'ease-out-cubic',
-      throttleDelay: 50,
-      debounceDelay: 25
-    });
-
-    // Smoothly scroll to sections when clicking navigation links without lagging mouse wheel
-    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-      anchor.addEventListener('click', function (e) {
-        const href = this.getAttribute('href');
-        if (href && href.length > 1) {
-          const target = document.querySelector(href);
-          if (target) {
-            e.preventDefault();
-            target.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            if (history.pushState) history.pushState(null, '', href);
-          }
-        }
-      });
-    });
-  </script>
+  <script src="data.js?v=2.9"></script>
+  <script src="app.js?v=2.9"></script>
 </body>
-
 </html>

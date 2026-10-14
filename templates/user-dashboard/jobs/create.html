@@ -118,6 +118,7 @@
                   .cat-card input[type="radio"]:checked + .card-content { color: #5b5bd6; font-weight: 700; }
                   .cat-card:has(input[type="radio"]:checked) { border-color: #5b5bd6; background: #f0f0ff; box-shadow: 0 0 0 3px rgba(91,91,214,0.15); }
                   .card-content i { font-size: 26px; color: #64748b; }
+                  .card-content img.cat-card-img { width: 34px; height: 34px; object-fit: contain; }
                   .cat-card input[type="radio"]:checked + .card-content i { color: #5b5bd6; }
                   </style>
 
@@ -129,7 +130,11 @@
                       <label class="cat-card" onclick="updateSubcats('{{ cat.id }}')">
                          <input type="radio" name="category" value="{{ cat.id }}" required>
                          <div class="card-content">
-                            <i class="bi {{ cat.icon_class }}"></i>
+                            {% if cat.image %}
+                              <img src="{{ cat.image.url }}" alt="{{ cat.name }}" class="cat-card-img">
+                            {% else %}
+                              <i class="bi {{ cat.icon_class }}"></i>
+                            {% endif %}
                             <span style="display:block; margin-top:8px; font-size:13px;">{{ cat.name }}</span>
                          </div>
                       </label>

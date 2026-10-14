@@ -818,7 +818,13 @@
                 {% for cat in categories %}
                 <div class="cat-option-item" data-value="{{ cat.name }}" role="option">
                   <div class="cat-checkbox"><i class="fa-solid fa-check"></i></div>
-                  <div class="cat-option-icon"><i class="bi {{ cat.icon_class }}"></i></div>
+                  <div class="cat-option-icon">
+                    {% if cat.image %}
+                      <img src="{{ cat.image.url }}" alt="{{ cat.name }}" style="width: 20px; height: 20px; object-fit: contain;">
+                    {% else %}
+                      <i class="bi {{ cat.icon_class }}"></i>
+                    {% endif %}
+                  </div>
                   <span class="cat-option-label">{{ cat.name }}</span>
                 </div>
                 {% endfor %}

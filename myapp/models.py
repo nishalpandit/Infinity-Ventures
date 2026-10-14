@@ -130,6 +130,7 @@ class QuickService(models.Model):
     vendor = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='vendor_services')
     title = models.CharField(max_length=255)
     category = models.ForeignKey('Category', on_delete=models.SET_NULL, null=True, blank=True)
+    subcategory = models.ForeignKey('SubCategory', on_delete=models.SET_NULL, null=True, blank=True, related_name='quick_services')
     description = models.TextField(blank=True, null=True)
     base_price = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     service_packages = models.JSONField(default=list, blank=True, null=True, help_text="List of packages/variants e.g. [{'name': 'Haircut', 'price': 150}]")
@@ -549,12 +550,22 @@ class Category(models.Model):
         ('inactive', 'Inactive'),
     )
     name = models.CharField(max_length=100)
+    image = models.ImageField(upload_to='categories/', null=True, blank=True)
     service_type = models.CharField(max_length=20, choices=SERVICE_TYPE_CHOICES, default='both')
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='active')
     created_at = models.DateTimeField(default=timezone.now)
 
     def __str__(self):
         return self.name
+
+    @property
+    def image_url(self):
+        try:
+            if self.image and hasattr(self.image, 'url'):
+                return self.image.url
+        except Exception:
+            pass
+        return None
 
     @property
     def icon_class(self):

@@ -245,7 +245,7 @@
           <!-- Category -->
           <div class="form-field">
             <label>Category <span style="color:#ef4444;">*</span></label>
-            <select name="category" class="form-select" required>
+            <select name="category" id="qsCategorySelect" class="form-select" required onchange="onCategoryChange(this.value)">
               <option value="">-- Select Category --</option>
               {% for cat in categories %}
                 <option value="{{ cat.id }}" {% if qs.category_id == cat.id %}selected{% endif %}>{{ cat.name }}</option>
@@ -253,25 +253,34 @@
             </select>
           </div>
 
-          <!-- Status -->
+          <!-- Subcategory -->
           <div class="form-field">
-            <label>Listing Status <span style="color:#ef4444;">*</span></label>
-            <div class="status-pill-select">
-              <label class="status-radio-label active-pill {% if qs.status == 'active' or not qs.status %}checked{% endif %}">
-                <input type="radio" name="status" value="active" {% if qs.status == 'active' or not qs.status %}checked{% endif %} onchange="updateStatusPills()">
-                <i class="fa-solid fa-circle-check"></i> Active
-              </label>
-              <label class="status-radio-label paused-pill {% if qs.status == 'paused' %}checked{% endif %}">
-                <input type="radio" name="status" value="paused" {% if qs.status == 'paused' %}checked{% endif %} onchange="updateStatusPills()">
-                <i class="fa-solid fa-circle-pause"></i> Paused
-              </label>
-              <label class="status-radio-label draft-pill {% if qs.status == 'draft' %}checked{% endif %}">
-                <input type="radio" name="status" value="draft" {% if qs.status == 'draft' %}checked{% endif %} onchange="updateStatusPills()">
-                <i class="fa-solid fa-file-pen"></i> Draft
-              </label>
-            </div>
-            <div class="field-hint">Active = Visible to customers on app & website; Paused = Temporarily disabled; Draft = Staged.</div>
+            <label>Subcategory <span style="color:var(--text-muted); font-size:11.5px; font-weight:normal;">(Optional)</span></label>
+            <select name="subcategory" id="qsSubcategorySelect" class="form-select">
+              <option value="">-- Select Subcategory --</option>
+            </select>
+            <div class="field-hint" id="subcatHint">Select a parent category to load subcategories</div>
           </div>
+        </div>
+
+        <!-- Listing Status -->
+        <div class="form-field">
+          <label>Listing Status <span style="color:#ef4444;">*</span></label>
+          <div class="status-pill-select">
+            <label class="status-radio-label active-pill {% if qs.status == 'active' or not qs.status %}checked{% endif %}">
+              <input type="radio" name="status" value="active" {% if qs.status == 'active' or not qs.status %}checked{% endif %} onchange="updateStatusPills()">
+              <i class="fa-solid fa-circle-check"></i> Active
+            </label>
+            <label class="status-radio-label paused-pill {% if qs.status == 'paused' %}checked{% endif %}">
+              <input type="radio" name="status" value="paused" {% if qs.status == 'paused' %}checked{% endif %} onchange="updateStatusPills()">
+              <i class="fa-solid fa-circle-pause"></i> Paused
+            </label>
+            <label class="status-radio-label draft-pill {% if qs.status == 'draft' %}checked{% endif %}">
+              <input type="radio" name="status" value="draft" {% if qs.status == 'draft' %}checked{% endif %} onchange="updateStatusPills()">
+              <i class="fa-solid fa-file-pen"></i> Draft
+            </label>
+          </div>
+          <div class="field-hint">Active = Visible to customers on app & website; Paused = Temporarily disabled; Draft = Staged.</div>
         </div>
 
         <!-- Description -->
@@ -727,11 +736,51 @@
     return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   }
 
+  // Subcategories mapping
+  const subcatsMap = {
+    {% for cat in categories %}
+    '{{ cat.id }}': [
+      {% for sub in cat.subcategories.all %}
+      { id: '{{ sub.id }}', name: '{{ sub.name|escapejs }}' }{% if not forloop.last %},{% endif %}
+      {% endfor %}
+    ]{% if not forloop.last %},{% endif %}
+    {% endfor %}
+  };
+
+  const initialSubcatId = "{{ qs.subcategory_id|default:'' }}";
+
+  function onCategoryChange(catId, preselectSubId) {
+    const subSelect = document.getElementById('qsSubcategorySelect');
+    const hint = document.getElementById('subcatHint');
+    if (!subSelect) return;
+
+    subSelect.innerHTML = '<option value="">-- Select Subcategory --</option>';
+
+    const subs = subcatsMap[catId] || [];
+    if (subs.length > 0) {
+      subs.forEach(s => {
+        const isSel = (preselectSubId && String(preselectSubId) === String(s.id)) ? 'selected' : '';
+        subSelect.innerHTML += `<option value="${s.id}" ${isSel}>${s.name}</option>`;
+      });
+      if (hint) hint.textContent = `${subs.length} subcategories available for this category`;
+    } else {
+      if (hint) {
+        hint.textContent = catId ? 'No subcategories created for this category yet' : 'Select a parent category to load subcategories';
+      }
+    }
+  }
+
   document.addEventListener('DOMContentLoaded', () => {
     renderPackageRows();
     renderInclusions();
     renderExclusions();
     updateStatusPills();
+
+    // Initialize subcategories dropdown
+    const catSelect = document.getElementById('qsCategorySelect');
+    if (catSelect && catSelect.value) {
+      onCategoryChange(catSelect.value, initialSubcatId);
+    }
 
     const form = document.getElementById('qsEditForm');
     if (form) {

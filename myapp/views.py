@@ -1249,6 +1249,7 @@ def dashboard_view(request, path=''):
                 'name': cat.name,
                 'service_type': cat.service_type,
                 'status': cat.status,
+                'image': cat.image_url,
                 'created_at': cat.created_at.strftime('%Y-%m-%d') if cat.created_at else 'Unknown'
             })
         context['categories_json'] = json.dumps(categories_data)
@@ -1256,7 +1257,7 @@ def dashboard_view(request, path=''):
     if 'jobs/create' in path or 'quick-services/create' in path:
         active_cats = Category.objects.filter(status='active').order_by('name')
         context['categories'] = active_cats
-        cat_data = [{'id': c.id, 'name': c.name, 'service_type': c.service_type} for c in active_cats]
+        cat_data = [{'id': c.id, 'name': c.name, 'service_type': c.service_type, 'image': c.image_url} for c in active_cats]
         context['categories_json'] = json.dumps(cat_data)
         active_locs = Location.objects.filter(status='active').order_by('state', 'city')
         context['locations'] = active_locs
@@ -3501,7 +3502,18 @@ def public_browse_services(request):
             'subcategories': [{'id': s.id, 'name': s.name} for s in cat.subcategories.filter(status='active').order_by('id')]
         })
         
-    services_qs = QuickService.objects.filter(status='active').select_related('vendor', 'category').order_by('-created_at')
+    city_param = request.GET.get('city', '').strip()
+    if not city_param and not request.GET.get('lat'):
+        city_param = 'Ranchi'
+
+    services_qs = QuickService.objects.filter(status='active').select_related('vendor', 'category', 'subcategory').order_by('-created_at')
+
+    if city_param and city_param.lower() != 'all':
+        services_qs = services_qs.filter(
+            Q(location__city__iexact=city_param) |
+            Q(locality__icontains=city_param) |
+            Q(vendor__vendor_profile__location__icontains=city_param)
+        )
     
     if selected_category:
         services_qs = services_qs.filter(category_id=selected_category.id)
@@ -3510,7 +3522,7 @@ def public_browse_services(request):
         services_qs = services_qs.filter(Q(title__icontains=search_query) | Q(description__icontains=search_query) | Q(tags__icontains=search_query))
         
     if sub_query and sub_query.lower() != 'all':
-        services_qs = services_qs.filter(Q(title__icontains=sub_query) | Q(tags__icontains=sub_query) | Q(description__icontains=sub_query))
+        services_qs = services_qs.filter(Q(title__icontains=sub_query) | Q(tags__icontains=sub_query) | Q(description__icontains=sub_query) | Q(subcategory__name__icontains=sub_query))
 
     services_list = list(services_qs)
     
@@ -3545,6 +3557,10 @@ def public_browse_services(request):
     
     user_lat = request.GET.get('lat')
     user_lon = request.GET.get('lon')
+    if (not user_lat or not user_lon) and city_param and city_param.lower() != 'all':
+        coords = resolve_coordinates_for_location(city_param, default_coords=(23.3697, 85.3346))
+        if coords:
+            user_lat, user_lon = coords[0], coords[1]
 
     def calculate_distance(lat1, lon1, lat2, lon2):
         try:
@@ -3624,8 +3640,8 @@ def public_browse_services(request):
             'inclusions': inclusions,
             'exclusions': exclusions,
             'packages': packages,
-            'tags': s.tags or '',
-            'subcat_name': s.tags or ''
+            'tags': s.tags or (s.subcategory.name if s.subcategory else ''),
+            'subcat_name': (s.subcategory.name if s.subcategory else s.tags) or ''
         })
         
     # Map subcategory names into enriched_services
@@ -3677,7 +3693,11 @@ def home_view(request):
         else:
             error = 'Invalid username, email, phone number, or password.'
 
-    categories = Category.objects.filter(status='active').prefetch_related('subcategories').order_by('name')
+    from django.db.models import Count, Min, Q
+    categories = Category.objects.filter(status='active').prefetch_related('subcategories').annotate(
+        qs_count=Count('quickservice', filter=Q(quickservice__status='active')),
+        min_price=Min('quickservice__base_price', filter=Q(quickservice__status='active'))
+    ).order_by('name')
     locations = Location.objects.filter(status='active').order_by('state', 'city')
     recent_bids = Bid.objects.select_related('vendor', 'vendor__vendor_profile', 'job', 'job__location').order_by('-created_at')[:6]
     
@@ -3744,6 +3764,155 @@ def home_view(request):
             active_cities_set = {c.lower().strip() for c in locations.values_list('city', flat=True) if c}
             is_service_available = user_city.lower().strip() in active_cities_set
 
+    categories_data = []
+    for c in categories:
+        services_qs = c.quickservice_set.filter(status='active').order_by('-created_at')[:10]
+        subs = list(c.subcategories.filter(status='active').values('id', 'name'))
+        categories_data.append({
+            'id': str(c.id),
+            'name': c.name,
+            'image': c.image_url,
+            'icon_class': c.icon_class,
+            'min_price': float(c.min_price) if c.min_price else 199,
+            'qs_count': c.qs_count,
+            'subcategories': subs,
+            'services': [{
+                'id': s.id,
+                'title': s.title,
+                'price': float(s.base_price),
+                'description': s.description or '',
+                'image': s.image.url if s.image else None,
+            } for s in services_qs]
+        })
+
+    popular_services = []
+    seen_categories = set()
+    for s in QuickService.objects.filter(status='active').select_related('category', 'vendor').annotate(b_count=Count('bookings')).order_by('-b_count', 'id'):
+        if s.category_id and s.category_id not in seen_categories:
+            popular_services.append(s)
+            seen_categories.add(s.category_id)
+        if len(popular_services) >= 6:
+            break
+
+    if len(popular_services) < 6:
+        for s in QuickService.objects.filter(status='active').select_related('category', 'vendor').exclude(id__in=[x.id for x in popular_services]).order_by('-created_at'):
+            popular_services.append(s)
+            if len(popular_services) >= 6:
+                break
+
+    testimonials_data = []
+    for t in cms_testimonials:
+        avatar_url = None
+        try:
+            if t.avatar and hasattr(t.avatar, 'url') and bool(t.avatar.name):
+                avatar_url = t.avatar.url
+        except Exception:
+            avatar_url = None
+
+        testimonials_data.append({
+            'id': t.id,
+            'name': t.client_name,
+            'role': t.client_role_or_company,
+            'city': t.client_role_or_company,
+            'avatar': avatar_url,
+            'rating': float(t.rating) if t.rating else 5.0,
+            'comment': t.review_text,
+            'service': t.service_taken,
+            'badge': 'Verified Customer',
+            'date': t.created_at.strftime("%d %b %Y") if t.created_at else "Verified"
+        })
+
+    # Dynamic Bidding Marketplace Jobs & Quotes
+    bidding_jobs_data = []
+    db_jobs = Job.objects.select_related('category', 'location', 'user').prefetch_related(
+        Prefetch('bids', queryset=Bid.objects.select_related('vendor', 'vendor__vendor_profile', 'vendor__kyc_document').order_by('amount')),
+        'images'
+    ).annotate(actual_bids_count=Count('bids')).order_by('-actual_bids_count', '-created_at')[:20]
+
+    for j in db_jobs:
+        cat_name = j.category.name if j.category else "Home Improvement"
+        budget_range = f"₹{int(j.budget):,}" if j.budget else "₹15,000 - ₹35,000"
+        if j.min_bid_amount and j.max_bid_amount:
+            budget_range = f"₹{int(j.min_bid_amount):,} - ₹{int(j.max_bid_amount):,}"
+
+        photos_list = []
+        if j.image:
+            try:
+                if hasattr(j.image, 'url') and bool(j.image.name):
+                    photos_list.append(j.image.url)
+            except Exception:
+                pass
+        for img in j.images.all()[:3]:
+            try:
+                if hasattr(img.image, 'url') and bool(img.image.name):
+                    photos_list.append(img.image.url)
+            except Exception:
+                pass
+
+        bids_list = []
+        for b in j.bids.all():
+            v = b.vendor
+            vp = getattr(v, 'vendor_profile', None)
+            kyc = getattr(v, 'kyc_document', None)
+            company = vp.company_name if (vp and vp.company_name) else (v.get_full_name() or v.username)
+            contractor_name = v.get_full_name() or company
+            avatar_url = None
+            if vp and vp.profile_image:
+                try:
+                    if hasattr(vp.profile_image, 'url') and bool(vp.profile_image.name):
+                        avatar_url = vp.profile_image.url
+                except Exception:
+                    avatar_url = None
+
+            bids_list.append({
+                'id': f"BID-{b.id}",
+                'dbId': b.id,
+                'bidderName': company,
+                'contractor': contractor_name,
+                'rating': str(round(float(vp.rating), 2) if vp and vp.rating > 0 else 4.88),
+                'jobsDone': v.assigned_jobs.count() if hasattr(v, 'assigned_jobs') else 28,
+                'avatar': avatar_url or f"https://api.dicebear.com/7.x/initials/svg?seed={contractor_name}&backgroundColor=1b75d0,f59e0b",
+                'bidAmount': float(b.amount),
+                'timeline': b.estimated_time or "3-5 Working Days",
+                'included': b.proposal or b.message or "Complete labor, materials, cleanup, and Sugu 30-day warranty guarantee.",
+                'verified': kyc.status == 'approved' if kyc else True,
+                'isRecommended': False,
+                'status': b.status,
+            })
+
+        if bids_list:
+            min_bid = min(bids_list, key=lambda x: x['bidAmount'])
+            min_bid['isRecommended'] = True
+
+        bidding_jobs_data.append({
+            'id': f"JOB-{j.id}",
+            'dbId': j.id,
+            'title': j.title,
+            'category': cat_name,
+            'icon': j.category.image_url if (j.category and j.category.image_url) else "painting_upgrade.png",
+            'postedDate': j.created_at.strftime("%d %b %Y") if j.created_at else "Recent",
+            'budgetRange': budget_range,
+            'budget': float(j.budget) if j.budget else 0,
+            'minBidAmount': float(j.min_bid_amount) if j.min_bid_amount else None,
+            'maxBidAmount': float(j.max_bid_amount) if j.max_bid_amount else None,
+            'urgency': j.required_time or "Within 1 Week",
+            'location': j.locality or j.city or (j.location.city if j.location else "Ranchi, Jharkhand"),
+            'city': j.city or (j.location.city if j.location else "Ranchi"),
+            'locality': j.locality or "",
+            'address': j.address or "",
+            'description': j.description or j.scope_of_work or "Detailed custom requirement posted for competitive bidding.",
+            'scopeOfWork': j.scope_of_work or "",
+            'requiredWork': j.required_work if isinstance(j.required_work, list) else [],
+            'materialsDetails': j.materials_details or "",
+            'additionalRequirements': j.additional_requirements or "",
+            'preferredStartDate': j.preferred_start_date.strftime("%d %b %Y") if j.preferred_start_date else None,
+            'photos': photos_list,
+            'status': j.get_status_display(),
+            'bidsCount': len(bids_list),
+            'maxBids': j.max_bids or 10,
+            'bids': bids_list
+        })
+
     context = {
         'error': error,
         'branding': branding,
@@ -3754,11 +3923,15 @@ def home_view(request):
         'cms_testimonials': cms_testimonials,
         'cms_trust_metrics': cms_trust_metrics,
         'categories': categories,
+        'popular_services': popular_services,
         'landing_services': QuickService.objects.filter(status='active').select_related('vendor', 'category').order_by('-created_at'),
         'top_services': QuickService.objects.filter(status='active').select_related('vendor', 'category').order_by('-created_at')[:8],
         'locations': locations,
         'recent_bids': recent_bids,
         'categories_json': json.dumps(list(categories.values("id", "name", "service_type", "status"))),
+        'categories_data_json': json.dumps(categories_data),
+        'testimonials_data_json': json.dumps(testimonials_data),
+        'bidding_jobs_data_json': json.dumps(bidding_jobs_data),
         'locations_json': json.dumps(list(locations.values("id", "state", "city"))),
         'recent_bids_json': json.dumps(recent_bids_data),
         'now': timezone.now(),

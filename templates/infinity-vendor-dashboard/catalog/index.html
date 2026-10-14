@@ -111,7 +111,14 @@
       color: #64748b;
       transition: all 0.2s;
     }
-    .cat-card.active .card-content i, .cat-card:has(input[type="radio"]:checked) .card-content i {
+    .cat-card .card-content img.cat-card-img {
+      width: 32px;
+      height: 32px;
+      object-fit: contain;
+      transition: all 0.2s;
+    }
+    .cat-card.active .card-content i, .cat-card:has(input[type="radio"]:checked) .card-content i,
+    .cat-card.active .card-content img.cat-card-img, .cat-card:has(input[type="radio"]:checked) .card-content img.cat-card-img {
       color: #0f8a7c;
       transform: scale(1.08);
     }
@@ -900,7 +907,11 @@
                       <label class="cat-card {% if forloop.first %}active{% endif %}" onclick="selectCreateCategoryCard(this, '{{ cat.id }}', '{{ cat.name|escapejs }}')">
                         <input type="radio" name="category_radio" value="{{ cat.id }}" {% if forloop.first %}checked{% endif %}>
                         <div class="card-content">
-                          <i class="bi {{ cat.icon_class }}"></i>
+                          {% if cat.image %}
+                            <img src="{{ cat.image.url }}" alt="{{ cat.name }}" class="cat-card-img">
+                          {% else %}
+                            <i class="bi {{ cat.icon_class }}"></i>
+                          {% endif %}
                           <span class="cat-title">{{ cat.name }}</span>
                         </div>
                         <span class="cat-check-badge"><i class="fa-solid fa-check"></i></span>

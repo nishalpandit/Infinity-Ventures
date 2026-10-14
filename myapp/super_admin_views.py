@@ -1050,27 +1050,74 @@ def super_admin_locations(request):
 
 @sa_required
 def super_admin_category_create(request):
+    from .models import SubCategory
     if request.method == 'POST':
-        Category.objects.create(
+        cat = Category.objects.create(
             name=request.POST.get('name'),
             service_type=request.POST.get('service_type', 'both'),
             status=request.POST.get('status', 'active'),
+            image=request.FILES.get('image'),
         )
+        # Handle inline subcategories
+        subcat_names = request.POST.getlist('subcat_name[]')
+        subcat_statuses = request.POST.getlist('subcat_status[]')
+        for i, sname in enumerate(subcat_names):
+            sname = sname.strip()
+            if sname:
+                SubCategory.objects.create(
+                    category=cat,
+                    name=sname,
+                    status=subcat_statuses[i] if i < len(subcat_statuses) else 'active',
+                )
         django_messages.success(request, 'Category created.')
         return redirect('super_admin_categories')
     return render(request, 'superadmin/category_form.html', {'mode': 'create'})
 
 @sa_required
 def super_admin_category_edit(request, cat_id):
+    from .models import SubCategory
     cat = get_object_or_404(Category, pk=cat_id)
     if request.method == 'POST':
         cat.name = request.POST.get('name', cat.name)
         cat.service_type = request.POST.get('service_type', cat.service_type)
         cat.status = request.POST.get('status', cat.status)
+        if 'image' in request.FILES:
+            cat.image = request.FILES['image']
+        elif request.POST.get('clear_image') == '1':
+            cat.image = None
         cat.save()
+        # Handle inline subcategories
+        subcat_ids = request.POST.getlist('subcat_id[]')
+        subcat_names = request.POST.getlist('subcat_name[]')
+        subcat_statuses = request.POST.getlist('subcat_status[]')
+        # Track which existing subcategory IDs are still present
+        kept_ids = set()
+        for i, sname in enumerate(subcat_names):
+            sname = sname.strip()
+            if not sname:
+                continue
+            sid = subcat_ids[i] if i < len(subcat_ids) else ''
+            s_status = subcat_statuses[i] if i < len(subcat_statuses) else 'active'
+            if sid:
+                # Update existing
+                try:
+                    sub = SubCategory.objects.get(pk=int(sid), category=cat)
+                    sub.name = sname
+                    sub.status = s_status
+                    sub.save()
+                    kept_ids.add(sub.id)
+                except SubCategory.DoesNotExist:
+                    pass
+            else:
+                # Create new
+                new_sub = SubCategory.objects.create(category=cat, name=sname, status=s_status)
+                kept_ids.add(new_sub.id)
+        # Delete subcategories that were removed from the form
+        cat.subcategories.exclude(id__in=kept_ids).delete()
         django_messages.success(request, f'Category "{cat.name}" updated.')
         return redirect('super_admin_categories')
-    return render(request, 'superadmin/category_form.html', {'mode': 'edit', 'cat': cat})
+    subcategories = cat.subcategories.all().order_by('id')
+    return render(request, 'superadmin/category_form.html', {'mode': 'edit', 'cat': cat, 'subcategories': subcategories})
 
 @sa_required
 def super_admin_category_delete(request, cat_id):
@@ -1648,7 +1695,7 @@ def super_admin_job_bids(request, job_id):
 # ─────────────────────────────────────────────
 @sa_required
 def super_admin_quick_services(request):
-    qs_list = QuickService.objects.all().select_related('vendor', 'vendor__vendor_profile', 'category', 'location').order_by('-created_at')
+    qs_list = QuickService.objects.all().select_related('vendor', 'vendor__vendor_profile', 'category', 'subcategory', 'location').order_by('-created_at')
     
     total_count = qs_list.count()
     active_count = qs_list.filter(status='active').count()
@@ -1700,7 +1747,7 @@ def super_admin_quick_services(request):
 @sa_required
 def super_admin_qs_create(request):
     vendors = CustomUser.objects.filter(role='VENDOR').order_by('username')
-    categories = Category.objects.all().order_by('name')
+    categories = Category.objects.all().prefetch_related('subcategories').order_by('name')
     locations = Location.objects.all().order_by('state', 'city')
     gs = GlobalSettings.objects.first()
 
@@ -1708,6 +1755,7 @@ def super_admin_qs_create(request):
         vendor_id = request.POST.get('vendor') or request.POST.get('user')
         title = request.POST.get('title', '').strip()
         cat_id = request.POST.get('category')
+        subcat_id = request.POST.get('subcategory')
         loc_id = request.POST.get('location')
         status = request.POST.get('status', 'active')
         if status not in ['active', 'paused', 'draft']:
@@ -1718,6 +1766,7 @@ def super_admin_qs_create(request):
 
         vendor = get_object_or_404(CustomUser, pk=vendor_id)
         cat_obj = Category.objects.filter(id=cat_id).first() if cat_id else None
+        subcat_obj = SubCategory.objects.filter(id=subcat_id).first() if subcat_id else None
         loc_obj = Location.objects.filter(id=loc_id).first() if loc_id else None
 
         radius_val = request.POST.get('service_radius_km', 10.0)
@@ -1826,6 +1875,8 @@ def super_admin_qs_create(request):
             vendor=vendor,
             title=title,
             category=cat_obj,
+            subcategory=subcat_obj,
+            tags=subcat_obj.name if subcat_obj else '',
             location=loc_obj,
             base_price=min_price,
             service_packages=service_packages,
@@ -1862,7 +1913,7 @@ def super_admin_qs_create(request):
 @sa_required
 def super_admin_qs_edit(request, qs_id):
     qs = get_object_or_404(QuickService, pk=qs_id)
-    categories = Category.objects.all().order_by('name')
+    categories = Category.objects.all().prefetch_related('subcategories').order_by('name')
     locations = Location.objects.all().order_by('state', 'city')
     vendors = CustomUser.objects.filter(role='VENDOR').order_by('username')
     gs = GlobalSettings.objects.first()
@@ -1879,6 +1930,16 @@ def super_admin_qs_edit(request, qs_id):
         cat_id = request.POST.get('category')
         if cat_id:
             qs.category = Category.objects.filter(id=cat_id).first()
+        else:
+            qs.category = None
+
+        subcat_id = request.POST.get('subcategory')
+        if subcat_id:
+            qs.subcategory = SubCategory.objects.filter(id=subcat_id).first()
+            if qs.subcategory:
+                qs.tags = qs.subcategory.name
+        else:
+            qs.subcategory = None
 
         loc_id = request.POST.get('location')
         if loc_id:

@@ -458,7 +458,7 @@
       {% endif %}
 
       <span class="qs-badge-overlay-left">
-        <i class="fa-solid fa-tag"></i> {{ qs.category.name|default:"General" }}
+        <i class="fa-solid fa-tag"></i> {{ qs.category.name|default:"General" }}{% if qs.subcategory %} · {{ qs.subcategory.name }}{% elif qs.tags %} · {{ qs.tags }}{% endif %}
       </span>
 
       <span class="qs-badge-overlay-right {{ qs.status }}">
@@ -549,7 +549,10 @@
         <tr>
           <td><strong>{{ qs.title }}</strong></td>
           <td>{{ qs.vendor.vendor_profile.company_name|default:qs.vendor.username }}</td>
-          <td>{{ qs.category.name|default:"-" }}</td>
+          <td>
+            <div>{{ qs.category.name|default:"-" }}</div>
+            {% if qs.subcategory %}<div style="font-size:11px; color:var(--text-muted);">{{ qs.subcategory.name }}</div>{% elif qs.tags %}<div style="font-size:11px; color:var(--text-muted);">{{ qs.tags }}</div>{% endif %}
+          </td>
           <td><i class="fa-solid fa-location-dot" style="font-size: 11px; color: var(--text-muted);"></i> {{ qs.locality|default:"-" }}</td>
           <td style="color: var(--success); font-weight: 700;">₹{{ qs.base_price|floatformat:"0" }}</td>
           <td><span class="badge {% if qs.status == 'active' %}active{% elif qs.status == 'draft' %}inactive{% else %}warn{% endif %}">{{ qs.get_status_display }}</span></td>

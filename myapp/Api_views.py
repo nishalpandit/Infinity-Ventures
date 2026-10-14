@@ -14,7 +14,7 @@ from django.contrib.auth import get_user_model
 from django.utils import timezone
 from django.db import transaction
 from django.db.models import Q
-from .models import UserProfile, VendorProfile, Category, Location, OTPVerification, AuthToken, Job, QuickService, VendorKYC, CustomerAddress, ServiceBooking, GlobalSettings, Message, Bid, BidPlan, BidCreditTransaction, Subscription, VendorWallet, WalletTransaction, PlatformRevenueLedger, ServiceReview
+from .models import UserProfile, VendorProfile, Category, SubCategory, Location, OTPVerification, AuthToken, Job, QuickService, VendorKYC, CustomerAddress, ServiceBooking, GlobalSettings, Message, Bid, BidPlan, BidCreditTransaction, Subscription, VendorWallet, WalletTransaction, PlatformRevenueLedger, ServiceReview
 from .review_services import (
     ReviewError, UNLOCKED_BOOKING_STATUSES, booking_contact_unlocked,
     mask_customer_name, submit_booking_review, vendor_review_summary,
@@ -825,10 +825,12 @@ def add_category_api(request):
         if not name:
             return JsonResponse({'success': False, 'error': 'Name is required.'})
 
+        image = request.FILES.get('image')
         cat = Category.objects.create(
             name=name,
             service_type=service_type,
-            status=status
+            status=status,
+            image=image
         )
 
         cat_data = {
@@ -836,6 +838,8 @@ def add_category_api(request):
             'name': cat.name,
             'service_type': cat.service_type,
             'status': cat.status,
+            'image': cat.image_url,
+            'image_url': cat.image_url,
             'created_at': cat.created_at.strftime('%Y-%m-%d')
         }
 
@@ -863,6 +867,10 @@ def update_category_api(request):
         cat.name = name
         cat.service_type = service_type
         cat.status = status
+        if 'image' in request.FILES:
+            cat.image = request.FILES['image']
+        elif data.get('clear_image') or request.POST.get('clear_image') == '1':
+            cat.image = None
         cat.save()
 
         cat_data = {
@@ -870,6 +878,8 @@ def update_category_api(request):
             'name': cat.name,
             'service_type': cat.service_type,
             'status': cat.status,
+            'image': cat.image_url,
+            'image_url': cat.image_url,
             'created_at': cat.created_at.strftime('%Y-%m-%d')
         }
 
@@ -2148,6 +2158,8 @@ def _serialize_quick_service(request, qs, vendor_profile=None, reviews_avg=None,
         'description': qs.description or '',
         'category': qs.category.name if qs.category else 'General',
         'category_id': qs.category.id if qs.category else None,
+        'subcategory': qs.subcategory.name if getattr(qs, 'subcategory', None) else (qs.tags or ''),
+        'subcategory_id': qs.subcategory.id if getattr(qs, 'subcategory', None) else None,
         'base_price': float(qs.base_price),
         'service_packages': qs.service_packages or [],
         'image': service_image,
@@ -2181,18 +2193,23 @@ def _serialize_quick_service(request, qs, vendor_profile=None, reviews_avg=None,
 @csrf_exempt
 def services_nearby_api(request):
     """
-    API to list active QuickServices with full image URLs, vendor info, and ratings.
-    Supports optional geo-based filtering, category filtering, search, and pagination.
-    URL: /api/services/nearby/
+    API to browse and search active QuickServices.
+    URL: /api/services/nearby/ or /api/services/ or /api/quick-services/
     Method: GET
-    Params (all optional):
-        lat, lng         - User's coordinates for distance-based sorting
-        radius           - Max distance in km (default 50)
-        category         - Filter by category name (partial match)
-        category_id      - Filter by category ID
-        search / q       - Keyword search on title/description/tags
-        page             - Page number (default 1)
-        page_size        - Results per page (default 20, max 50)
+
+    Query Parameters:
+        category_id    - Filter by Category ID (int, optional)
+        category       - Filter by Category name (string, partial match, optional)
+        subcategory_id - Filter by SubCategory ID (int, optional)
+        subcategory    - Filter by SubCategory name or tag (string, optional, alias: 'sub')
+        search / q     - Search keyword matching title, description, tags, category, subcategory (optional)
+        lat            - User latitude for distance calculation (float, optional)
+        lng            - User longitude for distance calculation (float, optional)
+        radius         - Max distance radius in km (float, default: 50)
+        status         - Service status filter: 'active' (default), 'all', 'paused'
+        sort           - Sort by: 'distance' (default if lat/lng), 'newest', 'price_asc', 'price_desc'
+        page           - Page number (int, default: 1)
+        page_size      - Items per page (int, default: 20, max: 50)
     """
     if request.method != 'GET':
         return JsonResponse({'status': 'error', 'message': 'Method not allowed'}, status=405)
@@ -2202,19 +2219,81 @@ def services_nearby_api(request):
         from .models import ServiceReview
         import math
 
-        # Query params
-        lat = request.GET.get('lat')
-        lng = request.GET.get('lng')
-        radius = float(request.GET.get('radius', 50))
-        category = request.GET.get('category', '').strip()
-        category_id = request.GET.get('category_id')
-        search = (request.GET.get('search') or request.GET.get('q') or '').strip()
-        page = int(request.GET.get('page', 1))
-        page_size = min(int(request.GET.get('page_size', 20)), 50)
+        data = _parse_api_request(request)
+        lat = data.get('lat') or request.GET.get('lat')
+        lng = data.get('lng') or request.GET.get('lng')
+        city = (data.get('city') or request.GET.get('city') or '').strip()
+        state = (data.get('state') or request.GET.get('state') or '').strip()
+        location_param = (data.get('location') or request.GET.get('location') or '').strip()
+
+        # If user token provided and city/state not in request, infer from user profile
+        user, _ = _get_user_from_bearer_token(request)
+        if user and not city and not state and not lat and not lng and not location_param:
+            vp = getattr(user, 'vendor_profile', None)
+            up = getattr(user, 'user_profile', None)
+            if vp and vp.location:
+                city = vp.location.split(',')[0].strip()
+            elif up and up.city:
+                city = up.city.strip()
+            elif getattr(user, 'assigned_city', None):
+                city = user.assigned_city.strip()
+            if getattr(user, 'assigned_state', None):
+                state = user.assigned_state.strip()
+
+        # Default to platform primary city/state (Ranchi, Jharkhand) if location is omitted
+        # This prevents other cities (Thane, Mumbai, Bangalore) from leaking into default browse response!
+        if not lat and not lng and not city and not state and not location_param:
+            city = 'Ranchi'
+            state = 'Jharkhand'
+
+        # Strictly capped under 10km
+        try:
+            radius = min(float(data.get('radius') or request.GET.get('radius') or 10.0), 10.0)
+        except (ValueError, TypeError):
+            radius = 10.0
+
+        # Resolve user lat/lng from location or city if coordinates omitted
+        from .views import resolve_coordinates_for_location, haversine_distance_km
+        if (not lat or not lng) and (location_param or (city and city.lower() != 'all')):
+            lookup_str = location_param or city
+            coords = resolve_coordinates_for_location(lookup_str, default_coords=None)
+            if coords:
+                lat, lng = coords[0], coords[1]
+
+        category = (data.get('category') or request.GET.get('category') or '').strip()
+        category_id = data.get('category_id') or request.GET.get('category_id')
+        subcategory = (data.get('subcategory') or data.get('sub') or request.GET.get('subcategory') or request.GET.get('sub') or '').strip()
+        subcategory_id = data.get('subcategory_id') or request.GET.get('subcategory_id')
+        search = (data.get('search') or data.get('q') or request.GET.get('search') or request.GET.get('q') or '').strip()
+        status = (data.get('status') or request.GET.get('status') or 'active').strip()
+        sort_by = (data.get('sort') or request.GET.get('sort') or '').strip().lower()
+        page = int(data.get('page') or request.GET.get('page', 1))
+        page_size = min(int(data.get('page_size') or request.GET.get('page_size', 20)), 50)
 
         qs = QuickService.objects.all().select_related(
-            'vendor', 'vendor__vendor_profile', 'category', 'location'
+            'vendor', 'vendor__vendor_profile', 'category', 'subcategory', 'location'
         )
+
+        # Status filter (default: active)
+        if status and status.lower() != 'all':
+            qs = qs.filter(status=status)
+
+        # City filter (exclude other cities unless city='all')
+        if city and city.lower() != 'all':
+            qs = qs.filter(
+                Q(location__city__iexact=city) |
+                Q(locality__icontains=city) |
+                Q(vendor__vendor_profile__location__icontains=city) |
+                Q(vendor__assigned_city__iexact=city)
+            )
+
+        # State filter
+        if state and state.lower() != 'all':
+            qs = qs.filter(
+                Q(location__state__iexact=state) |
+                Q(vendor__assigned_state__iexact=state) |
+                Q(vendor__vendor_profile__location__icontains=state)
+            )
 
         # Category filter
         if category_id:
@@ -2222,46 +2301,65 @@ def services_nearby_api(request):
         elif category:
             qs = qs.filter(category__name__icontains=category)
 
+        # SubCategory filter
+        if subcategory_id:
+            qs = qs.filter(subcategory_id=subcategory_id)
+        elif subcategory and subcategory.lower() != 'all':
+            qs = qs.filter(
+                Q(subcategory__name__icontains=subcategory) |
+                Q(tags__icontains=subcategory)
+            )
+
         # Keyword search
         if search:
             qs = qs.filter(
                 Q(title__icontains=search) |
                 Q(description__icontains=search) |
                 Q(tags__icontains=search) |
-                Q(category__name__icontains=search)
+                Q(category__name__icontains=search) |
+                Q(subcategory__name__icontains=search)
             )
 
-        # Geo-distance calculation & filtering
+        # Sort order before distance calculation
+        if sort_by == 'price_asc':
+            all_services = list(qs.order_by('base_price'))
+        elif sort_by == 'price_desc':
+            all_services = list(qs.order_by('-base_price'))
+        else:
+            all_services = list(qs.order_by('-created_at'))
+
+        # Geo-distance calculation & filtering (strictly under 10km only)
         results_with_distance = []
         user_lat = float(lat) if lat else None
         user_lng = float(lng) if lng else None
 
-        all_services = list(qs.order_by('-created_at'))
-
         for svc in all_services:
             dist = None
-            if user_lat is not None and user_lng is not None and svc.latitude and svc.longitude:
-                # Haversine formula (approximate)
-                R = 6371  # Earth radius in km
-                dlat = math.radians(float(svc.latitude) - user_lat)
-                dlng = math.radians(float(svc.longitude) - user_lng)
-                a = (math.sin(dlat / 2) ** 2 +
-                     math.cos(math.radians(user_lat)) *
-                     math.cos(math.radians(float(svc.latitude))) *
-                     math.sin(dlng / 2) ** 2)
-                c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
-                dist = R * c
+            svc_lat = float(svc.latitude) if svc.latitude else None
+            svc_lng = float(svc.longitude) if svc.longitude else None
 
-                if dist > radius:
+            # Fallback service coordinates from locality / city
+            if (svc_lat is None or svc_lng is None) and (svc.locality or svc.location):
+                loc_txt = (svc.locality or '') + ' ' + (svc.location.city if svc.location else '')
+                res_coords = resolve_coordinates_for_location(loc_txt, default_coords=None)
+                if res_coords:
+                    svc_lat, svc_lng = res_coords[0], res_coords[1]
+
+            if user_lat is not None and user_lng is not None:
+                if svc_lat is not None and svc_lng is not None:
+                    dist = haversine_distance_km(user_lat, user_lng, svc_lat, svc_lng)
+                    # Strictly under 10km
+                    if dist is None or dist > radius:
+                        continue
+                else:
+                    # Cannot verify within 10km, exclude
                     continue
 
             results_with_distance.append((svc, dist))
 
-        # Sort: by distance if available, otherwise by newest
-        if user_lat is not None and user_lng is not None:
+        # Sort: by distance if user coords provided and not explicitly sorting by price
+        if user_lat is not None and user_lng is not None and not sort_by:
             results_with_distance.sort(key=lambda x: x[1] if x[1] is not None else float('inf'))
-        else:
-            results_with_distance.sort(key=lambda x: x[0].created_at, reverse=True)
 
         total = len(results_with_distance)
         start = (page - 1) * page_size
@@ -2282,6 +2380,9 @@ def services_nearby_api(request):
             'page': page,
             'page_size': page_size,
             'has_more': end < total,
+            'city': city or None,
+            'state': state or None,
+            'radius_km': radius if (user_lat is not None and user_lng is not None) else None,
             'services': services_data,
         }, status=200)
 
@@ -2437,6 +2538,8 @@ def categories_with_services_api(request):
                 'name': cat.name,
                 'service_type': cat.service_type,
                 'services_count': cat.services_count,
+                'image': cat.image_url,
+                'image_url': cat.image_url,
             })
 
         return JsonResponse({'status': 'success', 'categories': cat_data}, status=200)
@@ -2453,9 +2556,82 @@ def get_categories_api(request):
     Method: GET
     '''
     if request.method == 'GET':
-        categories = Category.objects.filter(status='active').values('id', 'name', 'service_type')
-        return JsonResponse({'status': 'success', 'categories': list(categories)}, status=200)
+        categories = Category.objects.filter(status='active').order_by('name')
+        cat_data = []
+        for c in categories:
+            cat_data.append({
+                'id': c.id,
+                'name': c.name,
+                'service_type': c.service_type,
+                'image': c.image_url,
+                'image_url': c.image_url,
+            })
+        return JsonResponse({'status': 'success', 'categories': cat_data}, status=200)
     return JsonResponse({'status': 'error', 'message': 'Method not allowed'}, status=405)
+
+@csrf_exempt
+def get_subcategories_api(request, category_id):
+    """
+    API to fetch active subcategories for a given category.
+    URL: /api/categories/<category_id>/subcategories/
+    Method: GET
+    Returns: { status, category: {id, name, image, image_url}, subcategories: [{id, name, status}] }
+    """
+    if request.method != 'GET':
+        return JsonResponse({'status': 'error', 'message': 'Method not allowed'}, status=405)
+
+    try:
+        category = Category.objects.filter(id=category_id, status='active').first()
+        if not category:
+            return JsonResponse({'status': 'error', 'message': 'Category not found'}, status=404)
+
+        subcategories = SubCategory.objects.filter(
+            category=category, status='active'
+        ).order_by('name').values('id', 'name', 'status')
+
+        return JsonResponse({
+            'status': 'success',
+            'category': {
+                'id': category.id,
+                'name': category.name,
+                'image': category.image_url,
+                'image_url': category.image_url,
+            },
+            'subcategories': list(subcategories),
+        }, status=200)
+
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+@csrf_exempt
+def get_all_subcategories_api(request):
+    """
+    API to fetch all active categories with their subcategories nested.
+    URL: /api/categories/subcategories/
+    Method: GET
+    Returns: { status, categories: [{id, name, image, image_url, subcategories: [{id, name}]}] }
+    """
+    if request.method != 'GET':
+        return JsonResponse({'status': 'error', 'message': 'Method not allowed'}, status=405)
+
+    try:
+        categories = Category.objects.filter(status='active').prefetch_related('subcategories').order_by('name')
+        data = []
+        for cat in categories:
+            subs = cat.subcategories.filter(status='active').order_by('name')
+            data.append({
+                'id': cat.id,
+                'name': cat.name,
+                'service_type': cat.service_type,
+                'image': cat.image_url,
+                'image_url': cat.image_url,
+                'subcategories': [{'id': s.id, 'name': s.name} for s in subs],
+            })
+
+        return JsonResponse({'status': 'success', 'categories': data}, status=200)
+
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
 
 @csrf_exempt
 def get_locations_api(request):
@@ -2678,34 +2854,86 @@ def update_customer_address_api(request):
 @csrf_exempt
 def top_professionals_api(request):
     """
-    API to fetch top-rated professionals (vendors).
+    API to fetch top-rated professionals (vendors) strictly under 10km.
     URL: /api/top-professionals/
     Method: GET
     Params:
-      - location (optional, string)
-      - limit (optional, integer, default: 10)
+      - lat (optional, float) - User latitude
+      - lng (optional, float) - User longitude
+      - location (optional, string) - User location text/city
+      - category (optional, string) - Filter by vendor category
+      - limit (optional, integer, default: 10, max: 50)
     """
     if request.method != 'GET':
         return JsonResponse({'status': 'error', 'message': 'Method not allowed'}, status=405)
 
     data = _parse_api_request(request)
-    location = data.get('location')
-    limit = data.get('limit', 10)
+    lat = data.get('lat') or request.GET.get('lat')
+    lng = data.get('lng') or request.GET.get('lng')
+    location = data.get('location') or request.GET.get('location', '').strip()
+    category = data.get('category') or request.GET.get('category', '').strip()
+    limit = data.get('limit') or request.GET.get('limit', 10)
 
     try:
-        limit = int(limit)
-    except ValueError:
+        limit = min(int(limit), 50)
+    except (ValueError, TypeError):
         limit = 10
 
-    queryset = VendorProfile.objects.filter(user__is_active=True).order_by('-rating', '-experience')
+    from .views import resolve_coordinates_for_location, haversine_distance_km
 
-    if location:
-        queryset = queryset.filter(location__icontains=location)
-    
-    top_vendors = queryset[:limit]
+    # Resolve user coordinates
+    user_lat = float(lat) if lat else None
+    user_lng = float(lng) if lng else None
+    if (user_lat is None or user_lng is None) and location:
+        coords = resolve_coordinates_for_location(location, default_coords=None)
+        if coords:
+            user_lat, user_lng = coords[0], coords[1]
+
+    queryset = VendorProfile.objects.filter(user__is_active=True).select_related('user').order_by('-rating', '-experience')
+
+    if category:
+        queryset = queryset.filter(category__icontains=category)
+
+    # Geo-distance calculation (strictly under 10km only)
+    radius = 10.0
+    vendors_with_distance = []
+
+    for vp in queryset:
+        v_lat = float(vp.latitude) if vp.latitude else None
+        v_lon = float(vp.longitude) if vp.longitude else None
+
+        if (v_lat is None or v_lon is None) and (vp.location or getattr(vp, 'address', None)):
+            v_loc_txt = (vp.location or '') + ' ' + (getattr(vp, 'address', '') or '')
+            coords = resolve_coordinates_for_location(v_loc_txt, default_coords=None)
+            if coords:
+                v_lat, v_lon = coords[0], coords[1]
+
+        dist = None
+        if user_lat is not None and user_lng is not None:
+            if v_lat is not None and v_lon is not None:
+                dist = haversine_distance_km(user_lat, user_lng, v_lat, v_lon)
+                # Strictly under 10km
+                if dist is None or dist > radius:
+                    continue
+            else:
+                # Cannot determine coordinates, exclude
+                continue
+        elif location:
+            # Fallback text match if coordinates not resolved
+            loc_lower = location.lower()
+            if loc_lower not in (vp.location or '').lower() and loc_lower not in (getattr(vp, 'address', '') or '').lower():
+                continue
+
+        vendors_with_distance.append((vp, dist))
+
+    # Sort: by distance first if coordinates available, otherwise rating
+    if user_lat is not None and user_lng is not None:
+        vendors_with_distance.sort(key=lambda x: (x[1] if x[1] is not None else float('inf'), -(float(x[0].rating or 0))))
+
+    top_vendors = vendors_with_distance[:limit]
 
     vendors_data = []
-    for vp in top_vendors:
+    for vp, dist in top_vendors:
         profile_img_url = _build_absolute_image_url(request, vp.profile_image) if vp.profile_image else ""
         
         # Get quick services for this vendor
@@ -2749,12 +2977,16 @@ def top_professionals_api(request):
             'profile_image': profile_img_url,
             'vendor_type': vp.vendor_type,
             'about': vp.about or "",
+            'distance_km': round(dist, 1) if dist is not None else None,
+            'distance': f"{round(dist, 1)} km" if dist is not None else "Nearby",
             'services': services_data,
             'reviews': reviews_data
         })
 
     return JsonResponse({
         'status': 'success',
+        'count': len(vendors_data),
+        'radius_km': radius if (user_lat is not None and user_lng is not None) else None,
         'professionals': vendors_data
     })
 
@@ -3112,7 +3344,8 @@ def _serialize_job_summary(job, vendor_user=None, request=None):
     category_name = _resolve_category_name(job.category, job.title)
     budget_val = float(job.budget) if job.budget else 0.0
     locality = job.locality or ""
-    city = job.location.city if job.location else ""
+    city = job.city or (job.location.city if job.location else "")
+    state = job.state or (job.location.state if job.location else "")
     loc_display = locality or city or job.address or "Local Area"
     if locality and city and locality.lower() != city.lower():
         loc_display = f"{locality}, {city}"
@@ -3128,14 +3361,21 @@ def _serialize_job_summary(job, vendor_user=None, request=None):
         'job_code': f"JOB{job.id:04d}",
         'title': job.title,
         'category': category_name,
+        'category_id': job.category.id if job.category else None,
         'description': job.description or "",
         'budget': budget_val,
-        'budget_formatted': f"â‚¹{int(budget_val):,}" if budget_val >= 1000 else f"â‚¹{budget_val:.0f}",
+        'budget_formatted': f"₹{int(budget_val):,}" if budget_val >= 1000 else f"₹{budget_val:.0f}",
         'budget_type': job.budget_type or "Fixed Budget",
         'location': loc_display,
+        'city': city,
+        'state': state,
+        'locality': locality,
         'address': job.address or "",
         'pincode': job.pincode or "",
-        'distance': "Nearby",
+        'latitude': float(job.latitude) if job.latitude else None,
+        'longitude': float(job.longitude) if job.longitude else None,
+        'distance': f"{round(job.distance_km, 1)} km" if getattr(job, 'distance_km', None) is not None else "Nearby",
+        'distance_km': round(job.distance_km, 1) if getattr(job, 'distance_km', None) is not None else None,
         'time_posted': _format_time_ago(job.created_at),
         'created_at': job.created_at.strftime("%Y-%m-%d %H:%M:%S"),
         'urgent': bool(budget_val >= 10000 or (job.title and 'urgent' in job.title.lower())),
@@ -3354,11 +3594,21 @@ def vendor_jobs_api(request):
             if vp.category and vp.category.strip():
                 vendor_categories = vp.categories_list
 
-        if vendor_city:
+        req_state = (data.get('state') or request.GET.get('state') or '').strip()
+        req_city = (data.get('city') or request.GET.get('city') or '').strip() or vendor_city or 'Ranchi'
+
+        if req_state and req_state.lower() != 'all':
+            jobs_qs = jobs_qs.filter(
+                Q(state__iexact=req_state) |
+                Q(location__state__iexact=req_state) |
+                Q(address__icontains=req_state)
+            )
+
+        if req_city and req_city.lower() != 'all':
             city_filter = (
-                Q(location__city__iexact=vendor_city) |
-                Q(city__iexact=vendor_city) |
-                (Q(location__isnull=True) & (Q(address__icontains=vendor_city) | Q(locality__icontains=vendor_city)))
+                Q(location__city__iexact=req_city) |
+                Q(city__iexact=req_city) |
+                (Q(location__isnull=True) & (Q(address__icontains=req_city) | Q(locality__icontains=req_city)))
             )
             jobs_qs = jobs_qs.filter(city_filter)
 
@@ -3376,7 +3626,7 @@ def vendor_jobs_api(request):
                     )
             jobs_qs = jobs_qs.filter(cat_filter)
 
-        search_query = request.GET.get('search', '').strip()
+        search_query = (data.get('search') or data.get('q') or request.GET.get('search') or request.GET.get('q') or '').strip()
         if search_query:
             jobs_qs = jobs_qs.filter(
                 Q(title__icontains=search_query) |
@@ -3386,14 +3636,15 @@ def vendor_jobs_api(request):
                 Q(address__icontains=search_query)
             )
 
-        category_filter = request.GET.get('category', '').strip()
+        category_filter = (data.get('category') or request.GET.get('category') or '').strip()
         if category_filter:
             jobs_qs = jobs_qs.filter(category__name__iexact=category_filter)
 
         from .views import is_job_in_vendor_city
         filtered_jobs = []
         for j in jobs_qs:
-            is_in_city, dist = is_job_in_vendor_city(vp, j, city_radius_km=35.0)
+            # Strictly under 10km for job browsing
+            is_in_city, dist = is_job_in_vendor_city(vp, j, city_radius_km=10.0)
             if is_in_city:
                 j.distance_km = dist
                 filtered_jobs.append(j)
@@ -3401,11 +3652,184 @@ def vendor_jobs_api(request):
         jobs_list = [_serialize_job_summary(j, vendor_user=user, request=request) for j in filtered_jobs]
         return JsonResponse({
             'status': 'success',
+            'city': req_city,
+            'state': req_state or None,
             'count': len(jobs_list),
             'jobs': jobs_list
         }, status=200)
     except Exception as e:
         return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+
+@csrf_exempt
+def browse_jobs_api(request):
+    """
+    API to browse available jobs according to city and state (strictly under 10km radius if coordinates provided).
+    URL: /api/jobs/ or /api/jobs/browse/
+    Method: GET
+
+    Query Parameters:
+        city        - Filter by city name (e.g. 'Ranchi')
+        state       - Filter by state name (e.g. 'Jharkhand')
+        lat         - Latitude for 10km radius filter
+        lng         - Longitude for 10km radius filter
+        category_id - Filter by Category ID
+        category    - Filter by Category name
+        search / q  - Search keyword in title, description, category, locality
+        status      - Job status: 'open' (default), 'all'
+        sort        - 'newest' (default), 'budget_desc', 'budget_asc'
+        page        - Page number (default: 1)
+        page_size   - Results per page (default: 20, max: 50)
+    """
+    if request.method != 'GET':
+        return JsonResponse({'status': 'error', 'message': 'Method not allowed. Use GET.'}, status=405)
+
+    try:
+        data = _parse_api_request(request)
+        lat = data.get('lat') or request.GET.get('lat')
+        lng = data.get('lng') or request.GET.get('lng')
+        city = (data.get('city') or request.GET.get('city') or '').strip()
+        state = (data.get('state') or request.GET.get('state') or '').strip()
+        location_param = (data.get('location') or request.GET.get('location') or '').strip()
+
+        # If user token provided and city/state not in request, infer from user profile
+        user, _ = _get_user_from_bearer_token(request)
+        if user and not city and not state and not lat and not lng and not location_param:
+            vp = getattr(user, 'vendor_profile', None)
+            up = getattr(user, 'user_profile', None)
+            if vp and vp.location:
+                city = vp.location.split(',')[0].strip()
+            elif up and up.city:
+                city = up.city.strip()
+            elif getattr(user, 'assigned_city', None):
+                city = user.assigned_city.strip()
+            if getattr(user, 'assigned_state', None):
+                state = user.assigned_state.strip()
+
+        # Default to platform primary city/state (Ranchi, Jharkhand) if omitted
+        if not lat and not lng and not city and not state and not location_param:
+            city = 'Ranchi'
+            state = 'Jharkhand'
+
+        from .views import resolve_coordinates_for_location, haversine_distance_km
+        if (not lat or not lng) and (location_param or (city and city.lower() != 'all')):
+            lookup_str = location_param or city
+            coords = resolve_coordinates_for_location(lookup_str, default_coords=None)
+            if coords:
+                lat, lng = coords[0], coords[1]
+
+        category_id = data.get('category_id') or request.GET.get('category_id')
+        category = (data.get('category') or request.GET.get('category') or '').strip()
+        search = (data.get('search') or data.get('q') or request.GET.get('search') or request.GET.get('q') or '').strip()
+        status = (data.get('status') or request.GET.get('status') or 'open').strip()
+        sort_by = (data.get('sort') or request.GET.get('sort') or 'newest').strip().lower()
+        page = int(data.get('page') or request.GET.get('page', 1))
+        page_size = min(int(data.get('page_size') or request.GET.get('page_size', 20)), 50)
+
+        jobs_qs = Job.objects.all().select_related('category', 'location', 'user')
+
+        # Status filter (default: open)
+        if status and status.lower() != 'all':
+            jobs_qs = jobs_qs.filter(status=status)
+
+        # State filter
+        if state and state.lower() != 'all':
+            jobs_qs = jobs_qs.filter(
+                Q(state__iexact=state) |
+                Q(location__state__iexact=state) |
+                Q(address__icontains=state)
+            )
+
+        # City filter (strictly exclude other cities)
+        if city and city.lower() != 'all':
+            jobs_qs = jobs_qs.filter(
+                Q(city__iexact=city) |
+                Q(location__city__iexact=city) |
+                Q(locality__icontains=city) |
+                Q(address__icontains=city)
+            )
+
+        # Category filter
+        if category_id:
+            jobs_qs = jobs_qs.filter(category_id=category_id)
+        elif category:
+            jobs_qs = jobs_qs.filter(category__name__icontains=category)
+
+        # Keyword search
+        if search:
+            jobs_qs = jobs_qs.filter(
+                Q(title__icontains=search) |
+                Q(description__icontains=search) |
+                Q(category__name__icontains=search) |
+                Q(locality__icontains=search) |
+                Q(address__icontains=search)
+            )
+
+        # Sorting
+        if sort_by == 'budget_desc':
+            all_jobs = list(jobs_qs.order_by('-budget'))
+        elif sort_by == 'budget_asc':
+            all_jobs = list(jobs_qs.order_by('budget'))
+        else:
+            all_jobs = list(jobs_qs.order_by('-created_at'))
+
+        # Distance calculation & strict 10km filter if coords are available
+        user_lat = float(lat) if lat else None
+        user_lng = float(lng) if lng else None
+        radius = 10.0
+
+        filtered_jobs = []
+        for j in all_jobs:
+            dist = None
+            j_lat = float(j.latitude) if j.latitude else None
+            j_lng = float(j.longitude) if j.longitude else None
+
+            if (j_lat is None or j_lng is None) and (j.locality or j.city or j.location):
+                j_loc_str = (j.locality or '') + ' ' + (j.city or '') + ' ' + (j.location.city if j.location else '')
+                res_coords = resolve_coordinates_for_location(j_loc_str, default_coords=None)
+                if res_coords:
+                    j_lat, j_lng = res_coords[0], res_coords[1]
+
+            if user_lat is not None and user_lng is not None:
+                if j_lat is not None and j_lng is not None:
+                    dist = haversine_distance_km(user_lat, user_lng, j_lat, j_lng)
+                    # Strictly under 10km
+                    if dist is None or dist > radius:
+                        continue
+                else:
+                    continue
+
+            j.distance_km = dist
+            filtered_jobs.append(j)
+
+        if user_lat is not None and user_lng is not None and not sort_by:
+            filtered_jobs.sort(key=lambda x: getattr(x, 'distance_km', None) if getattr(x, 'distance_km', None) is not None else float('inf'))
+
+        total = len(filtered_jobs)
+        start = (page - 1) * page_size
+        end = start + page_size
+        paged_jobs = filtered_jobs[start:end]
+
+        jobs_list = [_serialize_job_summary(j, vendor_user=user, request=request) for j in paged_jobs]
+
+        return JsonResponse({
+            'status': 'success',
+            'total': total,
+            'page': page,
+            'page_size': page_size,
+            'has_more': end < total,
+            'filters': {
+                'city': city or None,
+                'state': state or None,
+                'category': category or None,
+                'category_id': category_id or None,
+            },
+            'jobs': jobs_list
+        }, status=200)
+
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
 
 @csrf_exempt
 def vendor_services_api(request, service_id=None):

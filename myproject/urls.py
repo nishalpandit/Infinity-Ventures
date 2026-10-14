@@ -43,6 +43,14 @@ for s_dir in getattr(settings, 'STATICFILES_DIRS', []):
             re_path(r'^static/(?P<path>.*)$', serve, {'document_root': s_dir}),
         ]
 
+# Direct serving for root-level assets and scripts from sugu-service
+urlpatterns += [
+    re_path(r'^assets/(?P<path>.*)$', serve, {'document_root': settings.BASE_DIR / 'static' / 'assets'}),
+    re_path(r'^styles\.css$', serve, {'document_root': settings.BASE_DIR / 'static', 'path': 'styles.css'}),
+    re_path(r'^data\.js$', serve, {'document_root': settings.BASE_DIR / 'static', 'path': 'data.js'}),
+    re_path(r'^app\.js$', serve, {'document_root': settings.BASE_DIR / 'static', 'path': 'app.js'}),
+]
+
 urlpatterns += [
     path('', include('myapp.urls')),
 ]

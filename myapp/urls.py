@@ -279,6 +279,10 @@ urlpatterns = [
     path('api/vendor/bids/<int:bid_id>', Api_views.vendor_bid_detail_api),
 
     # User Job & Service APIs (Bearer Token Protected)
+    path('api/jobs/browse/', Api_views.browse_jobs_api, name='browse_jobs_api'),
+    path('api/jobs/browse', Api_views.browse_jobs_api),
+    path('api/jobs/', Api_views.browse_jobs_api, name='jobs_list_api'),
+    path('api/jobs', Api_views.browse_jobs_api),
     path('api/user/post-job/', Api_views.user_post_job_api, name='user_post_job_api'),
     path('api/user/post-job', Api_views.user_post_job_api),
     path('api/user/jobs/create/', Api_views.user_post_job_api, name='user_jobs_create_api'),
@@ -291,11 +295,18 @@ urlpatterns = [
     # Service Listing & Image Data APIs
     path('api/services/nearby/', Api_views.services_nearby_api, name='services_nearby_api'),
     path('api/services/nearby', Api_views.services_nearby_api),
+    path('api/services/', Api_views.services_nearby_api, name='browse_services_api'),
+    path('api/services', Api_views.services_nearby_api),
+    path('api/quick-services/', Api_views.services_nearby_api, name='browse_quick_services_api'),
+    path('api/quick-services', Api_views.services_nearby_api),
     path('api/services/<int:service_id>/', Api_views.service_detail_api, name='service_detail_api'),
     path('api/services/<int:service_id>', Api_views.service_detail_api),
     path('api/vendors/<int:vendor_id>/profile/', Api_views.vendor_public_profile_api, name='vendor_public_profile_api'),
     path('api/vendors/<int:vendor_id>/profile', Api_views.vendor_public_profile_api),
     path('api/categories/with-services/', Api_views.categories_with_services_api, name='categories_with_services_api'),
+    path('api/categories/subcategories/', Api_views.get_all_subcategories_api, name='get_all_subcategories_api'),
+    path('api/categories/<int:category_id>/subcategories/', Api_views.get_subcategories_api, name='get_subcategories_api'),
+    path('api/categories/<int:category_id>/subcategories', Api_views.get_subcategories_api),
     # Chat & Messaging APIs (Bearer Token Protected)
     path('api/chat/conversations/', Api_views.chat_conversations_api, name='chat_conversations_api'),
     path('api/chat/conversations', Api_views.chat_conversations_api),

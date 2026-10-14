@@ -225,11 +225,21 @@ function updateNavState() {
   navBtns.forEach(btn => {
     const mode = btn.getAttribute("data-mode");
     if (mode === appState.currentRoute) {
-      btn.classList.add("bg-sky-600", "text-white", "shadow-md");
-      btn.classList.remove("text-slate-600", "hover:bg-slate-100");
+      btn.classList.add("bg-sugu-blue", "text-white", "shadow-md");
+      btn.classList.remove("text-slate-600", "hover:bg-slate-200", "hover:bg-slate-100", "bg-sky-600");
+      const gavel = btn.querySelector('[data-lucide="gavel"]');
+      if (gavel) {
+        gavel.classList.remove("text-sugu-blue");
+        gavel.classList.add("text-white");
+      }
     } else {
-      btn.classList.remove("bg-sky-600", "text-white", "shadow-md");
-      btn.classList.add("text-slate-600", "hover:bg-slate-100");
+      btn.classList.remove("bg-sugu-blue", "bg-sky-600", "text-white", "shadow-md");
+      btn.classList.add("text-slate-600", "hover:bg-slate-200");
+      const gavel = btn.querySelector('[data-lucide="gavel"]');
+      if (gavel) {
+        gavel.classList.remove("text-white");
+        gavel.classList.add("text-sugu-blue");
+      }
     }
   });
 
@@ -317,32 +327,58 @@ function renderHomeView() {
   // Render Customer Reviews Grid
   const reviewsGrid = document.getElementById("home-reviews-grid");
   if (reviewsGrid) {
-    reviewsGrid.innerHTML = SUGU_DATA.reviews.map(r => `
+    const listToRender = (window.DB_TESTIMONIALS && Array.isArray(window.DB_TESTIMONIALS) && window.DB_TESTIMONIALS.length > 0)
+      ? window.DB_TESTIMONIALS
+      : SUGU_DATA.reviews;
+
+    reviewsGrid.innerHTML = listToRender.map(r => {
+      const starCount = Math.min(5, Math.max(1, Math.round(Number(r.rating) || 5)));
+      const starsHtml = Array.from({ length: starCount }).map(() => '<i data-lucide="star" class="w-4 h-4 fill-amber-400 text-amber-400"></i>').join("");
+      
+      const initials = (r.name || 'User')
+        .split(' ')
+        .filter(Boolean)
+        .map(n => n[0])
+        .slice(0, 2)
+        .join('')
+        .toUpperCase();
+
+      const avatarHtml = r.avatar
+        ? `<img src="${r.avatar}" alt="${r.name}" class="w-12 h-12 rounded-full object-cover border-2 border-sky-500 shadow-sm" onerror="this.outerHTML='<div class=\\\'w-12 h-12 rounded-full bg-gradient-to-tr from-sky-600 to-indigo-600 text-white font-bold flex items-center justify-center text-sm border-2 border-sky-400 shadow-sm\\\'>${initials}</div>'">`
+        : `<div class="w-12 h-12 rounded-full bg-gradient-to-tr from-sky-600 to-indigo-600 text-white font-bold flex items-center justify-center text-sm border-2 border-sky-400 shadow-sm">${initials}</div>`;
+
+      const roleOrLocation = r.role || r.city || 'Homeowner, Ranchi';
+      const badgeText = r.badge || 'Verified Customer';
+      const serviceName = r.service || 'Home Service';
+      const dateText = r.date || 'Verified';
+
+      return `
       <div class="p-6 rounded-2xl bg-white border border-slate-200 shadow-md hover:shadow-xl transition-all duration-300 flex flex-col justify-between">
         <div>
           <div class="flex items-center justify-between mb-4">
             <div class="flex items-center space-x-3">
-              <img src="${r.avatar}" alt="${r.name}" class="w-12 h-12 rounded-full object-cover border-2 border-sky-500">
+              ${avatarHtml}
               <div>
                 <h5 class="font-bold text-slate-900 leading-tight">${r.name}</h5>
-                <span class="text-xs text-slate-500">${r.city} • ${r.role}</span>
+                <span class="text-xs text-slate-500">${roleOrLocation}</span>
               </div>
             </div>
-            <span class="px-2 py-0.5 text-xs font-semibold rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
-              ${r.badge}
+            <span class="px-2 py-0.5 text-[11px] font-semibold rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 whitespace-nowrap flex-shrink-0 self-start">
+              ${badgeText}
             </span>
           </div>
           <div class="flex items-center space-x-1 text-amber-400 mb-3">
-            ${Array(r.rating).fill('<i data-lucide="star" class="w-4 h-4 fill-amber-400"></i>').join("")}
+            ${starsHtml}
           </div>
-          <p class="text-sm text-slate-700 leading-relaxed">"${r.comment}"</p>
+          <p class="text-sm text-slate-700 leading-relaxed">"${r.comment || ''}"</p>
         </div>
         <div class="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-400">
-          <span>Service: <strong class="text-slate-600">${r.service}</strong></span>
-          <span>${r.date}</span>
+          <span>Service: <strong class="text-slate-600">${serviceName}</strong></span>
+          <span>${dateText}</span>
         </div>
       </div>
-    `).join("");
+    `;
+    }).join("");
   }
 
   // Render How Quick Service Works vs Bidding Works

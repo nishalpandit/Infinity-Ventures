@@ -3,27 +3,204 @@
 {% block header_title %}{{ mode|title }} Category{% endblock %}
 
 {% block header_actions %}
-<a href="{% url 'super_admin_cms' %}" class="btn btn-outline btn-sm">
+<a href="{% url 'super_admin_categories' %}" class="btn btn-outline btn-sm">
   <i class="fa-solid fa-arrow-left"></i>
   <span>Back to Categories</span>
 </a>
 {% endblock %}
 
 {% block content %}
+<style>
+  .subcategory-section {
+    margin-top: 28px;
+    padding-top: 24px;
+    border-top: 1px solid rgba(0,0,0,0.08);
+  }
+  .subcategory-section h4 {
+    font-size: 16px;
+    font-weight: 600;
+    margin-bottom: 16px;
+    color: var(--text-main);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .subcategory-section h4 i { color: var(--primary); font-size: 14px; }
+  .subcat-list { display: flex; flex-direction: column; gap: 10px; }
+  .subcat-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: var(--bg-light, #f8fafc);
+    border: 1px solid rgba(0,0,0,0.06);
+    border-radius: 8px;
+    padding: 10px 14px;
+    transition: box-shadow 0.2s;
+  }
+  .subcat-row:hover { box-shadow: 0 1px 4px rgba(0,0,0,0.06); }
+  .subcat-row input[type="text"] {
+    flex: 1;
+    padding: 10px 12px;
+    border: 1px solid rgba(0,0,0,0.1);
+    border-radius: 6px;
+    font-family: inherit;
+    font-size: 14px;
+    background: #fff;
+  }
+  .subcat-row select {
+    width: 130px;
+    padding: 10px 12px;
+    border: 1px solid rgba(0,0,0,0.1);
+    border-radius: 6px;
+    font-family: inherit;
+    font-size: 13px;
+    background: #fff;
+  }
+  .subcat-row .remove-btn {
+    width: 34px;
+    height: 34px;
+    border: none;
+    background: rgba(239,68,68,0.08);
+    color: #ef4444;
+    border-radius: 6px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    transition: background 0.2s;
+    flex-shrink: 0;
+  }
+  .subcat-row .remove-btn:hover { background: rgba(239,68,68,0.18); }
+  .add-subcat-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 12px;
+    padding: 8px 16px;
+    background: rgba(99,102,241,0.06);
+    border: 1px dashed rgba(99,102,241,0.3);
+    border-radius: 8px;
+    color: var(--primary, #6366f1);
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.2s, border-color 0.2s;
+  }
+  .add-subcat-btn:hover {
+    background: rgba(99,102,241,0.12);
+    border-color: rgba(99,102,241,0.5);
+  }
+  .subcat-count-badge {
+    background: var(--primary, #6366f1);
+    color: #fff;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 10px;
+    min-width: 20px;
+    text-align: center;
+  }
+  .img-upload-box {
+    border: 2px dashed rgba(99,102,241,0.25);
+    background: #f8fafc;
+    border-radius: 12px;
+    padding: 20px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    position: relative;
+  }
+  .img-upload-box:hover {
+    border-color: var(--primary, #6366f1);
+    background: rgba(99,102,241,0.03);
+  }
+  .img-preview-wrap {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 12px 16px;
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+  }
+  .img-preview-thumb {
+    width: 60px;
+    height: 60px;
+    border-radius: 8px;
+    object-fit: cover;
+    border: 1px solid #cbd5e1;
+    background: #f8fafc;
+  }
+</style>
+
 <div class="card form-card">
   <h3 style="font-size: 20px; font-weight: 700; margin-bottom: 24px;">
     {% if mode == 'create' %}Add New Category{% else %}Edit: {{ cat.name }}{% endif %}
   </h3>
   
-  <form method="POST">
+  <form method="POST" enctype="multipart/form-data">
     {% csrf_token %}
     
     <div class="form-group">
       <label>Category Name</label>
-      <input type="text" name="name" class="form-control" value="{{ cat.name|default:'' }}" required>
+      <input type="text" name="name" class="form-control" value="{{ cat.name|default:'' }}" required placeholder="e.g. AC Services, Home Painting, Carpentry">
+    </div>
+
+    <!-- Category Image Field -->
+    <div class="form-group" style="margin-top: 18px;">
+      <label style="display:flex; justify-content:space-between; align-items:center;">
+        <span style="font-weight: 600;"><i class="fa-solid fa-image" style="color:var(--accent); margin-right:6px;"></i>Category Image / Icon</span>
+        <span style="font-size: 11.5px; font-weight: normal; color: var(--text-muted);">(Used for Service cards, Job cards & Quick Booking)</span>
+      </label>
+
+      {% if cat.image %}
+      <div id="currentImageContainer" class="img-preview-wrap" style="margin-bottom: 12px;">
+        <img src="{{ cat.image.url }}" alt="{{ cat.name }}" class="img-preview-thumb" id="currentImageThumb">
+        <div style="flex: 1;">
+          <div style="font-size: 13px; font-weight: 600; color: #1e293b;">Current Image Active</div>
+          <div style="font-size: 11px; color: #64748b;">Click the box below to replace, or click Remove to clear.</div>
+        </div>
+        <button type="button" class="btn btn-outline btn-sm" onclick="removeCurrentImage()" style="color: #ef4444; border-color: rgba(239,68,68,0.3);" title="Remove Image">
+          <i class="fa-solid fa-trash"></i> Remove
+        </button>
+      </div>
+      <input type="hidden" name="clear_image" id="clearImageInput" value="0">
+      {% endif %}
+
+      <div class="img-upload-box" id="dropZone" onclick="document.getElementById('catImageInput').click()">
+        <input type="file" name="image" id="catImageInput" accept="image/*" style="display: none;" onchange="handleImageSelect(event)">
+        <div id="uploadPrompt" style="display: flex; flex-direction: column; align-items: center; gap: 6px;">
+          <div style="width: 42px; height: 42px; border-radius: 50%; background: rgba(99,102,241,0.1); color: var(--primary, #6366f1); display: flex; align-items: center; justify-content: center; font-size: 18px;">
+            <i class="fa-solid fa-cloud-arrow-up"></i>
+          </div>
+          <div style="font-size: 13.5px; font-weight: 600; color: var(--text-main);">
+            Click to upload category image <span style="font-weight: 400; color: var(--text-muted);">or drag & drop</span>
+          </div>
+          <div style="font-size: 11.5px; color: var(--text-muted);">
+            Supports PNG, JPG, SVG, WEBP (Ideal for card icons and banners)
+          </div>
+        </div>
+
+        <div id="newImagePreview" class="img-preview-wrap" style="display: none; width: 100%; text-align: left; background: #fff;" onclick="event.stopPropagation()">
+          <img src="" id="newImageThumb" class="img-preview-thumb" alt="Preview">
+          <div style="flex: 1; min-width: 0;">
+            <div id="newImageName" style="font-size: 13px; font-weight: 600; color: #1e293b; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">filename.png</div>
+            <div id="newImageSize" style="font-size: 11px; color: #64748b;">Ready to upload</div>
+          </div>
+          <button type="button" class="btn btn-outline btn-sm" onclick="cancelImageSelect(event)" style="color: #ef4444; border-color: rgba(239,68,68,0.3);">
+            <i class="fa-solid fa-xmark"></i> Cancel
+          </button>
+        </div>
+      </div>
     </div>
     
-    <div class="form-row">
+    <div class="form-row" style="margin-top: 18px;">
       <div class="form-group">
         <label>Service Type</label>
         <select name="service_type" class="form-control">
@@ -40,13 +217,160 @@
         </select>
       </div>
     </div>
+
+    <!-- ── Subcategories Section ── -->
+    <div class="subcategory-section">
+      <h4>
+        <i class="fa-solid fa-layer-group"></i>
+        Subcategories
+        <span class="subcat-count-badge" id="subcatCount">0</span>
+      </h4>
+      <div class="subcat-list" id="subcatList">
+        {% if mode == 'edit' and subcategories %}
+          {% for sub in subcategories %}
+          <div class="subcat-row">
+            <input type="hidden" name="subcat_id[]" value="{{ sub.id }}">
+            <input type="text" name="subcat_name[]" value="{{ sub.name }}" placeholder="Subcategory name" required>
+            <select name="subcat_status[]">
+              <option value="active" {% if sub.status == 'active' %}selected{% endif %}>Active</option>
+              <option value="inactive" {% if sub.status == 'inactive' %}selected{% endif %}>Inactive</option>
+            </select>
+            <button type="button" class="remove-btn" onclick="removeSubcat(this)" title="Remove">
+              <i class="fa-solid fa-xmark"></i>
+            </button>
+          </div>
+          {% endfor %}
+        {% endif %}
+      </div>
+      <button type="button" class="add-subcat-btn" onclick="addSubcatRow()">
+        <i class="fa-solid fa-plus"></i> Add Subcategory
+      </button>
+    </div>
     
-    <div class="form-actions">
+    <div class="form-actions" style="margin-top: 28px;">
       <button type="submit" class="btn btn-primary">
         <i class="fa-solid fa-check"></i> {% if mode == 'create' %}Create Category{% else %}Save Changes{% endif %}
       </button>
-      <a href="{% url 'super_admin_cms' %}" class="btn btn-outline">Cancel</a>
+      <a href="{% url 'super_admin_categories' %}" class="btn btn-outline">Cancel</a>
     </div>
   </form>
 </div>
+
+<script>
+function addSubcatRow(name, status) {
+  const list = document.getElementById('subcatList');
+  const row = document.createElement('div');
+  row.className = 'subcat-row';
+  row.style.animation = 'fadeIn 0.25s ease';
+  row.innerHTML = `
+    <input type="hidden" name="subcat_id[]" value="">
+    <input type="text" name="subcat_name[]" value="${name || ''}" placeholder="Subcategory name" required>
+    <select name="subcat_status[]">
+      <option value="active" ${(!status || status === 'active') ? 'selected' : ''}>Active</option>
+      <option value="inactive" ${status === 'inactive' ? 'selected' : ''}>Inactive</option>
+    </select>
+    <button type="button" class="remove-btn" onclick="removeSubcat(this)" title="Remove">
+      <i class="fa-solid fa-xmark"></i>
+    </button>
+  `;
+  list.appendChild(row);
+  row.querySelector('input[type="text"]').focus();
+  updateCount();
+}
+
+function removeSubcat(btn) {
+  const row = btn.closest('.subcat-row');
+  row.style.opacity = '0';
+  row.style.transform = 'translateX(20px)';
+  row.style.transition = 'all 0.2s ease';
+  setTimeout(() => { row.remove(); updateCount(); }, 200);
+}
+
+function updateCount() {
+  const count = document.querySelectorAll('#subcatList .subcat-row').length;
+  document.getElementById('subcatCount').textContent = count;
+}
+
+// Category Image Handlers
+function handleImageSelect(event) {
+  const file = event.target.files && event.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    document.getElementById('newImageThumb').src = e.target.result;
+    document.getElementById('newImageName').textContent = file.name;
+    document.getElementById('newImageSize').textContent = (file.size / 1024).toFixed(1) + ' KB · Click "Save Changes" to apply';
+    document.getElementById('uploadPrompt').style.display = 'none';
+    document.getElementById('newImagePreview').style.display = 'flex';
+
+    // If there was a current image, hide it visually
+    const currContainer = document.getElementById('currentImageContainer');
+    if (currContainer) {
+      currContainer.style.opacity = '0.5';
+    }
+    const clearInput = document.getElementById('clearImageInput');
+    if (clearInput) clearInput.value = '0';
+  };
+  reader.readAsDataURL(file);
+}
+
+function cancelImageSelect(event) {
+  event.stopPropagation();
+  const input = document.getElementById('catImageInput');
+  input.value = '';
+  document.getElementById('newImageThumb').src = '';
+  document.getElementById('newImagePreview').style.display = 'none';
+  document.getElementById('uploadPrompt').style.display = 'flex';
+
+  const currContainer = document.getElementById('currentImageContainer');
+  if (currContainer) {
+    currContainer.style.opacity = '1';
+  }
+}
+
+function removeCurrentImage() {
+  if (confirm('Remove current category image?')) {
+    const clearInput = document.getElementById('clearImageInput');
+    if (clearInput) clearInput.value = '1';
+    const currContainer = document.getElementById('currentImageContainer');
+    if (currContainer) {
+      currContainer.style.display = 'none';
+    }
+  }
+}
+
+// Drag & drop support
+const dropZone = document.getElementById('dropZone');
+if (dropZone) {
+  ['dragenter', 'dragover'].forEach(eventName => {
+    dropZone.addEventListener(eventName, (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      dropZone.style.borderColor = 'var(--primary, #6366f1)';
+      dropZone.style.background = 'rgba(99,102,241,0.08)';
+    }, false);
+  });
+  ['dragleave', 'drop'].forEach(eventName => {
+    dropZone.addEventListener(eventName, (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      dropZone.style.borderColor = 'rgba(99,102,241,0.25)';
+      dropZone.style.background = '#f8fafc';
+    }, false);
+  });
+  dropZone.addEventListener('drop', (e) => {
+    const dt = e.dataTransfer;
+    const files = dt.files;
+    if (files && files.length > 0) {
+      const input = document.getElementById('catImageInput');
+      input.files = files;
+      handleImageSelect({ target: { files: files } });
+    }
+  });
+}
+
+// init count
+updateCount();
+</script>
 {% endblock %}

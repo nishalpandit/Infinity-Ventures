@@ -153,7 +153,12 @@
           html += `
             <tr>
               <td class="fw-medium text-muted">#${cat.id}</td>
-              <td class="fw-semibold">${cat.name}</td>
+              <td class="fw-semibold">
+                <div class="d-flex align-items-center gap-2">
+                  ${cat.image ? `<img src="${cat.image}" alt="${cat.name}" style="width:28px;height:28px;object-fit:cover;border-radius:6px;border:1px solid #e2e8f0;">` : `<div style="width:28px;height:28px;background:#f1f5f9;border-radius:6px;display:flex;align-items:center;justify-content:center;color:#94a3b8;font-size:12px;"><i class="fa-solid fa-shapes"></i></div>`}
+                  <span>${cat.name}</span>
+                </div>
+              </td>
               <td>${getTypeLabel(cat.service_type)}</td>
               <td><span class="badge ${getBadgeClass(cat.status)}">${cat.status}</span></td>
               <td class="text-muted">${cat.created_at}</td>

@@ -3,7 +3,7 @@
 {% block header_title %}{{ mode|title }} City{% endblock %}
 
 {% block header_actions %}
-<a href="{% url 'super_admin_cms' %}" class="btn btn-outline btn-sm">
+<a href="{% url 'super_admin_locations' %}" class="btn btn-outline btn-sm">
   <i class="fa-solid fa-arrow-left"></i>
   <span>Back to CMS</span>
 </a>
@@ -66,7 +66,7 @@
       <button type="submit" class="btn btn-primary">
         <i class="fa-solid fa-check"></i> {% if mode == 'create' %}Create City{% else %}Save Changes{% endif %}
       </button>
-      <a href="{% url 'super_admin_cms' %}" class="btn btn-outline">Cancel</a>
+      <a href="{% url 'super_admin_locations' %}" class="btn btn-outline">Cancel</a>
     </div>
   </form>
 </div>

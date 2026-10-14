@@ -561,7 +561,11 @@ button{cursor:pointer}
   <div class="uc-cat-bar-inner">
     {% for cat in categories %}
     <a href="/services/browse?category={{ cat.id }}" class="uc-cat-chip {% if selected_category_id == cat.id %}active{% endif %}">
-      <i class="fa-solid fa-{% if cat.name == 'Plumbing' %}wrench{% elif cat.name == 'Electrical' %}bolt{% elif 'Appliance' in cat.name or 'AC' in cat.name %}screwdriver-wrench{% elif 'Clean' in cat.name %}spray-can-sparkles{% elif 'Paint' in cat.name %}paint-roller{% elif 'Carpent' in cat.name %}hammer{% elif 'Beauty' in cat.name or 'Spa' in cat.name %}spa{% else %}screwdriver-wrench{% endif %}"></i>
+      {% if cat.image %}
+        <img src="{{ cat.image.url }}" alt="{{ cat.name }}" style="width: 18px; height: 18px; object-fit: contain; border-radius: 3px;">
+      {% else %}
+        <i class="fa-solid fa-{% if cat.name == 'Plumbing' %}wrench{% elif cat.name == 'Electrical' %}bolt{% elif 'Appliance' in cat.name or 'AC' in cat.name %}screwdriver-wrench{% elif 'Clean' in cat.name %}spray-can-sparkles{% elif 'Paint' in cat.name %}paint-roller{% elif 'Carpent' in cat.name %}hammer{% elif 'Beauty' in cat.name or 'Spa' in cat.name %}spa{% else %}screwdriver-wrench{% endif %}"></i>
+      {% endif %}
       <span>{{ cat.name }}</span>
     </a>
     {% endfor %}
