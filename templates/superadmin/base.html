@@ -652,9 +652,17 @@
       </a>
       
       <div class="nav-section" style="color: var(--accent); font-weight: 800;">Landing Page CMS</div>
-      <a href="{% url 'super_admin_landing_quick_services' %}" class="nav-item {% if '/landing/quick-services' in request.path %}active{% endif %}">
-        <i class="fa-solid fa-bolt-lightning"></i>
-        <span>Quick Service Cards</span>
+      <a href="{% url 'super_admin_landing_overview' %}" class="nav-item {% if '/landing/overview' in request.path %}active{% endif %}">
+        <i class="fa-solid fa-shapes"></i>
+        <span>CMS Overview</span>
+      </a>
+      <a href="{% url 'super_admin_landing_transform_videos' %}" class="nav-item {% if '/landing/transform-videos' in request.path %}active{% endif %}">
+        <i class="fa-solid fa-film"></i>
+        <span>Transform Videos</span>
+      </a>
+      <a href="{% url 'super_admin_landing_why_choose' %}" class="nav-item {% if '/landing/why-choose' in request.path %}active{% endif %}">
+        <i class="fa-solid fa-shield-halved"></i>
+        <span>Why Choose Sugu</span>
       </a>
       <a href="{% url 'super_admin_landing_testimonials' %}" class="nav-item {% if '/landing/testimonials' in request.path %}active{% endif %}">
         <i class="fa-solid fa-star-half-stroke"></i>

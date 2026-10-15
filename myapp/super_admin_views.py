@@ -15,7 +15,8 @@ from .models import (
     SiteBranding, HeroSection, QuickServiceCard, FeaturedProjectCard,
     PackageCard, Testimonial, TrustMetric, VendorKYC,
     VendorWallet, WalletTransaction, PayoutRequest,
-    DisputeTicket, DisputeMessage, BidPlan
+    DisputeTicket, DisputeMessage, BidPlan,
+    WhyChooseSection, WhyChooseFeature, TransformVideoSection, TransformVideo
 )
 from .wallet_services import (
     settle_job_completion, approve_payout, reject_payout, get_or_create_wallet
@@ -23,7 +24,8 @@ from .wallet_services import (
 from .cms_forms import (
     SiteBrandingForm, HeroSectionForm, QuickServiceCardForm,
     FeaturedProjectCardForm, PackageCardForm, TestimonialForm,
-    TrustMetricForm
+    TrustMetricForm, WhyChooseSectionForm, WhyChooseFeatureForm,
+    TransformVideoSectionForm, TransformVideoForm
 )
 
 LOGIN_URL = '/super-admin/login/'
@@ -2502,7 +2504,8 @@ def super_admin_landing_overview(request):
     context = {
         'branding': SiteBranding.objects.first(),
         'hero': HeroSection.objects.first(),
-        'qs_cards_count': QuickServiceCard.objects.count(),
+        'why_choose_count': WhyChooseFeature.objects.count(),
+        'transform_videos_count': TransformVideo.objects.count(),
         'featured_count': FeaturedProjectCard.objects.count(),
         'packages_count': PackageCard.objects.count(),
         'testimonials_count': Testimonial.objects.count(),
@@ -2540,67 +2543,244 @@ def super_admin_landing_hero(request):
     return render(request, 'superadmin/cms_hero.html', {'form': form, 'hero': hero_obj})
 
 
-# ── QUICK SERVICES CARDS ──────────────────────────────────────────────────────
+# ── WATCH HOW SUGU TRANSFORMS HOMES (VIDEOS CMS) ───────────────────────────
 @sa_required
-def super_admin_landing_quick_services(request):
-    cards_qs = QuickServiceCard.objects.all().order_by('order', '-created_at')
-    paginator = Paginator(cards_qs, 10)
+def super_admin_landing_transform_videos(request):
+    section_obj, _ = TransformVideoSection.objects.get_or_create(pk=1)
+    
+    # Auto-seed initial 3 video showcase entries if none exist
+    if TransformVideo.objects.count() == 0:
+        TransformVideo.objects.create(
+            title="How Sugu Transformed Our 3BHK Living Room via Bidding",
+            author="Pooja & Sameer Kulkarni",
+            city="Bengaluru",
+            service_tag="Home Renovation & Bidding",
+            rating=5,
+            duration="1:42",
+            quote="We got 4 contractor quotes in 2 hours and saved ₹42,000 on our interior revamp! Milestone payment protection gave us total peace of mind.",
+            video_url="https://assets.mixkit.co/videos/preview/mixkit-living-room-with-decorations-and-furniture-41484-large.mp4",
+            order=1,
+            is_active=True
+        )
+        TransformVideo.objects.create(
+            title="Powerjet AC Deep Clean Review: 15-Min Quick Service",
+            author="Aditya Verma",
+            city="Gurugram",
+            service_tag="AC & Appliance Quick Service",
+            rating=5,
+            duration="1:15",
+            quote="The foam-jet washed out 2 years of trapped dust inside our split AC. Cooling returned like a brand new AC, zero mess left behind.",
+            video_url="https://assets.mixkit.co/videos/preview/mixkit-hands-of-a-man-working-with-a-screwdriver-42611-large.mp4",
+            order=2,
+            is_active=True
+        )
+        TransformVideo.objects.create(
+            title="Salon Luxe At Home: Complete Bridal Glow Routine",
+            author="Sneha Mukherjee",
+            city="Mumbai",
+            service_tag="Women's Salon & Spa",
+            rating=5,
+            duration="2:04",
+            quote="Single-use sealed hygiene kits and salon-grade O3+ products right in my bedroom. Hands down the safest and most relaxing salon experience.",
+            video_url="https://assets.mixkit.co/videos/preview/mixkit-applying-face-cream-at-the-spa-41718-large.mp4",
+            order=3,
+            is_active=True
+        )
+
+    videos_qs = TransformVideo.objects.all().order_by('order', '-created_at')
+    section_form = TransformVideoSectionForm(instance=section_obj)
+    
+    paginator = Paginator(videos_qs, 10)
     page_num = request.GET.get('page', 1)
     try:
-        cards = paginator.page(page_num)
+        videos = paginator.page(page_num)
     except (EmptyPage, PageNotAnInteger):
-        cards = paginator.page(1)
-    page_range = paginator.get_elided_page_range(cards.number, on_each_side=2, on_ends=1)
-    return render(request, 'superadmin/cms_quick_services.html', {'cards': cards, 'page_range': page_range})
+        videos = paginator.page(1)
+    page_range = paginator.get_elided_page_range(videos.number, on_each_side=2, on_ends=1)
+    
+    return render(request, 'superadmin/cms_transform_videos.html', {
+        'section': section_obj,
+        'section_form': section_form,
+        'videos': videos,
+        'page_range': page_range
+    })
+
+@sa_required
+def super_admin_landing_transform_section_save(request):
+    section_obj, _ = TransformVideoSection.objects.get_or_create(pk=1)
+    if request.method == 'POST':
+        form = TransformVideoSectionForm(request.POST, instance=section_obj)
+        if form.is_valid():
+            form.save()
+            django_messages.success(request, 'Watch How Sugu Transforms Homes section updated successfully!')
+        else:
+            django_messages.error(request, 'Please verify section input values.')
+    return redirect('super_admin_landing_transform_videos')
+
+@sa_required
+def super_admin_landing_transform_video_create(request):
+    if request.method == 'POST':
+        form = TransformVideoForm(request.POST, request.FILES)
+        if form.is_valid():
+            form.save()
+            django_messages.success(request, 'Video showcase card published successfully!')
+            return redirect('super_admin_landing_transform_videos')
+    else:
+        form = TransformVideoForm()
+    return render(request, 'superadmin/cms_transform_video_form.html', {
+        'form': form,
+        'title': 'Upload / Add Video Showcase Card',
+        'back_url': 'super_admin_landing_transform_videos'
+    })
+
+@sa_required
+def super_admin_landing_transform_video_edit(request, video_id):
+    video = get_object_or_404(TransformVideo, pk=video_id)
+    if request.method == 'POST':
+        form = TransformVideoForm(request.POST, request.FILES, instance=video)
+        if form.is_valid():
+            form.save()
+            django_messages.success(request, 'Video showcase card updated successfully!')
+            return redirect('super_admin_landing_transform_videos')
+    else:
+        form = TransformVideoForm(instance=video)
+    return render(request, 'superadmin/cms_transform_video_form.html', {
+        'form': form,
+        'video': video,
+        'title': f'Edit Video: {video.title}',
+        'back_url': 'super_admin_landing_transform_videos'
+    })
+
+@sa_required
+def super_admin_landing_transform_video_delete(request, video_id):
+    video = get_object_or_404(TransformVideo, pk=video_id)
+    video.delete()
+    django_messages.success(request, 'Video card deleted.')
+    return redirect('super_admin_landing_transform_videos')
+
+@sa_required
+def super_admin_landing_transform_video_toggle(request, video_id):
+    video = get_object_or_404(TransformVideo, pk=video_id)
+    video.is_active = not video.is_active
+    video.save()
+    django_messages.success(request, f'Video "{video.title}" {"activated" if video.is_active else "deactivated"}.')
+    return redirect('super_admin_landing_transform_videos')
+
+
+# ── WHY CHOOSE SUGU SERVICES (COMPARISON CMS) ─────────────────────────────
+@sa_required
+def super_admin_landing_why_choose(request):
+    section_obj, _ = WhyChooseSection.objects.get_or_create(pk=1)
+    
+    # Auto-seed initial 5 comparison items if none exist
+    if WhyChooseFeature.objects.count() == 0:
+        initial_features = [
+            ("Technician Background Check", "✓ 7-Step Police & Skill Verified", "✗ Zero verification or background check", 1),
+            ("Pricing Transparency", "✓ Upfront fixed rate or competitive pro bids", "✗ Random arbitrary pricing & hidden charges", 2),
+            ("Post-Service Warranty", "✓ 30-Day Money-Back & Free Re-work", "✗ No warranty once technician leaves", 3),
+            ("Damage Protection", "✓ Up to ₹10,000 Free Insurance Cover", "✗ Customer bears 100% loss", 4),
+            ("Payment Security", "✓ Pay After Service or Work Satisfaction", "✗ Demands high non-refundable cash advance", 5),
+        ]
+        for name, sugu, others, order in initial_features:
+            WhyChooseFeature.objects.create(
+                feature_name=name,
+                sugu_value=sugu,
+                others_value=others,
+                order=order,
+                is_active=True
+            )
+
+    features_qs = WhyChooseFeature.objects.all().order_by('order', 'id')
+    section_form = WhyChooseSectionForm(instance=section_obj)
+    
+    return render(request, 'superadmin/cms_why_choose.html', {
+        'section': section_obj,
+        'section_form': section_form,
+        'features': features_qs
+    })
+
+@sa_required
+def super_admin_landing_why_choose_section_save(request):
+    section_obj, _ = WhyChooseSection.objects.get_or_create(pk=1)
+    if request.method == 'POST':
+        form = WhyChooseSectionForm(request.POST, instance=section_obj)
+        if form.is_valid():
+            form.save()
+            django_messages.success(request, 'Why Choose Sugu Section Header updated successfully!')
+        else:
+            django_messages.error(request, 'Please verify section header input.')
+    return redirect('super_admin_landing_why_choose')
+
+@sa_required
+def super_admin_landing_why_choose_create(request):
+    if request.method == 'POST':
+        form = WhyChooseFeatureForm(request.POST)
+        if form.is_valid():
+            form.save()
+            django_messages.success(request, 'Comparison feature row added successfully!')
+            return redirect('super_admin_landing_why_choose')
+    else:
+        form = WhyChooseFeatureForm()
+    return render(request, 'superadmin/cms_why_choose_form.html', {
+        'form': form,
+        'title': 'Add Comparison Feature',
+        'back_url': 'super_admin_landing_why_choose'
+    })
+
+@sa_required
+def super_admin_landing_why_choose_edit(request, item_id):
+    item = get_object_or_404(WhyChooseFeature, pk=item_id)
+    if request.method == 'POST':
+        form = WhyChooseFeatureForm(request.POST, instance=item)
+        if form.is_valid():
+            form.save()
+            django_messages.success(request, 'Comparison feature row updated successfully!')
+            return redirect('super_admin_landing_why_choose')
+    else:
+        form = WhyChooseFeatureForm(instance=item)
+    return render(request, 'superadmin/cms_why_choose_form.html', {
+        'form': form,
+        'item': item,
+        'title': f'Edit Feature: {item.feature_name}',
+        'back_url': 'super_admin_landing_why_choose'
+    })
+
+@sa_required
+def super_admin_landing_why_choose_delete(request, item_id):
+    item = get_object_or_404(WhyChooseFeature, pk=item_id)
+    item.delete()
+    django_messages.success(request, 'Comparison feature row deleted.')
+    return redirect('super_admin_landing_why_choose')
+
+@sa_required
+def super_admin_landing_why_choose_toggle(request, item_id):
+    item = get_object_or_404(WhyChooseFeature, pk=item_id)
+    item.is_active = not item.is_active
+    item.save()
+    django_messages.success(request, f'Feature "{item.feature_name}" {"activated" if item.is_active else "deactivated"}.')
+    return redirect('super_admin_landing_why_choose')
+
+
+# ── QUICK SERVICES CARDS (LEGACY REDIRECT) ──────────────────────────────────
+@sa_required
+def super_admin_landing_quick_services(request):
+    return redirect('super_admin_landing_why_choose')
 
 @sa_required
 def super_admin_landing_quick_service_create(request):
-    if request.method == 'POST':
-        form = QuickServiceCardForm(request.POST, request.FILES)
-        if form.is_valid():
-            form.save()
-            django_messages.success(request, 'Quick Service Card created successfully!')
-            return redirect('super_admin_landing_quick_services')
-    else:
-        form = QuickServiceCardForm()
-    return render(request, 'superadmin/cms_card_form.html', {
-        'form': form,
-        'title': 'Add Quick Service Card',
-        'back_url': 'super_admin_landing_quick_services'
-    })
+    return redirect('super_admin_landing_why_choose')
 
 @sa_required
 def super_admin_landing_quick_service_edit(request, card_id):
-    card = get_object_or_404(QuickServiceCard, pk=card_id)
-    if request.method == 'POST':
-        form = QuickServiceCardForm(request.POST, request.FILES, instance=card)
-        if form.is_valid():
-            form.save()
-            django_messages.success(request, 'Quick Service Card updated successfully!')
-            return redirect('super_admin_landing_quick_services')
-    else:
-        form = QuickServiceCardForm(instance=card)
-    return render(request, 'superadmin/cms_card_form.html', {
-        'form': form,
-        'card': card,
-        'title': f'Edit Card: {card.title}',
-        'back_url': 'super_admin_landing_quick_services'
-    })
+    return redirect('super_admin_landing_why_choose')
 
 @sa_required
 def super_admin_landing_quick_service_delete(request, card_id):
-    card = get_object_or_404(QuickServiceCard, pk=card_id)
-    card.delete()
-    django_messages.success(request, 'Quick Service Card deleted.')
-    return redirect('super_admin_landing_quick_services')
+    return redirect('super_admin_landing_why_choose')
 
 @sa_required
 def super_admin_landing_quick_service_toggle(request, card_id):
-    card = get_object_or_404(QuickServiceCard, pk=card_id)
-    card.is_active = not card.is_active
-    card.save()
-    django_messages.success(request, f'Card "{card.title}" {"activated" if card.is_active else "deactivated"}.')
-    return redirect('super_admin_landing_quick_services')
+    return redirect('super_admin_landing_why_choose')
 
 
 # ── FEATURED PROJECTS (BIDDING SHOWCASE) ──────────────────────────────────────

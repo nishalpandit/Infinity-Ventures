@@ -7,6 +7,10 @@ from .models import (
     PackageCard,
     Testimonial,
     TrustMetric,
+    WhyChooseSection,
+    WhyChooseFeature,
+    TransformVideoSection,
+    TransformVideo,
 )
 
 class StyledModelForm(forms.ModelForm):
@@ -161,3 +165,68 @@ class TrustMetricForm(StyledModelForm):
             'stat_number': forms.TextInput(attrs={'placeholder': 'e.g. 100% or 4.8★'}),
             'label': forms.TextInput(attrs={'placeholder': 'e.g. Aadhaar & Police Verified Pros'}),
         }
+
+
+class WhyChooseSectionForm(StyledModelForm):
+    class Meta:
+        model = WhyChooseSection
+        fields = ['tag_badge', 'title', 'subtitle', 'col_sugu_title', 'col_others_title']
+        widgets = {
+            'tag_badge': forms.TextInput(attrs={'placeholder': 'e.g. Sugu Advantage'}),
+            'title': forms.TextInput(attrs={'placeholder': 'e.g. Why Choose Sugu Services?'}),
+            'subtitle': forms.Textarea(attrs={'rows': 2, 'placeholder': 'Section description...'}),
+            'col_sugu_title': forms.TextInput(attrs={'placeholder': 'e.g. Sugu Services (Quick & Bidding)'}),
+            'col_others_title': forms.TextInput(attrs={'placeholder': 'e.g. Unorganized Local Technicians'}),
+        }
+
+
+class WhyChooseFeatureForm(StyledModelForm):
+    class Meta:
+        model = WhyChooseFeature
+        fields = ['feature_name', 'sugu_value', 'others_value', 'order', 'is_active']
+        widgets = {
+            'feature_name': forms.TextInput(attrs={'placeholder': 'e.g. Technician Background Check'}),
+            'sugu_value': forms.TextInput(attrs={'placeholder': 'e.g. ✓ 7-Step Police & Skill Verified'}),
+            'others_value': forms.TextInput(attrs={'placeholder': 'e.g. ✗ Zero verification or background check'}),
+        }
+
+
+class TransformVideoSectionForm(StyledModelForm):
+    class Meta:
+        model = TransformVideoSection
+        fields = ['tag_badge', 'title', 'subtitle', 'counter_text']
+        widgets = {
+            'tag_badge': forms.TextInput(attrs={'placeholder': 'e.g. Real Customer Stories'}),
+            'title': forms.TextInput(attrs={'placeholder': 'e.g. Watch How Sugu Transforms Homes'}),
+            'subtitle': forms.Textarea(attrs={'rows': 2, 'placeholder': 'Section description...'}),
+            'counter_text': forms.TextInput(attrs={'placeholder': 'e.g. Over 50,000+ 5-star video reviews'}),
+        }
+
+
+class TransformVideoForm(StyledModelForm):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if 'video_file' in self.fields:
+            self.fields['video_file'].widget.attrs.update({
+                'class': 'dropzone-input',
+                'accept': 'video/mp4,video/webm,video/ogg,video/quicktime'
+            })
+
+    class Meta:
+        model = TransformVideo
+        fields = [
+            'title', 'video_file', 'video_url', 'thumbnail',
+            'author', 'city', 'service_tag', 'rating',
+            'duration', 'quote', 'order', 'is_active'
+        ]
+        widgets = {
+            'title': forms.TextInput(attrs={'placeholder': 'e.g. How Sugu Transformed Our 3BHK Living Room via Bidding'}),
+            'video_url': forms.URLInput(attrs={'placeholder': 'https://.../video.mp4 (Optional if video file uploaded)'}),
+            'thumbnail': forms.FileInput(attrs={'class': 'dropzone-input', 'accept': 'image/*', 'id': 'id_thumbnail'}),
+            'author': forms.TextInput(attrs={'placeholder': 'e.g. Pooja & Sameer Kulkarni'}),
+            'city': forms.TextInput(attrs={'placeholder': 'e.g. Bengaluru'}),
+            'service_tag': forms.TextInput(attrs={'placeholder': 'e.g. Home Renovation & Bidding'}),
+            'duration': forms.TextInput(attrs={'placeholder': 'e.g. 1:42'}),
+            'quote': forms.Textarea(attrs={'rows': 3, 'placeholder': 'Customer testimonial quote...'}),
+        }
+

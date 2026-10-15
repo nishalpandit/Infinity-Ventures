@@ -1,0 +1,83 @@
+{% extends 'superadmin/base.html' %}
+{% block title %}{{ title }} - CMS{% endblock %}
+{% block header_title %}{{ title }}{% endblock %}
+
+{% block header_actions %}
+<a href="{% url back_url %}" class="btn btn-outline btn-sm">
+  <i class="fa-solid fa-arrow-left"></i>
+  <span>Back to Comparison List</span>
+</a>
+{% endblock %}
+
+{% block content %}
+<form method="POST">
+  {% csrf_token %}
+
+  <div style="max-width: 800px; margin: 0 auto;">
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">
+          <i class="fa-solid fa-scale-balanced" style="color: var(--accent);"></i>
+          <span>Feature Comparison Details</span>
+        </div>
+        <span class="badge info">Sugu vs Traditional</span>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="{{ form.feature_name.id_for_label }}">
+          Feature / Metric Name <span style="color: var(--danger);">*</span>
+        </label>
+        {{ form.feature_name }}
+        <small style="color: var(--text-muted); font-size: 11.5px;">e.g. Technician Background Check, Damage Protection, Pricing Transparency</small>
+        {% if form.feature_name.errors %}<div style="color: var(--danger); font-size: 12px; margin-top: 4px;">{{ form.feature_name.errors|striptags }}</div>{% endif %}
+      </div>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 16px;">
+        <div class="form-group">
+          <label class="form-label" for="{{ form.sugu_value.id_for_label }}" style="color: var(--success); font-weight: 700;">
+            <i class="fa-solid fa-circle-check"></i> Sugu Advantage Value <span style="color: var(--danger);">*</span>
+          </label>
+          {{ form.sugu_value }}
+          <small style="color: var(--text-muted); font-size: 11.5px;">e.g. ✓ 7-Step Police &amp; Skill Verified</small>
+          {% if form.sugu_value.errors %}<div style="color: var(--danger); font-size: 12px; margin-top: 4px;">{{ form.sugu_value.errors|striptags }}</div>{% endif %}
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="{{ form.others_value.id_for_label }}" style="color: var(--danger); font-weight: 700;">
+            <i class="fa-solid fa-circle-xmark"></i> Local Techs / Others Value <span style="color: var(--danger);">*</span>
+          </label>
+          {{ form.others_value }}
+          <small style="color: var(--text-muted); font-size: 11.5px;">e.g. ✗ Zero verification or background check</small>
+          {% if form.others_value.errors %}<div style="color: var(--danger); font-size: 12px; margin-top: 4px;">{{ form.others_value.errors|striptags }}</div>{% endif %}
+        </div>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 200px 1fr; gap: 20px; margin-top: 16px; align-items: center;">
+        <div class="form-group" style="margin-bottom: 0;">
+          <label class="form-label" for="{{ form.order.id_for_label }}">Display Sort Order</label>
+          {{ form.order }}
+          <small style="color: var(--text-muted); font-size: 11.5px;">Lower numbers show first</small>
+        </div>
+
+        <div style="display: flex; align-items: center; justify-content: space-between; padding: 14px 18px; background: #f8fafc; border: 1px solid var(--border); border-radius: var(--r-sm);">
+          <div>
+            <div style="font-size: 13.5px; font-weight: 700; color: var(--text-main);">Publish Status</div>
+            <div style="font-size: 11.5px; color: var(--text-muted);">Visible in comparison table on public site</div>
+          </div>
+          <label class="toggle-switch">
+            {{ form.is_active }}
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+      </div>
+
+      <div style="margin-top: 32px; padding-top: 20px; border-top: 1px solid var(--border); display: flex; gap: 14px;">
+        <button type="submit" class="btn btn-primary btn-lg" style="flex: 1;">
+          <i class="fa-solid fa-floppy-disk"></i> Save Comparison Feature
+        </button>
+        <a href="{% url back_url %}" class="btn btn-outline btn-lg">Cancel</a>
+      </div>
+    </div>
+  </div>
+</form>
+{% endblock %}

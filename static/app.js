@@ -23,6 +23,12 @@ let appState = {
   selectedSlotDate: "Today",
   selectedSlotTime: "02:00 PM - 04:00 PM",
   assignedPartner: null,
+  biddingPage: 1,
+  biddingPerPage: 5,
+  qsCategoryPage: 1,
+  qsCategoryPerPage: 6,
+  qsServicesPage: 1,
+  qsServicesPerPage: 4,
   // Women's Beauty Service Dual Navigation State
   beautyMode: 'home', // 'home' | 'parlour'
   selectedParlourId: null,
@@ -38,8 +44,13 @@ let appState = {
 function findCategory(catId) {
   if (!catId || !window.SUGU_DATA || !Array.isArray(SUGU_DATA.categories)) return null;
   const s = String(catId).toLowerCase().trim();
+  if (s === '37' || s === 'beauty_wellness' || s.includes('beauty')) {
+    const bCat = SUGU_DATA.categories.find(c => c.id === 'beauty_wellness' || c.isBeautyHub || String(c.id) === '37' || String(c.dbId) === '37');
+    if (bCat) return bCat;
+  }
   return SUGU_DATA.categories.find(c => 
     String(c.id).toLowerCase() === s || 
+    (c.dbId && String(c.dbId).toLowerCase() === s) ||
     (c.legacyId && c.legacyId.toLowerCase() === s) ||
     (c.name && c.name.toLowerCase().trim() === s) ||
     (c.name && c.name.toLowerCase().includes(s))
@@ -74,6 +85,9 @@ function syncDynamicCategories() {
     if (lower.includes('pest')) return existingMap.get('pest_control');
     if (lower.includes('paint')) return existingMap.get('painting_upgrade');
     if (lower.includes('renov')) return existingMap.get('home_renovation');
+    if (lower.includes('beauty') || lower.includes('salon') || lower.includes('spa')) {
+      return existingMap.get('beauty_wellness') || existingMap.get('womens_salon_spa');
+    }
     return null;
   }
 
@@ -177,24 +191,37 @@ function syncDynamicCategories() {
       }
     }
 
+    const isBeauty = (dbCat.name && dbCat.name.toLowerCase().includes('beauty')) || strId === '37' || (tpl && (tpl.id === 'beauty_wellness' || tpl.isBeautyHub));
     const catObj = {
-      id: strId,
+      id: isBeauty ? 'beauty_wellness' : strId,
+      dbId: strId,
       legacyId: tpl ? tpl.id : null,
-      name: dbCat.name,
-      iconFile: dbCat.image ? dbCat.image : (tpl ? tpl.iconFile : 'home_renovation.png'),
+      name: isBeauty ? "Beauty & Spa" : dbCat.name,
+      iconFile: dbCat.image ? dbCat.image : (tpl ? tpl.iconFile : 'womens_salon_spa.png'),
       isCustomImage: !!dbCat.image,
       icon_class: dbCat.icon_class || 'bi-tools',
       tagline: tpl ? tpl.tagline : `Verified ${dbCat.name} Services at Transparent Pricing`,
-      rating: tpl ? tpl.rating : "4.86 (Verified)",
-      startingPrice: dbCat.min_price ? `Starts ₹${dbCat.min_price}` : (tpl ? tpl.startingPrice : "Starts ₹199"),
-      subcategories: subcategories,
+      rating: tpl ? tpl.rating : "4.91 (4.2M Reviews)",
+      startingPrice: dbCat.min_price ? `Starts ₹${dbCat.min_price}` : (tpl ? tpl.startingPrice : "Starts ₹249"),
+      isBeautyHub: isBeauty,
+      subcategories: isBeauty ? [] : subcategories,
       parlours: (tpl && tpl.parlours) ? tpl.parlours : []
     };
 
     synchronized.push(catObj);
   });
 
-  // CRITICAL: Replace SUGU_DATA.categories with ONLY super admin DB categories!
+  // Retain women's and men's salon catalogs so direct selection and toggling work seamlessly
+  const womenTpl = existingMap.get('womens_salon_spa');
+  const menTpl = existingMap.get('mens_salon_massage');
+  if (womenTpl && !synchronized.some(c => c.id === 'womens_salon_spa')) {
+    synchronized.push(womenTpl);
+  }
+  if (menTpl && !synchronized.some(c => c.id === 'mens_salon_massage')) {
+    synchronized.push(menTpl);
+  }
+
+  // CRITICAL: Replace SUGU_DATA.categories with dynamic categories + beauty experiences!
   SUGU_DATA.categories = synchronized;
 
   // Set default bidding category to the first dynamic category
@@ -607,10 +634,18 @@ function renderHomeView() {
   // Render Video Testimonials
   const videoGrid = document.getElementById("home-videos-grid");
   if (videoGrid) {
-    videoGrid.innerHTML = SUGU_DATA.videos.map(v => `
+    const listToRender = (window.DB_VIDEOS && Array.isArray(window.DB_VIDEOS) && window.DB_VIDEOS.length > 0)
+      ? window.DB_VIDEOS
+      : (typeof SUGU_DATA !== 'undefined' ? SUGU_DATA.videos : []);
+
+    videoGrid.innerHTML = listToRender.map(v => {
+      const ratingStars = Array(Math.min(5, Math.max(1, Math.round(Number(v.rating) || 5)))).fill('<i data-lucide="star" class="w-4 h-4 fill-amber-400"></i>').join("");
+      const thumb = v.thumbnail || "https://images.unsplash.com/photo-1513694203232-719a280e022f?auto=format&fit=crop&w=600&q=80";
+      const tag = v.service || v.service_tag || "Home Service";
+      return `
       <div class="group relative rounded-2xl overflow-hidden bg-white shadow-lg border border-slate-200 hover:shadow-2xl transition duration-300">
         <div class="relative h-56 overflow-hidden cursor-pointer" onclick="openVideoModal('${v.id}')">
-          <img src="${v.thumbnail}" alt="${v.title}" class="w-full h-full object-cover group-hover:scale-105 transition duration-500">
+          <img src="${thumb}" alt="${v.title}" class="w-full h-full object-cover group-hover:scale-105 transition duration-500">
           <div class="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-slate-950/30 to-transparent"></div>
           <div class="absolute inset-0 flex items-center justify-center">
             <div class="w-14 h-14 rounded-full bg-sky-600/90 text-white flex items-center justify-center shadow-lg group-hover:scale-110 group-hover:bg-sky-500 transition">
@@ -621,12 +656,12 @@ function renderHomeView() {
             ${v.duration}
           </span>
           <span class="absolute top-3 left-3 px-2.5 py-1 text-xs font-bold bg-sky-600 text-white rounded-full">
-            ${v.service}
+            ${tag}
           </span>
         </div>
         <div class="p-5">
           <div class="flex items-center space-x-1 text-amber-500 mb-2">
-            ${Array(v.rating).fill('<i data-lucide="star" class="w-4 h-4 fill-amber-400"></i>').join("")}
+            ${ratingStars}
           </div>
           <h4 class="font-bold text-slate-800 text-lg mb-2 line-clamp-1">${v.title}</h4>
           <p class="text-sm text-slate-600 italic mb-4 line-clamp-2">"${v.quote}"</p>
@@ -636,7 +671,10 @@ function renderHomeView() {
           </div>
         </div>
       </div>
-    `).join("");
+    `}).join("");
+    if (window.lucide && typeof lucide.createIcons === 'function') {
+      lucide.createIcons();
+    }
   }
 
   // Render Customer Reviews Grid (Dynamic from Super Admin CMS DB_TESTIMONIALS)
@@ -751,16 +789,29 @@ function renderQuickServiceView() {
 
 function render12CategoryIcons() {
   const container = document.getElementById("qs-12-icons-grid");
+  const paginationContainer = document.getElementById("qs-categories-pagination");
   if (!container) return;
 
-  container.innerHTML = SUGU_DATA.categories.map(cat => {
-    const imgHtml = cat.isCustomImage
-      ? `<img src="${cat.iconFile}" alt="${cat.name}" class="w-full h-full object-contain rounded-2xl group-hover:scale-105 transition-transform duration-300">`
-      : `<img src="assets/icons/${cat.iconFile}" alt="${cat.name}" class="w-full h-full object-contain rounded-2xl group-hover:scale-105 transition-transform duration-300">`;
+  // Filter out separate gender categories so Beauty & Spa represents both in the master 12 grid
+  const displayCats = SUGU_DATA.categories.filter(c => c.id !== 'womens_salon_spa' && c.id !== 'mens_salon_massage');
+
+  const totalCats = displayCats.length;
+  const perPage = appState.qsCategoryPerPage || 6;
+  const totalPages = Math.ceil(totalCats / perPage) || 1;
+  if (appState.qsCategoryPage > totalPages) appState.qsCategoryPage = totalPages;
+  if (appState.qsCategoryPage < 1) appState.qsCategoryPage = 1;
+  const startIdx = (appState.qsCategoryPage - 1) * perPage;
+  const endIdx = Math.min(startIdx + perPage, totalCats);
+  const pagedCats = displayCats.slice(startIdx, endIdx);
+
+  container.innerHTML = pagedCats.map(cat => {
+    const iconFile = cat.iconFile || 'painting_upgrade.png';
+    const imgSrc = cat.isCustomImage ? iconFile : `assets/icons/${iconFile}`;
+    const imgHtml = `<img src="${imgSrc}" alt="${cat.name}" class="w-14 h-14 sm:w-16 sm:h-16 object-contain rounded-xl group-hover:scale-110 transition-transform duration-300">`;
 
     return `
-    <div onclick="selectCategory('${cat.id}')" class="sugu-category-card group cursor-pointer">
-      <div class="relative overflow-hidden bg-slate-50/80 aspect-square flex items-center justify-center p-3">
+    <div onclick="selectCategory('${cat.id}')" class="sugu-category-card group cursor-pointer bg-white border border-slate-200/90 rounded-2xl overflow-hidden shadow-xs hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between">
+      <div class="relative overflow-hidden bg-slate-50/80 aspect-[4/3] flex items-center justify-center p-3">
         ${imgHtml}
         <div class="absolute inset-0 bg-[#1b75d0]/5 opacity-0 group-hover:opacity-100 transition-opacity"></div>
       </div>
@@ -785,7 +836,55 @@ function render12CategoryIcons() {
     </div>
   `;
   }).join("");
+
+  // Pagination bar for Categories Overview if totalPages > 1
+  if (paginationContainer) {
+    if (totalPages > 1) {
+      let pagesHtml = '';
+      for (let p = 1; p <= totalPages; p++) {
+        const isCur = p === appState.qsCategoryPage;
+        pagesHtml += `
+          <button onclick="changeQsCategoryPage(${p})" 
+            class="w-8 h-8 rounded-xl text-xs font-bold transition flex items-center justify-center border
+            ${isCur ? 'bg-sugu-blue text-white border-sugu-blue shadow-sm' : 'bg-white hover:bg-slate-50 text-slate-700 border-slate-200 hover:border-slate-300'}">
+            ${p}
+          </button>
+        `;
+      }
+      paginationContainer.innerHTML = `
+        <div class="p-4 bg-slate-50 rounded-2xl border border-slate-200 shadow-xs flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div class="text-xs text-slate-600 font-medium">
+            Showing <strong class="text-slate-900 font-bold">${startIdx + 1}–${endIdx}</strong> of <strong class="text-slate-900 font-bold">${totalCats}</strong> categories (Page ${appState.qsCategoryPage} of ${totalPages})
+          </div>
+          <div class="flex items-center space-x-1.5">
+            <button onclick="changeQsCategoryPage(${appState.qsCategoryPage - 1})" 
+              ${appState.qsCategoryPage === 1 ? 'disabled class="px-3 py-1.5 rounded-xl text-xs font-bold bg-slate-100 text-slate-400 cursor-not-allowed border border-slate-200 flex items-center space-x-1"' : 'class="px-3 py-1.5 rounded-xl text-xs font-bold bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 shadow-xs transition hover:text-sugu-blue flex items-center space-x-1"'}>
+              <i data-lucide="chevron-left" class="w-4 h-4"></i>
+              <span>Prev</span>
+            </button>
+            ${pagesHtml}
+            <button onclick="changeQsCategoryPage(${appState.qsCategoryPage + 1})" 
+              ${appState.qsCategoryPage === totalPages ? 'disabled class="px-3 py-1.5 rounded-xl text-xs font-bold bg-slate-100 text-slate-400 cursor-not-allowed border border-slate-200 flex items-center space-x-1"' : 'class="px-3 py-1.5 rounded-xl text-xs font-bold bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 shadow-xs transition hover:text-sugu-blue flex items-center space-x-1"'}>
+              <span>Next</span>
+              <i data-lucide="chevron-right" class="w-4 h-4"></i>
+            </button>
+          </div>
+        </div>
+      `;
+    } else {
+      paginationContainer.innerHTML = '';
+    }
+  }
 }
+
+function changeQsCategoryPage(newPage) {
+  appState.qsCategoryPage = newPage;
+  render12CategoryIcons();
+  initLucideIcons();
+  const el = document.getElementById("qs-category-grid-section");
+  if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+window.changeQsCategoryPage = changeQsCategoryPage;
 
 function selectCategory(catId) {
   const cat = findCategory(catId);
@@ -800,6 +899,7 @@ function selectCategory(catId) {
   // Reset parlour state cleanly when switching categories
   appState.beautyMode = 'home';
   appState.selectedParlourId = null;
+  appState.qsServicesPage = 1;
   renderApp();
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
@@ -834,13 +934,43 @@ function renderUrbanCompanyDetailFlow() {
   // ----------------------------------------------------
   // BEAUTY & GROOMING SERVICES DUAL NAVIGATION LOGIC (WOMEN & MEN)
   // ----------------------------------------------------
+  const isBeautyHub = currentCat.id === 'beauty_wellness';
   const isSalon = currentCat.id === 'womens_salon_spa' || currentCat.id === 'mens_salon_massage';
   const isMen = currentCat.id === 'mens_salon_massage';
+  const beautyHubView = document.getElementById("beauty-gender-hub-view");
+  const beautyGenderToggleBar = document.getElementById("beauty-gender-toggle-bar");
   const beautyModeBar = document.getElementById("beauty-service-mode-bar");
   const standardLayout = document.getElementById("uc-standard-layout");
   const parloursLayout = document.getElementById("beauty-parlours-layout");
 
+  if (isBeautyHub) {
+    if (beautyHubView) beautyHubView.classList.remove("hidden");
+    if (beautyGenderToggleBar) beautyGenderToggleBar.classList.add("hidden");
+    if (beautyModeBar) beautyModeBar.classList.add("hidden");
+    if (standardLayout) standardLayout.classList.add("hidden");
+    if (parloursLayout) parloursLayout.classList.add("hidden");
+    initLucideIcons();
+    return;
+  } else {
+    if (beautyHubView) beautyHubView.classList.add("hidden");
+  }
+
   if (isSalon) {
+    if (beautyGenderToggleBar) {
+      beautyGenderToggleBar.classList.remove("hidden");
+      const toggleWomens = document.getElementById("toggle-womens-btn");
+      const toggleMens = document.getElementById("toggle-mens-btn");
+      if (toggleWomens && toggleMens) {
+        if (isMen) {
+          toggleMens.className = "px-4 py-1.5 rounded-xl text-xs font-bold transition flex items-center space-x-1.5 bg-sky-100 text-sky-800 border-2 border-sky-600 shadow-sm";
+          toggleWomens.className = "px-4 py-1.5 rounded-xl text-xs font-semibold transition flex items-center space-x-1.5 bg-slate-50 text-slate-600 hover:bg-pink-50 hover:text-pink-700 border border-slate-200";
+        } else {
+          toggleWomens.className = "px-4 py-1.5 rounded-xl text-xs font-bold transition flex items-center space-x-1.5 bg-pink-100 text-pink-800 border-2 border-pink-500 shadow-sm";
+          toggleMens.className = "px-4 py-1.5 rounded-xl text-xs font-semibold transition flex items-center space-x-1.5 bg-slate-50 text-slate-600 hover:bg-sky-50 hover:text-sky-700 border border-slate-200";
+        }
+      }
+    }
+
     if (beautyModeBar) {
       beautyModeBar.classList.remove("hidden");
 
@@ -922,6 +1052,7 @@ function renderUrbanCompanyDetailFlow() {
       return;
     }
   } else {
+    if (beautyGenderToggleBar) beautyGenderToggleBar.classList.add("hidden");
     if (beautyModeBar) beautyModeBar.classList.add("hidden");
     if (standardLayout) standardLayout.classList.remove("hidden");
     if (parloursLayout) parloursLayout.classList.add("hidden");
@@ -945,10 +1076,20 @@ function renderUrbanCompanyDetailFlow() {
   // Center Feed: Services of the selected subcategory
   const activeSub = currentCat.subcategories.find(s => s.id === appState.selectedSubcategoryId) || currentCat.subcategories[0];
   const itemsContainer = document.getElementById("uc-services-list");
+  const paginationContainer = document.getElementById("uc-services-pagination");
 
   if (itemsContainer && activeSub) {
+    const totalItems = activeSub.items.length;
+    const perPage = appState.qsServicesPerPage || 4;
+    const totalPages = Math.ceil(totalItems / perPage) || 1;
+    if (appState.qsServicesPage > totalPages) appState.qsServicesPage = totalPages;
+    if (appState.qsServicesPage < 1) appState.qsServicesPage = 1;
+    const startIdx = (appState.qsServicesPage - 1) * perPage;
+    const endIdx = Math.min(startIdx + perPage, totalItems);
+    const pagedItems = activeSub.items.slice(startIdx, endIdx);
+
     document.getElementById("uc-subcat-heading").innerText = activeSub.name;
-    itemsContainer.innerHTML = activeSub.items.map(item => {
+    itemsContainer.innerHTML = pagedItems.map(item => {
       const cartItem = appState.cart.find(c => c.item.id === item.id);
       const qty = cartItem ? cartItem.quantity : 0;
       const isWomen = currentCat.id === 'womens_salon_spa';
@@ -1012,8 +1153,55 @@ function renderUrbanCompanyDetailFlow() {
         </div>
       `;
     }).join("");
+
+    if (paginationContainer) {
+      if (totalPages > 1) {
+        let pagesHtml = '';
+        for (let p = 1; p <= totalPages; p++) {
+          const isCur = p === appState.qsServicesPage;
+          pagesHtml += `
+            <button onclick="changeQsServicesPage(${p})" 
+              class="w-8 h-8 rounded-xl text-xs font-bold transition flex items-center justify-center border
+              ${isCur ? 'bg-sugu-blue text-white border-sugu-blue shadow-sm' : 'bg-white hover:bg-slate-50 text-slate-700 border-slate-200 hover:border-slate-300'}">
+              ${p}
+            </button>
+          `;
+        }
+        paginationContainer.innerHTML = `
+          <div class="p-4 bg-white rounded-2xl border border-slate-200 shadow-xs flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div class="text-xs text-slate-600 font-medium">
+              Showing <strong class="text-slate-900 font-bold">${startIdx + 1}–${endIdx}</strong> of <strong class="text-slate-900 font-bold">${totalItems}</strong> services (Page ${appState.qsServicesPage} of ${totalPages})
+            </div>
+            <div class="flex items-center space-x-1.5">
+              <button onclick="changeQsServicesPage(${appState.qsServicesPage - 1})" 
+                ${appState.qsServicesPage === 1 ? 'disabled class="px-3 py-1.5 rounded-xl text-xs font-bold bg-slate-100 text-slate-400 cursor-not-allowed border border-slate-200 flex items-center space-x-1"' : 'class="px-3 py-1.5 rounded-xl text-xs font-bold bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 shadow-xs transition hover:text-sugu-blue flex items-center space-x-1"'}>
+                <i data-lucide="chevron-left" class="w-4 h-4"></i>
+                <span>Prev</span>
+              </button>
+              ${pagesHtml}
+              <button onclick="changeQsServicesPage(${appState.qsServicesPage + 1})" 
+                ${appState.qsServicesPage === totalPages ? 'disabled class="px-3 py-1.5 rounded-xl text-xs font-bold bg-slate-100 text-slate-400 cursor-not-allowed border border-slate-200 flex items-center space-x-1"' : 'class="px-3 py-1.5 rounded-xl text-xs font-bold bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 shadow-xs transition hover:text-sugu-blue flex items-center space-x-1"'}>
+                <span>Next</span>
+                <i data-lucide="chevron-right" class="w-4 h-4"></i>
+              </button>
+            </div>
+          </div>
+        `;
+      } else {
+        paginationContainer.innerHTML = '';
+      }
+    }
   }
 }
+
+function changeQsServicesPage(newPage) {
+  appState.qsServicesPage = newPage;
+  renderUrbanCompanyDetailFlow();
+  initLucideIcons();
+  const el = document.getElementById("uc-services-list");
+  if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+window.changeQsServicesPage = changeQsServicesPage;
 
 // ----------------------------------------------------
 // BEAUTY SERVICES DUAL MODE CONTROLLERS & PARLOUR DIRECTORY
@@ -1375,6 +1563,25 @@ function confirmParlourAppointment() {
   const isMen = data.isMen || appState.selectedCategoryId === 'mens_salon_massage';
   const prefix = isMen ? 'GENT' : 'LUXE';
   const code = `${prefix}-${Math.floor(1000 + Math.random() * 9000)}`;
+
+  // Sync with Backend Beauty Booking REST API
+  try {
+    fetch('/api/beauty/book-appointment/', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        hub: isMen ? 'mens_salon_massage' : 'womens_salon_spa',
+        parlour_id: data.parlour.id,
+        service_id: data.service.id,
+        stylist_tier: appState.selectedParlourStylist,
+        slot_date: appState.selectedParlourSlotDate,
+        slot_time: appState.selectedParlourSlotTime,
+        customer_name: (window.CURRENT_USER && window.CURRENT_USER.name) || 'Guest Customer',
+        customer_phone: '9876543210'
+      })
+    }).catch(e => console.log('Booking API synced:', e));
+  } catch(e) {}
+
   closeParlourBookingModal();
 
   showToast(`Appointment Confirmed at ${data.parlour.name}! Pass #${code}`);
@@ -1385,6 +1592,7 @@ function confirmParlourAppointment() {
 
 function selectSubcategory(subId) {
   appState.selectedSubcategoryId = subId;
+  appState.qsServicesPage = 1;
   renderUrbanCompanyDetailFlow();
   initLucideIcons();
 }
@@ -1876,6 +2084,7 @@ function getTradeCategoryIcon(catName) {
 
 function setBiddingCategoryFilter(catKey) {
   appState.biddingCategoryFilter = catKey;
+  appState.biddingPage = 1;
   renderActiveBiddingTenders();
 }
 
@@ -1934,6 +2143,16 @@ function renderActiveBiddingTenders() {
   // Sort jobs by newest/recent
   filteredJobs.sort((a, b) => (b.dbId || 0) - (a.dbId || 0));
 
+  // Calculate Bidding Pagination
+  const filteredCount = filteredJobs.length;
+  const perPage = appState.biddingPerPage || 5;
+  const totalPages = Math.ceil(filteredCount / perPage) || 1;
+  if (appState.biddingPage > totalPages) appState.biddingPage = totalPages;
+  if (appState.biddingPage < 1) appState.biddingPage = 1;
+  const startIdx = (appState.biddingPage - 1) * perPage;
+  const endIdx = Math.min(startIdx + perPage, filteredCount);
+  const pagedJobs = filteredJobs.slice(startIdx, endIdx);
+
   // Render Category Filter Bar
   if (filterBar) {
     filterBar.innerHTML = `
@@ -1953,7 +2172,7 @@ function renderActiveBiddingTenders() {
             </div>
           </div>
           <div class="text-xs text-slate-500 font-medium bg-slate-50 px-3.5 py-1.5 rounded-xl border border-slate-200 shrink-0">
-            Showing <strong class="text-slate-900 font-bold">${filteredJobs.length}</strong> of ${totalJobsCount} open projects
+            Showing <strong class="text-slate-900 font-bold">${filteredCount > 0 ? (startIdx + 1) : 0}–${endIdx}</strong> of ${filteredCount} open projects
           </div>
         </div>
 
@@ -2010,11 +2229,15 @@ function renderActiveBiddingTenders() {
     return;
   }
 
-  // Render Job Opportunity Cards with Dynamic Details and "Send Bid"
-  container.innerHTML = filteredJobs.map(job => {
+  // Render Paged Job Opportunity Cards with Small Category Icon & "Send Bid"
+  const cardsHtml = pagedJobs.map(job => {
     const iconSrc = (job.icon && (job.icon.startsWith('http') || job.icon.startsWith('/') || job.icon.includes('/')))
       ? job.icon
       : (job.icon ? `assets/icons/${job.icon}` : 'assets/icons/painting_upgrade.png');
+
+    const primaryJobPhoto = (job.main_image && (job.main_image.startsWith('http') || job.main_image.startsWith('/')))
+      ? job.main_image
+      : ((job.photos && job.photos.length > 0) ? job.photos[0] : iconSrc);
 
     const tradeIcon = getTradeCategoryIcon(job.category);
     const bidsReceived = job.bidsCount || (job.bids ? job.bids.length : 0);
@@ -2024,15 +2247,22 @@ function renderActiveBiddingTenders() {
         <!-- Card Main Container -->
         <div class="p-6 sm:p-7">
           
-          <!-- Top Row: Category, Job ID, Status, and Target Budget -->
+          <!-- Top Row: Small Category Icon, Category, Job ID, Status, Target Budget -->
           <div class="flex flex-col md:flex-row md:items-start justify-between gap-4 pb-4 border-b border-slate-100">
-            <div class="flex items-start space-x-4">
-              <div class="w-14 h-14 rounded-2xl bg-slate-50 border border-slate-200/80 p-2.5 shadow-xs flex items-center justify-center shrink-0">
-                <img src="${iconSrc}" alt="${job.category}" class="w-full h-full object-contain" onerror="this.outerHTML='<span class=\\\'text-2xl\\\'>${tradeIcon}</span>'">
+            <div class="flex items-start space-x-3.5 sm:space-x-4">
+              <!-- Small Category Thumbnail (Compact & Clean) -->
+              <div class="relative w-12 h-12 sm:w-14 sm:h-14 rounded-xl overflow-hidden border border-slate-200/90 shadow-xs shrink-0 bg-slate-50 flex items-center justify-center p-0.5 group cursor-pointer" 
+                   onclick="window.open('${primaryJobPhoto}', '_blank')" 
+                   title="Click to view full photo">
+                <img src="${primaryJobPhoto}" alt="${job.title}" class="w-full h-full object-cover rounded-lg group-hover:scale-110 transition-transform duration-300" onerror="this.src='${iconSrc}'">
+                <div class="absolute inset-0 bg-slate-900/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-[10px]">
+                  <i data-lucide="zoom-in" class="w-3.5 h-3.5"></i>
+                </div>
               </div>
-              <div>
-                <div class="flex flex-wrap items-center gap-2 mb-1.5">
-                  <span class="px-2.5 py-0.5 text-xs font-bold rounded-lg bg-amber-100 text-amber-900 border border-amber-200/90 flex items-center space-x-1">
+
+              <div class="min-w-0 flex-1">
+                <div class="flex flex-wrap items-center gap-1.5 sm:gap-2 mb-1">
+                  <span class="px-2 py-0.5 text-xs font-bold rounded-lg bg-amber-100 text-amber-900 border border-amber-200/90 flex items-center space-x-1">
                     <span>${tradeIcon}</span>
                     <span>${job.category}</span>
                   </span>
@@ -2049,7 +2279,8 @@ function renderActiveBiddingTenders() {
                     </span>
                   `}
                 </div>
-                <h3 class="text-xl font-extrabold font-heading text-slate-900 leading-snug">${job.title}</h3>
+                <h3 class="text-lg sm:text-xl font-extrabold font-heading text-slate-900 leading-snug">${job.title}</h3>
+                <p class="text-xs text-slate-500 mt-0.5 line-clamp-1">${job.description}</p>
               </div>
             </div>
 
@@ -2058,7 +2289,7 @@ function renderActiveBiddingTenders() {
               <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Client Target Budget</span>
               <span class="text-2xl font-black text-slate-900 block mt-0.5">${job.budgetRange}</span>
               <span class="text-[11px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md mt-1 inline-block border border-emerald-200">
-                100% Escrow Protected
+                100% Payment Protected
               </span>
             </div>
           </div>
@@ -2125,13 +2356,23 @@ function renderActiveBiddingTenders() {
 
             <!-- Site Photos Gallery (If available) -->
             ${job.photos && job.photos.length > 0 ? `
-              <div class="pt-2">
-                <span class="text-[10px] uppercase font-bold text-slate-400 tracking-wider block mb-1.5 flex items-center">
-                  <i data-lucide="image" class="w-3.5 h-3.5 mr-1 text-slate-400"></i> Site Inspection Photos (${job.photos.length})
-                </span>
-                <div class="flex items-center space-x-3 overflow-x-auto pb-1">
-                  ${job.photos.map(p => `
-                    <img src="${p}" class="w-16 h-16 object-cover rounded-xl border border-slate-200 cursor-pointer hover:scale-105 transition shadow-xs" onclick="window.open('${p}', '_blank')" title="Click to view full photo">
+              <div class="pt-3 border-t border-slate-100">
+                <div class="flex items-center justify-between mb-2.5">
+                  <span class="text-xs uppercase font-extrabold text-slate-700 tracking-wider flex items-center">
+                    <i data-lucide="camera" class="w-4 h-4 mr-1.5 text-sugu-blue"></i>
+                    Project Site &amp; Requirement Photos (${job.photos.length})
+                  </span>
+                  <span class="text-[11px] text-slate-400 font-medium">Click any photo to view full size</span>
+                </div>
+                <div class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-5 gap-3">
+                  ${job.photos.map((p, pIdx) => `
+                    <div class="relative group cursor-pointer overflow-hidden rounded-2xl border border-slate-200 shadow-xs aspect-[4/3] bg-slate-50" onclick="window.open('${p}', '_blank')" title="View site photo ${pIdx+1}">
+                      <img src="${p}" class="w-full h-full object-cover group-hover:scale-108 transition-transform duration-300" alt="Job Site Photo ${pIdx+1}">
+                      <div class="absolute inset-0 bg-slate-900/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-xs font-bold space-x-1">
+                        <i data-lucide="zoom-in" class="w-4 h-4"></i>
+                        <span>Enlarge</span>
+                      </div>
+                    </div>
                   `).join("")}
                 </div>
               </div>
@@ -2142,7 +2383,7 @@ function renderActiveBiddingTenders() {
           <div class="pt-4 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div class="flex items-center space-x-2 text-xs text-slate-500 font-medium">
               <i data-lucide="shield-check" class="w-4 h-4 text-emerald-600 shrink-0"></i>
-              <span>Verified Homeowner Requirement • Payment Secured in Sugu Milestone Escrow</span>
+              <span>Verified Homeowner Requirement • Payment Secured &amp; Released On Satisfaction</span>
             </div>
 
             <button onclick="handleSendBid('${job.dbId}')" 
@@ -2157,8 +2398,54 @@ function renderActiveBiddingTenders() {
     `;
   }).join("");
 
+  // Bidding Pagination Controls
+  let paginationHtml = '';
+  if (totalPages > 1) {
+    let pagesHtml = '';
+    for (let p = 1; p <= totalPages; p++) {
+      const isCur = p === appState.biddingPage;
+      pagesHtml += `
+        <button onclick="changeBiddingPage(${p})" 
+          class="w-8 h-8 rounded-xl text-xs font-bold transition flex items-center justify-center border
+          ${isCur ? 'bg-sugu-blue text-white border-sugu-blue shadow-sm' : 'bg-white hover:bg-slate-50 text-slate-700 border-slate-200 hover:border-slate-300'}">
+          ${p}
+        </button>
+      `;
+    }
+
+    paginationHtml = `
+      <div class="mt-8 p-4 bg-white rounded-2xl border border-slate-200 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div class="text-xs text-slate-500 font-medium">
+          Showing <strong class="text-slate-900 font-bold">${startIdx + 1}–${endIdx}</strong> of <strong class="text-slate-900 font-bold">${filteredCount}</strong> projects (Page ${appState.biddingPage} of ${totalPages})
+        </div>
+        <div class="flex items-center space-x-1.5">
+          <button onclick="changeBiddingPage(${appState.biddingPage - 1})" 
+            ${appState.biddingPage === 1 ? 'disabled class="px-3 py-1.5 rounded-xl text-xs font-bold bg-slate-100 text-slate-400 cursor-not-allowed border border-slate-200 flex items-center space-x-1"' : 'class="px-3 py-1.5 rounded-xl text-xs font-bold bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 shadow-xs transition hover:text-sugu-blue flex items-center space-x-1"'}>
+            <i data-lucide="chevron-left" class="w-4 h-4"></i>
+            <span>Previous</span>
+          </button>
+          ${pagesHtml}
+          <button onclick="changeBiddingPage(${appState.biddingPage + 1})" 
+            ${appState.biddingPage === totalPages ? 'disabled class="px-3 py-1.5 rounded-xl text-xs font-bold bg-slate-100 text-slate-400 cursor-not-allowed border border-slate-200 flex items-center space-x-1"' : 'class="px-3 py-1.5 rounded-xl text-xs font-bold bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 shadow-xs transition hover:text-sugu-blue flex items-center space-x-1"'}>
+            <span>Next</span>
+            <i data-lucide="chevron-right" class="w-4 h-4"></i>
+          </button>
+        </div>
+      </div>
+    `;
+  }
+
+  container.innerHTML = cardsHtml + paginationHtml;
   initLucideIcons();
 }
+
+function changeBiddingPage(newPage) {
+  appState.biddingPage = newPage;
+  renderActiveBiddingTenders();
+  const el = document.getElementById("bidding-filter-bar");
+  if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+window.changeBiddingPage = changeBiddingPage;
 
 // ----------------------------------------------------
 // VENDOR AUTH & "SEND BID" SUBMISSION FLOW
@@ -2313,7 +2600,7 @@ function insertProBidTemplate() {
   const textarea = document.getElementById("send-bid-proposal-input");
   if (!textarea) return;
   const jobTitle = (currentBiddingJob && currentBiddingJob.title) || "this requirement";
-  textarea.value = `Comprehensive proposal for ${jobTitle}:\n1. Complete labor by verified certified technicians\n2. Premium grade materials & proper surface preparation\n3. Daily site hygiene & post-work debris cleanup\n4. 30-day workmanship warranty backed by Sugu Escrow guarantee.`;
+  textarea.value = `Comprehensive proposal for ${jobTitle}:\n1. Complete labor by verified certified technicians\n2. Premium grade materials & proper surface preparation\n3. Daily site hygiene & post-work debris cleanup\n4. 30-day workmanship warranty backed by Sugu Payment Guarantee.`;
 }
 
 function updateBidCalculationBreakdown() {
@@ -2833,9 +3120,9 @@ function customizeTemplate(tplId) {
 }
 
 function acceptBid(jobId, bidId, amount, proName) {
-  showToast(`Accepted bid from ${proName}! Initiating Sugu Milestone Escrow protection.`);
+  showToast(`Accepted bid from ${proName}! Sugu Payment Protection active.`);
   setTimeout(() => {
-    alert(`🎉 Congratulations! You have successfully hired ${proName} for ₹${amount.toLocaleString()}.\n\nNext Steps:\n1. 20% Advance deposited in Sugu Escrow (Safety Guard).\n2. Contractor will visit for pre-execution inspection.\n3. Contract & 100% Satisfaction Guarantee activated.`);
+    alert(`🎉 Congratulations! You have successfully hired ${proName} for ₹${amount.toLocaleString()}.\n\nNext Steps:\n1. Advance payment secured in Sugu Payment Protection Guarantee.\n2. Contractor will visit for pre-execution inspection.\n3. Contract & 100% Satisfaction Guarantee activated.`);
   }, 300);
 }
 
@@ -2948,7 +3235,13 @@ function sendChatMessage(e) {
 // VIDEO MODAL
 // ----------------------------------------------------
 function openVideoModal(videoId) {
-  const v = SUGU_DATA.videos.find(item => item.id === videoId);
+  let v = null;
+  if (window.DB_VIDEOS && Array.isArray(window.DB_VIDEOS)) {
+    v = window.DB_VIDEOS.find(item => String(item.id) === String(videoId));
+  }
+  if (!v && typeof SUGU_DATA !== 'undefined' && SUGU_DATA.videos) {
+    v = SUGU_DATA.videos.find(item => String(item.id) === String(videoId));
+  }
   if (!v) return;
 
   const modal = document.getElementById("video-modal");
@@ -2961,7 +3254,7 @@ function openVideoModal(videoId) {
 
   const videoElement = document.getElementById("video-modal-player");
   if (videoElement) {
-    videoElement.src = v.videoUrl;
+    videoElement.src = v.videoUrl || v.video_url || v.src || "";
     videoElement.play().catch(e => console.log("Autoplay prevented:", e));
   }
 }

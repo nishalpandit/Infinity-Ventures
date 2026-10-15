@@ -49,24 +49,45 @@
     </a>
   </div>
 
-  <!-- Quick Services Grid -->
+  <!-- Watch How Sugu Transforms Homes (Videos CMS) -->
   <div class="card" style="display: flex; flex-direction: column; justify-content: space-between;">
     <div>
       <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 14px;">
-        <div style="width: 44px; height: 44px; border-radius: 10px; background: rgba(245,158,11,0.1); color: var(--warning); display: flex; align-items: center; justify-content: center; font-size: 20px;">
-          <i class="fa-solid fa-bolt"></i>
+        <div style="width: 44px; height: 44px; border-radius: 10px; background: rgba(168,85,247,0.1); color: #9333ea; display: flex; align-items: center; justify-content: center; font-size: 20px;">
+          <i class="fa-solid fa-film"></i>
         </div>
         <div>
-          <h3 style="font-size: 16px; font-weight: 700;">Quick Services Cards</h3>
-          <p style="font-size: 12px; color: var(--text-muted);">Instant booking photo cards & pricing</p>
+          <h3 style="font-size: 16px; font-weight: 700;">Transform Videos</h3>
+          <p style="font-size: 12px; color: var(--text-muted);">Watch How Sugu Transforms Homes videos &amp; titles</p>
         </div>
       </div>
       <div style="font-size: 24px; font-weight: 800; color: var(--text-main); margin-bottom: 16px;">
-        {{ qs_cards_count }} <span style="font-size: 13px; font-weight: 500; color: var(--text-muted);">Active Cards</span>
+        {{ transform_videos_count|default:0 }} <span style="font-size: 13px; font-weight: 500; color: var(--text-muted);">Video Reviews</span>
       </div>
     </div>
-    <a href="{% url 'super_admin_landing_quick_services' %}" class="btn btn-outline btn-sm" style="width: 100%; justify-content: center;">
-      <i class="fa-solid fa-list-check"></i> Manage Cards
+    <a href="{% url 'super_admin_landing_transform_videos' %}" class="btn btn-outline btn-sm" style="width: 100%; justify-content: center;">
+      <i class="fa-solid fa-video"></i> Manage Videos
+    </a>
+  </div>
+
+  <!-- Why Choose Sugu (Comparison CMS) -->
+  <div class="card" style="display: flex; flex-direction: column; justify-content: space-between;">
+    <div>
+      <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 14px;">
+        <div style="width: 44px; height: 44px; border-radius: 10px; background: rgba(14,165,233,0.1); color: #0284c7; display: flex; align-items: center; justify-content: center; font-size: 20px;">
+          <i class="fa-solid fa-shield-halved"></i>
+        </div>
+        <div>
+          <h3 style="font-size: 16px; font-weight: 700;">Why Choose Sugu</h3>
+          <p style="font-size: 12px; color: var(--text-muted);">Feature comparison vs local unorganized techs</p>
+        </div>
+      </div>
+      <div style="font-size: 24px; font-weight: 800; color: var(--text-main); margin-bottom: 16px;">
+        {{ why_choose_count|default:0 }} <span style="font-size: 13px; font-weight: 500; color: var(--text-muted);">Comparison Rows</span>
+      </div>
+    </div>
+    <a href="{% url 'super_admin_landing_why_choose' %}" class="btn btn-outline btn-sm" style="width: 100%; justify-content: center;">
+      <i class="fa-solid fa-table-columns"></i> Manage Comparison
     </a>
   </div>
 

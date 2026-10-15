@@ -6,13 +6,16 @@ let appState = {
   selectedSubcategoryId: null,
   cart: [],
   appliedCoupon: null,
-  userLocation: "Indiranagar, Bengaluru",
+  userLocation: (window.SERVER_USER_LOCATION && window.SERVER_USER_LOCATION.trim()) || localStorage.getItem("sugu_user_location") || "Ranchi, Jharkhand",
   activeVideo: null,
-  activeChatBid: null,
-  biddingJobs: JSON.parse(JSON.stringify(SUGU_DATA.biddingDemo.activeJobs)),
+  biddingJobs: (window.DB_BIDDING_JOBS && Array.isArray(window.DB_BIDDING_JOBS) && window.DB_BIDDING_JOBS.length > 0)
+    ? window.DB_BIDDING_JOBS
+    : ((typeof SUGU_DATA !== 'undefined' && SUGU_DATA.biddingDemo && Array.isArray(SUGU_DATA.biddingDemo.activeJobs)) ? JSON.parse(JSON.stringify(SUGU_DATA.biddingDemo.activeJobs)) : []),
   biddingTab: 'tenders', // 'tenders' | 'post-job' | 'templates'
-  biddingFilter: 'all', // 'all' | 'recommended' | 'lowest' | 'top_rated' | 'fastest'
-  biddingSelectedCategory: 'painting_upgrade',
+  biddingFilter: 'all', // 'all' | 'recommended' | 'lowest' | 'highest' | 'top_rated' | 'fastest'
+  biddingStatusFilter: 'all', // 'all' | 'with_quotes' | 'awaiting'
+  biddingCategoryFilter: 'all', // 'all' | category name
+  biddingSelectedCategory: null,
   biddingSelectedSize: '3 BHK',
   biddingSelectedUrgency: 'Within 1 Week',
   biddingSelectedBudget: '₹20,000 - ₹35,000',
@@ -20,6 +23,12 @@ let appState = {
   selectedSlotDate: "Today",
   selectedSlotTime: "02:00 PM - 04:00 PM",
   assignedPartner: null,
+  biddingPage: 1,
+  biddingPerPage: 5,
+  qsCategoryPage: 1,
+  qsCategoryPerPage: 6,
+  qsServicesPage: 1,
+  qsServicesPerPage: 4,
   // Women's Beauty Service Dual Navigation State
   beautyMode: 'home', // 'home' | 'parlour'
   selectedParlourId: null,
@@ -29,13 +38,342 @@ let appState = {
   selectedParlourSlotTime: '02:00 PM - 03:00 PM'
 };
 
+// ----------------------------------------------------
+// DYNAMIC CATEGORY & LOCATION HELPERS
+// ----------------------------------------------------
+function findCategory(catId) {
+  if (!catId || !window.SUGU_DATA || !Array.isArray(SUGU_DATA.categories)) return null;
+  const s = String(catId).toLowerCase().trim();
+  if (s === '37' || s === 'beauty_wellness' || s.includes('beauty')) {
+    const bCat = SUGU_DATA.categories.find(c => c.id === 'beauty_wellness' || c.isBeautyHub || String(c.id) === '37' || String(c.dbId) === '37');
+    if (bCat) return bCat;
+  }
+  return SUGU_DATA.categories.find(c => 
+    String(c.id).toLowerCase() === s || 
+    (c.dbId && String(c.dbId).toLowerCase() === s) ||
+    (c.legacyId && c.legacyId.toLowerCase() === s) ||
+    (c.name && c.name.toLowerCase().trim() === s) ||
+    (c.name && c.name.toLowerCase().includes(s))
+  ) || null;
+}
+
+function syncDynamicCategories() {
+  if (!window.DB_CATEGORIES || !Array.isArray(window.DB_CATEGORIES) || window.DB_CATEGORIES.length === 0) {
+    return;
+  }
+
+  const dbCats = window.DB_CATEGORIES;
+  const existingMap = new Map();
+  if (window.SUGU_DATA && Array.isArray(SUGU_DATA.categories)) {
+    SUGU_DATA.categories.forEach(c => {
+      if (c.id) existingMap.set(String(c.id).toLowerCase(), c);
+      if (c.name) existingMap.set(c.name.toLowerCase().trim(), c);
+    });
+  }
+
+  function findBestTemplate(dbName) {
+    const lower = (dbName || '').toLowerCase().trim();
+    if (existingMap.has(lower)) return existingMap.get(lower);
+    for (const [key, tpl] of existingMap.entries()) {
+      if (lower.includes(key) || key.includes(lower)) return tpl;
+    }
+    if (lower.includes('plumb')) return existingMap.get('plumbing');
+    if (lower.includes('electr')) return existingMap.get('electrical');
+    if (lower.includes('carpent')) return existingMap.get('carpentry');
+    if (lower.includes('appliance') || lower.includes('ac')) return existingMap.get('ac_services');
+    if (lower.includes('clean')) return existingMap.get('cleaning');
+    if (lower.includes('pest')) return existingMap.get('pest_control');
+    if (lower.includes('paint')) return existingMap.get('painting_upgrade');
+    if (lower.includes('renov')) return existingMap.get('home_renovation');
+    if (lower.includes('beauty') || lower.includes('salon') || lower.includes('spa')) {
+      return existingMap.get('beauty_wellness') || existingMap.get('womens_salon_spa');
+    }
+    return null;
+  }
+
+  const synchronized = [];
+
+  dbCats.forEach(dbCat => {
+    const strId = String(dbCat.id);
+    const tpl = findBestTemplate(dbCat.name);
+
+    let subcategories = [];
+    if (dbCat.subcategories && dbCat.subcategories.length > 0) {
+      subcategories = dbCat.subcategories.map(s => {
+        const sId = 'sub_' + s.id;
+        let items = [];
+        if (tpl && tpl.subcategories) {
+          const matchingSub = tpl.subcategories.find(ts => 
+            (ts.name || '').toLowerCase().includes(s.name.toLowerCase()) || 
+            s.name.toLowerCase().includes((ts.name || '').toLowerCase())
+          );
+          if (matchingSub && matchingSub.items) {
+            items = JSON.parse(JSON.stringify(matchingSub.items));
+          }
+        }
+        if (items.length === 0) {
+          items = [
+            {
+              id: `${sId}_std`,
+              title: `${s.name} Inspection & Repair`,
+              rating: "4.86",
+              reviews: "150+",
+              price: dbCat.min_price || 249,
+              originalPrice: Math.round((dbCat.min_price || 249) * 1.3),
+              time: "30 mins",
+              badge: "Standard",
+              image: dbCat.image || (tpl ? `assets/icons/${tpl.iconFile}` : "https://images.unsplash.com/photo-1581092160607-ee22621dd758?auto=format&fit=crop&w=600&q=80"),
+              features: [
+                "Comprehensive doorstep inspection",
+                "Verified certified professional",
+                "Standard manufacturer components used",
+                "30-day Sugu service guarantee"
+              ]
+            }
+          ];
+        }
+        return {
+          id: sId,
+          name: s.name,
+          items: items
+        };
+      });
+    } else if (tpl && tpl.subcategories && tpl.subcategories.length > 0) {
+      subcategories = JSON.parse(JSON.stringify(tpl.subcategories));
+    } else {
+      subcategories = [
+        {
+          id: `general_${strId}`,
+          name: `Standard ${dbCat.name}`,
+          items: [
+            {
+              id: `item_${strId}_1`,
+              title: `General ${dbCat.name} Consultation & Service`,
+              rating: "4.88",
+              reviews: "210+",
+              price: dbCat.min_price || 199,
+              originalPrice: Math.round((dbCat.min_price || 199) * 1.35),
+              time: "30 mins",
+              badge: "Instant",
+              image: dbCat.image || "https://images.unsplash.com/photo-1581092160607-ee22621dd758?auto=format&fit=crop&w=600&q=80",
+              features: [
+                "Instant 15-minute pro assignment",
+                "Standardized upfront pricing",
+                "30-day rework warranty"
+              ]
+            }
+          ]
+        }
+      ];
+    }
+
+    // If DB category has live QuickService items from backend, attach them to the first subcategory
+    if (dbCat.services && dbCat.services.length > 0) {
+      const dbItems = dbCat.services.map(qs => ({
+        id: `qs_${qs.id}`,
+        title: qs.title,
+        rating: "4.87",
+        reviews: "120+",
+        price: qs.price,
+        originalPrice: Math.round(qs.price * 1.3),
+        time: "45 mins",
+        badge: "Verified",
+        image: qs.image || dbCat.image || "https://images.unsplash.com/photo-1581092160607-ee22621dd758?auto=format&fit=crop&w=600&q=80",
+        desc: qs.description,
+        features: [
+          "Doorstep service by verified vendor",
+          "Transparent pricing with no hidden charges",
+          "30-day Sugu guarantee included"
+        ]
+      }));
+      if (subcategories[0]) {
+        subcategories[0].items = [...dbItems, ...subcategories[0].items];
+      }
+    }
+
+    const isBeauty = (dbCat.name && dbCat.name.toLowerCase().includes('beauty')) || strId === '37' || (tpl && (tpl.id === 'beauty_wellness' || tpl.isBeautyHub));
+    const catObj = {
+      id: isBeauty ? 'beauty_wellness' : strId,
+      dbId: strId,
+      legacyId: tpl ? tpl.id : null,
+      name: isBeauty ? "Beauty & Spa" : dbCat.name,
+      iconFile: dbCat.image ? dbCat.image : (tpl ? tpl.iconFile : 'womens_salon_spa.png'),
+      isCustomImage: !!dbCat.image,
+      icon_class: dbCat.icon_class || 'bi-tools',
+      tagline: tpl ? tpl.tagline : `Verified ${dbCat.name} Services at Transparent Pricing`,
+      rating: tpl ? tpl.rating : "4.91 (4.2M Reviews)",
+      startingPrice: dbCat.min_price ? `Starts ₹${dbCat.min_price}` : (tpl ? tpl.startingPrice : "Starts ₹249"),
+      isBeautyHub: isBeauty,
+      subcategories: isBeauty ? [] : subcategories,
+      parlours: (tpl && tpl.parlours) ? tpl.parlours : []
+    };
+
+    synchronized.push(catObj);
+  });
+
+  // Retain women's and men's salon catalogs so direct selection and toggling work seamlessly
+  const womenTpl = existingMap.get('womens_salon_spa');
+  const menTpl = existingMap.get('mens_salon_massage');
+  if (womenTpl && !synchronized.some(c => c.id === 'womens_salon_spa')) {
+    synchronized.push(womenTpl);
+  }
+  if (menTpl && !synchronized.some(c => c.id === 'mens_salon_massage')) {
+    synchronized.push(menTpl);
+  }
+
+  // CRITICAL: Replace SUGU_DATA.categories with dynamic categories + beauty experiences!
+  SUGU_DATA.categories = synchronized;
+
+  // Set default bidding category to the first dynamic category
+  if (synchronized.length > 0 && !appState.biddingSelectedCategory) {
+    appState.biddingSelectedCategory = synchronized[0].id;
+  }
+}
+
+// ----------------------------------------------------
+// LOCATION MANAGEMENT & HIGH PRECISION LIVE GPS FETCH
+// ----------------------------------------------------
+function initLocationDetection() {
+  const headerText = document.getElementById("header-location-text");
+  const stored = localStorage.getItem("sugu_user_location");
+
+  if (stored && stored.trim().length > 0 && stored !== "Detecting...") {
+    appState.userLocation = stored;
+    if (headerText) headerText.innerText = stored;
+    return;
+  }
+
+  if (window.SERVER_USER_LOCATION && window.SERVER_USER_LOCATION.trim().length > 0) {
+    const sLoc = window.SERVER_USER_LOCATION.trim();
+    appState.userLocation = sLoc;
+    if (headerText) headerText.innerText = sLoc;
+    localStorage.setItem("sugu_user_location", sLoc);
+    return;
+  }
+
+  // Auto-detect via live GPS / IP in background
+  detectUserLiveLocation({ silent: true });
+}
+
+async function detectUserLiveLocation(options = {}) {
+  const silent = !!options.silent;
+  const headerText = document.getElementById("header-location-text");
+  const gpsIcon = document.getElementById("modal-gps-icon");
+  const gpsText = document.getElementById("modal-gps-text");
+  const gpsSub = document.getElementById("modal-gps-sub");
+
+  if (!silent) {
+    if (headerText) headerText.innerText = "Locating GPS...";
+    if (gpsText) gpsText.innerText = "Requesting device GPS...";
+    if (gpsSub) gpsSub.innerText = "Please allow location access if prompted";
+  }
+
+  function applyLocation(locName, fullData) {
+    appState.userLocation = locName;
+    if (headerText) headerText.innerText = locName;
+    localStorage.setItem("sugu_user_location", locName);
+
+    if (!silent) {
+      if (gpsText) gpsText.innerText = "Location Found!";
+      if (gpsSub) gpsSub.innerText = locName;
+      showToast(`Location updated to ${locName}`);
+      setTimeout(() => {
+        closeLocationPicker();
+        resetGpsButton();
+      }, 700);
+    }
+    renderApp();
+  }
+
+  function resetGpsButton() {
+    if (gpsText) gpsText.innerText = "Use My Current Location";
+    if (gpsSub) gpsSub.innerText = "High accuracy GPS & reverse geocoding";
+  }
+
+  async function fallbackToIp() {
+    try {
+      const res = await fetch("/api/detect-location/");
+      const data = await res.json();
+      const locStr = (data.city && data.state) ? `${data.city}, ${data.state}` : (data.name || "Ranchi, Jharkhand");
+      applyLocation(locStr, data);
+    } catch (e) {
+      console.warn("IP location fallback failed:", e);
+      if (!localStorage.getItem("sugu_user_location")) {
+        applyLocation("Ranchi, Jharkhand");
+      }
+      if (!silent) resetGpsButton();
+    }
+  }
+
+  if (!navigator.geolocation) {
+    fallbackToIp();
+    return;
+  }
+
+  navigator.geolocation.getCurrentPosition(
+    async (pos) => {
+      const lat = pos.coords.latitude;
+      const lon = pos.coords.longitude;
+      if (!silent && gpsText) gpsText.innerText = "Pinpointing address...";
+
+      try {
+        const res = await fetch(`/api/detect-location/?lat=${lat}&lon=${lon}`);
+        const data = await res.json();
+        const displayLoc = data.primary ? (data.city ? `${data.primary}, ${data.city}` : data.primary) : (data.name || `${data.city}, ${data.state}`);
+        applyLocation(displayLoc, data);
+      } catch (err) {
+        console.warn("Reverse geocode failed, using IP fallback:", err);
+        fallbackToIp();
+      }
+    },
+    (err) => {
+      console.warn("HTML5 Geolocation error, falling back to IP:", err.message);
+      fallbackToIp();
+    },
+    {
+      enableHighAccuracy: true,
+      timeout: 8000,
+      maximumAge: 60000
+    }
+  );
+}
+
+function filterModalCities(query) {
+  const q = (query || '').toLowerCase().trim();
+  const items = document.querySelectorAll(".modal-city-item");
+  items.forEach(item => {
+    const text = item.textContent.toLowerCase();
+    if (!q || text.includes(q)) {
+      item.style.display = "flex";
+    } else {
+      item.style.display = "none";
+    }
+  });
+}
+
 // Initialize app when DOM is loaded
-document.addEventListener("DOMContentLoaded", () => {
-  initThreeJsHero();
-  initLucideIcons();
-  setupEventListeners();
+function initApplication() {
+  if (window.DB_BIDDING_JOBS && Array.isArray(window.DB_BIDDING_JOBS) && window.DB_BIDDING_JOBS.length > 0) {
+    appState.biddingJobs = window.DB_BIDDING_JOBS;
+  } else if ((!appState.biddingJobs || appState.biddingJobs.length === 0) && typeof SUGU_DATA !== 'undefined' && SUGU_DATA.biddingDemo) {
+    appState.biddingJobs = JSON.parse(JSON.stringify(SUGU_DATA.biddingDemo.activeJobs || []));
+  }
+  if (!appState.biddingTab) {
+    appState.biddingTab = 'tenders';
+  }
+  try { initThreeJsHero(); } catch (e) { console.error("ThreeJS error:", e); }
+  try { syncDynamicCategories(); } catch (e) { console.error("syncDynamicCategories error:", e); }
+  try { initLocationDetection(); } catch (e) { console.error("Location error:", e); }
+  try { initLucideIcons(); } catch (e) { console.error("Lucide error:", e); }
+  try { setupEventListeners(); } catch (e) { console.error("Listeners error:", e); }
   renderApp();
-});
+}
+
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", initApplication);
+} else {
+  initApplication();
+}
 
 function initLucideIcons() {
   if (window.lucide) {
@@ -178,10 +516,14 @@ function switchRoute(route, categoryId = null) {
   if (categoryId === 'ac_appliance') categoryId = 'ac_services';
   appState.currentRoute = route;
   if (categoryId) {
-    appState.selectedCategoryId = categoryId;
-    const cat = SUGU_DATA.categories.find(c => c.id === categoryId);
-    if (cat && cat.subcategories && cat.subcategories.length > 0) {
-      appState.selectedSubcategoryId = cat.subcategories[0].id;
+    const cat = findCategory(categoryId);
+    if (cat) {
+      appState.selectedCategoryId = cat.id;
+      if (cat.subcategories && cat.subcategories.length > 0) {
+        appState.selectedSubcategoryId = cat.subcategories[0].id;
+      }
+    } else {
+      appState.selectedCategoryId = categoryId;
     }
   } else if (route === 'quick-service' && !appState.selectedCategoryId) {
     // If opening quick service without specific category, default to category overview
@@ -292,10 +634,18 @@ function renderHomeView() {
   // Render Video Testimonials
   const videoGrid = document.getElementById("home-videos-grid");
   if (videoGrid) {
-    videoGrid.innerHTML = SUGU_DATA.videos.map(v => `
+    const listToRender = (window.DB_VIDEOS && Array.isArray(window.DB_VIDEOS) && window.DB_VIDEOS.length > 0)
+      ? window.DB_VIDEOS
+      : (typeof SUGU_DATA !== 'undefined' ? SUGU_DATA.videos : []);
+
+    videoGrid.innerHTML = listToRender.map(v => {
+      const ratingStars = Array(Math.min(5, Math.max(1, Math.round(Number(v.rating) || 5)))).fill('<i data-lucide="star" class="w-4 h-4 fill-amber-400"></i>').join("");
+      const thumb = v.thumbnail || "https://images.unsplash.com/photo-1513694203232-719a280e022f?auto=format&fit=crop&w=600&q=80";
+      const tag = v.service || v.service_tag || "Home Service";
+      return `
       <div class="group relative rounded-2xl overflow-hidden bg-white shadow-lg border border-slate-200 hover:shadow-2xl transition duration-300">
         <div class="relative h-56 overflow-hidden cursor-pointer" onclick="openVideoModal('${v.id}')">
-          <img src="${v.thumbnail}" alt="${v.title}" class="w-full h-full object-cover group-hover:scale-105 transition duration-500">
+          <img src="${thumb}" alt="${v.title}" class="w-full h-full object-cover group-hover:scale-105 transition duration-500">
           <div class="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-slate-950/30 to-transparent"></div>
           <div class="absolute inset-0 flex items-center justify-center">
             <div class="w-14 h-14 rounded-full bg-sky-600/90 text-white flex items-center justify-center shadow-lg group-hover:scale-110 group-hover:bg-sky-500 transition">
@@ -306,12 +656,12 @@ function renderHomeView() {
             ${v.duration}
           </span>
           <span class="absolute top-3 left-3 px-2.5 py-1 text-xs font-bold bg-sky-600 text-white rounded-full">
-            ${v.service}
+            ${tag}
           </span>
         </div>
         <div class="p-5">
           <div class="flex items-center space-x-1 text-amber-500 mb-2">
-            ${Array(v.rating).fill('<i data-lucide="star" class="w-4 h-4 fill-amber-400"></i>').join("")}
+            ${ratingStars}
           </div>
           <h4 class="font-bold text-slate-800 text-lg mb-2 line-clamp-1">${v.title}</h4>
           <p class="text-sm text-slate-600 italic mb-4 line-clamp-2">"${v.quote}"</p>
@@ -321,10 +671,13 @@ function renderHomeView() {
           </div>
         </div>
       </div>
-    `).join("");
+    `}).join("");
+    if (window.lucide && typeof lucide.createIcons === 'function') {
+      lucide.createIcons();
+    }
   }
 
-  // Render Customer Reviews Grid
+  // Render Customer Reviews Grid (Dynamic from Super Admin CMS DB_TESTIMONIALS)
   const reviewsGrid = document.getElementById("home-reviews-grid");
   if (reviewsGrid) {
     const listToRender = (window.DB_TESTIMONIALS && Array.isArray(window.DB_TESTIMONIALS) && window.DB_TESTIMONIALS.length > 0)
@@ -356,11 +709,11 @@ function renderHomeView() {
       <div class="p-6 rounded-2xl bg-white border border-slate-200 shadow-md hover:shadow-xl transition-all duration-300 flex flex-col justify-between">
         <div>
           <div class="flex items-center justify-between mb-4">
-            <div class="flex items-center space-x-3">
+            <div class="flex items-center space-x-3 min-w-0 pr-2">
               ${avatarHtml}
-              <div>
-                <h5 class="font-bold text-slate-900 leading-tight">${r.name}</h5>
-                <span class="text-xs text-slate-500">${roleOrLocation}</span>
+              <div class="min-w-0">
+                <h5 class="font-bold text-slate-900 leading-tight truncate">${r.name}</h5>
+                <span class="text-xs text-slate-500 block truncate">${roleOrLocation}</span>
               </div>
             </div>
             <span class="px-2 py-0.5 text-[11px] font-semibold rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 whitespace-nowrap flex-shrink-0 self-start">
@@ -436,24 +789,42 @@ function renderQuickServiceView() {
 
 function render12CategoryIcons() {
   const container = document.getElementById("qs-12-icons-grid");
+  const paginationContainer = document.getElementById("qs-categories-pagination");
   if (!container) return;
 
-  container.innerHTML = SUGU_DATA.categories.map(cat => `
-    <div onclick="selectCategory('${cat.id}')" class="sugu-category-card group">
-      <div class="relative overflow-hidden bg-slate-50/80 aspect-square flex items-center justify-center p-3">
-        <img src="assets/icons/${cat.iconFile}" alt="${cat.name}" class="w-full h-full object-contain rounded-2xl group-hover:scale-105 transition-transform duration-300">
+  // Filter out separate gender categories so Beauty & Spa represents both in the master 12 grid
+  const displayCats = SUGU_DATA.categories.filter(c => c.id !== 'womens_salon_spa' && c.id !== 'mens_salon_massage');
+
+  const totalCats = displayCats.length;
+  const perPage = appState.qsCategoryPerPage || 6;
+  const totalPages = Math.ceil(totalCats / perPage) || 1;
+  if (appState.qsCategoryPage > totalPages) appState.qsCategoryPage = totalPages;
+  if (appState.qsCategoryPage < 1) appState.qsCategoryPage = 1;
+  const startIdx = (appState.qsCategoryPage - 1) * perPage;
+  const endIdx = Math.min(startIdx + perPage, totalCats);
+  const pagedCats = displayCats.slice(startIdx, endIdx);
+
+  container.innerHTML = pagedCats.map(cat => {
+    const iconFile = cat.iconFile || 'painting_upgrade.png';
+    const imgSrc = cat.isCustomImage ? iconFile : `assets/icons/${iconFile}`;
+    const imgHtml = `<img src="${imgSrc}" alt="${cat.name}" class="w-14 h-14 sm:w-16 sm:h-16 object-contain rounded-xl group-hover:scale-110 transition-transform duration-300">`;
+
+    return `
+    <div onclick="selectCategory('${cat.id}')" class="sugu-category-card group cursor-pointer bg-white border border-slate-200/90 rounded-2xl overflow-hidden shadow-xs hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between">
+      <div class="relative overflow-hidden bg-slate-50/80 aspect-[4/3] flex items-center justify-center p-3">
+        ${imgHtml}
         <div class="absolute inset-0 bg-[#1b75d0]/5 opacity-0 group-hover:opacity-100 transition-opacity"></div>
       </div>
       <div class="p-3.5 bg-white border-t border-slate-100 flex flex-col justify-between flex-1">
         <div>
           <div class="flex items-center justify-between text-xs text-slate-500 mb-1">
             <span class="flex items-center font-semibold text-amber-600">
-              <i data-lucide="star" class="w-3.5 h-3.5 fill-amber-400 mr-0.5"></i> ${cat.rating.split(' ')[0]}
+              <i data-lucide="star" class="w-3.5 h-3.5 fill-amber-400 mr-0.5"></i> ${(cat.rating || '4.85').split(' ')[0]}
             </span>
             <span class="text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full text-[10px] font-bold border border-emerald-200">15 Min Pro</span>
           </div>
           <h4 class="font-bold text-slate-900 group-hover:text-[#1b75d0] transition text-sm mb-1">${cat.name}</h4>
-          <p class="text-[11px] text-slate-500 line-clamp-1">${cat.tagline}</p>
+          <p class="text-[11px] text-slate-500 line-clamp-1">${cat.tagline || 'Verified Doorstep Services'}</p>
         </div>
         <div class="mt-2.5 pt-2 border-t border-slate-100 flex items-center justify-between">
           <span class="text-xs font-black text-[#1b75d0]">${cat.startingPrice}</span>
@@ -463,31 +834,89 @@ function render12CategoryIcons() {
         </div>
       </div>
     </div>
-  `).join("");
+  `;
+  }).join("");
+
+  // Pagination bar for Categories Overview if totalPages > 1
+  if (paginationContainer) {
+    if (totalPages > 1) {
+      let pagesHtml = '';
+      for (let p = 1; p <= totalPages; p++) {
+        const isCur = p === appState.qsCategoryPage;
+        pagesHtml += `
+          <button onclick="changeQsCategoryPage(${p})" 
+            class="w-8 h-8 rounded-xl text-xs font-bold transition flex items-center justify-center border
+            ${isCur ? 'bg-sugu-blue text-white border-sugu-blue shadow-sm' : 'bg-white hover:bg-slate-50 text-slate-700 border-slate-200 hover:border-slate-300'}">
+            ${p}
+          </button>
+        `;
+      }
+      paginationContainer.innerHTML = `
+        <div class="p-4 bg-slate-50 rounded-2xl border border-slate-200 shadow-xs flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div class="text-xs text-slate-600 font-medium">
+            Showing <strong class="text-slate-900 font-bold">${startIdx + 1}–${endIdx}</strong> of <strong class="text-slate-900 font-bold">${totalCats}</strong> categories (Page ${appState.qsCategoryPage} of ${totalPages})
+          </div>
+          <div class="flex items-center space-x-1.5">
+            <button onclick="changeQsCategoryPage(${appState.qsCategoryPage - 1})" 
+              ${appState.qsCategoryPage === 1 ? 'disabled class="px-3 py-1.5 rounded-xl text-xs font-bold bg-slate-100 text-slate-400 cursor-not-allowed border border-slate-200 flex items-center space-x-1"' : 'class="px-3 py-1.5 rounded-xl text-xs font-bold bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 shadow-xs transition hover:text-sugu-blue flex items-center space-x-1"'}>
+              <i data-lucide="chevron-left" class="w-4 h-4"></i>
+              <span>Prev</span>
+            </button>
+            ${pagesHtml}
+            <button onclick="changeQsCategoryPage(${appState.qsCategoryPage + 1})" 
+              ${appState.qsCategoryPage === totalPages ? 'disabled class="px-3 py-1.5 rounded-xl text-xs font-bold bg-slate-100 text-slate-400 cursor-not-allowed border border-slate-200 flex items-center space-x-1"' : 'class="px-3 py-1.5 rounded-xl text-xs font-bold bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 shadow-xs transition hover:text-sugu-blue flex items-center space-x-1"'}>
+              <span>Next</span>
+              <i data-lucide="chevron-right" class="w-4 h-4"></i>
+            </button>
+          </div>
+        </div>
+      `;
+    } else {
+      paginationContainer.innerHTML = '';
+    }
+  }
 }
 
+function changeQsCategoryPage(newPage) {
+  appState.qsCategoryPage = newPage;
+  render12CategoryIcons();
+  initLucideIcons();
+  const el = document.getElementById("qs-category-grid-section");
+  if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+window.changeQsCategoryPage = changeQsCategoryPage;
+
 function selectCategory(catId) {
-  appState.selectedCategoryId = catId;
-  const cat = SUGU_DATA.categories.find(c => c.id === catId);
-  if (cat && cat.subcategories.length > 0) {
-    appState.selectedSubcategoryId = cat.subcategories[0].id;
+  const cat = findCategory(catId);
+  if (cat) {
+    appState.selectedCategoryId = cat.id;
+    if (cat.subcategories && cat.subcategories.length > 0) {
+      appState.selectedSubcategoryId = cat.subcategories[0].id;
+    }
+  } else {
+    appState.selectedCategoryId = catId;
   }
   // Reset parlour state cleanly when switching categories
   appState.beautyMode = 'home';
   appState.selectedParlourId = null;
+  appState.qsServicesPage = 1;
   renderApp();
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
 function renderUrbanCompanyDetailFlow() {
-  const currentCat = SUGU_DATA.categories.find(c => c.id === appState.selectedCategoryId);
+  const currentCat = findCategory(appState.selectedCategoryId) || SUGU_DATA.categories[0];
   if (!currentCat) return;
+  appState.selectedCategoryId = currentCat.id;
 
   // Header info
   document.getElementById("uc-cat-title").innerText = currentCat.name;
-  document.getElementById("uc-cat-tagline").innerText = currentCat.tagline;
-  document.getElementById("uc-cat-rating").innerHTML = `<i data-lucide="star" class="w-4 h-4 fill-amber-400 text-amber-400 mr-1"></i> ${currentCat.rating}`;
-  document.getElementById("uc-cat-icon-thumb").src = `assets/icons/${currentCat.iconFile}`;
+  document.getElementById("uc-cat-tagline").innerText = currentCat.tagline || 'Verified Doorstep Services';
+  document.getElementById("uc-cat-rating").innerHTML = `<i data-lucide="star" class="w-4 h-4 fill-amber-400 text-amber-400 mr-1"></i> ${currentCat.rating || '4.86'}`;
+  const catThumb = document.getElementById("uc-cat-icon-thumb");
+  if (catThumb) {
+    catThumb.src = currentCat.isCustomImage ? currentCat.iconFile : `assets/icons/${currentCat.iconFile}`;
+  }
 
   // Render Horizontal Category Switcher (Urban Company style pill strip)
   const catPillStrip = document.getElementById("uc-category-pills");
@@ -496,7 +925,7 @@ function renderUrbanCompanyDetailFlow() {
       <button onclick="selectCategory('${c.id}')" 
         class="flex-shrink-0 flex items-center space-x-2 px-3 py-1.5 rounded-full text-xs font-semibold transition border 
         ${c.id === currentCat.id ? 'bg-sky-600 text-white border-sky-600 shadow' : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'}">
-        <img src="assets/icons/${c.iconFile}" class="w-5 h-5 object-contain rounded-md" alt="${c.name}">
+        <img src="${c.isCustomImage ? c.iconFile : 'assets/icons/' + c.iconFile}" class="w-5 h-5 object-contain rounded-md" alt="${c.name}">
         <span>${c.name}</span>
       </button>
     `).join("");
@@ -505,13 +934,43 @@ function renderUrbanCompanyDetailFlow() {
   // ----------------------------------------------------
   // BEAUTY & GROOMING SERVICES DUAL NAVIGATION LOGIC (WOMEN & MEN)
   // ----------------------------------------------------
+  const isBeautyHub = currentCat.id === 'beauty_wellness';
   const isSalon = currentCat.id === 'womens_salon_spa' || currentCat.id === 'mens_salon_massage';
   const isMen = currentCat.id === 'mens_salon_massage';
+  const beautyHubView = document.getElementById("beauty-gender-hub-view");
+  const beautyGenderToggleBar = document.getElementById("beauty-gender-toggle-bar");
   const beautyModeBar = document.getElementById("beauty-service-mode-bar");
   const standardLayout = document.getElementById("uc-standard-layout");
   const parloursLayout = document.getElementById("beauty-parlours-layout");
 
+  if (isBeautyHub) {
+    if (beautyHubView) beautyHubView.classList.remove("hidden");
+    if (beautyGenderToggleBar) beautyGenderToggleBar.classList.add("hidden");
+    if (beautyModeBar) beautyModeBar.classList.add("hidden");
+    if (standardLayout) standardLayout.classList.add("hidden");
+    if (parloursLayout) parloursLayout.classList.add("hidden");
+    initLucideIcons();
+    return;
+  } else {
+    if (beautyHubView) beautyHubView.classList.add("hidden");
+  }
+
   if (isSalon) {
+    if (beautyGenderToggleBar) {
+      beautyGenderToggleBar.classList.remove("hidden");
+      const toggleWomens = document.getElementById("toggle-womens-btn");
+      const toggleMens = document.getElementById("toggle-mens-btn");
+      if (toggleWomens && toggleMens) {
+        if (isMen) {
+          toggleMens.className = "px-4 py-1.5 rounded-xl text-xs font-bold transition flex items-center space-x-1.5 bg-sky-100 text-sky-800 border-2 border-sky-600 shadow-sm";
+          toggleWomens.className = "px-4 py-1.5 rounded-xl text-xs font-semibold transition flex items-center space-x-1.5 bg-slate-50 text-slate-600 hover:bg-pink-50 hover:text-pink-700 border border-slate-200";
+        } else {
+          toggleWomens.className = "px-4 py-1.5 rounded-xl text-xs font-bold transition flex items-center space-x-1.5 bg-pink-100 text-pink-800 border-2 border-pink-500 shadow-sm";
+          toggleMens.className = "px-4 py-1.5 rounded-xl text-xs font-semibold transition flex items-center space-x-1.5 bg-slate-50 text-slate-600 hover:bg-sky-50 hover:text-sky-700 border border-slate-200";
+        }
+      }
+    }
+
     if (beautyModeBar) {
       beautyModeBar.classList.remove("hidden");
 
@@ -593,6 +1052,7 @@ function renderUrbanCompanyDetailFlow() {
       return;
     }
   } else {
+    if (beautyGenderToggleBar) beautyGenderToggleBar.classList.add("hidden");
     if (beautyModeBar) beautyModeBar.classList.add("hidden");
     if (standardLayout) standardLayout.classList.remove("hidden");
     if (parloursLayout) parloursLayout.classList.add("hidden");
@@ -616,10 +1076,20 @@ function renderUrbanCompanyDetailFlow() {
   // Center Feed: Services of the selected subcategory
   const activeSub = currentCat.subcategories.find(s => s.id === appState.selectedSubcategoryId) || currentCat.subcategories[0];
   const itemsContainer = document.getElementById("uc-services-list");
+  const paginationContainer = document.getElementById("uc-services-pagination");
 
   if (itemsContainer && activeSub) {
+    const totalItems = activeSub.items.length;
+    const perPage = appState.qsServicesPerPage || 4;
+    const totalPages = Math.ceil(totalItems / perPage) || 1;
+    if (appState.qsServicesPage > totalPages) appState.qsServicesPage = totalPages;
+    if (appState.qsServicesPage < 1) appState.qsServicesPage = 1;
+    const startIdx = (appState.qsServicesPage - 1) * perPage;
+    const endIdx = Math.min(startIdx + perPage, totalItems);
+    const pagedItems = activeSub.items.slice(startIdx, endIdx);
+
     document.getElementById("uc-subcat-heading").innerText = activeSub.name;
-    itemsContainer.innerHTML = activeSub.items.map(item => {
+    itemsContainer.innerHTML = pagedItems.map(item => {
       const cartItem = appState.cart.find(c => c.item.id === item.id);
       const qty = cartItem ? cartItem.quantity : 0;
       const isWomen = currentCat.id === 'womens_salon_spa';
@@ -683,8 +1153,55 @@ function renderUrbanCompanyDetailFlow() {
         </div>
       `;
     }).join("");
+
+    if (paginationContainer) {
+      if (totalPages > 1) {
+        let pagesHtml = '';
+        for (let p = 1; p <= totalPages; p++) {
+          const isCur = p === appState.qsServicesPage;
+          pagesHtml += `
+            <button onclick="changeQsServicesPage(${p})" 
+              class="w-8 h-8 rounded-xl text-xs font-bold transition flex items-center justify-center border
+              ${isCur ? 'bg-sugu-blue text-white border-sugu-blue shadow-sm' : 'bg-white hover:bg-slate-50 text-slate-700 border-slate-200 hover:border-slate-300'}">
+              ${p}
+            </button>
+          `;
+        }
+        paginationContainer.innerHTML = `
+          <div class="p-4 bg-white rounded-2xl border border-slate-200 shadow-xs flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div class="text-xs text-slate-600 font-medium">
+              Showing <strong class="text-slate-900 font-bold">${startIdx + 1}–${endIdx}</strong> of <strong class="text-slate-900 font-bold">${totalItems}</strong> services (Page ${appState.qsServicesPage} of ${totalPages})
+            </div>
+            <div class="flex items-center space-x-1.5">
+              <button onclick="changeQsServicesPage(${appState.qsServicesPage - 1})" 
+                ${appState.qsServicesPage === 1 ? 'disabled class="px-3 py-1.5 rounded-xl text-xs font-bold bg-slate-100 text-slate-400 cursor-not-allowed border border-slate-200 flex items-center space-x-1"' : 'class="px-3 py-1.5 rounded-xl text-xs font-bold bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 shadow-xs transition hover:text-sugu-blue flex items-center space-x-1"'}>
+                <i data-lucide="chevron-left" class="w-4 h-4"></i>
+                <span>Prev</span>
+              </button>
+              ${pagesHtml}
+              <button onclick="changeQsServicesPage(${appState.qsServicesPage + 1})" 
+                ${appState.qsServicesPage === totalPages ? 'disabled class="px-3 py-1.5 rounded-xl text-xs font-bold bg-slate-100 text-slate-400 cursor-not-allowed border border-slate-200 flex items-center space-x-1"' : 'class="px-3 py-1.5 rounded-xl text-xs font-bold bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 shadow-xs transition hover:text-sugu-blue flex items-center space-x-1"'}>
+                <span>Next</span>
+                <i data-lucide="chevron-right" class="w-4 h-4"></i>
+              </button>
+            </div>
+          </div>
+        `;
+      } else {
+        paginationContainer.innerHTML = '';
+      }
+    }
   }
 }
+
+function changeQsServicesPage(newPage) {
+  appState.qsServicesPage = newPage;
+  renderUrbanCompanyDetailFlow();
+  initLucideIcons();
+  const el = document.getElementById("uc-services-list");
+  if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+window.changeQsServicesPage = changeQsServicesPage;
 
 // ----------------------------------------------------
 // BEAUTY SERVICES DUAL MODE CONTROLLERS & PARLOUR DIRECTORY
@@ -1046,6 +1563,25 @@ function confirmParlourAppointment() {
   const isMen = data.isMen || appState.selectedCategoryId === 'mens_salon_massage';
   const prefix = isMen ? 'GENT' : 'LUXE';
   const code = `${prefix}-${Math.floor(1000 + Math.random() * 9000)}`;
+
+  // Sync with Backend Beauty Booking REST API
+  try {
+    fetch('/api/beauty/book-appointment/', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        hub: isMen ? 'mens_salon_massage' : 'womens_salon_spa',
+        parlour_id: data.parlour.id,
+        service_id: data.service.id,
+        stylist_tier: appState.selectedParlourStylist,
+        slot_date: appState.selectedParlourSlotDate,
+        slot_time: appState.selectedParlourSlotTime,
+        customer_name: (window.CURRENT_USER && window.CURRENT_USER.name) || 'Guest Customer',
+        customer_phone: '9876543210'
+      })
+    }).catch(e => console.log('Booking API synced:', e));
+  } catch(e) {}
+
   closeParlourBookingModal();
 
   showToast(`Appointment Confirmed at ${data.parlour.name}! Pass #${code}`);
@@ -1056,6 +1592,7 @@ function confirmParlourAppointment() {
 
 function selectSubcategory(subId) {
   appState.selectedSubcategoryId = subId;
+  appState.qsServicesPage = 1;
   renderUrbanCompanyDetailFlow();
   initLucideIcons();
 }
@@ -1113,11 +1650,13 @@ function renderFloatingCart() {
   const subtotal = appState.cart.reduce((sum, i) => sum + (i.item.price * i.quantity), 0);
 
   if (totalQty > 0) {
-    bar.classList.remove("translate-y-full");
-    document.getElementById("cart-bar-count").innerText = `${totalQty} ${totalQty === 1 ? 'service' : 'services'}`;
-    document.getElementById("cart-bar-total").innerText = `₹${subtotal}`;
+    bar.classList.remove("hidden", "translate-y-full");
+    const countEl = document.getElementById("cart-bar-count");
+    const totalEl = document.getElementById("cart-bar-total");
+    if (countEl) countEl.innerText = `${totalQty} ${totalQty === 1 ? 'service' : 'services'}`;
+    if (totalEl) totalEl.innerText = `₹${subtotal}`;
   } else {
-    bar.classList.add("translate-y-full");
+    bar.classList.add("hidden", "translate-y-full");
   }
 }
 
@@ -1470,6 +2009,9 @@ function closeOrderSuccessModal() {
 // 3. BIDDING HUB VIEW (END-USER BIDDING PORTAL - EASY MODE)
 // ----------------------------------------------------
 function renderBiddingView() {
+  if (!appState.biddingTab) {
+    appState.biddingTab = 'tenders';
+  }
   const tabTenders = document.getElementById("bid-tab-tenders-btn");
   const tabPost = document.getElementById("bid-tab-post-btn");
   const tabTemplates = document.getElementById("bid-tab-templates-btn");
@@ -1479,7 +2021,7 @@ function renderBiddingView() {
   const secTemplates = document.getElementById("bidding-templates-section");
 
   // Calculate total bids across all active tenders
-  const totalBids = appState.biddingJobs.reduce((sum, j) => sum + (j.bids ? j.bids.length : 0), 0);
+  const totalBids = (appState.biddingJobs || []).reduce((sum, j) => sum + (j.bids ? j.bids.length : 0), 0);
   const badgeCountEl = document.getElementById("bid-badge-count");
   if (badgeCountEl) badgeCountEl.innerText = totalBids;
 
@@ -1525,8 +2067,29 @@ function setBiddingTab(tab) {
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
-function setBiddingFilter(filterKey) {
-  appState.biddingFilter = filterKey;
+function getTradeCategoryIcon(catName) {
+  const c = (catName || '').toLowerCase();
+  if (c.includes('carpent')) return '🪚';
+  if (c.includes('clean')) return '🧹';
+  if (c.includes('electr')) return '⚡';
+  if (c.includes('paint')) return '🎨';
+  if (c.includes('plumb')) return '🔧';
+  if (c.includes('renov')) return '🏡';
+  if (c.includes('improv')) return '🛠️';
+  if (c.includes('ac') || c.includes('appliance')) return '❄️';
+  if (c.includes('pest')) return '🐜';
+  if (c.includes('kitchen')) return '🍳';
+  return '📋';
+}
+
+function setBiddingCategoryFilter(catKey) {
+  appState.biddingCategoryFilter = catKey;
+  appState.biddingPage = 1;
+  renderActiveBiddingTenders();
+}
+
+function resetBiddingFilters() {
+  appState.biddingCategoryFilter = 'all';
   renderActiveBiddingTenders();
 }
 
@@ -1535,205 +2098,646 @@ function renderActiveBiddingTenders() {
   const filterBar = document.getElementById("bidding-filter-bar");
   if (!container) return;
 
-  // Render Filter Bar Chips
-  if (filterBar) {
-    const filters = [
-      { id: 'all', label: 'All Quotes', icon: 'list-filter' },
-      { id: 'recommended', label: '🏆 Best Value', icon: 'award' },
-      { id: 'lowest', label: '💰 Lowest Price', icon: 'trending-down' },
-      { id: 'top_rated', label: '⭐ Top Rated (4.9+★)', icon: 'star' },
-      { id: 'fastest', label: '⚡ Fastest Delivery', icon: 'zap' }
-    ];
+  const allJobs = appState.biddingJobs || [];
+  const totalJobsCount = allJobs.length;
 
-    filterBar.innerHTML = `
-      <div class="flex items-center space-x-2 text-xs font-bold text-slate-500 mr-2">
-        <i data-lucide="sliders-horizontal" class="w-4 h-4"></i>
-        <span>Filter Quotes:</span>
+  // Calculate total bids across all active tenders
+  const totalBids = allJobs.reduce((sum, j) => sum + (j.bids ? j.bids.length : 0), 0);
+  const badgeCountEl = document.getElementById("bid-badge-count");
+  if (badgeCountEl) badgeCountEl.innerText = totalBids;
+
+  // If no jobs exist at all
+  if (totalJobsCount === 0) {
+    if (filterBar) filterBar.innerHTML = '';
+    container.innerHTML = `
+      <div class="bg-white rounded-3xl p-12 text-center border border-slate-200 shadow-sm mb-8">
+        <div class="w-16 h-16 rounded-2xl bg-amber-100 text-amber-700 flex items-center justify-center mx-auto mb-4">
+          <i data-lucide="layers" class="w-8 h-8"></i>
+        </div>
+        <h3 class="text-xl font-bold text-slate-800 mb-2">No Active Tenders Yet</h3>
+        <p class="text-xs text-slate-500 max-w-md mx-auto mb-6">Be the first to post a home renovation or custom project requirement and get competitive bids in minutes!</p>
+        <button onclick="setBiddingTab('post-job')" class="px-6 py-3 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold rounded-xl shadow-lg transition">
+          ⚡ Post Your First Requirement
+        </button>
       </div>
-      <div class="flex flex-wrap gap-2">
-        ${filters.map(f => `
-          <button onclick="setBiddingFilter('${f.id}')" 
-            class="px-3.5 py-1.5 rounded-full text-xs font-semibold transition border 
-            ${appState.biddingFilter === f.id ? 'bg-amber-600 text-white border-amber-600 shadow' : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-100'}">
-            ${f.label}
+    `;
+    initLucideIcons();
+    return;
+  }
+
+  // Extract unique categories present in jobs
+  const categoryMap = new Map();
+  allJobs.forEach(j => {
+    const c = j.category ? j.category.trim() : 'Home Improvement';
+    categoryMap.set(c, (categoryMap.get(c) || 0) + 1);
+  });
+  const uniqueCategories = Array.from(categoryMap.keys()).sort();
+
+  // Filter jobs by active Category
+  let filteredJobs = [...allJobs];
+  if (appState.biddingCategoryFilter && appState.biddingCategoryFilter !== 'all') {
+    const targetCat = appState.biddingCategoryFilter.toLowerCase();
+    filteredJobs = filteredJobs.filter(j => (j.category || '').toLowerCase() === targetCat);
+  }
+
+  // Sort jobs by newest/recent
+  filteredJobs.sort((a, b) => (b.dbId || 0) - (a.dbId || 0));
+
+  // Calculate Bidding Pagination
+  const filteredCount = filteredJobs.length;
+  const perPage = appState.biddingPerPage || 5;
+  const totalPages = Math.ceil(filteredCount / perPage) || 1;
+  if (appState.biddingPage > totalPages) appState.biddingPage = totalPages;
+  if (appState.biddingPage < 1) appState.biddingPage = 1;
+  const startIdx = (appState.biddingPage - 1) * perPage;
+  const endIdx = Math.min(startIdx + perPage, filteredCount);
+  const pagedJobs = filteredJobs.slice(startIdx, endIdx);
+
+  // Render Category Filter Bar
+  if (filterBar) {
+    filterBar.innerHTML = `
+      <div class="w-full bg-white p-4 sm:p-5 rounded-3xl border border-slate-200/90 shadow-sm mb-6">
+        <!-- Header Row -->
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3.5">
+          <div class="flex items-center space-x-2.5">
+            <div class="w-8 h-8 rounded-xl bg-sugu-blue/10 text-sugu-blue flex items-center justify-center font-bold">
+              <i data-lucide="layers" class="w-4 h-4"></i>
+            </div>
+            <div>
+              <div class="flex items-center space-x-2">
+                <span class="text-xs font-extrabold uppercase tracking-wider text-slate-800">Category Filter</span>
+                <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-50 text-sugu-blue border border-blue-200">${uniqueCategories.length} Trades</span>
+              </div>
+              <p class="text-[11px] text-slate-500">Filter open customer tenders by trade specialization</p>
+            </div>
+          </div>
+          <div class="text-xs text-slate-500 font-medium bg-slate-50 px-3.5 py-1.5 rounded-xl border border-slate-200 shrink-0">
+            Showing <strong class="text-slate-900 font-bold">${filteredCount > 0 ? (startIdx + 1) : 0}–${endIdx}</strong> of ${filteredCount} open projects
+          </div>
+        </div>
+
+        <!-- Category Pills List -->
+        <div class="flex flex-wrap items-center gap-2 pt-1">
+          <!-- All Categories Pill -->
+          <button onclick="setBiddingCategoryFilter('all')" 
+            class="px-4 py-2 rounded-2xl text-xs font-bold transition-all flex items-center space-x-2 border
+            ${appState.biddingCategoryFilter === 'all' 
+              ? 'bg-gradient-to-r from-slate-900 via-sugu-navy to-slate-900 text-white border-slate-900 shadow-md shadow-slate-900/15 scale-[1.02]' 
+              : 'bg-white hover:bg-slate-50 text-slate-700 border-slate-200 hover:border-slate-300'}">
+            <span>🌐</span>
+            <span>All</span>
+            <span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold ${appState.biddingCategoryFilter === 'all' ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-700'}">${totalJobsCount}</span>
           </button>
-        `).join("")}
+
+          <!-- Dynamic Trade Categories -->
+          ${uniqueCategories.map(c => {
+            const count = categoryMap.get(c) || 0;
+            const isActive = appState.biddingCategoryFilter.toLowerCase() === c.toLowerCase();
+            const icon = getTradeCategoryIcon(c);
+            return `
+              <button onclick="setBiddingCategoryFilter('${c}')" 
+                class="px-4 py-2 rounded-2xl text-xs font-bold transition-all flex items-center space-x-2 border
+                ${isActive 
+                  ? 'bg-gradient-to-r from-sugu-blue to-blue-700 text-white border-blue-600 shadow-md shadow-blue-600/20 scale-[1.02]' 
+                  : 'bg-white hover:bg-slate-50 text-slate-700 border-slate-200 hover:border-slate-300'}">
+                <span>${icon}</span>
+                <span>${c}</span>
+                <span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold ${isActive ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-700'}">${count}</span>
+              </button>
+            `;
+          }).join("")}
+        </div>
       </div>
     `;
   }
 
-  container.innerHTML = appState.biddingJobs.map(job => {
-    // Filter bids
-    let filteredBids = job.bids || [];
-    if (appState.biddingFilter === 'recommended') {
-      filteredBids = filteredBids.filter(b => b.isRecommended);
-    } else if (appState.biddingFilter === 'lowest') {
-      filteredBids = [...filteredBids].sort((a, b) => a.bidAmount - b.bidAmount);
-    } else if (appState.biddingFilter === 'top_rated') {
-      filteredBids = filteredBids.filter(b => parseFloat(b.rating) >= 4.9);
-    } else if (appState.biddingFilter === 'fastest') {
-      filteredBids = [...filteredBids].sort((a, b) => parseInt(a.timeline) - parseInt(b.timeline));
-    }
+  // If no jobs match category filter
+  if (filteredJobs.length === 0) {
+    container.innerHTML = `
+      <div class="bg-white rounded-3xl p-10 text-center border border-slate-200 shadow-sm mb-8">
+        <div class="w-14 h-14 rounded-2xl bg-slate-100 text-slate-400 flex items-center justify-center mx-auto mb-3">
+          <i data-lucide="filter-x" class="w-7 h-7"></i>
+        </div>
+        <h4 class="text-lg font-bold text-slate-800 mb-1">No Projects in "${appState.biddingCategoryFilter}"</h4>
+        <p class="text-xs text-slate-500 max-w-sm mx-auto mb-4">No open customer requirements currently match this trade category.</p>
+        <button onclick="resetBiddingFilters()" class="px-5 py-2.5 bg-sugu-blue hover:bg-blue-700 text-white text-xs font-bold rounded-xl shadow transition">
+          View All Categories
+        </button>
+      </div>
+    `;
+    initLucideIcons();
+    return;
+  }
 
-    // Min price and savings estimate
-    const minBid = job.bids.length > 0 ? Math.min(...job.bids.map(b => b.bidAmount)) : 0;
+  // Render Paged Job Opportunity Cards with Small Category Icon & "Send Bid"
+  const cardsHtml = pagedJobs.map(job => {
+    const iconSrc = (job.icon && (job.icon.startsWith('http') || job.icon.startsWith('/') || job.icon.includes('/')))
+      ? job.icon
+      : (job.icon ? `assets/icons/${job.icon}` : 'assets/icons/painting_upgrade.png');
+
+    const primaryJobPhoto = (job.main_image && (job.main_image.startsWith('http') || job.main_image.startsWith('/')))
+      ? job.main_image
+      : ((job.photos && job.photos.length > 0) ? job.photos[0] : iconSrc);
+
+    const tradeIcon = getTradeCategoryIcon(job.category);
+    const bidsReceived = job.bidsCount || (job.bids ? job.bids.length : 0);
 
     return `
-      <div class="bg-white rounded-3xl border border-slate-200 shadow-md overflow-hidden mb-8">
-        <!-- Tender Header -->
-        <div class="p-6 bg-gradient-to-r from-slate-50 via-amber-50/30 to-slate-50 border-b border-slate-200 flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div class="flex items-start space-x-4">
-            <div class="w-16 h-16 rounded-2xl bg-white border border-slate-200 p-2 shadow-sm flex items-center justify-center flex-shrink-0">
-              <img src="assets/icons/${job.icon}" alt="${job.category}" class="w-full h-full object-contain">
+      <div class="bg-white rounded-3xl border border-slate-200/90 shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden mb-6">
+        <!-- Card Main Container -->
+        <div class="p-6 sm:p-7">
+          
+          <!-- Top Row: Small Category Icon, Category, Job ID, Status, Target Budget -->
+          <div class="flex flex-col md:flex-row md:items-start justify-between gap-4 pb-4 border-b border-slate-100">
+            <div class="flex items-start space-x-3.5 sm:space-x-4">
+              <!-- Small Category Thumbnail (Compact & Clean) -->
+              <div class="relative w-12 h-12 sm:w-14 sm:h-14 rounded-xl overflow-hidden border border-slate-200/90 shadow-xs shrink-0 bg-slate-50 flex items-center justify-center p-0.5 group cursor-pointer" 
+                   onclick="window.open('${primaryJobPhoto}', '_blank')" 
+                   title="Click to view full photo">
+                <img src="${primaryJobPhoto}" alt="${job.title}" class="w-full h-full object-cover rounded-lg group-hover:scale-110 transition-transform duration-300" onerror="this.src='${iconSrc}'">
+                <div class="absolute inset-0 bg-slate-900/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-[10px]">
+                  <i data-lucide="zoom-in" class="w-3.5 h-3.5"></i>
+                </div>
+              </div>
+
+              <div class="min-w-0 flex-1">
+                <div class="flex flex-wrap items-center gap-1.5 sm:gap-2 mb-1">
+                  <span class="px-2 py-0.5 text-xs font-bold rounded-lg bg-amber-100 text-amber-900 border border-amber-200/90 flex items-center space-x-1">
+                    <span>${tradeIcon}</span>
+                    <span>${job.category}</span>
+                  </span>
+                  <span class="text-xs text-slate-400 font-mono font-bold">${job.id}</span>
+                  <span class="text-xs text-slate-400 font-medium">• Posted ${job.postedDate}</span>
+                  ${bidsReceived > 0 ? `
+                    <span class="px-2.5 py-0.5 text-xs font-bold rounded-lg bg-emerald-100 text-emerald-800 border border-emerald-200 flex items-center">
+                      <span class="w-2 h-2 rounded-full bg-emerald-500 mr-1.5 animate-pulse"></span>
+                      ${bidsReceived} ${bidsReceived === 1 ? 'Bid Received' : 'Bids Received'}
+                    </span>
+                  ` : `
+                    <span class="px-2.5 py-0.5 text-xs font-bold rounded-lg bg-blue-50 text-sugu-blue border border-blue-200">
+                      ⚡ Be First to Bid
+                    </span>
+                  `}
+                </div>
+                <h3 class="text-lg sm:text-xl font-extrabold font-heading text-slate-900 leading-snug">${job.title}</h3>
+                <p class="text-xs text-slate-500 mt-0.5 line-clamp-1">${job.description}</p>
+              </div>
             </div>
+
+            <!-- Target Budget Box -->
+            <div class="shrink-0 bg-gradient-to-br from-slate-50 via-white to-amber-50/30 p-4 rounded-2xl border border-slate-200/90 shadow-xs min-w-[200px] text-left md:text-right">
+              <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Client Target Budget</span>
+              <span class="text-2xl font-black text-slate-900 block mt-0.5">${job.budgetRange}</span>
+              <span class="text-[11px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md mt-1 inline-block border border-emerald-200">
+                100% Payment Protected
+              </span>
+            </div>
+          </div>
+
+          <!-- Description & Scope Section -->
+          <div class="py-4 space-y-3">
             <div>
-              <div class="flex flex-wrap items-center gap-2 mb-1.5">
-                <span class="px-2.5 py-0.5 text-xs font-bold rounded-full bg-amber-100 text-amber-900 border border-amber-200">${job.category}</span>
-                <span class="text-xs text-slate-500">${job.id} • Posted ${job.postedDate}</span>
-                <span class="px-2.5 py-0.5 text-xs font-bold rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200 flex items-center">
-                  <span class="w-2 h-2 rounded-full bg-emerald-500 mr-1.5 animate-ping"></span>
-                  ${job.bids.length} Contractor Bids Received
+              <span class="text-[10px] uppercase font-bold text-slate-400 tracking-wider block mb-1">Requirement & Scope Details</span>
+              <p class="text-sm text-slate-700 leading-relaxed font-normal">${job.description}</p>
+            </div>
+
+            ${(job.scopeOfWork && job.scopeOfWork.trim() && job.scopeOfWork.trim() !== job.description.trim()) ? `
+              <div class="p-3.5 bg-amber-50/50 rounded-2xl border border-amber-200/70 text-xs text-amber-950">
+                <span class="font-bold text-amber-900 block mb-0.5 flex items-center">
+                  <i data-lucide="clipboard-list" class="w-3.5 h-3.5 mr-1 text-amber-700"></i> Scope of Work Specification:
+                </span>
+                <p class="leading-relaxed font-medium">${job.scopeOfWork}</p>
+              </div>
+            ` : ''}
+
+            ${(job.materialsDetails && job.materialsDetails.trim()) ? `
+              <div class="p-3 bg-blue-50/50 rounded-xl border border-blue-200/60 text-xs text-slate-700 flex items-start space-x-2">
+                <i data-lucide="package" class="w-4 h-4 text-sugu-blue shrink-0 mt-0.5"></i>
+                <div>
+                  <strong class="text-slate-800">Materials & Supply Notes:</strong> ${job.materialsDetails}
+                </div>
+              </div>
+            ` : ''}
+
+            <!-- Project Specifications Grid -->
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2">
+              <div class="p-3 bg-slate-50 rounded-xl border border-slate-100">
+                <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Location</span>
+                <span class="text-xs font-bold text-slate-800 flex items-center mt-1 truncate" title="${job.location}">
+                  <i data-lucide="map-pin" class="w-3.5 h-3.5 mr-1 text-slate-400 shrink-0"></i>
+                  ${job.location}
                 </span>
               </div>
-              <h3 class="text-xl font-bold font-heading text-slate-900">${job.title}</h3>
-              <p class="text-xs text-slate-600 mt-1 max-w-2xl leading-relaxed">${job.description}</p>
-            </div>
-          </div>
 
-          <div class="flex flex-col md:items-end justify-between flex-shrink-0 bg-white/80 p-4 rounded-2xl border border-slate-200">
-            <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Your Target Budget</span>
-            <span class="text-xl font-black text-amber-700">${job.budgetRange}</span>
-            <span class="text-xs text-slate-500 mt-1 flex items-center">
-              <i data-lucide="clock" class="w-3.5 h-3.5 mr-1 text-amber-500"></i> ${job.urgency}
-            </span>
-            ${minBid > 0 ? `
-              <span class="text-[11px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded mt-1.5">
-                Lowest Quote: ₹${minBid.toLocaleString()}
-              </span>
+              <div class="p-3 bg-slate-50 rounded-xl border border-slate-100">
+                <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Turnaround</span>
+                <span class="text-xs font-bold text-slate-800 flex items-center mt-1">
+                  <i data-lucide="clock" class="w-3.5 h-3.5 mr-1 text-amber-500 shrink-0"></i>
+                  ${job.urgency}
+                </span>
+              </div>
+
+              <div class="p-3 bg-slate-50 rounded-xl border border-slate-100">
+                <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Start Date</span>
+                <span class="text-xs font-bold text-slate-800 flex items-center mt-1">
+                  <i data-lucide="calendar" class="w-3.5 h-3.5 mr-1 text-sugu-blue shrink-0"></i>
+                  ${job.preferredStartDate || 'Immediate'}
+                </span>
+              </div>
+
+              <div class="p-3 bg-slate-50 rounded-xl border border-slate-100">
+                <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Bidding Slots</span>
+                <span class="text-xs font-bold text-slate-800 flex items-center mt-1">
+                  <i data-lucide="users" class="w-3.5 h-3.5 mr-1 text-emerald-600 shrink-0"></i>
+                  ${bidsReceived} of ${job.maxBids || 10} filled
+                </span>
+              </div>
+            </div>
+
+            <!-- Site Photos Gallery (If available) -->
+            ${job.photos && job.photos.length > 0 ? `
+              <div class="pt-3 border-t border-slate-100">
+                <div class="flex items-center justify-between mb-2.5">
+                  <span class="text-xs uppercase font-extrabold text-slate-700 tracking-wider flex items-center">
+                    <i data-lucide="camera" class="w-4 h-4 mr-1.5 text-sugu-blue"></i>
+                    Project Site &amp; Requirement Photos (${job.photos.length})
+                  </span>
+                  <span class="text-[11px] text-slate-400 font-medium">Click any photo to view full size</span>
+                </div>
+                <div class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-5 gap-3">
+                  ${job.photos.map((p, pIdx) => `
+                    <div class="relative group cursor-pointer overflow-hidden rounded-2xl border border-slate-200 shadow-xs aspect-[4/3] bg-slate-50" onclick="window.open('${p}', '_blank')" title="View site photo ${pIdx+1}">
+                      <img src="${p}" class="w-full h-full object-cover group-hover:scale-108 transition-transform duration-300" alt="Job Site Photo ${pIdx+1}">
+                      <div class="absolute inset-0 bg-slate-900/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-xs font-bold space-x-1">
+                        <i data-lucide="zoom-in" class="w-4 h-4"></i>
+                        <span>Enlarge</span>
+                      </div>
+                    </div>
+                  `).join("")}
+                </div>
+              </div>
             ` : ''}
           </div>
-        </div>
 
-        <!-- Scope Photos Preview (If any) -->
-        ${job.photos && job.photos.length > 0 ? `
-          <div class="px-6 py-3 bg-slate-50/70 border-b border-slate-100 flex items-center space-x-3 overflow-x-auto">
-            <span class="text-xs font-bold text-slate-500 flex-shrink-0 flex items-center">
-              <i data-lucide="image" class="w-3.5 h-3.5 mr-1 text-slate-400"></i> Site Inspection Photos:
-            </span>
-            ${job.photos.map(p => `
-              <img src="${p}" class="w-14 h-14 object-cover rounded-xl border border-slate-200 cursor-pointer hover:scale-105 transition shadow-sm" onclick="window.open('${p}', '_blank')">
-            `).join("")}
-          </div>
-        ` : ''}
+          <!-- Footer Action Bar: Trust Guarantee & "Send Bid" -->
+          <div class="pt-4 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div class="flex items-center space-x-2 text-xs text-slate-500 font-medium">
+              <i data-lucide="shield-check" class="w-4 h-4 text-emerald-600 shrink-0"></i>
+              <span>Verified Homeowner Requirement • Payment Secured &amp; Released On Satisfaction</span>
+            </div>
 
-        <!-- Incoming Contractor Bids Comparison Grid -->
-        <div class="p-6">
-          <div class="flex items-center justify-between mb-4">
-            <h4 class="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center">
-              <i data-lucide="gavel" class="w-4 h-4 mr-1.5 text-amber-600"></i> Compare Contractor Quotes (${filteredBids.length})
-            </h4>
-            <span class="text-xs text-slate-400">Funds protected in Sugu Milestone Escrow</span>
+            <button onclick="handleSendBid('${job.dbId}')" 
+              class="px-7 py-3 rounded-2xl bg-gradient-to-r from-sugu-navy via-sugu-blue to-blue-600 hover:from-blue-700 hover:to-sugu-navy text-white font-bold text-xs sm:text-sm shadow-md hover:shadow-lg transition-all flex items-center justify-center space-x-2 group shrink-0">
+              <i data-lucide="send" class="w-4 h-4 group-hover:translate-x-0.5 transition-transform"></i>
+              <span>Send Bid</span>
+            </button>
           </div>
 
-          ${filteredBids.length === 0 ? `
-            <div class="text-center py-8 bg-slate-50 rounded-2xl border border-dashed border-slate-300">
-              <p class="text-xs font-semibold text-slate-500">No quotes match this filter.</p>
-              <button onclick="setBiddingFilter('all')" class="mt-2 text-xs font-bold text-amber-600 hover:underline">Show all quotes</button>
-            </div>
-          ` : `
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-              ${filteredBids.map(bid => `
-                <div class="p-5 rounded-3xl border ${bid.isRecommended ? 'border-amber-400 bg-amber-50/30 ring-2 ring-amber-400/20' : 'border-slate-200 bg-white'} shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col justify-between group">
-                  <div>
-                    <div class="flex items-center justify-between mb-3">
-                      ${bid.isRecommended ? `
-                        <span class="inline-block px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider bg-amber-500 text-white rounded-full">
-                          ★ Best Value Quote
-                        </span>
-                      ` : `
-                        <span class="inline-block px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider bg-slate-100 text-slate-600 rounded-full">
-                          Verified Pro Quote
-                        </span>
-                      `}
-                      <span class="text-xs font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
-                        ✓ Background Verified
-                      </span>
-                    </div>
-
-                    <div class="flex items-center space-x-3 mb-3">
-                      <img src="${bid.avatar}" alt="${bid.contractor}" class="w-12 h-12 rounded-full object-cover border-2 border-slate-200 group-hover:border-amber-500 transition">
-                      <div>
-                        <h5 class="font-bold text-slate-900 text-sm leading-tight">${bid.bidderName}</h5>
-                        <span class="text-xs text-slate-500 block">${bid.contractor}</span>
-                        <div class="flex items-center space-x-1 text-xs text-amber-500 font-semibold mt-0.5">
-                          <i data-lucide="star" class="w-3.5 h-3.5 fill-amber-400"></i> ${bid.rating} (${bid.jobsDone} jobs completed)
-                        </div>
-                      </div>
-                    </div>
-
-                    <div class="p-3.5 rounded-2xl bg-slate-50 border border-slate-100 mb-3 space-y-1">
-                      <div class="flex items-baseline justify-between">
-                        <span class="text-xs text-slate-500 font-medium">Quoted Price:</span>
-                        <span class="text-2xl font-black text-slate-900">₹${bid.bidAmount.toLocaleString()}</span>
-                      </div>
-                      <div class="flex justify-between text-xs text-slate-500">
-                        <span>Work Timeline:</span>
-                        <strong class="text-slate-800">${bid.timeline}</strong>
-                      </div>
-                    </div>
-
-                    <p class="text-xs text-slate-600 mb-4 bg-white p-3 rounded-xl border border-slate-100 leading-relaxed">
-                      <strong class="text-slate-800">Proposal:</strong> "${bid.included}"
-                    </p>
-                  </div>
-
-                  <!-- End-User Friendly Action Buttons -->
-                  <div class="space-y-2 pt-3 border-t border-slate-100">
-                    <button onclick="acceptBid('${job.id}', '${bid.id}', ${bid.bidAmount}, '${bid.bidderName}')" 
-                      class="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow-md transition flex items-center justify-center space-x-2">
-                      <i data-lucide="shield-check" class="w-4 h-4"></i>
-                      <span>Accept Bid & Lock Escrow</span>
-                    </button>
-                    <div class="grid grid-cols-2 gap-2">
-                      <button onclick="openCounterOfferModal('${job.id}', '${bid.id}', ${bid.bidAmount}, '${bid.bidderName}')" 
-                        class="py-2.5 px-2 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 rounded-xl text-xs font-bold transition text-center flex items-center justify-center space-x-1">
-                        <i data-lucide="badge-percent" class="w-3.5 h-3.5 text-amber-600"></i>
-                        <span>Counter-Offer</span>
-                      </button>
-                      <button onclick="openChatModal('${bid.bidderName}', '${bid.avatar}')" 
-                        class="py-2.5 px-2 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-xl text-xs font-bold transition flex items-center justify-center space-x-1">
-                        <i data-lucide="message-square" class="w-3.5 h-3.5 text-sky-600"></i>
-                        <span>Chat / Call</span>
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              `).join("")}
-            </div>
-          `}
         </div>
       </div>
     `;
   }).join("");
+
+  // Bidding Pagination Controls
+  let paginationHtml = '';
+  if (totalPages > 1) {
+    let pagesHtml = '';
+    for (let p = 1; p <= totalPages; p++) {
+      const isCur = p === appState.biddingPage;
+      pagesHtml += `
+        <button onclick="changeBiddingPage(${p})" 
+          class="w-8 h-8 rounded-xl text-xs font-bold transition flex items-center justify-center border
+          ${isCur ? 'bg-sugu-blue text-white border-sugu-blue shadow-sm' : 'bg-white hover:bg-slate-50 text-slate-700 border-slate-200 hover:border-slate-300'}">
+          ${p}
+        </button>
+      `;
+    }
+
+    paginationHtml = `
+      <div class="mt-8 p-4 bg-white rounded-2xl border border-slate-200 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div class="text-xs text-slate-500 font-medium">
+          Showing <strong class="text-slate-900 font-bold">${startIdx + 1}–${endIdx}</strong> of <strong class="text-slate-900 font-bold">${filteredCount}</strong> projects (Page ${appState.biddingPage} of ${totalPages})
+        </div>
+        <div class="flex items-center space-x-1.5">
+          <button onclick="changeBiddingPage(${appState.biddingPage - 1})" 
+            ${appState.biddingPage === 1 ? 'disabled class="px-3 py-1.5 rounded-xl text-xs font-bold bg-slate-100 text-slate-400 cursor-not-allowed border border-slate-200 flex items-center space-x-1"' : 'class="px-3 py-1.5 rounded-xl text-xs font-bold bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 shadow-xs transition hover:text-sugu-blue flex items-center space-x-1"'}>
+            <i data-lucide="chevron-left" class="w-4 h-4"></i>
+            <span>Previous</span>
+          </button>
+          ${pagesHtml}
+          <button onclick="changeBiddingPage(${appState.biddingPage + 1})" 
+            ${appState.biddingPage === totalPages ? 'disabled class="px-3 py-1.5 rounded-xl text-xs font-bold bg-slate-100 text-slate-400 cursor-not-allowed border border-slate-200 flex items-center space-x-1"' : 'class="px-3 py-1.5 rounded-xl text-xs font-bold bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 shadow-xs transition hover:text-sugu-blue flex items-center space-x-1"'}>
+            <span>Next</span>
+            <i data-lucide="chevron-right" class="w-4 h-4"></i>
+          </button>
+        </div>
+      </div>
+    `;
+  }
+
+  container.innerHTML = cardsHtml + paginationHtml;
   initLucideIcons();
+}
+
+function changeBiddingPage(newPage) {
+  appState.biddingPage = newPage;
+  renderActiveBiddingTenders();
+  const el = document.getElementById("bidding-filter-bar");
+  if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+window.changeBiddingPage = changeBiddingPage;
+
+// ----------------------------------------------------
+// VENDOR AUTH & "SEND BID" SUBMISSION FLOW
+// ----------------------------------------------------
+function handleSendBid(jobDbId) {
+  const allJobs = appState.biddingJobs || [];
+  const job = allJobs.find(j => String(j.dbId) === String(jobDbId) || String(j.id) === String(jobDbId));
+  if (!job) return;
+
+  const user = window.CURRENT_USER || {};
+
+  // Case 1: Visitor is NOT logged in
+  if (!user.isAuthenticated) {
+    openVendorAuthPromptModal(job, false);
+    return;
+  }
+
+  // Case 2: User is logged in, but is NOT a Vendor Partner (e.g. standard Customer)
+  if (user.role !== 'VENDOR' && !user.isStaff) {
+    openVendorAuthPromptModal(job, true);
+    return;
+  }
+
+  // Case 3: Verified Vendor is logged in -> Open Bid Form Modal!
+  openSendBidModal(job);
+}
+
+function openVendorAuthPromptModal(job, isNonVendorRole) {
+  const modal = document.getElementById("vendor-auth-prompt-modal");
+  if (!modal) return;
+
+  const titleEl = document.getElementById("vendor-prompt-job-title");
+  const budgetEl = document.getElementById("vendor-prompt-job-budget");
+  const msgEl = document.getElementById("vendor-prompt-message");
+  const loginBtn = document.getElementById("vendor-prompt-login-btn");
+
+  if (titleEl) titleEl.innerText = job.title || "Project Requirement";
+  if (budgetEl) budgetEl.innerText = `Target Budget: ${job.budgetRange || 'Competitive'}`;
+
+  if (isNonVendorRole) {
+    const userName = (window.CURRENT_USER && window.CURRENT_USER.name) || "Customer";
+    if (msgEl) {
+      msgEl.innerHTML = `You are currently logged into a Customer account (<strong>${userName}</strong>). Only verified <strong>Vendor Partners</strong> can send quotations on client projects.`;
+    }
+    if (loginBtn) {
+      loginBtn.href = "/login/?next=" + encodeURIComponent(window.location.pathname + "#view-bidding");
+      loginBtn.querySelector("span").innerText = "Switch to Vendor Partner Account";
+    }
+  } else {
+    if (msgEl) {
+      msgEl.innerHTML = `To submit an itemized bid on <strong>${job.title}</strong>, please log in with your verified <strong>Sugu Vendor Partner</strong> account.`;
+    }
+    if (loginBtn) {
+      loginBtn.href = "/login/?next=" + encodeURIComponent(window.location.pathname + "#view-bidding");
+      loginBtn.querySelector("span").innerText = "Log In as Vendor Partner";
+    }
+  }
+
+  modal.classList.remove("hidden");
+  initLucideIcons();
+}
+
+function closeVendorAuthPromptModal() {
+  const modal = document.getElementById("vendor-auth-prompt-modal");
+  if (modal) modal.classList.add("hidden");
+}
+
+let currentBiddingJob = null;
+
+function openSendBidModal(job) {
+  currentBiddingJob = job;
+  const modal = document.getElementById("send-bid-modal");
+  if (!modal) return;
+
+  // Set header details
+  const idEl = document.getElementById("send-bid-job-id");
+  const titleEl = document.getElementById("send-bid-job-title");
+  const catEl = document.getElementById("send-bid-job-category");
+  const budgetEl = document.getElementById("send-bid-job-budget");
+  const dbIdEl = document.getElementById("send-bid-job-dbid");
+  const boundsEl = document.getElementById("send-bid-price-bounds");
+  const amountInput = document.getElementById("send-bid-amount-input");
+  const timelineInput = document.getElementById("send-bid-timeline-input");
+  const proposalInput = document.getElementById("send-bid-proposal-input");
+  const attachmentInput = document.getElementById("send-bid-attachment-input");
+  const errorBanner = document.getElementById("send-bid-error-banner");
+  const formContainer = document.getElementById("send-bid-form-container");
+  const successContainer = document.getElementById("send-bid-success-container");
+
+  if (idEl) idEl.innerText = job.id || `JOB-${job.dbId}`;
+  if (titleEl) titleEl.innerText = job.title || "Custom Project";
+  if (catEl) catEl.innerText = `${job.category || 'General'} • ${job.location || 'Local'}`;
+  if (budgetEl) budgetEl.innerText = job.budgetRange || "Negotiable";
+  if (dbIdEl) dbIdEl.value = job.dbId;
+
+  // Price bounds helper
+  if (boundsEl) {
+    if (job.minBidAmount && job.maxBidAmount) {
+      boundsEl.innerText = `Allowed range: ₹${Math.round(job.minBidAmount).toLocaleString('en-IN')} - ₹${Math.round(job.maxBidAmount).toLocaleString('en-IN')}`;
+    } else {
+      boundsEl.innerText = `Client target: ${job.budgetRange || 'Competitive'}`;
+    }
+  }
+
+  // Pre-fill amount with numeric target budget if available
+  const numBudget = parseInt(String(job.budgetRange || '').replace(/[^0-9]/g, '')) || job.budget || '';
+  if (amountInput) {
+    amountInput.value = numBudget ? Math.round(numBudget) : '';
+  }
+
+  if (timelineInput) {
+    timelineInput.value = job.urgency || "3-5 Working Days";
+  }
+
+  if (proposalInput) {
+    proposalInput.value = `Professional quotation for ${job.title}. Includes certified materials, trained labor, and complete cleanup.`;
+  }
+
+  if (attachmentInput) attachmentInput.value = '';
+  if (errorBanner) {
+    errorBanner.classList.add("hidden");
+    errorBanner.innerText = '';
+  }
+
+  if (formContainer) formContainer.classList.remove("hidden");
+  if (successContainer) successContainer.classList.add("hidden");
+
+  updateBidCalculationBreakdown();
+  modal.classList.remove("hidden");
+  initLucideIcons();
+}
+
+function closeSendBidModal() {
+  const modal = document.getElementById("send-bid-modal");
+  if (modal) modal.classList.add("hidden");
+  currentBiddingJob = null;
+}
+
+function setBidTimelinePreset(val) {
+  const input = document.getElementById("send-bid-timeline-input");
+  if (input) input.value = val;
+  document.querySelectorAll(".timeline-preset-btn").forEach(btn => {
+    if (btn.innerText.trim() === val) {
+      btn.classList.add("border-sugu-blue", "bg-blue-50", "text-sugu-blue", "font-bold");
+    } else {
+      btn.classList.remove("border-sugu-blue", "bg-blue-50", "text-sugu-blue", "font-bold");
+    }
+  });
+}
+
+function insertProBidTemplate() {
+  const textarea = document.getElementById("send-bid-proposal-input");
+  if (!textarea) return;
+  const jobTitle = (currentBiddingJob && currentBiddingJob.title) || "this requirement";
+  textarea.value = `Comprehensive proposal for ${jobTitle}:\n1. Complete labor by verified certified technicians\n2. Premium grade materials & proper surface preparation\n3. Daily site hygiene & post-work debris cleanup\n4. 30-day workmanship warranty backed by Sugu Payment Guarantee.`;
+}
+
+function updateBidCalculationBreakdown() {
+  const amountInput = document.getElementById("send-bid-amount-input");
+  const baseEl = document.getElementById("calc-bid-base");
+  const feeEl = document.getElementById("calc-bid-fee");
+  const netEl = document.getElementById("calc-bid-net");
+
+  const val = parseFloat(amountInput ? amountInput.value : 0) || 0;
+  const fee = Math.round(val * 0.10);
+  const net = Math.max(0, val - fee);
+
+  if (baseEl) baseEl.innerText = `₹${val.toLocaleString('en-IN')}`;
+  if (feeEl) feeEl.innerText = `- ₹${fee.toLocaleString('en-IN')}`;
+  if (netEl) netEl.innerText = `₹${net.toLocaleString('en-IN')}`;
+}
+
+async function submitVendorQuotation(event) {
+  event.preventDefault();
+  const submitBtn = document.getElementById("send-bid-submit-btn");
+  const errorBanner = document.getElementById("send-bid-error-banner");
+  const formContainer = document.getElementById("send-bid-form-container");
+  const successContainer = document.getElementById("send-bid-success-container");
+  const successMsg = document.getElementById("send-bid-success-msg");
+
+  const jobDbId = document.getElementById("send-bid-job-dbid").value;
+  const amount = document.getElementById("send-bid-amount-input").value;
+  const timeline = document.getElementById("send-bid-timeline-input").value;
+  const proposal = document.getElementById("send-bid-proposal-input").value;
+  const attachmentInput = document.getElementById("send-bid-attachment-input");
+
+  if (!amount || parseFloat(amount) <= 0) {
+    if (errorBanner) {
+      errorBanner.innerText = "Please enter a valid quotation amount greater than 0.";
+      errorBanner.classList.remove("hidden");
+    }
+    return;
+  }
+
+  if (errorBanner) errorBanner.classList.add("hidden");
+  if (submitBtn) {
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<span class="inline-block animate-spin mr-2">⏳</span> Transmitting Bid...';
+  }
+
+  const formData = new FormData();
+  formData.append("job_id", jobDbId);
+  formData.append("amount", amount);
+  formData.append("estimated_time", timeline);
+  formData.append("proposal", proposal);
+  if (attachmentInput && attachmentInput.files[0]) {
+    formData.append("attachment", attachmentInput.files[0]);
+  }
+
+  // Get CSRF Token
+  const csrfToken = window.CSRF_TOKEN || (function() {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+      const cookies = document.cookie.split(';');
+      for (let i = 0; i < cookies.length; i++) {
+        const cookie = cookies[i].trim();
+        if (cookie.substring(0, 10) === 'csrftoken=') {
+          cookieValue = decodeURIComponent(cookie.substring(10));
+          break;
+        }
+      }
+    }
+    return cookieValue;
+  })();
+
+  try {
+    const res = await fetch("/api/vendor/send-quotation/", {
+      method: "POST",
+      body: formData,
+      headers: {
+        "X-CSRFToken": csrfToken || ""
+      },
+      credentials: "same-origin"
+    });
+
+    const data = await res.json().catch(() => ({}));
+
+    if (res.ok && (data.status === 'success' || data.bid_id || !data.status || data.status === 200)) {
+      // Success!
+      if (formContainer) formContainer.classList.add("hidden");
+      if (successContainer) successContainer.classList.remove("hidden");
+      if (successMsg) {
+        successMsg.innerHTML = `Your quotation of <strong>₹${Number(amount).toLocaleString('en-IN')}</strong> (${timeline}) has been submitted directly to the client. Track status in your Vendor Dashboard.`;
+      }
+
+      // Increment local job bids count
+      if (currentBiddingJob) {
+        currentBiddingJob.bidsCount = (currentBiddingJob.bidsCount || 0) + 1;
+        renderActiveBiddingTenders();
+      }
+    } else {
+      const errMsg = data.message || data.error || "Failed to submit quotation. Please try again.";
+      if (errorBanner) {
+        errorBanner.innerText = errMsg;
+        errorBanner.classList.remove("hidden");
+      }
+    }
+  } catch (err) {
+    console.error("Bid submission error:", err);
+    if (errorBanner) {
+      errorBanner.innerText = "Network error while submitting quotation. Please check your connection.";
+      errorBanner.classList.remove("hidden");
+    }
+  } finally {
+    if (submitBtn) {
+      submitBtn.disabled = false;
+      submitBtn.innerHTML = '<i data-lucide="send" class="w-4 h-4 mr-2"></i><span>Send Bid to Client</span>';
+      initLucideIcons();
+    }
+  }
 }
 
 // ----------------------------------------------------
 // POST JOB WIZARD (COMPLETELY DROPDOWN-FREE & VISUAL)
 // ----------------------------------------------------
 function selectBiddingCategory(catId) {
-  appState.biddingSelectedCategory = catId;
-  const cat = SUGU_DATA.categories.find(c => c.id === catId);
-  const titleInput = document.getElementById("job-title");
-  if (titleInput && cat) {
-    titleInput.value = `${appState.biddingSelectedSize} ${cat.name} Custom Requirement`;
+  const cat = findCategory(catId);
+  if (cat) {
+    appState.biddingSelectedCategory = cat.id;
+    const titleInput = document.getElementById("job-title");
+    if (titleInput) {
+      titleInput.value = `${appState.biddingSelectedSize} ${cat.name} Custom Requirement`;
+    }
+  } else {
+    appState.biddingSelectedCategory = catId;
   }
   renderPostJobWizard();
 }
 
 function selectBiddingSize(sizeLabel) {
   appState.biddingSelectedSize = sizeLabel;
-  const cat = SUGU_DATA.categories.find(c => c.id === appState.biddingSelectedCategory);
+  const cat = findCategory(appState.biddingSelectedCategory) || SUGU_DATA.categories[0];
   const titleInput = document.getElementById("job-title");
   if (titleInput && cat) {
     titleInput.value = `${sizeLabel} ${cat.name} Custom Requirement`;
@@ -1757,7 +2761,10 @@ function renderPostJobWizard() {
   const container = document.getElementById("bidding-post-form-container");
   if (!container) return;
 
-  const currentCat = SUGU_DATA.categories.find(c => c.id === appState.biddingSelectedCategory) || SUGU_DATA.categories[0];
+  const currentCat = findCategory(appState.biddingSelectedCategory) || SUGU_DATA.categories[0];
+  if (currentCat) {
+    appState.biddingSelectedCategory = currentCat.id;
+  }
 
   const sizeOptions = ["1 BHK", "2 BHK", "3 BHK", "4+ BHK / Villa", "Custom Scope"];
   const urgencyOptions = [
@@ -1767,17 +2774,10 @@ function renderPostJobWizard() {
   ];
   const budgetPresets = ["₹5,000 - ₹15,000", "₹15,000 - ₹30,000", "₹30,000 - ₹50,000", "₹50,000+"];
 
-  // Bidding specific categories (subset of popular custom categories)
-  const biddingCats = [
-    { id: "painting_upgrade", name: "Painting & Upgrade", icon: "painting_upgrade.png" },
-    { id: "carpentry", name: "Carpentry & Woodwork", icon: "carpentry.png" },
-    { id: "home_renovation", name: "Full Home Renovation", icon: "home_renovation.png" },
-    { id: "septic_tank", name: "Septic Tank Cleaning", icon: "septic_tank.png" },
-    { id: "electrical", name: "Electrical & Rewiring", icon: "electrical.png" },
-    { id: "plumbing", name: "Plumbing & Bath Remodel", icon: "plumbing.png" },
-    { id: "cleaning", name: "Deep Sanitization", icon: "cleaning.png" },
-    { id: "pest_control", name: "Pest Eradication", icon: "pest_control.png" }
-  ];
+  // Dynamic Bidding categories straight from Super Admin DB categories
+  const biddingCats = (window.DB_CATEGORIES && window.DB_CATEGORIES.length > 0)
+    ? window.DB_CATEGORIES
+    : ((typeof SUGU_DATA !== 'undefined' && SUGU_DATA.categories) ? SUGU_DATA.categories : []);
 
   container.innerHTML = `
     <div class="max-w-4xl mx-auto bg-white rounded-3xl p-6 sm:p-10 border border-slate-200 shadow-2xl">
@@ -1799,25 +2799,28 @@ function renderPostJobWizard() {
               <span class="w-6 h-6 rounded-full bg-amber-500 text-white flex items-center justify-center text-xs mr-2 font-black">1</span>
               Tap Your Service Category
             </label>
-            <span class="text-xs font-semibold text-amber-700">Selected: <strong>${currentCat.name}</strong></span>
+            <span class="text-xs font-semibold text-amber-700">Selected: <strong>${currentCat ? currentCat.name : 'Category'}</strong></span>
           </div>
 
           <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
-            ${biddingCats.map(c => `
+            ${biddingCats.map(c => {
+              const catImg = c.image || (c.isCustomImage ? c.iconFile : (c.iconFile ? 'assets/icons/' + c.iconFile : 'assets/icons/home_renovation.png'));
+              return `
               <div onclick="selectBiddingCategory('${c.id}')" 
                 class="relative p-3 rounded-2xl border-2 cursor-pointer transition-all duration-300 flex flex-col items-center text-center 
-                ${c.id === appState.biddingSelectedCategory ? 'border-amber-500 bg-amber-50/60 shadow-md ring-2 ring-amber-400/20 scale-[1.02]' : 'border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50'}">
+                ${String(c.id) === String(appState.biddingSelectedCategory) ? 'border-amber-500 bg-amber-50/60 shadow-md ring-2 ring-amber-400/20 scale-[1.02]' : 'border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50'}">
                 <div class="w-16 h-16 rounded-xl overflow-hidden mb-2 bg-slate-50 p-1 flex items-center justify-center">
-                  <img src="assets/icons/${c.icon}" alt="${c.name}" class="w-full h-full object-contain">
+                  <img src="${catImg}" alt="${c.name}" class="w-full h-full object-contain" onerror="this.onerror=null; this.src='https://cdn-icons-png.flaticon.com/512/1063/1063376.png'">
                 </div>
                 <span class="text-xs font-bold text-slate-900 leading-tight">${c.name}</span>
-                ${c.id === appState.biddingSelectedCategory ? `
+                ${String(c.id) === String(appState.biddingSelectedCategory) ? `
                   <div class="absolute top-2 right-2 w-5 h-5 rounded-full bg-amber-500 text-white flex items-center justify-center shadow">
                     <i data-lucide="check" class="w-3.5 h-3.5 stroke-[3]"></i>
                   </div>
                 ` : ''}
               </div>
-            `).join("")}
+            `;
+            }).join("")}
           </div>
         </div>
 
@@ -1981,7 +2984,7 @@ function renderBiddingTemplates() {
   const container = document.getElementById("bidding-templates-container");
   if (!container) return;
 
-  const templates = SUGU_DATA.biddingDemo.popularTemplates || [];
+  const templates = (typeof SUGU_DATA !== 'undefined' && SUGU_DATA.biddingDemo && SUGU_DATA.biddingDemo.popularTemplates) ? SUGU_DATA.biddingDemo.popularTemplates : [];
 
   container.innerHTML = `
     <div class="max-w-6xl mx-auto">
@@ -1992,12 +2995,14 @@ function renderBiddingTemplates() {
       </div>
 
       <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        ${templates.map(tpl => `
+        ${templates.map(tpl => {
+          const tplIcon = (tpl.icon && (tpl.icon.startsWith('http') || tpl.icon.startsWith('/'))) ? tpl.icon : 'assets/icons/' + (tpl.icon || 'home_renovation.png');
+          return `
           <div class="p-6 rounded-3xl bg-white border border-slate-200 shadow-md hover:shadow-xl transition-all duration-300 flex flex-col justify-between group">
             <div>
               <div class="flex items-center space-x-3 mb-4">
                 <div class="w-14 h-14 rounded-2xl bg-slate-50 border border-slate-200 p-2 flex items-center justify-center flex-shrink-0 group-hover:scale-105 transition">
-                  <img src="assets/icons/${tpl.icon}" alt="${tpl.category}" class="w-full h-full object-contain">
+                  <img src="${tplIcon}" alt="${tpl.category}" class="w-full h-full object-contain" onerror="this.onerror=null; this.src='https://cdn-icons-png.flaticon.com/512/1063/1063376.png'">
                 </div>
                 <div>
                   <span class="text-[11px] font-bold text-amber-700 bg-amber-50 px-2.5 py-0.5 rounded-full border border-amber-200">${tpl.category}</span>
@@ -2035,7 +3040,8 @@ function renderBiddingTemplates() {
               </button>
             </div>
           </div>
-        `).join("")}
+        `;
+        }).join("")}
       </div>
     </div>
   `;
@@ -2114,9 +3120,9 @@ function customizeTemplate(tplId) {
 }
 
 function acceptBid(jobId, bidId, amount, proName) {
-  showToast(`Accepted bid from ${proName}! Initiating Sugu Milestone Escrow protection.`);
+  showToast(`Accepted bid from ${proName}! Sugu Payment Protection active.`);
   setTimeout(() => {
-    alert(`🎉 Congratulations! You have successfully hired ${proName} for ₹${amount.toLocaleString()}.\n\nNext Steps:\n1. 20% Advance deposited in Sugu Escrow (Safety Guard).\n2. Contractor will visit for pre-execution inspection.\n3. Contract & 100% Satisfaction Guarantee activated.`);
+    alert(`🎉 Congratulations! You have successfully hired ${proName} for ₹${amount.toLocaleString()}.\n\nNext Steps:\n1. Advance payment secured in Sugu Payment Protection Guarantee.\n2. Contractor will visit for pre-execution inspection.\n3. Contract & 100% Satisfaction Guarantee activated.`);
   }, 300);
 }
 
@@ -2229,7 +3235,13 @@ function sendChatMessage(e) {
 // VIDEO MODAL
 // ----------------------------------------------------
 function openVideoModal(videoId) {
-  const v = SUGU_DATA.videos.find(item => item.id === videoId);
+  let v = null;
+  if (window.DB_VIDEOS && Array.isArray(window.DB_VIDEOS)) {
+    v = window.DB_VIDEOS.find(item => String(item.id) === String(videoId));
+  }
+  if (!v && typeof SUGU_DATA !== 'undefined' && SUGU_DATA.videos) {
+    v = SUGU_DATA.videos.find(item => String(item.id) === String(videoId));
+  }
   if (!v) return;
 
   const modal = document.getElementById("video-modal");
@@ -2242,7 +3254,7 @@ function openVideoModal(videoId) {
 
   const videoElement = document.getElementById("video-modal-player");
   if (videoElement) {
-    videoElement.src = v.videoUrl;
+    videoElement.src = v.videoUrl || v.video_url || v.src || "";
     videoElement.play().catch(e => console.log("Autoplay prevented:", e));
   }
 }
@@ -2273,6 +3285,9 @@ function closeLocationPicker() {
 
 function setLocation(loc) {
   appState.userLocation = loc;
+  const headerText = document.getElementById("header-location-text");
+  if (headerText) headerText.innerText = loc;
+  localStorage.setItem("sugu_user_location", loc);
   closeLocationPicker();
   showToast(`Location set to ${loc}`);
   renderApp();
@@ -2332,3 +3347,29 @@ function setupEventListeners() {
     });
   }
 }
+
+// Expose key router and bidding methods globally on window for inline handlers
+window.appState = appState;
+window.switchRoute = switchRoute;
+window.renderApp = renderApp;
+window.setBiddingTab = setBiddingTab;
+window.setBiddingCategoryFilter = setBiddingCategoryFilter;
+window.resetBiddingFilters = resetBiddingFilters;
+window.handleSendBid = handleSendBid;
+window.openVendorAuthPromptModal = openVendorAuthPromptModal;
+window.closeVendorAuthPromptModal = closeVendorAuthPromptModal;
+window.openSendBidModal = openSendBidModal;
+window.closeSendBidModal = closeSendBidModal;
+window.setBidTimelinePreset = setBidTimelinePreset;
+window.insertProBidTemplate = insertProBidTemplate;
+window.updateBidCalculationBreakdown = updateBidCalculationBreakdown;
+window.submitVendorQuotation = submitVendorQuotation;
+window.selectBiddingCategory = typeof selectBiddingCategory === 'function' ? selectBiddingCategory : null;
+window.selectBiddingSize = typeof selectBiddingSize === 'function' ? selectBiddingSize : null;
+window.selectBiddingUrgency = typeof selectBiddingUrgency === 'function' ? selectBiddingUrgency : null;
+window.selectBiddingBudgetPreset = typeof selectBiddingBudgetPreset === 'function' ? selectBiddingBudgetPreset : null;
+window.handlePostJobSubmit = typeof handlePostJobSubmit === 'function' ? handlePostJobSubmit : null;
+window.postFromTemplate = typeof postFromTemplate === 'function' ? postFromTemplate : null;
+window.customizeTemplate = typeof customizeTemplate === 'function' ? customizeTemplate : null;
+
+

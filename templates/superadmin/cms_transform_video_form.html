@@ -1,0 +1,241 @@
+{% extends 'superadmin/base.html' %}
+{% block title %}{{ title }} - CMS{% endblock %}
+{% block header_title %}{{ title }}{% endblock %}
+
+{% block header_actions %}
+<a href="{% url back_url %}" class="btn btn-outline btn-sm">
+  <i class="fa-solid fa-arrow-left"></i>
+  <span>Back to Videos List</span>
+</a>
+{% endblock %}
+
+{% block content %}
+<form method="POST" enctype="multipart/form-data" id="transformVideoForm">
+  {% csrf_token %}
+
+  <div style="display: grid; grid-template-columns: 1.2fr 0.8fr; gap: 28px; align-items: start;">
+    
+    <!-- LEFT: VIDEO METADATA & TESTIMONIAL CONTENT -->
+    <div class="card" style="margin-bottom: 0;">
+      <div class="card-header">
+        <div class="card-title">
+          <i class="fa-solid fa-film" style="color: var(--accent);"></i>
+          <span>Video Card Information</span>
+        </div>
+        <span class="badge info">Customer Story</span>
+      </div>
+
+      <!-- Title -->
+      <div class="form-group">
+        <label class="form-label" for="{{ form.title.id_for_label }}">
+          Video Card Title <span style="color: var(--danger);">*</span>
+        </label>
+        {{ form.title }}
+        <small style="color: var(--text-muted); font-size: 11.5px;">Catchy headline describing the transformation or service experience</small>
+        {% if form.title.errors %}<div style="color: var(--danger); font-size: 12px; margin-top: 4px;">{{ form.title.errors|striptags }}</div>{% endif %}
+      </div>
+
+      <!-- Author & City -->
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+        <div class="form-group">
+          <label class="form-label" for="{{ form.author.id_for_label }}">Customer / Homeowner Name <span style="color: var(--danger);">*</span></label>
+          {{ form.author }}
+          {% if form.author.errors %}<div style="color: var(--danger); font-size: 12px; margin-top: 4px;">{{ form.author.errors|striptags }}</div>{% endif %}
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="{{ form.city.id_for_label }}">City / Location <span style="color: var(--danger);">*</span></label>
+          {{ form.city }}
+          {% if form.city.errors %}<div style="color: var(--danger); font-size: 12px; margin-top: 4px;">{{ form.city.errors|striptags }}</div>{% endif %}
+        </div>
+      </div>
+
+      <!-- Service Tag & Duration -->
+      <div style="display: grid; grid-template-columns: 1.2fr 0.8fr; gap: 16px;">
+        <div class="form-group">
+          <label class="form-label" for="{{ form.service_tag.id_for_label }}">Service Category Tag <span style="color: var(--danger);">*</span></label>
+          {{ form.service_tag }}
+          <small style="color: var(--text-muted); font-size: 11.5px;">e.g. Home Renovation, AC Deep Clean, Salon Luxe</small>
+          {% if form.service_tag.errors %}<div style="color: var(--danger); font-size: 12px; margin-top: 4px;">{{ form.service_tag.errors|striptags }}</div>{% endif %}
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="{{ form.duration.id_for_label }}">Video Duration <span style="color: var(--danger);">*</span></label>
+          {{ form.duration }}
+          <small style="color: var(--text-muted); font-size: 11.5px;">e.g. 1:42 or 2:10</small>
+          {% if form.duration.errors %}<div style="color: var(--danger); font-size: 12px; margin-top: 4px;">{{ form.duration.errors|striptags }}</div>{% endif %}
+        </div>
+      </div>
+
+      <!-- Rating & Order -->
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+        <div class="form-group">
+          <label class="form-label" for="{{ form.rating.id_for_label }}">Customer Star Rating</label>
+          {{ form.rating }}
+          {% if form.rating.errors %}<div style="color: var(--danger); font-size: 12px; margin-top: 4px;">{{ form.rating.errors|striptags }}</div>{% endif %}
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="{{ form.order.id_for_label }}">Sort Order</label>
+          {{ form.order }}
+          <small style="color: var(--text-muted); font-size: 11.5px;">Lower numbers appear first</small>
+          {% if form.order.errors %}<div style="color: var(--danger); font-size: 12px; margin-top: 4px;">{{ form.order.errors|striptags }}</div>{% endif %}
+        </div>
+      </div>
+
+      <!-- Testimonial Quote -->
+      <div class="form-group">
+        <label class="form-label" for="{{ form.quote.id_for_label }}">Customer Review Quote <span style="color: var(--danger);">*</span></label>
+        {{ form.quote }}
+        <small style="color: var(--text-muted); font-size: 11.5px;">Key takeaway quote displayed over or beneath the video card</small>
+        {% if form.quote.errors %}<div style="color: var(--danger); font-size: 12px; margin-top: 4px;">{{ form.quote.errors|striptags }}</div>{% endif %}
+      </div>
+
+      <!-- Active Status Toggle -->
+      <div style="display: flex; align-items: center; justify-content: space-between; padding: 14px 18px; background: #f8fafc; border: 1px solid var(--border); border-radius: var(--r-sm); margin-top: 14px;">
+        <div>
+          <div style="font-size: 13.5px; font-weight: 700; color: var(--text-main);">Publish Card</div>
+          <div style="font-size: 11.5px; color: var(--text-muted);">Visible in "Watch How Sugu Transforms Homes" section</div>
+        </div>
+        <label class="toggle-switch">
+          {{ form.is_active }}
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+
+      <div style="margin-top: 28px; padding-top: 20px; border-top: 1px solid var(--border); display: flex; gap: 14px;">
+        <button type="submit" class="btn btn-primary btn-lg" style="flex: 1;">
+          <i class="fa-solid fa-floppy-disk"></i> Save Video Card
+        </button>
+        <a href="{% url back_url %}" class="btn btn-outline btn-lg">Cancel</a>
+      </div>
+    </div>
+
+    <!-- RIGHT: VIDEO FILE & THUMBNAIL UPLOAD -->
+    <div style="display: flex; flex-direction: column; gap: 24px;">
+
+      <!-- VIDEO FILE UPLOAD -->
+      <div class="card" style="margin-bottom: 0;">
+        <div class="card-header">
+          <div class="card-title">
+            <i class="fa-solid fa-cloud-arrow-up" style="color: var(--accent);"></i>
+            <span>Upload Video File</span>
+          </div>
+          <span style="font-size: 11.5px; color: var(--text-muted);">MP4 / WebM / MOV</span>
+        </div>
+
+        {% if video and video.video_file %}
+          <div style="padding: 12px; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; margin-bottom: 12px; display: flex; align-items: center; gap: 10px;">
+            <i class="fa-solid fa-circle-check" style="color: #16a34a; font-size: 18px;"></i>
+            <div style="flex: 1; min-width: 0;">
+              <div style="font-size: 12px; font-weight: 700; color: #166534;">Current Uploaded Video</div>
+              <div style="font-size: 11.5px; color: #15803d; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ video.video_file.name }}</div>
+            </div>
+            <a href="{{ video.video_file.url }}" target="_blank" class="btn btn-outline btn-sm" style="font-size: 11px; padding: 4px 8px;">
+              <i class="fa-solid fa-arrow-up-right-from-square"></i> View
+            </a>
+          </div>
+        {% endif %}
+
+        <div class="dropzone-box" id="videoDropBox">
+          {{ form.video_file }}
+          <div class="dropzone-icon"><i class="fa-solid fa-video"></i></div>
+          <div class="dropzone-title">Click or drag video file here</div>
+          <div class="dropzone-subtitle">Supported formats: MP4, WebM, MOV</div>
+        </div>
+        <div id="videoFileSelected" style="display: none; margin-top: 8px; font-size: 12px; color: var(--accent); font-weight: 600;">
+          <i class="fa-solid fa-check"></i> <span id="videoFileName"></span>
+        </div>
+        {% if form.video_file.errors %}
+          <div style="color: var(--danger); font-size: 12px; margin-top: 6px;">{{ form.video_file.errors|striptags }}</div>
+        {% endif %}
+
+        <div style="margin-top: 14px; padding-top: 14px; border-top: 1px dashed var(--border);">
+          <label class="form-label" for="{{ form.video_url.id_for_label }}" style="font-size: 12px;">
+            Or External Video URL (Optional CDN / Stream Link)
+          </label>
+          {{ form.video_url }}
+          <small style="color: var(--text-muted); font-size: 11px;">If no video file is uploaded, this direct URL will be streamed.</small>
+          {% if form.video_url.errors %}
+            <div style="color: var(--danger); font-size: 12px; margin-top: 4px;">{{ form.video_url.errors|striptags }}</div>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- THUMBNAIL POSTER IMAGE -->
+      <div class="card" style="margin-bottom: 0;">
+        <div class="card-header">
+          <div class="card-title">
+            <i class="fa-solid fa-image" style="color: var(--accent);"></i>
+            <span>Video Thumbnail Poster</span>
+          </div>
+          <span style="font-size: 11.5px; color: var(--text-muted);">Cover Image</span>
+        </div>
+
+        {% if video and video.thumbnail %}
+          <div class="dropzone-preview-wrap" id="thumbWrap">
+            <img src="{{ video.thumbnail.url }}" id="thumbPreview" class="dropzone-thumb" style="width: 100px; height: 60px; object-fit: cover;" alt="Thumbnail">
+            <div style="flex: 1; min-width: 0;">
+              <div style="font-size: 13px; font-weight: 700; color: var(--text-main);">Current Cover Poster</div>
+              <div style="font-size: 11.5px; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ video.thumbnail.name }}</div>
+            </div>
+          </div>
+        {% else %}
+          <div class="dropzone-preview-wrap" id="thumbWrap" style="display: none;">
+            <img src="" id="thumbPreview" class="dropzone-thumb" style="width: 100px; height: 60px; object-fit: cover;" alt="Thumbnail">
+            <div style="flex: 1; min-width: 0;">
+              <div style="font-size: 13px; font-weight: 700; color: var(--text-main);">Selected Poster</div>
+              <div style="font-size: 11.5px; color: var(--text-muted);" id="thumbText">Ready to upload</div>
+            </div>
+          </div>
+        {% endif %}
+
+        <div class="dropzone-box" id="thumbDropBox">
+          {{ form.thumbnail }}
+          <div class="dropzone-icon"><i class="fa-solid fa-cloud-arrow-up"></i></div>
+          <div class="dropzone-title">Upload video cover image</div>
+          <div class="dropzone-subtitle">JPG, PNG, or WEBP (16:9 recommended)</div>
+        </div>
+        {% if form.thumbnail.errors %}
+          <div style="color: var(--danger); font-size: 12px; margin-top: 6px;">{{ form.thumbnail.errors|striptags }}</div>
+        {% endif %}
+      </div>
+
+    </div>
+
+  </div>
+</form>
+
+<script>
+  // Live preview for thumbnail image
+  var thumbInput = document.getElementById('id_thumbnail');
+  if (thumbInput) {
+    thumbInput.addEventListener('change', function(e) {
+      var file = e.target.files[0];
+      if (file) {
+        var reader = new FileReader();
+        reader.onload = function(evt) {
+          var preview = document.getElementById('thumbPreview');
+          var wrap = document.getElementById('thumbWrap');
+          var text = document.getElementById('thumbText');
+          if (preview) preview.src = evt.target.result;
+          if (wrap) wrap.style.display = 'flex';
+          if (text) text.textContent = file.name + ' (' + (file.size / 1024).toFixed(1) + ' KB)';
+        };
+        reader.readAsDataURL(file);
+      }
+    });
+  }
+
+  // Live indicator for video file selection
+  var videoInput = document.querySelector('input[type="file"][name="video_file"]');
+  if (videoInput) {
+    videoInput.addEventListener('change', function(e) {
+      var file = e.target.files[0];
+      var nameEl = document.getElementById('videoFileName');
+      var selWrap = document.getElementById('videoFileSelected');
+      if (file && nameEl && selWrap) {
+        nameEl.textContent = file.name + ' (' + (file.size / (1024 * 1024)).toFixed(2) + ' MB)';
+        selWrap.style.display = 'block';
+      }
+    });
+  }
+</script>
+{% endblock %}

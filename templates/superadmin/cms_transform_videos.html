@@ -1,0 +1,256 @@
+{% extends 'superadmin/base.html' %}
+{% block title %}Transform Videos - CMS{% endblock %}
+{% block header_title %}Watch How Sugu Transforms Homes (Video CMS){% endblock %}
+
+{% block header_actions %}
+<a href="{% url 'super_admin_landing_overview' %}" class="btn btn-outline btn-sm">
+  <i class="fa-solid fa-arrow-left"></i>
+  <span>CMS Hub</span>
+</a>
+<a href="{% url 'super_admin_landing_transform_video_create' %}" class="btn btn-primary btn-sm">
+  <i class="fa-solid fa-video"></i>
+  <span>Upload / Add Video</span>
+</a>
+{% endblock %}
+
+{% block content %}
+<div style="display: flex; flex-direction: column; gap: 24px;">
+
+  <!-- SECTION HEADER & TITLE EDIT CARD -->
+  <div class="card" style="margin-bottom: 0;">
+    <div class="card-header">
+      <div class="card-title">
+        <i class="fa-solid fa-pen-nib" style="color: var(--accent);"></i>
+        <span>Section Title &amp; Header Settings</span>
+      </div>
+      <span class="badge info">Homepage Video Section</span>
+    </div>
+
+    <form method="POST" action="{% url 'super_admin_landing_transform_section_save' %}" style="display: flex; flex-direction: column; gap: 18px;">
+      {% csrf_token %}
+
+      <div style="display: grid; grid-template-columns: 220px 1fr; gap: 18px;">
+        <div class="form-group" style="margin-bottom: 0;">
+          <label class="form-label">Badge Tag</label>
+          {{ section_form.tag_badge }}
+          <small style="color: var(--text-muted); font-size: 11.5px;">e.g. Real Customer Stories</small>
+        </div>
+        <div class="form-group" style="margin-bottom: 0;">
+          <label class="form-label">Main Section Title</label>
+          {{ section_form.title }}
+        </div>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 1fr 280px; gap: 18px;">
+        <div class="form-group" style="margin-bottom: 0;">
+          <label class="form-label">Section Subtitle / Description</label>
+          {{ section_form.subtitle }}
+        </div>
+        <div class="form-group" style="margin-bottom: 0;">
+          <label class="form-label">Counter / Trust Badge</label>
+          {{ section_form.counter_text }}
+          <small style="color: var(--text-muted); font-size: 11.5px;">e.g. Over 50,000+ 5-star video reviews</small>
+        </div>
+      </div>
+
+      <div style="display: flex; justify-content: flex-end; padding-top: 8px;">
+        <button type="submit" class="btn btn-primary btn-sm">
+          <i class="fa-solid fa-floppy-disk"></i> Save Section Details
+        </button>
+      </div>
+    </form>
+  </div>
+
+  <!-- VIDEOS LIST CARD -->
+  <div class="card" style="padding: 0; overflow: hidden; margin-bottom: 0;">
+    <div style="padding: 18px 24px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between;">
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <i class="fa-solid fa-film" style="color: var(--accent); font-size: 18px;"></i>
+        <div>
+          <h3 style="font-size: 15px; font-weight: 700; margin: 0; color: var(--text-main);">Video Testimonial Cards</h3>
+          <p style="font-size: 12px; color: var(--text-muted); margin: 0;">Upload customer review videos, set thumbnails and quotes</p>
+        </div>
+      </div>
+      <a href="{% url 'super_admin_landing_transform_video_create' %}" class="btn btn-primary btn-sm">
+        <i class="fa-solid fa-plus"></i> Upload New Video
+      </a>
+    </div>
+
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr>
+            <th style="width: 80px;">Preview</th>
+            <th>Video Title &amp; Service</th>
+            <th>Customer &amp; Location</th>
+            <th>Rating &amp; Duration</th>
+            <th style="max-width: 250px;">Quote Snippet</th>
+            <th style="width: 60px;">Order</th>
+            <th style="width: 100px;">Status</th>
+            <th style="width: 150px;">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for video in videos %}
+          <tr>
+            <td>
+              <div style="position: relative; width: 68px; height: 48px; border-radius: 6px; overflow: hidden; background: #0f172a; border: 1px solid var(--border); cursor: pointer;" onclick="playAdminVideo('{{ video.get_video_src }}', '{{ video.title|escapejs }}', '{{ video.author|escapejs }}')">
+                {% if video.thumbnail %}
+                  <img src="{{ video.thumbnail.url }}" alt="{{ video.title }}" style="width: 100%; height: 100%; object-fit: cover;">
+                {% else %}
+                  <div style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, #1e293b, #0f172a); color: #94a3b8;">
+                    <i class="fa-solid fa-video" style="font-size: 14px;"></i>
+                  </div>
+                {% endif %}
+                <div style="position: absolute; inset: 0; background: rgba(0,0,0,0.35); display: flex; align-items: center; justify-content: center; color: #fff; font-size: 12px; transition: 0.2s;">
+                  <i class="fa-solid fa-play"></i>
+                </div>
+              </div>
+            </td>
+            <td>
+              <strong style="color: var(--text-main); font-size: 13.5px; display: block; max-width: 280px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="{{ video.title }}">{{ video.title }}</strong>
+              <div style="font-size: 11.5px; color: var(--accent); font-weight: 600; margin-top: 2px;">
+                <i class="fa-solid fa-tag"></i> {{ video.service_tag }}
+              </div>
+            </td>
+            <td>
+              <div style="font-weight: 600; color: var(--text-main); font-size: 13px;">{{ video.author }}</div>
+              <div style="font-size: 11.5px; color: var(--text-muted);"><i class="fa-solid fa-location-dot"></i> {{ video.city }}</div>
+            </td>
+            <td>
+              <div style="display: flex; align-items: center; gap: 4px; color: #f59e0b; font-weight: 700; font-size: 12.5px;">
+                ★ {{ video.rating }}.0
+              </div>
+              <div style="font-size: 11.5px; color: var(--text-muted); margin-top: 2px;">
+                <i class="fa-regular fa-clock"></i> {{ video.duration }}
+              </div>
+            </td>
+            <td style="font-size: 12.5px; color: var(--text-muted); max-width: 250px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="{{ video.quote }}">
+              "{{ video.quote }}"
+            </td>
+            <td>
+              <span style="font-weight: 600; color: var(--text-muted);">{{ video.order }}</span>
+            </td>
+            <td>
+              <a href="{% url 'super_admin_landing_transform_video_toggle' video.id %}" style="text-decoration: none;">
+                <span class="badge {% if video.is_active %}active{% else %}inactive{% endif %}">
+                  {% if video.is_active %}<i class="fa-solid fa-circle-check"></i> Active{% else %}<i class="fa-solid fa-circle-xmark"></i> Inactive{% endif %}
+                </span>
+              </a>
+            </td>
+            <td>
+              <div style="display: flex; gap: 6px;">
+                <button type="button" class="btn btn-outline btn-sm" onclick="playAdminVideo('{{ video.get_video_src }}', '{{ video.title|escapejs }}', '{{ video.author|escapejs }}')" title="Watch Video">
+                  <i class="fa-solid fa-play"></i> Play
+                </button>
+                <a href="{% url 'super_admin_landing_transform_video_edit' video.id %}" class="btn btn-outline btn-sm" title="Edit">
+                  <i class="fa-solid fa-pen-to-square"></i>
+                </a>
+                <a href="{% url 'super_admin_landing_transform_video_delete' video.id %}" class="btn btn-outline btn-sm" style="border-color: rgba(239,68,68,0.3); color: var(--danger);" onclick="return confirm('Delete this video card permanently?');" title="Delete">
+                  <i class="fa-solid fa-trash"></i>
+                </a>
+              </div>
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="8" style="text-align: center; padding: 48px; color: var(--text-muted);">
+              <i class="fa-solid fa-video-slash" style="font-size: 32px; margin-bottom: 12px; display: block; color: var(--accent);"></i>
+              No transformation videos added yet. Click "Upload / Add Video" to get started.
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+
+      {% if videos.has_other_pages %}
+      <div class="pagination-wrap">
+        <div>Showing <strong>{{ videos.start_index|default:0 }}</strong> to <strong>{{ videos.end_index|default:0 }}</strong> of <strong>{{ videos.paginator.count }}</strong> videos</div>
+        <nav class="pagination-nav" aria-label="Page navigation">
+          {% if videos.has_previous %}
+            <a href="?page=1" class="page-link" title="First Page"><i class="fa-solid fa-angles-left"></i></a>
+            <a href="?page={{ videos.previous_page_number }}" class="page-link" title="Previous Page"><i class="fa-solid fa-chevron-left"></i></a>
+          {% else %}
+            <span class="page-link disabled"><i class="fa-solid fa-angles-left"></i></span>
+            <span class="page-link disabled"><i class="fa-solid fa-chevron-left"></i></span>
+          {% endif %}
+
+          {% for p in page_range %}
+            {% if p == videos.paginator.ELLIPSIS %}
+              <span class="page-link disabled">…</span>
+            {% elif p == videos.number %}
+              <span class="page-link active">{{ p }}</span>
+            {% else %}
+              <a href="?page={{ p }}" class="page-link">{{ p }}</a>
+            {% endif %}
+          {% endfor %}
+
+          {% if videos.has_next %}
+            <a href="?page={{ videos.next_page_number }}" class="page-link" title="Next Page"><i class="fa-solid fa-chevron-right"></i></a>
+            <a href="?page={{ videos.paginator.num_pages }}" class="page-link" title="Last Page"><i class="fa-solid fa-angles-right"></i></a>
+          {% else %}
+            <span class="page-link disabled"><i class="fa-solid fa-chevron-right"></i></span>
+            <span class="page-link disabled"><i class="fa-solid fa-angles-right"></i></span>
+          {% endif %}
+        </nav>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+</div>
+
+<!-- ADMIN VIDEO PREVIEW MODAL -->
+<div id="adminVideoModal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 99999; align-items: center; justify-content: center; padding: 20px;">
+  <div style="background: #0f172a; border-radius: 12px; width: 100%; max-width: 720px; overflow: hidden; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5); border: 1px solid #334155;">
+    <div style="padding: 14px 20px; background: #1e293b; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #334155;">
+      <div>
+        <h4 id="adminModalTitle" style="color: #fff; font-size: 15px; margin: 0; font-weight: 700;">Video Preview</h4>
+        <small id="adminModalAuthor" style="color: #94a3b8; font-size: 12px;"></small>
+      </div>
+      <button type="button" onclick="closeAdminVideo()" style="background: transparent; border: none; color: #94a3b8; font-size: 20px; cursor: pointer; padding: 4px 8px;">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </div>
+    <div style="position: relative; padding-top: 56.25%; background: #000;">
+      <video id="adminModalPlayer" controls autoplay style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: contain;">
+        <source src="" type="video/mp4">
+        Your browser does not support HTML video.
+      </video>
+    </div>
+  </div>
+</div>
+
+<script>
+  function playAdminVideo(url, title, author) {
+    if (!url) {
+      alert('No video source available for this card.');
+      return;
+    }
+    var modal = document.getElementById('adminVideoModal');
+    var player = document.getElementById('adminModalPlayer');
+    var titleEl = document.getElementById('adminModalTitle');
+    var authorEl = document.getElementById('adminModalAuthor');
+    
+    titleEl.textContent = title || 'Video Preview';
+    authorEl.textContent = author ? 'Customer: ' + author : '';
+    player.src = url;
+    modal.style.display = 'flex';
+    player.play().catch(function(e) {});
+  }
+
+  function closeAdminVideo() {
+    var modal = document.getElementById('adminVideoModal');
+    var player = document.getElementById('adminModalPlayer');
+    player.pause();
+    player.src = '';
+    modal.style.display = 'none';
+  }
+
+  document.getElementById('adminVideoModal').addEventListener('click', function(e) {
+    if (e.target === this) {
+      closeAdminVideo();
+    }
+  });
+</script>
+{% endblock %}

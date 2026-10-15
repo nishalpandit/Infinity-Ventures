@@ -1,0 +1,150 @@
+{% extends 'superadmin/base.html' %}
+{% block title %}Why Choose Sugu - CMS{% endblock %}
+{% block header_title %}Why Choose Sugu Services? (Comparison CMS){% endblock %}
+
+{% block header_actions %}
+<a href="{% url 'super_admin_landing_overview' %}" class="btn btn-outline btn-sm">
+  <i class="fa-solid fa-arrow-left"></i>
+  <span>CMS Hub</span>
+</a>
+<a href="{% url 'super_admin_landing_why_choose_create' %}" class="btn btn-primary btn-sm">
+  <i class="fa-solid fa-plus"></i>
+  <span>Add Comparison Row</span>
+</a>
+{% endblock %}
+
+{% block content %}
+<div style="display: flex; flex-direction: column; gap: 24px;">
+
+  <!-- SECTION HEADER CONFIGURATION CARD -->
+  <div class="card" style="margin-bottom: 0;">
+    <div class="card-header">
+      <div class="card-title">
+        <i class="fa-solid fa-heading" style="color: var(--accent);"></i>
+        <span>Section Title &amp; Column Headings</span>
+      </div>
+      <span class="badge info">Homepage Section Setup</span>
+    </div>
+
+    <form method="POST" action="{% url 'super_admin_landing_why_choose_section_save' %}" style="display: flex; flex-direction: column; gap: 18px;">
+      {% csrf_token %}
+
+      <div style="display: grid; grid-template-columns: 200px 1fr; gap: 18px;">
+        <div class="form-group" style="margin-bottom: 0;">
+          <label class="form-label">Badge Tag</label>
+          {{ section_form.tag_badge }}
+          <small style="color: var(--text-muted); font-size: 11.5px;">Small pill label above the main title</small>
+        </div>
+        <div class="form-group" style="margin-bottom: 0;">
+          <label class="form-label">Main Section Title</label>
+          {{ section_form.title }}
+        </div>
+      </div>
+
+      <div class="form-group" style="margin-bottom: 0;">
+        <label class="form-label">Section Subtitle / Explainer Text</label>
+        {{ section_form.subtitle }}
+      </div>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 18px; padding-top: 14px; border-top: 1px dashed var(--border);">
+        <div class="form-group" style="margin-bottom: 0;">
+          <label class="form-label" style="color: var(--success); font-weight: 700;">
+            <i class="fa-solid fa-circle-check"></i> Sugu Column Header
+          </label>
+          {{ section_form.col_sugu_title }}
+        </div>
+        <div class="form-group" style="margin-bottom: 0;">
+          <label class="form-label" style="color: var(--danger); font-weight: 700;">
+            <i class="fa-solid fa-circle-xmark"></i> Competitor Column Header
+          </label>
+          {{ section_form.col_others_title }}
+        </div>
+      </div>
+
+      <div style="display: flex; justify-content: flex-end; padding-top: 10px;">
+        <button type="submit" class="btn btn-primary btn-sm">
+          <i class="fa-solid fa-floppy-disk"></i> Save Section Headings
+        </button>
+      </div>
+    </form>
+  </div>
+
+  <!-- COMPARISON TABLE ROWS CARD -->
+  <div class="card" style="padding: 0; overflow: hidden; margin-bottom: 0;">
+    <div style="padding: 18px 24px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between;">
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <i class="fa-solid fa-table-columns" style="color: var(--accent); font-size: 18px;"></i>
+        <div>
+          <h3 style="font-size: 15px; font-weight: 700; margin: 0; color: var(--text-main);">Comparison Rows</h3>
+          <p style="font-size: 12px; color: var(--text-muted); margin: 0;">Manage features comparing Sugu to traditional alternatives</p>
+        </div>
+      </div>
+      <a href="{% url 'super_admin_landing_why_choose_create' %}" class="btn btn-outline btn-sm">
+        <i class="fa-solid fa-plus"></i> Add Row
+      </a>
+    </div>
+
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr>
+            <th style="width: 220px;">Feature / Metric</th>
+            <th>With Sugu Services</th>
+            <th>Unorganized Local Techs</th>
+            <th style="width: 70px;">Order</th>
+            <th style="width: 100px;">Status</th>
+            <th style="width: 130px;">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for item in features %}
+          <tr>
+            <td>
+              <strong style="color: var(--text-main); font-size: 13.5px;">{{ item.feature_name }}</strong>
+            </td>
+            <td>
+              <div style="display: inline-flex; align-items: center; gap: 8px; background: rgba(16, 185, 129, 0.08); color: #065f46; padding: 6px 12px; border-radius: 6px; font-size: 13px; font-weight: 600; border: 1px solid rgba(16, 185, 129, 0.2);">
+                <span>{{ item.sugu_value }}</span>
+              </div>
+            </td>
+            <td>
+              <div style="display: inline-flex; align-items: center; gap: 8px; background: rgba(239, 68, 68, 0.06); color: #991b1b; padding: 6px 12px; border-radius: 6px; font-size: 13px; font-weight: 500; border: 1px solid rgba(239, 68, 68, 0.15);">
+                <span>{{ item.others_value }}</span>
+              </div>
+            </td>
+            <td>
+              <span style="font-weight: 600; color: var(--text-muted);">{{ item.order }}</span>
+            </td>
+            <td>
+              <a href="{% url 'super_admin_landing_why_choose_toggle' item.id %}" style="text-decoration: none;">
+                <span class="badge {% if item.is_active %}active{% else %}inactive{% endif %}">
+                  {% if item.is_active %}<i class="fa-solid fa-circle-check"></i> Active{% else %}<i class="fa-solid fa-circle-xmark"></i> Inactive{% endif %}
+                </span>
+              </a>
+            </td>
+            <td>
+              <div style="display: flex; gap: 8px;">
+                <a href="{% url 'super_admin_landing_why_choose_edit' item.id %}" class="btn btn-outline btn-sm" title="Edit row">
+                  <i class="fa-solid fa-pen-to-square"></i> Edit
+                </a>
+                <a href="{% url 'super_admin_landing_why_choose_delete' item.id %}" class="btn btn-outline btn-sm" style="border-color: rgba(239,68,68,0.3); color: var(--danger);" onclick="return confirm('Delete this comparison row permanently?');" title="Delete row">
+                  <i class="fa-solid fa-trash"></i>
+                </a>
+              </div>
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="6" style="text-align: center; padding: 48px; color: var(--text-muted);">
+              <i class="fa-solid fa-shield-halved" style="font-size: 32px; margin-bottom: 12px; display: block; color: var(--accent);"></i>
+              No comparison features found. Click "Add Comparison Row" to add your first item.
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

@@ -2,6 +2,7 @@ from django.urls import re_path, path
 from . import views
 from . import Api_views
 from . import super_admin_views
+from . import beauty_views
 
 urlpatterns = [
     path('', views.home_view, name='home'),
@@ -141,7 +142,23 @@ urlpatterns = [
     path('super-admin/landing/branding/', super_admin_views.super_admin_landing_branding, name='super_admin_landing_branding'),
     path('super-admin/landing/hero/', super_admin_views.super_admin_landing_hero, name='super_admin_landing_hero'),
     
-    # Quick Service Cards
+    # Why Choose Sugu Services CMS
+    path('super-admin/landing/why-choose/', super_admin_views.super_admin_landing_why_choose, name='super_admin_landing_why_choose'),
+    path('super-admin/landing/why-choose/save-section/', super_admin_views.super_admin_landing_why_choose_section_save, name='super_admin_landing_why_choose_section_save'),
+    path('super-admin/landing/why-choose/create/', super_admin_views.super_admin_landing_why_choose_create, name='super_admin_landing_why_choose_create'),
+    path('super-admin/landing/why-choose/<int:item_id>/edit/', super_admin_views.super_admin_landing_why_choose_edit, name='super_admin_landing_why_choose_edit'),
+    path('super-admin/landing/why-choose/<int:item_id>/delete/', super_admin_views.super_admin_landing_why_choose_delete, name='super_admin_landing_why_choose_delete'),
+    path('super-admin/landing/why-choose/<int:item_id>/toggle/', super_admin_views.super_admin_landing_why_choose_toggle, name='super_admin_landing_why_choose_toggle'),
+
+    # Watch How Sugu Transforms Homes (Videos CMS)
+    path('super-admin/landing/transform-videos/', super_admin_views.super_admin_landing_transform_videos, name='super_admin_landing_transform_videos'),
+    path('super-admin/landing/transform-videos/save-section/', super_admin_views.super_admin_landing_transform_section_save, name='super_admin_landing_transform_section_save'),
+    path('super-admin/landing/transform-videos/create/', super_admin_views.super_admin_landing_transform_video_create, name='super_admin_landing_transform_video_create'),
+    path('super-admin/landing/transform-videos/<int:video_id>/edit/', super_admin_views.super_admin_landing_transform_video_edit, name='super_admin_landing_transform_video_edit'),
+    path('super-admin/landing/transform-videos/<int:video_id>/delete/', super_admin_views.super_admin_landing_transform_video_delete, name='super_admin_landing_transform_video_delete'),
+    path('super-admin/landing/transform-videos/<int:video_id>/toggle/', super_admin_views.super_admin_landing_transform_video_toggle, name='super_admin_landing_transform_video_toggle'),
+
+    # Quick Service Cards (Legacy redirect)
     path('super-admin/landing/quick-services/', super_admin_views.super_admin_landing_quick_services, name='super_admin_landing_quick_services'),
     path('super-admin/landing/quick-services/create/', super_admin_views.super_admin_landing_quick_service_create, name='super_admin_landing_quick_service_create'),
     path('super-admin/landing/quick-services/<int:card_id>/edit/', super_admin_views.super_admin_landing_quick_service_edit, name='super_admin_landing_quick_service_edit'),
@@ -371,6 +388,20 @@ urlpatterns = [
     path('api/vendor/wallet/balance', Api_views.vendor_wallet_balance_api),
     path('api/vendor/wallet/transactions/', Api_views.vendor_wallet_transactions_api, name='vendor_wallet_transactions_api'),
     path('api/vendor/wallet/transactions', Api_views.vendor_wallet_transactions_api),
+
+    # Beauty & Wellness Dedicated Mobile App & Web Parity APIs
+    path('api/beauty/experiences/', beauty_views.beauty_experiences_api, name='beauty_experiences_api'),
+    path('api/beauty/experiences', beauty_views.beauty_experiences_api),
+    path('api/beauty/hubs/', beauty_views.beauty_experiences_api, name='beauty_hubs_api'),
+    path('api/beauty/hubs', beauty_views.beauty_experiences_api),
+    path('api/beauty/services/', beauty_views.beauty_services_api, name='beauty_services_api'),
+    path('api/beauty/services', beauty_views.beauty_services_api),
+    path('api/beauty/parlours/', beauty_views.beauty_parlours_api, name='beauty_parlours_api'),
+    path('api/beauty/parlours', beauty_views.beauty_parlours_api),
+    path('api/beauty/parlours/<str:parlour_id>/', beauty_views.beauty_parlour_detail_api, name='beauty_parlour_detail_api'),
+    path('api/beauty/parlours/<str:parlour_id>', beauty_views.beauty_parlour_detail_api),
+    path('api/beauty/book-appointment/', beauty_views.beauty_book_appointment_api, name='beauty_book_appointment_api'),
+    path('api/beauty/book-appointment', beauty_views.beauty_book_appointment_api),
 
     re_path(r'^(?P<path>.*)$', views.dashboard_view, name='dashboard'),
 ]

@@ -100,8 +100,8 @@ const SUGU_DATA = {
       },
       {
         step: "04",
-        title: "Milestone Escrow & Completion",
-        desc: "Funds are protected in Sugu Escrow. Payment is released stage-by-stage only when you sign off on milestones.",
+        title: "Milestone Protection & Completion",
+        desc: "Funds are safely protected with Sugu. Payment is released stage-by-stage only when you sign off on milestones.",
         icon: "lock"
       }
     ]
@@ -117,7 +117,7 @@ const SUGU_DATA = {
       duration: "1:42",
       thumbnail: "https://images.unsplash.com/photo-1618221195710-dd6b41faaea6?auto=format&fit=crop&w=800&q=80",
       service: "Home Renovation & Bidding",
-      quote: "We got 4 contractor quotes in 2 hours and saved ₹42,000 on our interior revamp! Escrow milestone payment gave us total peace of mind.",
+      quote: "We got 4 contractor quotes in 2 hours and saved ₹42,000 on our interior revamp! Milestone payment protection gave us total peace of mind.",
       videoUrl: "https://assets.mixkit.co/videos/preview/mixkit-living-room-with-decorations-and-furniture-41484-large.mp4"
     },
     {
@@ -875,6 +875,17 @@ const SUGU_DATA = {
           ]
         }
       ]
+    },
+
+    {
+      id: "beauty_wellness",
+      name: "Beauty & Spa",
+      iconFile: "womens_salon_spa.png",
+      tagline: "Salon at Home or Book Top Luxury Parlours",
+      rating: "4.91 (4.2M Reviews)",
+      startingPrice: "₹249",
+      isBeautyHub: true,
+      subcategories: []
     },
 
     {

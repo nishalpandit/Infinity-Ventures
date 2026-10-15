@@ -13,6 +13,7 @@ from .models import (
     VendorProfile, QuickService, Job, JobImage, Bid, Subscription, Category, Location, 
     UserProfile, Message, GlobalSettings, SiteBranding, HeroSection, 
     QuickServiceCard, FeaturedProjectCard, PackageCard, Testimonial, TrustMetric,
+    WhyChooseSection, WhyChooseFeature, TransformVideoSection, TransformVideo,
     VendorWallet, WalletTransaction, PayoutRequest, VendorKYC,
     DisputeTicket, DisputeMessage, JobCompletionProof, ServiceReview, ServiceBooking,
     BidCreditTransaction, BidPlan, CustomerAddress
@@ -3739,6 +3740,33 @@ def home_view(request):
     cms_packages = PackageCard.objects.filter(is_active=True).order_by('order', '-created_at')
     cms_testimonials = Testimonial.objects.filter(is_active=True).order_by('order', '-created_at')
     cms_trust_metrics = TrustMetric.objects.filter(is_active=True).order_by('order')
+    cms_why_choose_section = WhyChooseSection.objects.first()
+    cms_why_choose_features = WhyChooseFeature.objects.filter(is_active=True).order_by('order', 'id')
+    cms_transform_section = TransformVideoSection.objects.first()
+    cms_transform_videos = TransformVideo.objects.filter(is_active=True).order_by('order', '-created_at')
+
+    footer_quick_categories = Category.objects.filter(
+        status='active', service_type__in=['quick_service', 'both']
+    ).order_by('id')[:6]
+
+    footer_bidding_items = list(Category.objects.filter(
+        status='active', service_type__in=['job', 'both']
+    ).values_list('name', flat=True)[:6])
+
+    popular_bidding_fallbacks = [
+        "Full Home Renovation",
+        "Interior & Painting",
+        "Modular Kitchen Setup",
+        "Waterproofing & PU Coating",
+        "Commercial Electrical Rewiring",
+        "Milestone Payment Protection"
+    ]
+    for item in popular_bidding_fallbacks:
+        if len(footer_bidding_items) >= 6:
+            break
+        if item not in footer_bidding_items:
+            footer_bidding_items.append(item)
+    footer_bidding_items = footer_bidding_items[:6]
 
     user_city = None
     user_state = None
@@ -3822,6 +3850,30 @@ def home_view(request):
             'date': t.created_at.strftime("%d %b %Y") if t.created_at else "Verified"
         })
 
+    transform_videos_data = []
+    for tv in cms_transform_videos:
+        thumb_url = None
+        if tv.thumbnail:
+            try:
+                if hasattr(tv.thumbnail, 'url') and bool(tv.thumbnail.name):
+                    thumb_url = tv.thumbnail.url
+            except Exception:
+                thumb_url = None
+
+        transform_videos_data.append({
+            'id': str(tv.id),
+            'title': tv.title,
+            'author': tv.author,
+            'city': tv.city,
+            'service': tv.service_tag,
+            'service_tag': tv.service_tag,
+            'rating': int(tv.rating),
+            'duration': tv.duration,
+            'quote': tv.quote,
+            'videoUrl': tv.get_video_src(),
+            'thumbnail': thumb_url or 'https://images.unsplash.com/photo-1513694203232-719a280e022f?auto=format&fit=crop&w=600&q=80',
+        })
+
     # Dynamic Bidding Marketplace Jobs & Quotes
     bidding_jobs_data = []
     db_jobs = Job.objects.select_related('category', 'location', 'user').prefetch_related(
@@ -3839,15 +3891,21 @@ def home_view(request):
         if j.image:
             try:
                 if hasattr(j.image, 'url') and bool(j.image.name):
-                    photos_list.append(j.image.url)
+                    u = j.image.url
+                    if u not in photos_list:
+                        photos_list.append(u)
             except Exception:
                 pass
-        for img in j.images.all()[:3]:
+        for img in j.images.all()[:4]:
             try:
                 if hasattr(img.image, 'url') and bool(img.image.name):
-                    photos_list.append(img.image.url)
+                    u = img.image.url
+                    if u not in photos_list:
+                        photos_list.append(u)
             except Exception:
                 pass
+
+        main_img = photos_list[0] if photos_list else (j.category.image_url if (j.category and j.category.image_url) else "painting_upgrade.png")
 
         bids_list = []
         for b in j.bids.all():
@@ -3889,7 +3947,8 @@ def home_view(request):
             'dbId': j.id,
             'title': j.title,
             'category': cat_name,
-            'icon': j.category.image_url if (j.category and j.category.image_url) else "painting_upgrade.png",
+            'main_image': main_img,
+            'icon': main_img,
             'postedDate': j.created_at.strftime("%d %b %Y") if j.created_at else "Recent",
             'budgetRange': budget_range,
             'budget': float(j.budget) if j.budget else 0,
@@ -3922,6 +3981,12 @@ def home_view(request):
         'cms_packages': cms_packages,
         'cms_testimonials': cms_testimonials,
         'cms_trust_metrics': cms_trust_metrics,
+        'cms_why_choose_section': cms_why_choose_section,
+        'cms_why_choose_features': cms_why_choose_features,
+        'cms_transform_section': cms_transform_section,
+        'cms_transform_videos': cms_transform_videos,
+        'footer_quick_categories': footer_quick_categories,
+        'footer_bidding_items': footer_bidding_items,
         'categories': categories,
         'popular_services': popular_services,
         'landing_services': QuickService.objects.filter(status='active').select_related('vendor', 'category').order_by('-created_at'),
@@ -3931,6 +3996,7 @@ def home_view(request):
         'categories_json': json.dumps(list(categories.values("id", "name", "service_type", "status"))),
         'categories_data_json': json.dumps(categories_data),
         'testimonials_data_json': json.dumps(testimonials_data),
+        'transform_videos_data_json': json.dumps(transform_videos_data),
         'bidding_jobs_data_json': json.dumps(bidding_jobs_data),
         'locations_json': json.dumps(list(locations.values("id", "state", "city"))),
         'recent_bids_json': json.dumps(recent_bids_data),

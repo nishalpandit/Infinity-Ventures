@@ -1058,3 +1058,75 @@ class TrustMetric(models.Model):
         return self.title or f"{self.stat_number} {self.label}"
 
 
+class WhyChooseSection(models.Model):
+    tag_badge = models.CharField(max_length=100, default='Sugu Advantage', blank=True)
+    title = models.CharField(max_length=255, default='Why Choose Sugu Services?')
+    subtitle = models.TextField(default='A transparent comparison between Sugu Services and unverified roadside technicians.', blank=True)
+    col_sugu_title = models.CharField(max_length=150, default='Sugu Services (Quick & Bidding)')
+    col_others_title = models.CharField(max_length=150, default='Unorganized Local Technicians')
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name_plural = "Why Choose Section Config"
+
+    def __str__(self):
+        return self.title
+
+
+class WhyChooseFeature(models.Model):
+    feature_name = models.CharField(max_length=255, help_text="e.g. Technician Background Check")
+    sugu_value = models.CharField(max_length=255, default='✓ 7-Step Police & Skill Verified')
+    others_value = models.CharField(max_length=255, default='✗ Zero verification or background check')
+    order = models.IntegerField(default=0)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        ordering = ['order', 'id']
+
+    def __str__(self):
+        return self.feature_name
+
+
+class TransformVideoSection(models.Model):
+    tag_badge = models.CharField(max_length=100, default='Real Customer Stories', blank=True)
+    title = models.CharField(max_length=255, default='Watch How Sugu Transforms Homes')
+    subtitle = models.TextField(default='Unscripted video testimonials and project walkthroughs across India.', blank=True)
+    counter_text = models.CharField(max_length=150, default='Over 50,000+ 5-star video reviews', blank=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name_plural = "Transform Videos Section Config"
+
+    def __str__(self):
+        return self.title
+
+
+class TransformVideo(models.Model):
+    title = models.CharField(max_length=255, help_text="Video card title")
+    video_file = models.FileField(upload_to='cms/videos/', null=True, blank=True, help_text="Upload MP4/WebM video file")
+    video_url = models.CharField(max_length=500, blank=True, null=True, help_text="Or direct video URL (e.g. https://.../video.mp4)")
+    thumbnail = models.ImageField(upload_to='cms/videos/thumbs/', null=True, blank=True, help_text="Video thumbnail poster")
+    author = models.CharField(max_length=150, default='Verified Customer')
+    city = models.CharField(max_length=100, default='Ranchi')
+    service_tag = models.CharField(max_length=100, default='Home Renovation')
+    rating = models.IntegerField(default=5)
+    duration = models.CharField(max_length=50, default='1:30')
+    quote = models.TextField(blank=True, default='', help_text="Customer testimonial quote")
+    order = models.IntegerField(default=0)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        ordering = ['order', '-created_at']
+
+    def __str__(self):
+        return self.title
+
+    def get_video_src(self):
+        if self.video_file:
+            return self.video_file.url
+        return self.video_url or ''
+
+
+
