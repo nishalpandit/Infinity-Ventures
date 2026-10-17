@@ -172,10 +172,11 @@ def _get_user_from_bearer_token(request):
     else:
         # Fallback to query param or body
         token_key = request.GET.get('token') or request.POST.get('token')
-        if not token_key and hasattr(request, 'body'):
+        if not token_key:
             try:
-                body_data = json.loads(request.body.decode('utf-8'))
-                token_key = body_data.get('token') or body_data.get('bearer_token')
+                if hasattr(request, '_body') or not request.POST:
+                    body_data = json.loads(request.body.decode('utf-8'))
+                    token_key = body_data.get('token') or body_data.get('bearer_token')
             except Exception:
                 pass
 
@@ -833,13 +834,16 @@ def add_category_api(request):
             image=image
         )
 
+        cat_img = _build_absolute_image_url(request, cat.image, cat.image_url)
         cat_data = {
             'id': cat.id,
             'name': cat.name,
             'service_type': cat.service_type,
             'status': cat.status,
-            'image': cat.image_url,
-            'image_url': cat.image_url,
+            'icon_class': cat.icon_class,
+            'icon_color': cat.icon_color,
+            'image': cat_img,
+            'image_url': cat_img,
             'created_at': cat.created_at.strftime('%Y-%m-%d')
         }
 
@@ -873,13 +877,16 @@ def update_category_api(request):
             cat.image = None
         cat.save()
 
+        cat_img = _build_absolute_image_url(request, cat.image, cat.image_url)
         cat_data = {
             'id': cat.id,
             'name': cat.name,
             'service_type': cat.service_type,
             'status': cat.status,
-            'image': cat.image_url,
-            'image_url': cat.image_url,
+            'icon_class': cat.icon_class,
+            'icon_color': cat.icon_color,
+            'image': cat_img,
+            'image_url': cat_img,
             'created_at': cat.created_at.strftime('%Y-%m-%d')
         }
 
@@ -1810,6 +1817,21 @@ def user_post_job_api(request):
                 category_obj = Category.objects.filter(id=int(category_param)).first()
             if not category_obj:
                 category_obj = Category.objects.filter(name__iexact=str(category_param).strip()).first()
+
+        # SubCategory resolution (ID or Name)
+        subcategory_obj = None
+        subcat_param = data.get('subcategory_id') or data.get('subcategory')
+        if subcat_param:
+            if str(subcat_param).isdigit():
+                subcategory_obj = SubCategory.objects.filter(id=int(subcat_param)).first()
+            if not subcategory_obj and category_obj:
+                subcategory_obj = SubCategory.objects.filter(category=category_obj, name__iexact=str(subcat_param).strip()).first()
+            if not subcategory_obj:
+                subcategory_obj = SubCategory.objects.filter(name__iexact=str(subcat_param).strip()).first()
+
+        if subcategory_obj and not category_obj:
+            category_obj = subcategory_obj.category
+
         if not category_obj:
             category_obj = Category.objects.filter(status='active').first()
 
@@ -1882,6 +1904,7 @@ def user_post_job_api(request):
             user=user,
             title=title,
             category=category_obj,
+            subcategory=subcategory_obj,
             description=description,
             required_work=required_work,
             scope_of_work=scope_of_work,
@@ -1924,6 +1947,8 @@ def user_post_job_api(request):
                 'title': job.title,
                 'category': job.category.name if job.category else "General",
                 'category_id': job.category.id if job.category else None,
+                'subcategory': job.subcategory.name if job.subcategory else "",
+                'subcategory_id': job.subcategory.id if job.subcategory else None,
                 'description': job.description or "",
                 'required_work': job.required_work or [],
                 'scope_of_work': job.scope_of_work or "",
@@ -1948,6 +1973,8 @@ def user_post_job_api(request):
                 'contact_mobile': job.contact_mobile or "",
                 'status': job.status,
                 'bids_count': job.bids_count,
+                'image': _build_absolute_image_url(request, job.image) if job.image else None,
+                'images': [_build_absolute_image_url(request, ji.image) for ji in job.images.all()],
                 'created_at': job.created_at.strftime("%Y-%m-%d %H:%M:%S")
             }
         }
@@ -1960,140 +1987,15 @@ def user_post_job_api(request):
 @require_POST
 def user_post_quick_service_api(request):
     """
-    API for Posting a Quick Service by a User/Customer.
-    Requires Bearer Token:
-        Header: Authorization: Bearer <token>
-    URL: /api/user/post-quick-service/ or /api/user/quick-services/create/
-    Method: POST
+    Deprecated / Invalid Operation:
+    Customers/Users cannot post Quick Services.
+    - To book an existing Quick Service (15-min fixed price), use POST /api/user/services/book/
+    - To post a custom project requirement for vendor bidding, use POST /api/user/post-job/
     """
-    try:
-        user, error_msg = _get_user_from_bearer_token(request)
-        if not user:
-            return JsonResponse({'status': 'error', 'message': error_msg}, status=401)
-
-        if user.role not in ['USER', 'CUSTOMER'] and not user.is_superuser:
-            return JsonResponse({
-                'status': 'error',
-                'message': f"Access denied. Only registered users/customers can post quick services (current role: {user.role})."
-            }, status=403)
-
-        data = _parse_api_request(request)
-
-        title = (data.get('title') or '').strip()
-        if not title:
-            return JsonResponse({'status': 'error', 'message': "Field 'title' is required."}, status=400)
-
-        budget_raw = data.get('budget')
-        if budget_raw is None or budget_raw == '':
-            return JsonResponse({'status': 'error', 'message': "Field 'budget' is required."}, status=400)
-
-        try:
-            budget = float(budget_raw)
-            if budget < 0:
-                return JsonResponse({'status': 'error', 'message': "Field 'budget' must be a positive number."}, status=400)
-        except (ValueError, TypeError):
-            return JsonResponse({'status': 'error', 'message': "Field 'budget' must be a valid number."}, status=400)
-
-        description = (data.get('description') or '').strip()
-        shift_availability = (data.get('shift_availability') or 'Flexible').strip()
-        address = (data.get('address') or '').strip()
-        additional_requirements = (data.get('additional_requirements') or '').strip()
-
-        req_work_raw = data.get('required_work') or data.get('required_work[]')
-        if isinstance(req_work_raw, list):
-            required_work = req_work_raw
-        elif isinstance(req_work_raw, str) and req_work_raw.strip():
-            try:
-                parsed_list = json.loads(req_work_raw)
-                required_work = parsed_list if isinstance(parsed_list, list) else [req_work_raw]
-            except Exception:
-                required_work = [w.strip() for w in req_work_raw.split(',') if w.strip()]
-        else:
-            required_work = []
-
-        category_obj = None
-        category_param = data.get('category_id') or data.get('category')
-        if category_param:
-            if str(category_param).isdigit():
-                category_obj = Category.objects.filter(id=int(category_param)).first()
-            if not category_obj:
-                category_obj = Category.objects.filter(name__iexact=str(category_param).strip()).first()
-        if not category_obj:
-            category_obj = Category.objects.filter(status='active').first()
-
-        location_obj = None
-        location_param = data.get('location_id') or data.get('location') or data.get('city')
-        if location_param:
-            if str(location_param).isdigit():
-                location_obj = Location.objects.filter(id=int(location_param)).first()
-            if not location_obj:
-                location_obj = Location.objects.filter(city__iexact=str(location_param).strip()).first()
-            if not location_obj:
-                location_obj = Location.objects.filter(Q(city__icontains=str(location_param).strip()) | Q(state__icontains=str(location_param).strip())).first()
-        if not location_obj:
-            location_obj = Location.objects.filter(status='active').first()
-
-        pref_date = data.get('preferred_date') or None
-        pref_time = data.get('preferred_time') or None
-
-        user_phone = ''
-        try:
-            if hasattr(user, 'user_profile') and user.user_profile.phone_number:
-                user_phone = user.user_profile.phone_number
-        except Exception:
-            pass
-
-        contact_name = (data.get('contact_name') or user.get_full_name() or user.username).strip()
-        contact_mobile = (data.get('contact_mobile') or data.get('contact_phone') or user_phone).strip()
-
-        qs = QuickService.objects.create(
-            user=user,
-            title=title,
-            category=category_obj,
-            description=description,
-            required_work=required_work,
-            budget=budget,
-            shift_availability=shift_availability,
-            preferred_date=pref_date,
-            preferred_time=pref_time,
-            location=location_obj,
-            address=address,
-            additional_requirements=additional_requirements,
-            contact_name=contact_name,
-            contact_mobile=contact_mobile,
-            status='open',
-            bids_count=0
-        )
-
-        qs_code = f"QS-{qs.id:04d}"
-        response_data = {
-            'status': 'success',
-            'message': "Quick service posted successfully",
-            'quick_service': {
-                'id': qs.id,
-                'qs_code': qs_code,
-                'title': qs.title,
-                'category': qs.category.name if qs.category else "General",
-                'category_id': qs.category.id if qs.category else None,
-                'description': qs.description or "",
-                'required_work': qs.required_work or [],
-                'budget': float(qs.budget),
-                'shift_availability': qs.shift_availability or "",
-                'preferred_date': str(qs.preferred_date) if qs.preferred_date else None,
-                'preferred_time': str(qs.preferred_time) if qs.preferred_time else None,
-                'location': f"{qs.location.city}, {qs.location.state}" if qs.location else "",
-                'location_id': qs.location.id if qs.location else None,
-                'address': qs.address or "",
-                'contact_name': qs.contact_name or "",
-                'contact_mobile': qs.contact_mobile or "",
-                'status': qs.status,
-                'bids_count': qs.bids_count,
-                'created_at': qs.created_at.strftime("%Y-%m-%d %H:%M:%S")
-            }
-        }
-        return JsonResponse(response_data, status=201)
-    except Exception as e:
-        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+    return JsonResponse({
+        'status': 'error',
+        'message': "Customers cannot post Quick Services. Quick Services are pre-configured catalog services provided by vendors and booked via POST /api/user/services/book/. If you want to post a custom project requirement for bidding, use POST /api/user/post-job/."
+    }, status=400)
 
 
 # =====================================================================
@@ -2533,13 +2435,17 @@ def categories_with_services_api(request):
 
         cat_data = []
         for cat in categories:
+            img = _build_absolute_image_url(request, cat.image, cat.image_url)
             cat_data.append({
                 'id': cat.id,
                 'name': cat.name,
                 'service_type': cat.service_type,
+                'status': cat.status,
                 'services_count': cat.services_count,
-                'image': cat.image_url,
-                'image_url': cat.image_url,
+                'icon_class': cat.icon_class,
+                'icon_color': cat.icon_color,
+                'image': img,
+                'image_url': img,
             })
 
         return JsonResponse({'status': 'success', 'categories': cat_data}, status=200)
@@ -2559,15 +2465,20 @@ def get_categories_api(request):
         categories = Category.objects.filter(status='active').order_by('name')
         cat_data = []
         for c in categories:
+            img = _build_absolute_image_url(request, c.image, c.image_url)
             cat_data.append({
                 'id': c.id,
                 'name': c.name,
                 'service_type': c.service_type,
-                'image': c.image_url,
-                'image_url': c.image_url,
+                'status': c.status,
+                'icon_class': c.icon_class,
+                'icon_color': c.icon_color,
+                'image': img,
+                'image_url': img,
             })
         return JsonResponse({'status': 'success', 'categories': cat_data}, status=200)
     return JsonResponse({'status': 'error', 'message': 'Method not allowed'}, status=405)
+
 
 @csrf_exempt
 def get_subcategories_api(request, category_id):
@@ -2575,33 +2486,51 @@ def get_subcategories_api(request, category_id):
     API to fetch active subcategories for a given category.
     URL: /api/categories/<category_id>/subcategories/
     Method: GET
-    Returns: { status, category: {id, name, image, image_url}, subcategories: [{id, name, status}] }
+    Returns: { status, category: {id, name, image, image_url, icon_class, icon_color, service_type}, subcategories: [{id, name, status, services_count}] }
     """
     if request.method != 'GET':
         return JsonResponse({'status': 'error', 'message': 'Method not allowed'}, status=405)
 
     try:
+        from django.db.models import Count
         category = Category.objects.filter(id=category_id, status='active').first()
         if not category:
             return JsonResponse({'status': 'error', 'message': 'Category not found'}, status=404)
 
         subcategories = SubCategory.objects.filter(
             category=category, status='active'
-        ).order_by('name').values('id', 'name', 'status')
+        ).annotate(
+            services_count=Count('quick_services', filter=Q(quick_services__status='active'))
+        ).order_by('name')
 
+        subcat_data = []
+        for s in subcategories:
+            subcat_data.append({
+                'id': s.id,
+                'name': s.name,
+                'status': s.status,
+                'services_count': s.services_count,
+            })
+
+        cat_img = _build_absolute_image_url(request, category.image, category.image_url)
         return JsonResponse({
             'status': 'success',
             'category': {
                 'id': category.id,
                 'name': category.name,
-                'image': category.image_url,
-                'image_url': category.image_url,
+                'service_type': category.service_type,
+                'status': category.status,
+                'icon_class': category.icon_class,
+                'icon_color': category.icon_color,
+                'image': cat_img,
+                'image_url': cat_img,
             },
-            'subcategories': list(subcategories),
+            'subcategories': subcat_data,
         }, status=200)
 
     except Exception as e:
         return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
 
 @csrf_exempt
 def get_all_subcategories_api(request):
@@ -2609,23 +2538,29 @@ def get_all_subcategories_api(request):
     API to fetch all active categories with their subcategories nested.
     URL: /api/categories/subcategories/
     Method: GET
-    Returns: { status, categories: [{id, name, image, image_url, subcategories: [{id, name}]}] }
     """
     if request.method != 'GET':
         return JsonResponse({'status': 'error', 'message': 'Method not allowed'}, status=405)
 
     try:
+        from django.db.models import Count
         categories = Category.objects.filter(status='active').prefetch_related('subcategories').order_by('name')
         data = []
         for cat in categories:
-            subs = cat.subcategories.filter(status='active').order_by('name')
+            subs = cat.subcategories.filter(status='active').annotate(
+                services_count=Count('quick_services', filter=Q(quick_services__status='active'))
+            ).order_by('name')
+            cat_img = _build_absolute_image_url(request, cat.image, cat.image_url)
             data.append({
                 'id': cat.id,
                 'name': cat.name,
                 'service_type': cat.service_type,
-                'image': cat.image_url,
-                'image_url': cat.image_url,
-                'subcategories': [{'id': s.id, 'name': s.name} for s in subs],
+                'status': cat.status,
+                'icon_class': cat.icon_class,
+                'icon_color': cat.icon_color,
+                'image': cat_img,
+                'image_url': cat_img,
+                'subcategories': [{'id': s.id, 'name': s.name, 'services_count': s.services_count} for s in subs],
             })
 
         return JsonResponse({'status': 'success', 'categories': data}, status=200)
@@ -3066,6 +3001,10 @@ def _serialize_vendor_profile_data(user, request=None):
         'dob': str(vp.dob) if vp.dob else '',
         'gender': vp.gender or '',
         'id_proof': vp.id_proof or '',
+        'employee_code': vp.employee_code or '',
+        'employee_details': vp.employee_details or '',
+        'latitude': float(vp.latitude) if vp.latitude else None,
+        'longitude': float(vp.longitude) if vp.longitude else None,
         'about': vp.about or '',
         'profile_image': profile_image_url,
         'rating': float(vp.rating) if vp.rating else 0.0,
@@ -3122,6 +3061,16 @@ def _handle_vendor_profile_update(request, user, vp):
     # 6. Update Address
     if 'address' in data:
         vp.address = (data.get('address') or '').strip()
+
+    # 7. Coordinates & Employee Details
+    if 'latitude' in data:
+        vp.latitude = data.get('latitude') or None
+    if 'longitude' in data:
+        vp.longitude = data.get('longitude') or None
+    if 'employee_code' in data:
+        vp.employee_code = (data.get('employee_code') or '').strip()
+    if 'employee_details' in data:
+        vp.employee_details = (data.get('employee_details') or '').strip()
 
     # 9. Update Experience
     if 'experience' in data:
@@ -3354,7 +3303,16 @@ def _serialize_job_summary(job, vendor_user=None, request=None):
     if vendor_user:
         has_bid = Bid.objects.filter(job=job, vendor=vendor_user).exists()
 
-    image_url = _get_category_or_service_image(category_name, title=job.title, request=request)
+    image_url = _get_category_or_service_image(category_name, title=job.title, image_field=job.image, request=request)
+
+    gallery_images = []
+    try:
+        if hasattr(job, 'images'):
+            for img_obj in job.images.all():
+                if img_obj.image:
+                    gallery_images.append(_build_absolute_image_url(request, img_obj.image))
+    except Exception:
+        gallery_images = []
 
     return {
         'id': job.id,
@@ -3362,6 +3320,8 @@ def _serialize_job_summary(job, vendor_user=None, request=None):
         'title': job.title,
         'category': category_name,
         'category_id': job.category.id if job.category else None,
+        'subcategory': job.subcategory.name if getattr(job, 'subcategory', None) else "",
+        'subcategory_id': job.subcategory.id if getattr(job, 'subcategory', None) else None,
         'description': job.description or "",
         'budget': budget_val,
         'budget_formatted': f"₹{int(budget_val):,}" if budget_val >= 1000 else f"₹{budget_val:.0f}",
@@ -3381,10 +3341,19 @@ def _serialize_job_summary(job, vendor_user=None, request=None):
         'urgent': bool(budget_val >= 10000 or (job.title and 'urgent' in job.title.lower())),
         'bids_count': job.bids_count or job.bids.count(),
         'max_bids': job.max_bids or 10,
+        'min_bid_amount': float(job.min_bid_amount) if job.min_bid_amount is not None else None,
+        'max_bid_amount': float(job.max_bid_amount) if job.max_bid_amount is not None else None,
+        'scope_of_work': job.scope_of_work or "",
+        'required_work': job.required_work or [],
+        'materials_details': job.materials_details or "",
+        'additional_requirements': job.additional_requirements or "",
+        'preferred_start_date': job.preferred_start_date.isoformat() if job.preferred_start_date else None,
+        'expected_completion': job.expected_completion.isoformat() if job.expected_completion else None,
         'status': job.status,
         'customer_name': job.contact_name or (job.user.get_full_name() if job.user else "Customer"),
         'has_bid': has_bid,
-        'image_url': image_url
+        'image_url': image_url,
+        'gallery_images': gallery_images
     }
 
 
@@ -3726,7 +3695,7 @@ def browse_jobs_api(request):
         page = int(data.get('page') or request.GET.get('page', 1))
         page_size = min(int(data.get('page_size') or request.GET.get('page_size', 20)), 50)
 
-        jobs_qs = Job.objects.all().select_related('category', 'location', 'user')
+        jobs_qs = Job.objects.all().select_related('category', 'subcategory', 'location', 'user')
 
         # Status filter (default: open)
         if status and status.lower() != 'all':
@@ -3755,12 +3724,21 @@ def browse_jobs_api(request):
         elif category:
             jobs_qs = jobs_qs.filter(category__name__icontains=category)
 
+        # SubCategory filter
+        subcategory_id = data.get('subcategory_id') or request.GET.get('subcategory_id')
+        subcategory = (data.get('subcategory') or request.GET.get('subcategory') or '').strip()
+        if subcategory_id:
+            jobs_qs = jobs_qs.filter(subcategory_id=subcategory_id)
+        elif subcategory:
+            jobs_qs = jobs_qs.filter(subcategory__name__icontains=subcategory)
+
         # Keyword search
         if search:
             jobs_qs = jobs_qs.filter(
                 Q(title__icontains=search) |
                 Q(description__icontains=search) |
                 Q(category__name__icontains=search) |
+                Q(subcategory__name__icontains=search) |
                 Q(locality__icontains=search) |
                 Q(address__icontains=search)
             )
@@ -3870,11 +3848,14 @@ def vendor_services_api(request, service_id=None):
             'description': s.description or '',
             'category': cat_name,
             'category_id': s.category.id if s.category else None,
+            'subcategory': s.subcategory.name if s.subcategory else (s.tags or ''),
+            'subcategory_id': s.subcategory.id if s.subcategory else None,
             'base_price': str(s.base_price),
             'vendor_payout': str(v_payout),
             'service_packages': pkgs,
             'inclusions': s.inclusions or [],
             'exclusions': s.exclusions or [],
+            'tags': s.tags or '',
             'status': s.status,
             'locality': s.locality or '',
             'service_radius_km': float(s.service_radius_km) if s.service_radius_km else 10.0,
@@ -3885,12 +3866,12 @@ def vendor_services_api(request, service_id=None):
     # 1. GET Method
     if request.method == 'GET':
         if service_id:
-            s = QuickService.objects.filter(id=service_id, vendor=user).select_related('category').first()
+            s = QuickService.objects.filter(id=service_id, vendor=user).select_related('category', 'subcategory').first()
             if not s:
                 return JsonResponse({'status': 'error', 'message': 'Service not found.'}, status=404)
             return JsonResponse({'status': 'success', 'service': serialize_service(s), 'platform_config': platform_config}, status=200)
 
-        services = QuickService.objects.filter(vendor=user).select_related('category').order_by('-created_at')
+        services = QuickService.objects.filter(vendor=user).select_related('category', 'subcategory').order_by('-created_at')
         return JsonResponse({
             'status': 'success',
             'services': [serialize_service(s) for s in services],
@@ -3983,6 +3964,19 @@ def vendor_services_api(request, service_id=None):
                         qs_obj.category = Category.objects.filter(name__iexact=str(category_id).strip()).first()
                     except Exception:
                         pass
+
+            subcategory_id = data.get('subcategory_id') or data.get('subcategory')
+            if subcategory_id:
+                try:
+                    qs_obj.subcategory = SubCategory.objects.get(id=subcategory_id)
+                except (SubCategory.DoesNotExist, ValueError):
+                    try:
+                        qs_obj.subcategory = SubCategory.objects.filter(name__iexact=str(subcategory_id).strip()).first()
+                    except Exception:
+                        pass
+
+            if 'tags' in data:
+                qs_obj.tags = data.get('tags', '').strip()
             
             new_status = data.get('status', qs_obj.status).strip().lower()
             if new_status in ['active', 'paused', 'draft']:
@@ -4067,6 +4061,17 @@ def vendor_services_api(request, service_id=None):
                     except Exception:
                         pass
 
+            subcategory_id = data.get('subcategory_id') or data.get('subcategory')
+            subcategory = None
+            if subcategory_id:
+                try:
+                    subcategory = SubCategory.objects.get(id=subcategory_id)
+                except (SubCategory.DoesNotExist, ValueError):
+                    try:
+                        subcategory = SubCategory.objects.filter(name__iexact=str(subcategory_id).strip()).first()
+                    except Exception:
+                        pass
+
             service_packages = parse_json_field('packages') or parse_json_field('service_packages')
             inclusions = parse_json_field('inclusions')
             exclusions = parse_json_field('exclusions')
@@ -4119,6 +4124,8 @@ def vendor_services_api(request, service_id=None):
                 vendor=user,
                 title=title,
                 category=category,
+                subcategory=subcategory,
+                tags=data.get('tags', '').strip() or None,
                 base_price=final_customer_price,
                 description=data.get('description', ''),
                 locality=data.get('locality', '').strip(),
@@ -4382,6 +4389,12 @@ def vendor_bookings_api(request):
                 'longitude': lng,
                 'map_url': map_url,
                 'status': b.status,
+                'payment_status': b.payment_status,
+                'payment_method': b.payment_method or '',
+                'transaction_reference': b.transaction_reference or '',
+                'additional_charges': float(b.additional_charges or 0.0),
+                'additional_notes': b.additional_notes or '',
+                'completed_at': b.completed_at.isoformat() if b.completed_at else None,
                 'review_rating': review.rating if review else None,
                 'review_comment': review.comment if review else '',
                 'created_at': b.created_at.isoformat()
@@ -5043,6 +5056,8 @@ def book_service_api(request):
     scheduled_time = data.get('scheduled_time', '')
     service_address = data.get('service_address')
     
+    additional_notes = (data.get('additional_notes') or '').strip()
+    
     if not qs_id or not scheduled_date or not service_address:
         return JsonResponse({
             'status': 'error', 
@@ -5082,13 +5097,32 @@ def book_service_api(request):
             scheduled_date=scheduled_date,
             scheduled_time=parsed_time,
             service_address=service_address,
-            status='pending'
+            additional_notes=additional_notes,
+            status='pending',
+            payment_status='pending'
         )
         return JsonResponse({
             'status': 'success', 
             'message': 'Service booked successfully! Awaiting vendor acceptance.',
-            'booking_id': booking.id
-        })
+            'booking_id': booking.id,
+            'booking': {
+                'id': booking.id,
+                'booking_code': f"BK-{booking.id:04d}",
+                'service_id': qs.id,
+                'service_title': qs.title,
+                'vendor_id': qs.vendor.id,
+                'vendor_name': qs.vendor.get_full_name() or qs.vendor.username,
+                'package_name': booking.package_name,
+                'scheduled_date': str(booking.scheduled_date),
+                'scheduled_time': str(booking.scheduled_time) if booking.scheduled_time else '',
+                'total_amount': float(booking.total_amount),
+                'service_address': booking.service_address,
+                'additional_notes': booking.additional_notes,
+                'status': booking.status,
+                'payment_status': booking.payment_status,
+                'created_at': booking.created_at.strftime("%Y-%m-%d %H:%M:%S")
+            }
+        }, status=201)
     except QuickService.DoesNotExist:
         return JsonResponse({'status': 'error', 'message': 'Service not found.'}, status=404)
 
@@ -5138,8 +5172,13 @@ def user_bookings_api(request):
                 'scheduled_date': str(b.scheduled_date),
                 'scheduled_time': str(b.scheduled_time) if b.scheduled_time else '',
                 'service_address': b.service_address or '',
+                'additional_notes': b.additional_notes or '',
+                'additional_charges': float(b.additional_charges or 0.0),
                 'status': b.status,
                 'payment_status': b.payment_status,
+                'payment_method': b.payment_method or '',
+                'transaction_reference': b.transaction_reference or '',
+                'completed_at': b.completed_at.isoformat() if b.completed_at else None,
                 'review_rating': review.rating if review else None,
                 'review_comment': review.comment if review else '',
                 'created_at': b.created_at.isoformat(),
@@ -5206,7 +5245,7 @@ def get_user_jobs_api(request):
         return JsonResponse({'status': 'error', 'message': 'Unauthorized'}, status=401)
         
     from django.db.models import Count
-    jobs = Job.objects.filter(user=user).select_related('category', 'location', 'assigned_vendor').annotate(
+    jobs = Job.objects.filter(user=user).select_related('category', 'subcategory', 'location', 'assigned_vendor').annotate(
         actual_bids_count=Count('bids')
     ).order_by('-created_at')
     
@@ -5216,6 +5255,9 @@ def get_user_jobs_api(request):
             'id': job.id,
             'title': job.title,
             'category': job.category.name if job.category else None,
+            'category_id': job.category.id if job.category else None,
+            'subcategory': job.subcategory.name if job.subcategory else None,
+            'subcategory_id': job.subcategory.id if job.subcategory else None,
             'description': job.description,
             'budget': float(job.budget) if job.budget else 0.0,
             'budget_type': job.budget_type,
@@ -7107,71 +7149,15 @@ def delete_subcategory_api(request):
 
 @csrf_exempt
 def add_category_field_api(request):
-    if not request.user.is_authenticated or not request.user.is_superuser:
-        return JsonResponse({'success': False, 'error': 'Unauthorized'})
-    if request.method == 'POST':
-        try:
-            data = json.loads(request.body)
-            cat_id = data.get('category_id')
-            name = data.get('name')
-            field_type = data.get('field_type', 'text')
-            options = data.get('options', '')
-            is_required = data.get('is_required', True)
-            
-            if not cat_id or not name:
-                return JsonResponse({'success': False, 'error': 'Category ID and Name are required'})
-            
-            category = Category.objects.get(id=cat_id)
-            field = CategoryField.objects.create(
-                category=category, name=name, field_type=field_type,
-                options=options, is_required=is_required
-            )
-            return JsonResponse({'success': True, 'field': {
-                'id': field.id, 'name': field.name, 'field_type': field.field_type,
-                'options': field.options, 'is_required': field.is_required
-            }})
-        except Exception as e:
-            return JsonResponse({'success': False, 'error': str(e)})
-    return JsonResponse({'success': False, 'error': 'Invalid method'})
+    return JsonResponse({'success': True, 'message': 'Dynamic category fields are deprecated.'})
 
 @csrf_exempt
 def update_category_field_api(request):
-    if not request.user.is_authenticated or not request.user.is_superuser:
-        return JsonResponse({'success': False, 'error': 'Unauthorized'})
-    if request.method == 'POST':
-        try:
-            data = json.loads(request.body)
-            field_id = data.get('id')
-            if not field_id:
-                return JsonResponse({'success': False, 'error': 'ID is required'})
-            
-            field = CategoryField.objects.get(id=field_id)
-            if 'name' in data: field.name = data['name']
-            if 'field_type' in data: field.field_type = data['field_type']
-            if 'options' in data: field.options = data['options']
-            if 'is_required' in data: field.is_required = data['is_required']
-            field.save()
-            return JsonResponse({'success': True, 'field': {
-                'id': field.id, 'name': field.name, 'field_type': field.field_type,
-                'options': field.options, 'is_required': field.is_required
-            }})
-        except Exception as e:
-            return JsonResponse({'success': False, 'error': str(e)})
-    return JsonResponse({'success': False, 'error': 'Invalid method'})
+    return JsonResponse({'success': True, 'message': 'Dynamic category fields are deprecated.'})
 
 @csrf_exempt
 def delete_category_field_api(request):
-    if not request.user.is_authenticated or not request.user.is_superuser:
-        return JsonResponse({'success': False, 'error': 'Unauthorized'})
-    if request.method == 'POST':
-        try:
-            data = json.loads(request.body)
-            field_id = data.get('id')
-            CategoryField.objects.filter(id=field_id).delete()
-            return JsonResponse({'success': True})
-        except Exception as e:
-            return JsonResponse({'success': False, 'error': str(e)})
-    return JsonResponse({'success': False, 'error': 'Invalid method'})
+    return JsonResponse({'success': True, 'message': 'Dynamic category fields are deprecated.'})
 
 @csrf_exempt
 def category_details_api(request, category_id):
@@ -7180,17 +7166,21 @@ def category_details_api(request, category_id):
     try:
         category = Category.objects.get(id=category_id)
         subcats = list(category.subcategories.values('id', 'name', 'status'))
-        fields = list(category.fields.values('id', 'name', 'field_type', 'options', 'is_required'))
+        cat_img = _build_absolute_image_url(request, category.image, category.image_url)
         return JsonResponse({
             'success': True,
             'category': {
                 'id': category.id,
                 'name': category.name,
                 'service_type': category.service_type,
-                'status': category.status
+                'status': category.status,
+                'icon_class': category.icon_class,
+                'icon_color': category.icon_color,
+                'image': cat_img,
+                'image_url': cat_img,
             },
             'subcategories': subcats,
-            'fields': fields
+            'fields': []
         })
     except Category.DoesNotExist:
         return JsonResponse({'success': False, 'error': 'Category not found'})
@@ -7295,3 +7285,1154 @@ def user_update_profile_api(request):
             'profile_image': profile_img_url,
         }
     })
+
+
+# =====================================================================
+# PHASE 1 APIS: USER DASHBOARD, VENDOR SELECTED JOBS, VENDOR KYC
+# =====================================================================
+
+@csrf_exempt
+def user_dashboard_api(request):
+    """
+    API for User (Customer) Dashboard Data
+    URL: /api/user/dashboard/
+    Method: GET
+    Header: Authorization: Bearer <token>
+    """
+    if request.method != 'GET':
+        return JsonResponse({'status': 'error', 'message': 'Method not allowed. Use GET.'}, status=405)
+
+    user, err = _get_user_from_bearer_token(request)
+    if err:
+        return JsonResponse({'status': 'error', 'message': err}, status=401)
+
+    if user.role != 'USER' and not user.is_superuser and user.role != 'ADMIN':
+        return JsonResponse({'status': 'error', 'message': 'Access denied. Only customers can access user dashboard.'}, status=403)
+
+    try:
+        from django.db.models import Sum, Count
+        from .models import Job, ServiceBooking, Bid
+
+        user_jobs = Job.objects.filter(user=user)
+        user_bookings = ServiceBooking.objects.filter(customer=user)
+
+        active_jobs_count = user_jobs.filter(status__in=['open', 'progress', 'selected']).count()
+        active_bookings_count = user_bookings.filter(status__in=['pending', 'accepted']).count()
+        pending_bids_count = Bid.objects.filter(
+            job__user=user,
+            job__status__in=['open', 'progress', 'selected'],
+            status='submitted'
+        ).count()
+        selected_vendors_count = user_jobs.filter(assigned_vendor__isnull=False).values('assigned_vendor').distinct().count()
+        completed_jobs_count = user_jobs.filter(status='completed').count()
+        completed_bookings_count = user_bookings.filter(status='completed').count()
+
+        # Total spent: completed bookings total_amount + completed jobs selected bid amounts
+        bookings_spent = user_bookings.filter(status='completed').aggregate(total=Sum('total_amount'))['total'] or Decimal('0.00')
+        jobs_spent = Bid.objects.filter(
+            job__user=user,
+            job__status='completed',
+            status='selected'
+        ).aggregate(total=Sum('total_customer_amount'))['total'] or Decimal('0.00')
+        if not jobs_spent:
+            jobs_spent = Bid.objects.filter(
+                job__user=user,
+                job__status='completed',
+                status='selected'
+            ).aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
+        total_spent = float(bookings_spent + jobs_spent)
+
+        # Recent jobs (last 5)
+        recent_jobs_qs = user_jobs.select_related('category', 'assigned_vendor', 'location').annotate(
+            actual_bids_count=Count('bids')
+        ).order_by('-created_at')[:5]
+
+        recent_jobs_data = []
+        for job in recent_jobs_qs:
+            job_image_url = ""
+            if job.image:
+                job_image_url = _build_absolute_image_url(request, job.image)
+            recent_jobs_data.append({
+                'id': job.id,
+                'title': job.title,
+                'category': job.category.name if job.category else None,
+                'budget': float(job.budget) if job.budget else 0.0,
+                'budget_type': job.budget_type or 'Fixed',
+                'status': job.status,
+                'city': job.city or (job.location.city if job.location else ''),
+                'bids_count': job.actual_bids_count,
+                'assigned_vendor': (job.assigned_vendor.get_full_name() or job.assigned_vendor.username) if job.assigned_vendor else None,
+                'image': job_image_url,
+                'created_at': job.created_at.strftime("%Y-%m-%d %H:%M:%S")
+            })
+
+        # Recent bookings (last 5)
+        recent_bookings_qs = user_bookings.select_related('vendor', 'quick_service').order_by('-created_at')[:5]
+        recent_bookings_data = []
+        for b in recent_bookings_qs:
+            vendor_name = (b.vendor.get_full_name() or b.vendor.username) if b.vendor else 'Unknown'
+            recent_bookings_data.append({
+                'id': b.id,
+                'service_title': b.quick_service.title if b.quick_service else 'Service',
+                'package_name': b.package_name,
+                'vendor_name': vendor_name,
+                'total_amount': float(b.total_amount),
+                'scheduled_date': str(b.scheduled_date),
+                'status': b.status,
+                'payment_status': b.payment_status,
+                'created_at': b.created_at.strftime("%Y-%m-%d %H:%M:%S")
+            })
+
+        return JsonResponse({
+            'status': 'success',
+            'data': {
+                'active_jobs_count': active_jobs_count,
+                'active_bookings_count': active_bookings_count,
+                'pending_bids_count': pending_bids_count,
+                'selected_vendors_count': selected_vendors_count,
+                'completed_jobs_count': completed_jobs_count,
+                'completed_bookings_count': completed_bookings_count,
+                'total_spent': total_spent,
+                'recent_jobs': recent_jobs_data,
+                'recent_bookings': recent_bookings_data
+            }
+        })
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+
+@csrf_exempt
+def vendor_selected_jobs_api(request):
+    """
+    API for Vendor Selected Jobs (Jobs where this vendor was chosen)
+    URL: /api/vendor/selected-jobs/
+    Method: GET
+    Header: Authorization: Bearer <token>
+    """
+    if request.method != 'GET':
+        return JsonResponse({'status': 'error', 'message': 'Method not allowed. Use GET.'}, status=405)
+
+    user, err = _get_user_from_bearer_token(request)
+    if err:
+        return JsonResponse({'status': 'error', 'message': err}, status=401)
+
+    if user.role != 'VENDOR' and not user.is_superuser and user.role != 'ADMIN':
+        return JsonResponse({'status': 'error', 'message': 'Access denied. Only vendors can view selected jobs.'}, status=403)
+
+    try:
+        from .models import Job
+
+        jobs_qs = Job.objects.filter(assigned_vendor=user).select_related(
+            'category', 'user', 'location'
+        ).prefetch_related('bids').order_by('-created_at')
+
+        jobs_list = []
+        for job in jobs_qs:
+            winning_bid = job.bids.filter(vendor=user, status='selected').first()
+            if not winning_bid:
+                winning_bid = job.bids.filter(vendor=user).order_by('-created_at').first()
+
+            bid_amount = float(winning_bid.amount) if winning_bid else float(job.budget or 0.0)
+
+            customer = job.user
+            customer_name = job.contact_name or customer.get_full_name() or customer.username
+            customer_phone = job.contact_mobile or ''
+            if not customer_phone and hasattr(customer, 'user_profile') and customer.user_profile:
+                customer_phone = customer.user_profile.phone_number or ''
+
+            site_address = job.address or job.locality or ''
+
+            image_url = ""
+            if job.image:
+                image_url = _build_absolute_image_url(request, job.image)
+
+            jobs_list.append({
+                'job_id': job.id,
+                'title': job.title,
+                'category': job.category.name if job.category else 'General',
+                'budget': float(job.budget) if job.budget else 0.0,
+                'budget_type': job.budget_type or 'Fixed',
+                'status': job.status,
+                'bid_amount': bid_amount,
+                'customer_name': customer_name,
+                'customer_phone': customer_phone,
+                'site_address': site_address,
+                'locality': job.locality or '',
+                'city': job.city or (job.location.city if job.location else ''),
+                'state': job.state or (job.location.state if job.location else ''),
+                'pincode': job.pincode or '',
+                'image': image_url,
+                'started_at': str(job.preferred_start_date) if job.preferred_start_date else None,
+                'expected_completion': str(job.expected_completion) if job.expected_completion else None,
+                'created_at': job.created_at.strftime("%Y-%m-%d %H:%M:%S")
+            })
+
+        return JsonResponse({
+            'status': 'success',
+            'count': len(jobs_list),
+            'data': jobs_list
+        })
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+
+@csrf_exempt
+def vendor_kyc_submit_api(request):
+    """
+    API for Vendor to Submit KYC Documents
+    URL: /api/vendor/kyc/submit/
+    Method: POST (multipart/form-data)
+    Header: Authorization: Bearer <token>
+    """
+    if request.method != 'POST':
+        return JsonResponse({'status': 'error', 'message': 'Method not allowed. Use POST.'}, status=405)
+
+    user, err = _get_user_from_bearer_token(request)
+    if err:
+        return JsonResponse({'status': 'error', 'message': err}, status=401)
+
+    if user.role != 'VENDOR' and not user.is_superuser:
+        return JsonResponse({'status': 'error', 'message': 'Access denied. Only vendors can submit KYC.'}, status=403)
+
+    try:
+        from .models import VendorKYC
+
+        data = _parse_api_request(request)
+        id_type = (data.get('id_type') or request.POST.get('id_type') or '').strip().lower()
+        id_number = (data.get('id_number') or request.POST.get('id_number') or '').strip()
+
+        valid_id_types = ['aadhaar', 'pan', 'voter_id']
+        if not id_type:
+            return JsonResponse({'status': 'error', 'message': "Field 'id_type' is required (aadhaar, pan, voter_id)."}, status=400)
+        if id_type not in valid_id_types:
+            return JsonResponse({'status': 'error', 'message': f"Invalid 'id_type'. Must be one of: {', '.join(valid_id_types)}."}, status=400)
+        if not id_number:
+            return JsonResponse({'status': 'error', 'message': "Field 'id_number' is required."}, status=400)
+
+        kyc = VendorKYC.objects.filter(vendor=user).first()
+
+        # If new KYC submission, id_document_front is required
+        if not kyc and 'id_document_front' not in request.FILES:
+            return JsonResponse({'status': 'error', 'message': "File 'id_document_front' is required for initial KYC submission."}, status=400)
+
+        if not kyc:
+            kyc = VendorKYC(vendor=user)
+
+        kyc.id_type = id_type
+        kyc.id_number = id_number
+        kyc.status = 'pending'
+        kyc.admin_notes = ''
+        kyc.submitted_at = timezone.now()
+        kyc.reviewed_at = None
+        kyc.reviewed_by = None
+
+        if 'id_document_front' in request.FILES:
+            kyc.id_document_front = request.FILES['id_document_front']
+        if 'id_document_back' in request.FILES:
+            kyc.id_document_back = request.FILES['id_document_back']
+        if 'business_license' in request.FILES:
+            kyc.business_license = request.FILES['business_license']
+        if 'gst_certificate' in request.FILES:
+            kyc.gst_certificate = request.FILES['gst_certificate']
+
+        kyc.save()
+
+        return JsonResponse({
+            'status': 'success',
+            'message': 'KYC documents submitted for review successfully',
+            'data': {
+                'kyc_id': kyc.id,
+                'status': kyc.status
+            }
+        }, status=200 if kyc.id else 201)
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+
+@csrf_exempt
+def vendor_kyc_status_api(request):
+    """
+    API for Vendor to Check KYC Verification Status
+    URL: /api/vendor/kyc/status/
+    Method: GET
+    Header: Authorization: Bearer <token>
+    """
+    if request.method != 'GET':
+        return JsonResponse({'status': 'error', 'message': 'Method not allowed. Use GET.'}, status=405)
+
+    user, err = _get_user_from_bearer_token(request)
+    if err:
+        return JsonResponse({'status': 'error', 'message': err}, status=401)
+
+    if user.role != 'VENDOR' and not user.is_superuser:
+        return JsonResponse({'status': 'error', 'message': 'Access denied. Only vendors can view KYC status.'}, status=403)
+
+    try:
+        from .models import VendorKYC
+
+        kyc = VendorKYC.objects.filter(vendor=user).first()
+        if not kyc:
+            return JsonResponse({
+                'status': 'success',
+                'data': {
+                    'has_kyc': False,
+                    'kyc_status': 'not_submitted',
+                    'id_type': None,
+                    'id_number': None,
+                    'submitted_at': None,
+                    'reviewed_at': None,
+                    'admin_notes': None,
+                    'id_document_front': '',
+                    'id_document_back': '',
+                    'business_license': '',
+                    'gst_certificate': ''
+                }
+            })
+
+        front_url = _build_absolute_image_url(request, kyc.id_document_front) if kyc.id_document_front else ''
+        back_url = _build_absolute_image_url(request, kyc.id_document_back) if kyc.id_document_back else ''
+        license_url = _build_absolute_image_url(request, kyc.business_license) if kyc.business_license else ''
+        gst_url = _build_absolute_image_url(request, kyc.gst_certificate) if kyc.gst_certificate else ''
+
+        return JsonResponse({
+            'status': 'success',
+            'data': {
+                'has_kyc': True,
+                'kyc_id': kyc.id,
+                'kyc_status': kyc.status,
+                'id_type': kyc.id_type,
+                'id_number': kyc.id_number,
+                'submitted_at': kyc.submitted_at.strftime("%Y-%m-%d %H:%M:%S") if kyc.submitted_at else None,
+                'reviewed_at': kyc.reviewed_at.strftime("%Y-%m-%d %H:%M:%S") if kyc.reviewed_at else None,
+                'admin_notes': kyc.admin_notes or '',
+                'id_document_front': front_url,
+                'id_document_back': back_url,
+                'business_license': license_url,
+                'gst_certificate': gst_url
+            }
+        })
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+
+# =====================================================================
+# PHASE 2 APIS: VENDOR PAYOUTS, DISPUTES, JOB COMPLETION PROOF
+# =====================================================================
+
+@csrf_exempt
+def vendor_payout_request_api(request):
+    """
+    API for Vendor to Request Wallet Payout / Withdrawal
+    URL: /api/vendor/wallet/payout/request/
+    Method: POST
+    Header: Authorization: Bearer <token>
+    """
+    if request.method != 'POST':
+        return JsonResponse({'status': 'error', 'message': 'Method not allowed. Use POST.'}, status=405)
+
+    user, err = _get_user_from_bearer_token(request)
+    if err:
+        return JsonResponse({'status': 'error', 'message': err}, status=401)
+
+    if user.role != 'VENDOR' and not user.is_superuser:
+        return JsonResponse({'status': 'error', 'message': 'Access denied. Only vendors can request payouts.'}, status=403)
+
+    try:
+        from .wallet_services import request_payout
+        from .models import PayoutRequest
+
+        data = _parse_api_request(request)
+
+        # Check for existing pending request
+        if PayoutRequest.objects.filter(vendor=user, status='pending').exists():
+            return JsonResponse({
+                'status': 'error',
+                'message': 'You already have a pending payout request currently under review.'
+            }, status=400)
+
+        raw_amount = data.get('amount') or request.POST.get('amount')
+        if not raw_amount:
+            return JsonResponse({'status': 'error', 'message': "Field 'amount' is required."}, status=400)
+
+        try:
+            amount = Decimal(str(raw_amount).strip())
+            if amount <= Decimal('0.00'):
+                return JsonResponse({'status': 'error', 'message': 'Payout amount must be greater than zero.'}, status=400)
+        except Exception:
+            return JsonResponse({'status': 'error', 'message': 'Invalid amount value.'}, status=400)
+
+        payout_method = (data.get('payout_method') or request.POST.get('payout_method') or '').strip().lower()
+        if payout_method not in ['bank', 'upi']:
+            return JsonResponse({'status': 'error', 'message': "Field 'payout_method' must be 'bank' or 'upi'."}, status=400)
+
+        account_holder_name = (data.get('account_holder_name') or request.POST.get('account_holder_name') or '').strip()
+        account_number = (data.get('account_number') or request.POST.get('account_number') or '').strip()
+        ifsc_code = (data.get('ifsc_code') or request.POST.get('ifsc_code') or '').strip()
+        bank_name = (data.get('bank_name') or request.POST.get('bank_name') or '').strip()
+        upi_id = (data.get('upi_id') or request.POST.get('upi_id') or '').strip()
+
+        success, result = request_payout(
+            vendor=user,
+            amount=amount,
+            payout_method=payout_method,
+            account_holder_name=account_holder_name,
+            account_number=account_number,
+            ifsc_code=ifsc_code,
+            bank_name=bank_name,
+            upi_id=upi_id
+        )
+
+        if not success:
+            return JsonResponse({'status': 'error', 'message': result}, status=400)
+
+        payout = result
+        return JsonResponse({
+            'status': 'success',
+            'message': 'Payout request submitted successfully',
+            'data': {
+                'request_id': payout.id,
+                'amount': float(payout.amount),
+                'payout_method': payout.payout_method,
+                'status': payout.status
+            }
+        }, status=201)
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+
+@csrf_exempt
+def vendor_payout_history_api(request):
+    """
+    API for Vendor to List Payout Request History
+    URL: /api/vendor/wallet/payout/history/
+    Method: GET
+    Header: Authorization: Bearer <token>
+    """
+    if request.method != 'GET':
+        return JsonResponse({'status': 'error', 'message': 'Method not allowed. Use GET.'}, status=405)
+
+    user, err = _get_user_from_bearer_token(request)
+    if err:
+        return JsonResponse({'status': 'error', 'message': err}, status=401)
+
+    if user.role != 'VENDOR' and not user.is_superuser:
+        return JsonResponse({'status': 'error', 'message': 'Access denied. Only vendors can view payout history.'}, status=403)
+
+    try:
+        from .models import PayoutRequest
+
+        payouts = PayoutRequest.objects.filter(vendor=user).order_by('-requested_at')
+        data_list = []
+        for p in payouts:
+            data_list.append({
+                'id': p.id,
+                'amount': float(p.amount),
+                'payout_method': p.payout_method,
+                'account_number': p.account_number or '',
+                'upi_id': p.upi_id or '',
+                'status': p.status,
+                'bank_reference_number': p.bank_reference_number or '',
+                'admin_remarks': p.admin_remarks or '',
+                'requested_at': p.requested_at.strftime("%Y-%m-%d %H:%M:%S"),
+                'processed_at': p.processed_at.strftime("%Y-%m-%d %H:%M:%S") if p.processed_at else None
+            })
+
+        return JsonResponse({
+            'status': 'success',
+            'count': len(data_list),
+            'data': data_list
+        })
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+
+@csrf_exempt
+def dispute_create_api(request):
+    """
+    API to File / Raise a Dispute Ticket
+    URL: /api/disputes/create/
+    Method: POST (multipart/form-data)
+    Header: Authorization: Bearer <token>
+    """
+    if request.method != 'POST':
+        return JsonResponse({'status': 'error', 'message': 'Method not allowed. Use POST.'}, status=405)
+
+    user, err = _get_user_from_bearer_token(request)
+    if err:
+        return JsonResponse({'status': 'error', 'message': err}, status=401)
+
+    try:
+        from .models import DisputeTicket, Job, QuickService
+
+        data = _parse_api_request(request)
+        subject = (data.get('subject') or request.POST.get('subject') or '').strip()
+        description = (data.get('description') or request.POST.get('description') or '').strip()
+        category = (data.get('category') or request.POST.get('category') or 'quality').strip().lower()
+        priority = (data.get('priority') or request.POST.get('priority') or 'medium').strip().lower()
+
+        if not subject:
+            return JsonResponse({'status': 'error', 'message': "Field 'subject' is required."}, status=400)
+        if not description:
+            return JsonResponse({'status': 'error', 'message': "Field 'description' is required."}, status=400)
+
+        valid_categories = ['payment', 'quality', 'noshow', 'behavior', 'delay', 'platform', 'other']
+        if category not in valid_categories:
+            category = 'other'
+
+        valid_priorities = ['low', 'medium', 'high', 'urgent']
+        if priority not in valid_priorities:
+            priority = 'medium'
+
+        # Optional target objects
+        against_user = None
+        against_user_id = data.get('against_user_id') or request.POST.get('against_user_id')
+        if against_user_id:
+            against_user = User.objects.filter(id=against_user_id).first()
+
+        job = None
+        job_id = data.get('job_id') or request.POST.get('job_id')
+        if job_id:
+            job = Job.objects.filter(id=job_id).first()
+            if job and not against_user:
+                against_user = job.assigned_vendor if user == job.user else job.user
+
+        quick_service = None
+        qs_id = data.get('quick_service_id') or request.POST.get('quick_service_id')
+        if qs_id:
+            quick_service = QuickService.objects.filter(id=qs_id).first()
+            if quick_service and not against_user:
+                against_user = quick_service.vendor
+
+        ticket = DisputeTicket(
+            raised_by=user,
+            against_user=against_user,
+            job=job,
+            quick_service=quick_service,
+            category=category,
+            priority=priority,
+            subject=subject,
+            description=description,
+            status='open'
+        )
+
+        if 'evidence_image' in request.FILES:
+            ticket.evidence_image = request.FILES['evidence_image']
+
+        ticket.save()
+
+        return JsonResponse({
+            'status': 'success',
+            'message': 'Dispute ticket created successfully',
+            'data': {
+                'ticket_id': ticket.ticket_id,
+                'status': ticket.status
+            }
+        }, status=201)
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+
+@csrf_exempt
+def dispute_list_api(request):
+    """
+    API to List User's Dispute Tickets
+    URL: /api/disputes/
+    Method: GET
+    Header: Authorization: Bearer <token>
+    """
+    if request.method != 'GET':
+        return JsonResponse({'status': 'error', 'message': 'Method not allowed. Use GET.'}, status=405)
+
+    user, err = _get_user_from_bearer_token(request)
+    if err:
+        return JsonResponse({'status': 'error', 'message': err}, status=401)
+
+    try:
+        from .models import DisputeTicket
+
+        if user.is_superuser or user.role == 'ADMIN':
+            tickets = DisputeTicket.objects.all().select_related('raised_by', 'against_user', 'job', 'quick_service').order_by('-created_at')
+        else:
+            tickets = DisputeTicket.objects.filter(
+                Q(raised_by=user) | Q(against_user=user)
+            ).select_related('raised_by', 'against_user', 'job', 'quick_service').order_by('-created_at')
+
+        tickets_list = []
+        for t in tickets:
+            tickets_list.append({
+                'ticket_id': t.ticket_id,
+                'subject': t.subject,
+                'category': t.category,
+                'status': t.status,
+                'priority': t.priority,
+                'related_item': t.related_item_label,
+                'created_at': t.created_at.strftime("%Y-%m-%d %H:%M:%S")
+            })
+
+        return JsonResponse({
+            'status': 'success',
+            'count': len(tickets_list),
+            'data': tickets_list
+        })
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+
+@csrf_exempt
+def dispute_detail_api(request, ticket_id):
+    """
+    API for Dispute Ticket Detail and Conversation Thread
+    URL: /api/disputes/<ticket_id>/
+    Method: GET
+    Header: Authorization: Bearer <token>
+    """
+    if request.method != 'GET':
+        return JsonResponse({'status': 'error', 'message': 'Method not allowed. Use GET.'}, status=405)
+
+    user, err = _get_user_from_bearer_token(request)
+    if err:
+        return JsonResponse({'status': 'error', 'message': err}, status=401)
+
+    try:
+        from .models import DisputeTicket
+
+        ticket = DisputeTicket.objects.filter(ticket_id__iexact=str(ticket_id).strip()).select_related(
+            'raised_by', 'against_user', 'job', 'quick_service'
+        ).first()
+
+        if not ticket:
+            return JsonResponse({'status': 'error', 'message': 'Dispute ticket not found.'}, status=404)
+
+        # Authorization: user must be participant or admin
+        if not (user.is_superuser or user.role == 'ADMIN' or ticket.raised_by == user or ticket.against_user == user):
+            return JsonResponse({'status': 'error', 'message': 'Access denied to this dispute ticket.'}, status=403)
+
+        evidence_url = _build_absolute_image_url(request, ticket.evidence_image) if ticket.evidence_image else ''
+
+        # Messages thread
+        messages = []
+        for m in ticket.messages.all().select_related('sender').order_by('created_at'):
+            att_url = _build_absolute_image_url(request, m.attachment) if m.attachment else ''
+            sender_name = m.sender.get_full_name() or m.sender.username
+            messages.append({
+                'id': m.id,
+                'sender_id': m.sender.id,
+                'sender_name': sender_name,
+                'sender_role': m.sender.role,
+                'is_me': (m.sender == user),
+                'message': m.message,
+                'attachment_url': att_url,
+                'created_at': m.created_at.strftime("%Y-%m-%d %H:%M:%S")
+            })
+
+        against_user_data = None
+        if ticket.against_user:
+            against_user_data = {
+                'id': ticket.against_user.id,
+                'name': ticket.against_user.get_full_name() or ticket.against_user.username,
+                'role': ticket.against_user.role
+            }
+
+        job_data = None
+        if ticket.job:
+            job_data = {
+                'id': ticket.job.id,
+                'title': ticket.job.title,
+                'budget': float(ticket.job.budget or 0.0)
+            }
+
+        qs_data = None
+        if ticket.quick_service:
+            qs_data = {
+                'id': ticket.quick_service.id,
+                'title': ticket.quick_service.title
+            }
+
+        return JsonResponse({
+            'status': 'success',
+            'data': {
+                'ticket_id': ticket.ticket_id,
+                'subject': ticket.subject,
+                'description': ticket.description,
+                'category': ticket.category,
+                'status': ticket.status,
+                'priority': ticket.priority,
+                'raised_by': {
+                    'id': ticket.raised_by.id,
+                    'name': ticket.raised_by.get_full_name() or ticket.raised_by.username,
+                    'role': ticket.raised_by.role
+                },
+                'against_user': against_user_data,
+                'related_job': job_data,
+                'related_quick_service': qs_data,
+                'evidence_image_url': evidence_url,
+                'resolution_notes': ticket.resolution_notes or '',
+                'created_at': ticket.created_at.strftime("%Y-%m-%d %H:%M:%S"),
+                'resolved_at': ticket.resolved_at.strftime("%Y-%m-%d %H:%M:%S") if ticket.resolved_at else None,
+                'messages': messages
+            }
+        })
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+
+@csrf_exempt
+def dispute_message_api(request, ticket_id):
+    """
+    API to Post a Message / Reply to a Dispute Ticket
+    URL: /api/disputes/<ticket_id>/message/
+    Method: POST (multipart/form-data)
+    Header: Authorization: Bearer <token>
+    """
+    if request.method != 'POST':
+        return JsonResponse({'status': 'error', 'message': 'Method not allowed. Use POST.'}, status=405)
+
+    user, err = _get_user_from_bearer_token(request)
+    if err:
+        return JsonResponse({'status': 'error', 'message': err}, status=401)
+
+    try:
+        from .models import DisputeTicket, DisputeMessage
+
+        ticket = DisputeTicket.objects.filter(ticket_id__iexact=str(ticket_id).strip()).first()
+        if not ticket:
+            return JsonResponse({'status': 'error', 'message': 'Dispute ticket not found.'}, status=404)
+
+        if not (user.is_superuser or user.role == 'ADMIN' or ticket.raised_by == user or ticket.against_user == user):
+            return JsonResponse({'status': 'error', 'message': 'Access denied to post messages on this ticket.'}, status=403)
+
+        data = _parse_api_request(request)
+        msg_text = (data.get('message') or request.POST.get('message') or '').strip()
+        if not msg_text and 'attachment' not in request.FILES:
+            return JsonResponse({'status': 'error', 'message': "Field 'message' or an attachment is required."}, status=400)
+
+        msg = DisputeMessage(
+            ticket=ticket,
+            sender=user,
+            message=msg_text
+        )
+        if 'attachment' in request.FILES:
+            msg.attachment = request.FILES['attachment']
+        msg.save()
+
+        # If ticket was closed, reopen if participant replies
+        if ticket.status == 'closed' and not (user.is_superuser or user.role == 'ADMIN'):
+            ticket.status = 'investigating'
+            ticket.save(update_fields=['status'])
+
+        return JsonResponse({
+            'status': 'success',
+            'message': 'Message added to dispute successfully',
+            'data': {
+                'message_id': msg.id,
+                'created_at': msg.created_at.strftime("%Y-%m-%d %H:%M:%S")
+            }
+        }, status=201)
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+
+@csrf_exempt
+def vendor_submit_completion_proof_api(request, job_id):
+    """
+    API for Vendor to Submit Job Completion Proof Photos & Summary
+    URL: /api/vendor/jobs/<job_id>/submit-proof/
+    Method: POST (multipart/form-data)
+    Header: Authorization: Bearer <token>
+    """
+    if request.method != 'POST':
+        return JsonResponse({'status': 'error', 'message': 'Method not allowed. Use POST.'}, status=405)
+
+    user, err = _get_user_from_bearer_token(request)
+    if err:
+        return JsonResponse({'status': 'error', 'message': err}, status=401)
+
+    if user.role != 'VENDOR' and not user.is_superuser:
+        return JsonResponse({'status': 'error', 'message': 'Access denied. Only vendors can submit completion proof.'}, status=403)
+
+    try:
+        from .models import Job, JobCompletionProof
+
+        job = Job.objects.filter(id=job_id).first()
+        if not job:
+            return JsonResponse({'status': 'error', 'message': 'Job not found.'}, status=404)
+
+        # Ensure vendor is assigned to this job or has selected bid
+        is_assigned = (job.assigned_vendor == user)
+        if not is_assigned:
+            has_sel_bid = job.bids.filter(vendor=user, status__in=['selected', 'completed']).exists()
+            if not has_sel_bid and not user.is_superuser:
+                return JsonResponse({'status': 'error', 'message': 'You are not assigned to this job.'}, status=403)
+
+        data = _parse_api_request(request)
+        work_summary = (data.get('work_summary') or request.POST.get('work_summary') or '').strip()
+
+        proof = JobCompletionProof.objects.filter(job=job).first()
+
+        # photo_1 is required if creating new proof
+        if not proof and 'photo_1' not in request.FILES:
+            return JsonResponse({'status': 'error', 'message': "Field 'photo_1' (image file) is required."}, status=400)
+
+        if not proof:
+            proof = JobCompletionProof(job=job, vendor=user)
+
+        if work_summary:
+            proof.work_summary = work_summary
+        elif not proof.work_summary:
+            proof.work_summary = "Work completed successfully as per scope."
+
+        if 'photo_1' in request.FILES:
+            proof.photo_1 = request.FILES['photo_1']
+        if 'photo_2' in request.FILES:
+            proof.photo_2 = request.FILES['photo_2']
+
+        proof.completed_at = timezone.now()
+        proof.save()
+
+        # Update job status to progress if open
+        if job.status == 'open':
+            job.status = 'progress'
+            job.save(update_fields=['status'])
+
+        return JsonResponse({
+            'status': 'success',
+            'message': 'Completion proof submitted successfully',
+            'data': {
+                'proof_id': proof.id,
+                'completed_at': proof.completed_at.strftime("%Y-%m-%d %H:%M:%S")
+            }
+        }, status=200 if proof.id else 201)
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+
+@csrf_exempt
+def user_view_completion_proof_api(request, job_id):
+    """
+    API for User to View Submitted Completion Proof for Their Job
+    URL: /api/user/jobs/<job_id>/proof/
+    Method: GET
+    Header: Authorization: Bearer <token>
+    """
+    if request.method != 'GET':
+        return JsonResponse({'status': 'error', 'message': 'Method not allowed. Use GET.'}, status=405)
+
+    user, err = _get_user_from_bearer_token(request)
+    if err:
+        return JsonResponse({'status': 'error', 'message': err}, status=401)
+
+    try:
+        from .models import Job, JobCompletionProof
+
+        job = Job.objects.filter(id=job_id).first()
+        if not job:
+            return JsonResponse({'status': 'error', 'message': 'Job not found.'}, status=404)
+
+        # Access check: user owns job or is assigned vendor or admin
+        if not (user.is_superuser or user.role == 'ADMIN' or job.user == user or job.assigned_vendor == user):
+            return JsonResponse({'status': 'error', 'message': 'Access denied to this job completion proof.'}, status=403)
+
+        proof = JobCompletionProof.objects.filter(job=job).select_related('vendor').first()
+        if not proof:
+            return JsonResponse({
+                'status': 'success',
+                'data': {
+                    'has_proof': False,
+                    'photo_1_url': '',
+                    'photo_2_url': '',
+                    'work_summary': '',
+                    'vendor_name': '',
+                    'completed_at': None
+                }
+            })
+
+        p1_url = _build_absolute_image_url(request, proof.photo_1) if proof.photo_1 else ''
+        p2_url = _build_absolute_image_url(request, proof.photo_2) if proof.photo_2 else ''
+        vendor_name = proof.vendor.get_full_name() or proof.vendor.username
+
+        return JsonResponse({
+            'status': 'success',
+            'data': {
+                'has_proof': True,
+                'photo_1_url': p1_url,
+                'photo_2_url': p2_url,
+                'work_summary': proof.work_summary,
+                'vendor_name': vendor_name,
+                'completed_at': proof.completed_at.strftime("%Y-%m-%d %H:%M:%S")
+            }
+        })
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+
+# =====================================================================
+# PHASE 3 APIS: VENDOR EARNINGS SUMMARY & JOB IMAGE GALLERY
+# =====================================================================
+
+@csrf_exempt
+def vendor_earnings_summary_api(request):
+    """
+    API for Vendor Detailed Earnings Summary & Financial Breakdown
+    URL: /api/vendor/earnings/
+    Method: GET
+    Header: Authorization: Bearer <token>
+    """
+    if request.method != 'GET':
+        return JsonResponse({'status': 'error', 'message': 'Method not allowed. Use GET.'}, status=405)
+
+    user, err = _get_user_from_bearer_token(request)
+    if err:
+        return JsonResponse({'status': 'error', 'message': err}, status=401)
+
+    if user.role != 'VENDOR' and not user.is_superuser:
+        return JsonResponse({'status': 'error', 'message': 'Access denied. Only vendors can view earnings.'}, status=403)
+
+    try:
+        from django.db.models import Sum, Count
+        from datetime import datetime
+        from .wallet_services import get_or_create_wallet
+        from .models import PlatformRevenueLedger, Job, ServiceBooking, WalletTransaction
+
+        wallet = get_or_create_wallet(user)
+
+        # Totals from PlatformRevenueLedger
+        ledgers = PlatformRevenueLedger.objects.filter(vendor=user)
+        ledger_totals = ledgers.aggregate(
+            total_comm=Sum('platform_commission'),
+            total_cgst=Sum('cgst_collected'),
+            total_sgst=Sum('sgst_collected'),
+            total_payout=Sum('vendor_payout')
+        )
+
+        total_commission_paid = float(ledger_totals['total_comm'] or Decimal('0.00'))
+        total_tax_paid = float((ledger_totals['total_cgst'] or Decimal('0.00')) + (ledger_totals['total_sgst'] or Decimal('0.00')))
+
+        wallet_earned = float(wallet.total_earned or Decimal('0.00'))
+        ledger_earned = float(ledger_totals['total_payout'] or Decimal('0.00'))
+        total_earned = max(wallet_earned, ledger_earned)
+
+        completed_jobs_count = Job.objects.filter(assigned_vendor=user, status='completed').count()
+        completed_services_count = ServiceBooking.objects.filter(vendor=user, status='completed').count()
+        total_completed = completed_jobs_count + completed_services_count
+
+        average_job_value = round(total_earned / total_completed, 2) if total_completed > 0 else 0.0
+
+        # Monthly breakdown for last 6 months
+        monthly_breakdown = []
+        now = timezone.now()
+        for i in range(5, -1, -1):
+            m = now.month - i
+            y = now.year
+            while m <= 0:
+                m += 12
+                y -= 1
+
+            month_start = datetime(y, m, 1, 0, 0, 0)
+            if m == 12:
+                month_end = datetime(y + 1, 1, 1, 0, 0, 0)
+            else:
+                month_end = datetime(y, m + 1, 1, 0, 0, 0)
+
+            if timezone.is_aware(now):
+                month_start = timezone.make_aware(month_start)
+                month_end = timezone.make_aware(month_end)
+
+            month_ledgers = ledgers.filter(settled_at__gte=month_start, settled_at__lt=month_end)
+            m_totals = month_ledgers.aggregate(
+                earned=Sum('vendor_payout'),
+                commission=Sum('platform_commission'),
+                count=Count('id')
+            )
+
+            m_earned = float(m_totals['earned'] or Decimal('0.00'))
+            if m_earned == 0.0:
+                w_txns = WalletTransaction.objects.filter(
+                    wallet=wallet,
+                    transaction_type='credit',
+                    created_at__gte=month_start,
+                    created_at__lt=month_end
+                ).aggregate(total=Sum('amount'), count=Count('id'))
+                m_earned = float(w_txns['total'] or Decimal('0.00'))
+                m_count = w_txns['count'] or 0
+            else:
+                m_count = m_totals['count'] or 0
+
+            monthly_breakdown.append({
+                'month': month_start.strftime("%b %Y"),
+                'year_month': month_start.strftime("%Y-%m"),
+                'earned': m_earned,
+                'jobs_count': m_count,
+                'commission': float(m_totals['commission'] or Decimal('0.00'))
+            })
+
+        # Recent wallet transactions (last 5)
+        recent_txns = []
+        for t in WalletTransaction.objects.filter(wallet=wallet).order_by('-created_at')[:5]:
+            recent_txns.append({
+                'id': t.id,
+                'amount': float(t.amount),
+                'transaction_type': t.transaction_type,
+                'description': t.description,
+                'created_at': t.created_at.strftime("%Y-%m-%d %H:%M:%S")
+            })
+
+        return JsonResponse({
+            'status': 'success',
+            'data': {
+                'available_balance': float(wallet.available_balance or Decimal('0.00')),
+                'total_earned': total_earned,
+                'total_withdrawn': float(wallet.total_withdrawn or Decimal('0.00')),
+                'total_commission_paid': total_commission_paid,
+                'total_tax_paid': total_tax_paid,
+                'completed_jobs_count': completed_jobs_count,
+                'completed_services_count': completed_services_count,
+                'total_completed_orders': total_completed,
+                'average_job_value': average_job_value,
+                'monthly_breakdown': monthly_breakdown,
+                'recent_transactions': recent_txns
+            }
+        })
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+
+@csrf_exempt
+def user_job_images_upload_api(request, job_id):
+    """
+    API for User to Upload Gallery Images for a Job
+    URL: /api/user/jobs/<job_id>/images/upload/
+    Method: POST (multipart/form-data)
+    Header: Authorization: Bearer <token>
+    """
+    if request.method != 'POST':
+        return JsonResponse({'status': 'error', 'message': 'Method not allowed. Use POST.'}, status=405)
+
+    user, err = _get_user_from_bearer_token(request)
+    if err:
+        return JsonResponse({'status': 'error', 'message': err}, status=401)
+
+    try:
+        from .models import Job, JobImage
+
+        job = Job.objects.filter(id=job_id).first()
+        if not job:
+            return JsonResponse({'status': 'error', 'message': 'Job not found.'}, status=404)
+
+        if not (user.is_superuser or user.role == 'ADMIN' or job.user == user):
+            return JsonResponse({'status': 'error', 'message': 'Access denied. You do not own this job.'}, status=403)
+
+        uploaded_files = []
+        # Support multiple file fields: 'images', 'files', or single 'image'
+        if 'images' in request.FILES:
+            uploaded_files = request.FILES.getlist('images')
+        elif 'files' in request.FILES:
+            uploaded_files = request.FILES.getlist('files')
+        elif 'image' in request.FILES:
+            uploaded_files = [request.FILES['image']]
+
+        if not uploaded_files:
+            return JsonResponse({'status': 'error', 'message': "No image files found in request. Provide 'images' or 'image'."}, status=400)
+
+        created_images = []
+        for f in uploaded_files:
+            img_obj = JobImage.objects.create(job=job, image=f)
+            created_images.append({
+                'id': img_obj.id,
+                'image_url': _build_absolute_image_url(request, img_obj.image),
+                'created_at': img_obj.created_at.strftime("%Y-%m-%d %H:%M:%S")
+            })
+
+        return JsonResponse({
+            'status': 'success',
+            'message': f"{len(created_images)} gallery image(s) uploaded successfully",
+            'count': len(created_images),
+            'data': created_images
+        }, status=201)
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+
+@csrf_exempt
+def user_job_images_list_api(request, job_id):
+    """
+    API to List Gallery Images for a Specific Job
+    URL: /api/user/jobs/<job_id>/images/
+    Method: GET
+    Header: Authorization: Bearer <token> (Optional)
+    """
+    if request.method != 'GET':
+        return JsonResponse({'status': 'error', 'message': 'Method not allowed. Use GET.'}, status=405)
+
+    try:
+        from .models import Job, JobImage
+
+        job = Job.objects.filter(id=job_id).first()
+        if not job:
+            return JsonResponse({'status': 'error', 'message': 'Job not found.'}, status=404)
+
+        images = JobImage.objects.filter(job=job).order_by('id')
+        images_data = []
+        for img in images:
+            images_data.append({
+                'id': img.id,
+                'image_url': _build_absolute_image_url(request, img.image),
+                'created_at': img.created_at.strftime("%Y-%m-%d %H:%M:%S")
+            })
+
+        return JsonResponse({
+            'status': 'success',
+            'job_id': job.id,
+            'count': len(images_data),
+            'data': images_data
+        })
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+
+@csrf_exempt
+def user_job_image_delete_api(request, job_id, image_id):
+    """
+    API to Delete a Specific Gallery Image from a Job
+    URL: /api/user/jobs/<job_id>/images/<image_id>/ or /api/user/jobs/<job_id>/images/<image_id>/delete/
+    Method: DELETE or POST
+    Header: Authorization: Bearer <token>
+    """
+    if request.method not in ['DELETE', 'POST']:
+        return JsonResponse({'status': 'error', 'message': 'Method not allowed. Use DELETE or POST.'}, status=405)
+
+    user, err = _get_user_from_bearer_token(request)
+    if err:
+        return JsonResponse({'status': 'error', 'message': err}, status=401)
+
+    try:
+        from .models import Job, JobImage
+
+        job = Job.objects.filter(id=job_id).first()
+        if not job:
+            return JsonResponse({'status': 'error', 'message': 'Job not found.'}, status=404)
+
+        if not (user.is_superuser or user.role == 'ADMIN' or job.user == user):
+            return JsonResponse({'status': 'error', 'message': 'Access denied. You do not own this job.'}, status=403)
+
+        img_obj = JobImage.objects.filter(id=image_id, job=job).first()
+        if not img_obj:
+            return JsonResponse({'status': 'error', 'message': 'Gallery image not found for this job.'}, status=404)
+
+        # Remove file from storage if present
+        if img_obj.image:
+            try:
+                img_obj.image.delete(save=False)
+            except Exception:
+                pass
+
+        img_obj.delete()
+
+        return JsonResponse({
+            'status': 'success',
+            'message': 'Gallery image deleted successfully'
+        })
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+
+

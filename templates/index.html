@@ -1,3 +1,4 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="en" class="scroll-smooth">
 <head>
@@ -54,8 +55,18 @@
     }
   </script>
 
-  <!-- Lucide Icons -->
+  <!-- Lucide Icons with CDN Fallback & Instant Auto-Init -->
   <script src="https://unpkg.com/lucide@latest"></script>
+  <script>
+    if (typeof lucide === 'undefined') {
+      document.write('<script src="https://cdn.jsdelivr.net/npm/lucide@latest/dist/umd/lucide.min.js"><\/script>');
+    }
+    document.addEventListener("DOMContentLoaded", function() {
+      if (window.lucide && typeof lucide.createIcons === 'function') {
+        lucide.createIcons();
+      }
+    });
+  </script>
   
   <!-- Three.js CDN for 3D Hero Particles -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -64,125 +75,205 @@
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
 
   <!-- Custom Stylesheet -->
-  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="{% static 'styles.css' %}?v=4.2" />
 </head>
-<body class="bg-slate-50 text-slate-800 font-sans antialiased selection:bg-blue-600 selection:text-white">
+<body class="bg-slate-50 text-slate-800 font-sans antialiased selection:bg-blue-600 selection:text-white pb-16 md:pb-0">
 
   <!-- ================= TOP NOTIFICATION BAR ================= -->
-  <div class="bg-sugu-navy text-slate-300 text-xs py-2 px-4 border-b border-slate-800">
-    <div class="max-w-7xl mx-auto flex items-center justify-between">
-      <div class="flex items-center space-x-2">
-        <span class="px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-400 font-semibold border border-blue-500/30 text-[10px]">NEW</span>
-        <span>Dual-Engine Platform: Choose <strong class="text-white">15-Min Quick Service</strong> or <strong class="text-amber-300">Smart Contractor Bidding</strong></span>
+  <div class="bg-sugu-navy text-slate-300 text-xs py-1.5 sm:py-2 px-3 sm:px-4 border-b border-slate-800">
+    <div class="max-w-7xl mx-auto flex items-center justify-between gap-2">
+      <div class="flex items-center space-x-2 min-w-0">
+        <span class="px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-400 font-semibold border border-blue-500/30 text-[10px] shrink-0">NEW</span>
+        <span class="text-[11px] sm:text-xs truncate sm:overflow-visible">Dual-Engine Platform: <strong class="text-white">15-Min Quick Service</strong> or <strong class="text-amber-300">Smart Bidding</strong></span>
       </div>
-      <div class="hidden sm:flex items-center space-x-4 text-slate-400 text-xs">
+      <div class="hidden sm:flex items-center space-x-4 text-slate-400 text-xs shrink-0">
         <span class="flex items-center"><i data-lucide="shield" class="w-3.5 h-3.5 mr-1 text-emerald-400"></i> ₹25,000 Sugu Cover</span>
         <span class="flex items-center"><i data-lucide="phone" class="w-3.5 h-3.5 mr-1 text-blue-400"></i> 24/7 Helpline: 1800-SUGU-FIX</span>
       </div>
     </div>
   </div>
 
-  <!-- ================= MAIN NAVIGATION BAR (URBAN COMPANY STYLE ROUTER) ================= -->
+  <!-- ================= MAIN NAVIGATION BAR (RESPONSIVE DUAL-ENGINE ROUTER) ================= -->
   <header class="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200/80 shadow-sm transition-all duration-300">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-      <div class="flex items-center justify-between min-h-[82px] sm:min-h-[90px] lg:min-h-[98px] py-1.5 gap-4">
+    <div class="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
+      <div class="flex items-center justify-between min-h-[64px] sm:min-h-[76px] lg:min-h-[88px] py-1.5 gap-2 sm:gap-4">
         
-        <!-- Logo & Location -->
-        <div class="flex items-center space-x-4 lg:space-x-6 shrink-0">
-          <a href="/" class="flex items-center space-x-3.5 group shrink-0" title="{{ branding.site_title|default:'SUGU Services' }}">
+        <!-- Logo & Location Group -->
+        <div class="flex items-center space-x-2 sm:space-x-4 shrink-0 max-w-[70%] sm:max-w-none">
+          <a href="/" class="flex items-center space-x-2 sm:space-x-3.5 group shrink-0" title="{{ branding.site_title|default:'SUGU Services' }}">
             {% if branding.logo %}
-              <img src="{{ branding.logo.url }}" alt="{{ branding.site_title|default:'SUGU Services' }}" class="h-14 sm:h-16 md:h-20 lg:h-[84px] max-h-[86px] w-auto object-contain transition-transform group-hover:scale-105 drop-shadow-sm">
+              <img src="{{ branding.logo.url }}" alt="{{ branding.site_title|default:'SUGU Services' }}" class="h-10 sm:h-12 md:h-16 lg:h-[72px] max-h-[74px] w-auto object-contain transition-transform group-hover:scale-105 drop-shadow-sm">
             {% else %}
-              <img src="/static/images/logo.png" alt="SUGU Services" class="h-14 sm:h-16 md:h-20 lg:h-[84px] max-h-[86px] w-auto object-contain transition-transform group-hover:scale-105 drop-shadow-sm" onerror="this.src='/media/cms/branding/logo.png'">
+              <img src="/static/images/logo.png" alt="SUGU Services" class="h-10 sm:h-12 md:h-16 lg:h-[72px] max-h-[74px] w-auto object-contain transition-transform group-hover:scale-105 drop-shadow-sm" onerror="this.src='/media/cms/branding/logo.png'">
             {% endif %}
             <div class="hidden sm:block">
-              <span class="text-xl lg:text-2xl font-black font-heading tracking-tight text-sugu-navy block leading-tight">{{ branding.site_title|default:'SUGU' }} <span class="text-sugu-blue">Services</span></span>
+              <span class="text-lg lg:text-2xl font-black font-heading tracking-tight text-sugu-navy block leading-tight">{{ branding.site_title|default:'SUGU' }} <span class="text-sugu-blue">Services</span></span>
               <span class="text-[10px] sm:text-[11px] uppercase tracking-wider font-extrabold text-sugu-blue block mt-0.5 max-w-sm lg:max-w-md line-clamp-1">{{ branding.tagline|default:'Your Home. Our Priority.' }}</span>
             </div>
           </a>
 
           <!-- Location Selector -->
-          <div class="flex items-center space-x-2 pl-4 border-l border-slate-200 cursor-pointer shrink-0" onclick="openLocationPicker()" title="Click to change location">
-            <div class="w-8 h-8 rounded-full bg-blue-50 text-sugu-blue flex items-center justify-center shrink-0">
-              <i data-lucide="map-pin" class="w-4 h-4"></i>
+          <div class="flex items-center space-x-1.5 sm:space-x-2 pl-2 sm:pl-4 border-l border-slate-200 cursor-pointer min-w-0" onclick="openLocationPicker()" title="Click to change location">
+            <div class="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-blue-50 text-sugu-blue flex items-center justify-center shrink-0">
+              <i data-lucide="map-pin" class="w-3.5 h-3.5 sm:w-4 sm:h-4"></i>
             </div>
-            <div class="text-left">
-              <span class="block text-[11px] text-slate-400 font-medium leading-none">Location</span>
+            <div class="text-left min-w-0">
+              <span class="hidden xs:block text-[10px] sm:text-[11px] text-slate-400 font-medium leading-none">Location</span>
               <span class="text-xs font-bold text-slate-800 hover:text-sugu-blue transition flex items-center mt-0.5 leading-none">
-                <span id="header-location-text">{% if user_city %}{{ user_city }}{% if user_state %}, {{ user_state }}{% endif %}{% else %}Detecting...{% endif %}</span>
-                <i data-lucide="chevron-down" class="w-3.5 h-3.5 ml-1 text-slate-400"></i>
+                <span id="header-location-text" class="truncate max-w-[85px] xs:max-w-[120px] sm:max-w-[170px] md:max-w-[200px] block">{% if user_city %}{{ user_city }}{% if user_state %}, {{ user_state }}{% endif %}{% else %}Detecting...{% endif %}</span>
+                <i data-lucide="chevron-down" class="w-3 h-3 sm:w-3.5 sm:h-3.5 ml-0.5 text-slate-400 shrink-0"></i>
               </span>
             </div>
           </div>
         </div>
 
-        <!-- Primary Dual Mode Switcher Tabs (Urban Company Style Route Switching) -->
-        <div class="flex items-center space-x-1 p-1 bg-slate-100 rounded-xl border border-slate-200 shadow-inner h-10 shrink-0">
+        <!-- Desktop Primary Dual Mode Switcher Tabs (Hidden on mobile < md) -->
+        <div class="hidden md:flex items-center space-x-1 p-1 bg-slate-100 rounded-xl border border-slate-200 shadow-inner h-10 shrink-0">
           <button onclick="switchRoute('home')" data-mode="home" 
-            class="nav-mode-btn h-8 px-4 rounded-lg text-xs font-bold transition flex items-center justify-center space-x-1.5 whitespace-nowrap bg-sugu-blue text-white shadow-md">
+            class="nav-mode-btn h-8 px-3.5 lg:px-4 rounded-lg text-xs font-bold transition flex items-center justify-center space-x-1.5 whitespace-nowrap bg-sugu-blue text-white shadow-md">
             <i data-lucide="home" class="w-3.5 h-3.5"></i>
             <span>Home</span>
           </button>
           
           <button onclick="switchRoute('quick-service')" data-mode="quick-service" 
-            class="nav-mode-btn h-8 px-4 rounded-lg text-xs font-bold transition flex items-center justify-center space-x-1.5 whitespace-nowrap text-slate-600 hover:bg-slate-200">
+            class="nav-mode-btn h-8 px-3.5 lg:px-4 rounded-lg text-xs font-bold transition flex items-center justify-center space-x-1.5 whitespace-nowrap text-slate-600 hover:bg-slate-200">
             <i data-lucide="zap" class="w-3.5 h-3.5 text-amber-500 fill-amber-500"></i>
             <span>Quick Service</span>
           </button>
 
           <button onclick="switchRoute('bidding')" data-mode="bidding" 
-            class="nav-mode-btn h-8 px-4 rounded-lg text-xs font-bold transition flex items-center justify-center space-x-1.5 whitespace-nowrap text-slate-600 hover:bg-slate-200">
+            class="nav-mode-btn h-8 px-3.5 lg:px-4 rounded-lg text-xs font-bold transition flex items-center justify-center space-x-1.5 whitespace-nowrap text-slate-600 hover:bg-slate-200">
             <i data-lucide="gavel" class="w-3.5 h-3.5 text-sugu-blue"></i>
             <span>Bidding</span>
           </button>
         </div>
 
-        <!-- Profile / Auth (Cart removed as requested) -->
-        <div class="flex items-center space-x-2.5 shrink-0">
-
-          {% if user.is_authenticated %}
-          <!-- User profile badge & dashboard dropdown -->
-          <div class="relative group">
-            <a href="{% if user.role == 'VENDOR' %}/vendor/dashboard{% elif user.role == 'ADMIN' or user.is_superuser %}/admin-dashboard{% else %}/user/dashboard{% endif %}" class="h-10 flex items-center space-x-2.5 px-3 rounded-xl border border-slate-200 hover:border-slate-300 bg-white hover:bg-slate-50 transition shadow-xs">
-              <div class="w-7 h-7 rounded-full bg-sugu-blue text-white font-bold flex items-center justify-center border border-blue-400 shadow-sm text-xs">
-                {{ user.first_name|default:user.username|slice:":1"|upper }}
-              </div>
-              <div class="hidden xl:block text-left">
-                <span class="block text-xs font-bold text-slate-900 leading-tight">{{ user.first_name|default:user.username }}</span>
-                <span class="block text-[10px] font-semibold text-emerald-600 leading-none">
-                  {% if user.role == 'VENDOR' %}Vendor Partner{% elif user.role == 'ADMIN' or user.is_superuser %}Admin{% else %}Verified Customer{% endif %}
-                </span>
-              </div>
-              <i data-lucide="chevron-down" class="w-3.5 h-3.5 text-slate-400 hidden xl:block"></i>
-            </a>
-
-            <!-- Dropdown Menu -->
-            <div class="absolute right-0 mt-2 w-48 bg-white rounded-2xl shadow-xl border border-slate-100 py-2 hidden group-hover:block transition-all z-50">
-              <a href="{% if user.role == 'VENDOR' %}/vendor/dashboard{% elif user.role == 'ADMIN' or user.is_superuser %}/admin-dashboard{% else %}/user/dashboard{% endif %}" class="flex items-center space-x-2 px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-blue-50 hover:text-sugu-blue">
-                <i data-lucide="layout-dashboard" class="w-4 h-4"></i>
-                <span>My Dashboard</span>
+        <!-- Right Side: Desktop Profile / Auth AND Mobile Hamburger Button -->
+        <div class="flex items-center space-x-2 shrink-0">
+          
+          <!-- Desktop Auth / Profile Buttons (Hidden on mobile < md) -->
+          <div class="hidden md:flex items-center space-x-2.5">
+            {% if user.is_authenticated %}
+            <div class="relative group">
+              <a href="{% if user.role == 'VENDOR' %}/vendor/dashboard{% elif user.role == 'ADMIN' or user.is_superuser %}/admin-dashboard{% else %}/user/dashboard{% endif %}" class="h-10 flex items-center space-x-2.5 px-3 rounded-xl border border-slate-200 hover:border-slate-300 bg-white hover:bg-slate-50 transition shadow-xs">
+                <div class="w-7 h-7 rounded-full bg-sugu-blue text-white font-bold flex items-center justify-center border border-blue-400 shadow-sm text-xs">
+                  {{ user.first_name|default:user.username|slice:":1"|upper }}
+                </div>
+                <div class="hidden xl:block text-left">
+                  <span class="block text-xs font-bold text-slate-900 leading-tight">{{ user.first_name|default:user.username }}</span>
+                  <span class="block text-[10px] font-semibold text-emerald-600 leading-none">
+                    {% if user.role == 'VENDOR' %}Vendor Partner{% elif user.role == 'ADMIN' or user.is_superuser %}Admin{% else %}Verified Customer{% endif %}
+                  </span>
+                </div>
+                <i data-lucide="chevron-down" class="w-3.5 h-3.5 text-slate-400 hidden xl:block"></i>
               </a>
-              <a href="/logout/" class="flex items-center space-x-2 px-4 py-2 text-xs font-semibold text-rose-600 hover:bg-rose-50">
-                <i data-lucide="log-out" class="w-4 h-4"></i>
-                <span>Log Out</span>
-              </a>
+              <div class="absolute right-0 mt-2 w-48 bg-white rounded-2xl shadow-xl border border-slate-100 py-2 hidden group-hover:block transition-all z-50">
+                <a href="{% if user.role == 'VENDOR' %}/vendor/dashboard{% elif user.role == 'ADMIN' or user.is_superuser %}/admin-dashboard{% else %}/user/dashboard{% endif %}" class="flex items-center space-x-2 px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-blue-50 hover:text-sugu-blue">
+                  <i data-lucide="layout-dashboard" class="w-4 h-4"></i>
+                  <span>My Dashboard</span>
+                </a>
+                <a href="/logout/" class="flex items-center space-x-2 px-4 py-2 text-xs font-semibold text-rose-600 hover:bg-rose-50">
+                  <i data-lucide="log-out" class="w-4 h-4"></i>
+                  <span>Log Out</span>
+                </a>
+              </div>
             </div>
-          </div>
-          {% else %}
-          <!-- Guest Login / Partner Buttons -->
-          <div class="flex items-center space-x-2.5 pl-2 border-l border-slate-200">
-            <a href="/login/" id="header-login-btn" class="h-10 px-4 rounded-xl text-xs font-bold text-slate-700 hover:text-sugu-blue bg-white hover:bg-slate-50 border border-slate-200 hover:border-slate-300 shadow-xs transition-all duration-200 flex items-center justify-center space-x-1.5 whitespace-nowrap shrink-0">
+            {% else %}
+            <a href="/login/" id="header-login-btn" class="h-10 px-3.5 lg:px-4 rounded-xl text-xs font-bold text-slate-700 hover:text-sugu-blue bg-white hover:bg-slate-50 border border-slate-200 hover:border-slate-300 shadow-xs transition-all duration-200 flex items-center justify-center space-x-1.5 whitespace-nowrap">
               <i data-lucide="user" class="w-4 h-4 text-slate-500"></i>
               <span>Log In</span>
             </a>
-            <a href="/register/vendor/" id="header-vendor-btn" class="h-10 px-4 rounded-xl text-xs font-bold bg-sugu-navy hover:bg-slate-800 text-white shadow-xs hover:shadow transition-all duration-200 flex items-center justify-center space-x-1.5 whitespace-nowrap shrink-0">
+            <a href="/register/vendor/" id="header-vendor-btn" class="h-10 px-3.5 lg:px-4 rounded-xl text-xs font-bold bg-sugu-navy hover:bg-slate-800 text-white shadow-xs hover:shadow transition-all duration-200 flex items-center justify-center space-x-1.5 whitespace-nowrap">
               <i data-lucide="briefcase" class="w-4 h-4 text-amber-400"></i>
               <span>Become a Vendor</span>
             </a>
+            {% endif %}
           </div>
-          {% endif %}
+
+          <!-- Mobile Only Actions (< md): Quick Account Link + Hamburger Menu -->
+          <div class="flex md:hidden items-center space-x-1.5">
+            <a href="{% if user.is_authenticated %}{% if user.role == 'VENDOR' %}/vendor/dashboard{% elif user.role == 'ADMIN' or user.is_superuser %}/admin-dashboard{% else %}/user/dashboard{% endif %}{% else %}/login/{% endif %}" class="w-9 h-9 rounded-xl border border-slate-200 bg-slate-50 flex items-center justify-center text-slate-700 hover:bg-slate-100 transition shadow-xs" title="Account">
+              {% if user.is_authenticated %}
+                <div class="w-6 h-6 rounded-full bg-sugu-blue text-white font-bold flex items-center justify-center text-xs">
+                  {{ user.first_name|default:user.username|slice:":1"|upper }}
+                </div>
+              {% else %}
+                <i data-lucide="user" class="w-4 h-4 text-slate-600"></i>
+              {% endif %}
+            </a>
+            <button id="mobile-menu-toggle-btn" onclick="toggleMobileNavDrawer()" class="w-9 h-9 rounded-xl border border-slate-200 bg-white flex items-center justify-center text-slate-700 hover:bg-slate-100 transition shadow-xs" aria-label="Toggle menu">
+              <i data-lucide="menu" id="mobile-menu-icon" class="w-5 h-5"></i>
+            </button>
+          </div>
+
         </div>
 
+      </div>
+    </div>
+
+    <!-- Mobile Slide-Down Drawer (< md) -->
+    <div id="mobile-nav-drawer" class="hidden md:hidden border-t border-slate-200 bg-white px-4 py-4 shadow-xl transition-all duration-300">
+      <div class="space-y-3">
+        <!-- Dual Engine Mode Selector -->
+        <div class="p-1.5 bg-slate-100 rounded-2xl border border-slate-200/90 grid grid-cols-3 gap-1">
+          <button onclick="switchRoute('home')" class="nav-mode-btn py-2 px-2 rounded-xl text-xs font-bold transition flex flex-col items-center justify-center bg-sugu-blue text-white shadow-xs" data-mode="home">
+            <i data-lucide="home" class="w-4 h-4 mb-0.5"></i>
+            <span>Home</span>
+          </button>
+          <button onclick="switchRoute('quick-service')" class="nav-mode-btn py-2 px-2 rounded-xl text-xs font-bold transition flex flex-col items-center justify-center text-slate-600 hover:bg-slate-200" data-mode="quick-service">
+            <i data-lucide="zap" class="w-4 h-4 mb-0.5 text-amber-500 fill-amber-500"></i>
+            <span>Quick (15m)</span>
+          </button>
+          <button onclick="switchRoute('bidding')" class="nav-mode-btn py-2 px-2 rounded-xl text-xs font-bold transition flex flex-col items-center justify-center text-slate-600 hover:bg-slate-200" data-mode="bidding">
+            <i data-lucide="gavel" class="w-4 h-4 mb-0.5 text-sugu-blue"></i>
+            <span>Bidding</span>
+          </button>
+        </div>
+
+        <!-- Location Trigger in Drawer -->
+        <div onclick="openLocationPicker(); toggleMobileNavDrawer();" class="flex items-center justify-between p-3 rounded-2xl bg-blue-50/70 border border-blue-100 text-xs cursor-pointer">
+          <div class="flex items-center space-x-2.5 min-w-0">
+            <div class="w-8 h-8 rounded-xl bg-sugu-blue text-white flex items-center justify-center shrink-0">
+              <i data-lucide="map-pin" class="w-4 h-4"></i>
+            </div>
+            <div class="min-w-0">
+              <span class="text-[10px] text-slate-400 font-medium block">Selected Location</span>
+              <span id="drawer-location-text" class="font-bold text-slate-900 truncate block">{% if user_city %}{{ user_city }}{% if user_state %}, {{ user_state }}{% endif %}{% else %}Detecting location...{% endif %}</span>
+            </div>
+          </div>
+          <span class="text-[11px] font-bold text-sugu-blue shrink-0">Change &rarr;</span>
+        </div>
+
+        <!-- Auth Actions in Drawer -->
+        {% if user.is_authenticated %}
+        <div class="pt-2 border-t border-slate-100 space-y-2">
+          <a href="{% if user.role == 'VENDOR' %}/vendor/dashboard{% elif user.role == 'ADMIN' or user.is_superuser %}/admin-dashboard{% else %}/user/dashboard{% endif %}" class="w-full py-2.5 px-4 rounded-xl bg-sugu-blue text-white font-bold text-xs flex items-center justify-center space-x-2 shadow-sm">
+            <i data-lucide="layout-dashboard" class="w-4 h-4"></i>
+            <span>Go to My Dashboard</span>
+          </a>
+          <a href="/logout/" class="w-full py-2 px-4 rounded-xl border border-rose-200 text-rose-600 hover:bg-rose-50 font-bold text-xs flex items-center justify-center space-x-2 transition">
+            <i data-lucide="log-out" class="w-4 h-4"></i>
+            <span>Log Out</span>
+          </a>
+        </div>
+        {% else %}
+        <div class="pt-2 border-t border-slate-100 grid grid-cols-2 gap-2">
+          <a href="/login/" class="py-2.5 px-3 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-800 font-bold text-xs flex items-center justify-center space-x-1.5 shadow-xs">
+            <i data-lucide="user" class="w-4 h-4 text-slate-500"></i>
+            <span>Log In</span>
+          </a>
+          <a href="/register/vendor/" class="py-2.5 px-3 rounded-xl bg-sugu-navy hover:bg-slate-800 text-white font-bold text-xs flex items-center justify-center space-x-1.5 shadow-xs">
+            <i data-lucide="briefcase" class="w-4 h-4 text-amber-400"></i>
+            <span>Become Vendor</span>
+          </a>
+        </div>
+        {% endif %}
+
+        <!-- Guarantee & Helpline row -->
+        <div class="pt-2 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
+          <span class="flex items-center text-emerald-700 font-semibold"><i data-lucide="shield-check" class="w-3.5 h-3.5 mr-1"></i> ₹25,000 Sugu Cover</span>
+          <a href="tel:18007848349" class="flex items-center text-blue-600 font-semibold"><i data-lucide="phone" class="w-3.5 h-3.5 mr-1"></i> 1800-SUGU-FIX</a>
+        </div>
       </div>
     </div>
   </header>
@@ -194,100 +285,99 @@
   <main id="view-home" class="transition-opacity duration-300">
 
     <!-- ================= HERO SECTION (HIGH-RESOLUTION COMMERCIAL BANNER) ================= -->
-    <section class="relative bg-[#07152b] text-white overflow-hidden py-16 lg:py-24 min-h-[580px] lg:min-h-[640px] flex items-center">
+    <section class="relative bg-[#07152b] text-white overflow-hidden py-8 sm:py-12 lg:py-20 min-h-0 lg:min-h-[620px] flex items-center">
       
       <!-- Full-Width Photographic Hero Banner (Technician in Modern Kitchen) -->
       <div class="absolute inset-0 w-full h-full pointer-events-none select-none">
         <img 
           src="{% if hero and hero.hero_image %}{{ hero.hero_image.url }}{% else %}/static/images/hero_service_banner.jpg{% endif %}" 
           alt="SUGU Verified Home Services Technicians" 
-          class="w-full h-full object-cover object-[78%_top] sm:object-[82%_top] lg:object-[84%_top] xl:object-[86%_top] transition-opacity duration-700"
+          class="w-full h-full object-cover object-[80%_15%] sm:object-[82%_top] lg:object-[84%_top] xl:object-[86%_top] transition-opacity duration-700"
           onerror="this.src='/static/images/hero_service_banner.jpg'"
         />
         
         <!-- Smooth Directional Vignette / Gradient Overlay -->
-        <!-- Deep Navy on left to keep text crystal-clear, fading into photo on right -->
-        <div class="absolute inset-0 bg-gradient-to-r from-[#07152b] via-[#07152bf2] sm:via-[#07152be6] md:via-[#07152bcc] lg:via-[#07152b99] via-40% lg:via-48% to-[#07152b1a] lg:to-transparent"></div>
-        <div class="absolute inset-0 bg-gradient-to-t from-[#07152b] via-transparent to-[#07152b4d] opacity-90 lg:opacity-40"></div>
+        <div class="absolute inset-0 bg-gradient-to-r from-[#07152b] via-[#07152bf2] sm:via-[#07152be6] md:via-[#07152bcc] lg:via-[#07152b99] via-45% lg:via-48% to-[#07152b4d] lg:to-transparent"></div>
+        <div class="absolute inset-0 bg-gradient-to-t from-[#07152b] via-transparent to-[#07152b66] opacity-95 lg:opacity-40"></div>
       </div>
 
-      <!-- Script Brand Badge on Top-Right (Inspired by User Mockup) -->
+      <!-- Script Brand Badge on Top-Right -->
       <div class="hidden xl:flex flex-col items-end absolute top-6 right-8 xl:right-14 z-20 pointer-events-none select-none">
         <span class="text-blue-300 font-serif italic text-lg xl:text-xl tracking-wider drop-shadow-md">Your Home</span>
         <span class="text-white font-black font-heading text-xl xl:text-2xl tracking-tight -mt-1 drop-shadow-lg">Our Priority</span>
       </div>
 
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 w-full">
-        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center">
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-12 items-center">
           
-          <!-- Hero Left Column: Headline, Dual Engine Highlights, CTAs (Spans 7 cols on desktop to give text generous breathing room) -->
-          <div class="lg:col-span-7 space-y-6 text-center lg:text-left">
+          <!-- Hero Left Column -->
+          <div class="lg:col-span-7 space-y-4 sm:space-y-6 text-center lg:text-left">
             
             <!-- Blue Pill Badge -->
-            <div class="inline-flex items-center space-x-2 px-4 py-1.5 rounded-full bg-sugu-blue/85 text-white text-xs sm:text-sm font-semibold tracking-wide shadow-md backdrop-blur-md border border-blue-400/40">
-              <span class="flex h-2.5 w-2.5 relative">
+            <div class="inline-flex items-center space-x-2 px-3 sm:px-4 py-1 sm:py-1.5 rounded-full bg-sugu-blue/90 text-white text-[11px] sm:text-sm font-semibold tracking-wide shadow-md backdrop-blur-md border border-blue-400/40">
+              <span class="flex h-2 w-2 sm:h-2.5 sm:w-2.5 relative">
                 <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+                <span class="relative inline-flex rounded-full h-2 w-2 sm:h-2.5 sm:w-2.5 bg-emerald-500"></span>
               </span>
               <span>India's Dual-Engine Home Services Platform</span>
             </div>
 
             <!-- Main Hero Heading -->
-            <h1 class="text-3xl sm:text-4xl lg:text-[46px] font-black tracking-tight text-white leading-[1.15] font-heading drop-shadow-md">
+            <h1 class="text-2xl sm:text-3xl md:text-4xl lg:text-[46px] font-black tracking-tight text-white leading-tight sm:leading-[1.15] font-heading drop-shadow-md">
               India's First<br />
               <span class="text-blue-300">Quick-Service Booking</span> &amp;<br />
               <span class="text-amber-300">Smart Project Bidding Platform</span>
             </h1>
 
             <!-- Tagline Subtitle -->
-            <p class="text-base sm:text-lg text-blue-100/95 font-medium max-w-xl mx-auto lg:mx-0 drop-shadow-sm">
+            <p class="text-xs sm:text-base lg:text-lg text-blue-100/95 font-medium max-w-xl mx-auto lg:mx-0 drop-shadow-sm">
               Quick Booking for Today. Smart Bidding for Tomorrow's Projects.
             </p>
 
             <!-- Dual Highlights: Lightning (Quick) & Gavel (Bidding) -->
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5 pt-2 max-w-xl mx-auto lg:mx-0">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-3.5 pt-1 sm:pt-2 max-w-xl mx-auto lg:mx-0">
               <!-- Highlight 1: Quick Services -->
-              <div onclick="switchRoute('quick-service')" class="flex items-center space-x-3 bg-white/10 hover:bg-white/15 cursor-pointer backdrop-blur-md p-3.5 rounded-2xl border border-white/20 transition shadow-sm hover:border-blue-400/50">
-                <div class="w-10 h-10 rounded-xl bg-sugu-blue text-white flex items-center justify-center shrink-0 shadow">
-                  <i data-lucide="zap" class="w-5 h-5 fill-current"></i>
+              <div onclick="switchRoute('quick-service')" class="flex items-center space-x-3 bg-white/10 hover:bg-white/15 cursor-pointer backdrop-blur-md p-2.5 sm:p-3.5 rounded-xl sm:rounded-2xl border border-white/20 transition shadow-sm hover:border-blue-400/50">
+                <div class="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-sugu-blue text-white flex items-center justify-center shrink-0 shadow">
+                  <i data-lucide="zap" class="w-4 h-4 sm:w-5 sm:h-5 fill-current"></i>
                 </div>
-                <div class="text-left text-sm font-bold text-white leading-snug">
-                  Get Instant Help<br /><span class="text-xs font-normal text-blue-200">for Everyday Needs (15-min arrival)</span>
+                <div class="text-left text-xs sm:text-sm font-bold text-white leading-snug">
+                  Get Instant Help<br /><span class="text-[11px] sm:text-xs font-normal text-blue-200">for Everyday Needs (15-min arrival)</span>
                 </div>
               </div>
 
               <!-- Highlight 2: Project Bidding -->
-              <div onclick="switchRoute('bidding')" class="flex items-center space-x-3 bg-white/10 hover:bg-white/15 cursor-pointer backdrop-blur-md p-3.5 rounded-2xl border border-white/20 transition shadow-sm hover:border-amber-400/50">
+              <div onclick="switchRoute('bidding')" class="flex items-center space-x-3 bg-white/10 hover:bg-white/15 cursor-pointer backdrop-blur-md p-2.5 sm:p-3.5 rounded-xl sm:rounded-2xl border border-white/20 transition shadow-sm hover:border-amber-400/50">
                 <div class="w-10 h-10 rounded-xl bg-amber-500 text-white flex items-center justify-center shrink-0 shadow">
-                  <i data-lucide="gavel" class="w-5 h-5"></i>
+                  <i data-lucide="gavel" class="w-4 h-4 sm:w-5 sm:h-5"></i>
                 </div>
-                <div class="text-left text-sm font-bold text-white leading-snug">
-                  Competitive Offers<br /><span class="text-xs font-normal text-amber-200">for Bigger Projects (Save 40%)</span>
+                <div class="text-left text-xs sm:text-sm font-bold text-white leading-snug">
+                  Competitive Offers<br /><span class="text-[11px] sm:text-xs font-normal text-amber-200">for Bigger Projects (Save 40%)</span>
                 </div>
               </div>
             </div>
 
             <!-- Explainer Sentence -->
-            <p class="text-xs sm:text-sm text-slate-200 max-w-xl leading-relaxed mx-auto lg:mx-0 drop-shadow-sm">
+            <p class="text-[11px] sm:text-xs lg:text-sm text-slate-200 max-w-xl leading-relaxed mx-auto lg:mx-0 drop-shadow-sm">
               From 15-minute standard technician visits to reverse-auction bidding for home painting, carpentry, and full renovations.
             </p>
 
             <!-- CTA Buttons -->
-            <div class="flex flex-wrap items-center justify-center lg:justify-start gap-4 pt-2">
-              <button onclick="switchRoute('quick-service')" class="h-12 px-6 min-w-[210px] rounded-full font-bold text-sm bg-sugu-blue hover:bg-sugu-blueDark text-white shadow-xl shadow-blue-500/30 transition transform hover:-translate-y-0.5 flex items-center justify-center space-x-2 whitespace-nowrap shrink-0 border border-blue-300/30">
-                <i data-lucide="zap" class="w-4 h-4 fill-white"></i>
-                <span>Book a Quick Service &rarr;</span>
+            <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-center lg:justify-start gap-3 sm:gap-4 pt-2 sm:pt-3 w-full max-w-md mx-auto lg:mx-0">
+              <button onclick="switchRoute('quick-service')" class="min-h-[52px] sm:min-h-[54px] py-3.5 px-6 rounded-2xl font-extrabold text-sm sm:text-base bg-sugu-blue hover:bg-sugu-blueDark active:scale-[0.98] text-white shadow-xl shadow-blue-500/35 transition transform hover:-translate-y-0.5 flex items-center justify-center space-x-2.5 flex-1 border border-blue-300/30">
+                <i data-lucide="zap" class="w-5 h-5 fill-white shrink-0"></i>
+                <span class="tracking-wide">Book a Quick Service &rarr;</span>
               </button>
 
-              <button onclick="switchRoute('bidding')" class="h-12 px-6 min-w-[210px] rounded-full font-bold text-sm bg-amber-600 hover:bg-amber-700 text-white shadow-xl shadow-amber-600/30 transition transform hover:-translate-y-0.5 flex items-center justify-center space-x-2 whitespace-nowrap shrink-0 border border-amber-400/30">
-                <i data-lucide="gavel" class="w-4 h-4"></i>
-                <span>Explore Projects &rarr;</span>
+              <button onclick="switchRoute('bidding')" class="min-h-[52px] sm:min-h-[54px] py-3.5 px-6 rounded-2xl font-extrabold text-sm sm:text-base bg-amber-600 hover:bg-amber-700 active:scale-[0.98] text-white shadow-xl shadow-amber-600/35 transition transform hover:-translate-y-0.5 flex items-center justify-center space-x-2.5 flex-1 border border-amber-400/30">
+                <i data-lucide="gavel" class="w-5 h-5 shrink-0"></i>
+                <span class="tracking-wide">Explore Projects &rarr;</span>
               </button>
             </div>
 
           </div>
 
-          <!-- Hero Right Column: Open space on desktop showcasing the technician and toolbox -->
+          <!-- Hero Right Column -->
           <div class="lg:col-span-5 relative hidden lg:block min-h-[380px] pointer-events-none"></div>
 
         </div>
@@ -297,23 +387,23 @@
     <!-- ======================================================== -->
     <!-- OUR SERVICES (EXACT 8 REALISTIC TILES FROM USER MOCKUP)  -->
     <!-- ======================================================== -->
-    <section class="py-12 bg-white border-b border-slate-100">
+    <section class="py-8 sm:py-12 bg-white border-b border-slate-100">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         
-        <div class="mb-8">
-          <h2 class="text-2xl sm:text-3xl font-extrabold text-sugu-navy tracking-tight font-heading">Our Services</h2>
+        <div class="mb-6 sm:mb-8 text-center sm:text-left">
+          <h2 class="text-xl sm:text-2xl md:text-3xl font-extrabold text-sugu-navy tracking-tight font-heading">Our Services</h2>
           <p class="text-xs sm:text-sm text-slate-500 mt-1">Professional, reliable and affordable home services — at your fingertips.</p>
         </div>
 
         <!-- Dynamic Service Category Cards created by Super Admin -->
-        <div class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-3 sm:gap-4">
+        <div class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-2.5 sm:gap-4">
           {% for cat in categories %}
-          <div onclick="switchRoute('quick-service', '{{ cat.id }}')" class="bg-[#f0f4f9] hover:bg-[#e4ebf5] border border-slate-200/80 rounded-2xl p-3 sm:p-4 flex flex-col items-center justify-between text-center transition-all duration-300 hover:shadow-lg hover:-translate-y-1 cursor-pointer group">
-            <div class="w-16 h-16 sm:w-20 sm:h-20 flex items-center justify-center p-1">
+          <div onclick="switchRoute('quick-service', '{{ cat.id }}')" class="bg-[#f0f4f9] hover:bg-[#e4ebf5] border border-slate-200/80 rounded-xl sm:rounded-2xl p-2.5 sm:p-4 flex flex-col items-center justify-between text-center transition-all duration-300 hover:shadow-lg hover:-translate-y-1 cursor-pointer group">
+            <div class="w-14 h-14 sm:w-20 sm:h-20 flex items-center justify-center p-1">
               {% if cat.image %}
                 <img src="{{ cat.image.url }}" alt="{{ cat.name }}" class="max-w-full max-h-full object-contain group-hover:scale-108 transition-transform duration-300 drop-shadow-sm" />
               {% else %}
-                <div class="w-14 h-14 rounded-2xl bg-white shadow-sm flex items-center justify-center text-sugu-blue text-2xl group-hover:scale-108 transition-transform">
+                <div class="w-12 h-12 sm:w-14 sm:h-14 rounded-xl sm:rounded-2xl bg-white shadow-sm flex items-center justify-center text-sugu-blue text-xl sm:text-2xl group-hover:scale-108 transition-transform">
                   <i class="bi {{ cat.icon_class }}"></i>
                 </div>
               {% endif %}
@@ -331,47 +421,47 @@
     </section>
 
     <!-- KEY STATS BANNER (BLUE STRIP) -->
-    <section class="bg-sugu-blue text-white py-6 shadow-inner">
+    <section class="bg-sugu-blue text-white py-5 sm:py-6 shadow-inner">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="grid grid-cols-2 sm:grid-cols-4 gap-6 text-center sm:text-left divide-y sm:divide-y-0 sm:divide-x divide-blue-400/40">
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-6 text-center sm:text-left divide-y sm:divide-y-0 sm:divide-x divide-blue-400/40">
           
-          <div class="flex items-center justify-center sm:justify-start space-x-3.5 sm:px-4 pt-3 sm:pt-0">
-            <div class="w-12 h-12 rounded-xl bg-white/15 flex items-center justify-center shrink-0">
-              <i data-lucide="users" class="w-6 h-6 text-white"></i>
+          <div class="flex items-center justify-center sm:justify-start space-x-2.5 sm:space-x-3.5 sm:px-4 pt-2 sm:pt-0">
+            <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-white/15 flex items-center justify-center shrink-0">
+              <i data-lucide="users" class="w-5 h-5 sm:w-6 sm:h-6 text-white"></i>
             </div>
             <div>
-              <div class="text-2xl font-extrabold font-display leading-tight">5000+</div>
-              <div class="text-xs text-blue-100 font-medium">Happy Customers</div>
+              <div class="text-xl sm:text-2xl font-extrabold font-display leading-tight">5000+</div>
+              <div class="text-[11px] sm:text-xs text-blue-100 font-medium">Happy Customers</div>
             </div>
           </div>
 
-          <div class="flex items-center justify-center sm:justify-start space-x-3.5 sm:px-4 pt-3 sm:pt-0">
-            <div class="w-12 h-12 rounded-xl bg-white/15 flex items-center justify-center shrink-0">
-              <i data-lucide="award" class="w-6 h-6 text-white"></i>
+          <div class="flex items-center justify-center sm:justify-start space-x-2.5 sm:space-x-3.5 sm:px-4 pt-2 sm:pt-0">
+            <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-white/15 flex items-center justify-center shrink-0">
+              <i data-lucide="award" class="w-5 h-5 sm:w-6 sm:h-6 text-white"></i>
             </div>
             <div>
-              <div class="text-2xl font-extrabold font-display leading-tight">10+</div>
-              <div class="text-xs text-blue-100 font-medium">Years of Experience</div>
+              <div class="text-xl sm:text-2xl font-extrabold font-display leading-tight">10+</div>
+              <div class="text-[11px] sm:text-xs text-blue-100 font-medium">Years of Experience</div>
             </div>
           </div>
 
-          <div class="flex items-center justify-center sm:justify-start space-x-3.5 sm:px-4 pt-3 sm:pt-0">
-            <div class="w-12 h-12 rounded-xl bg-white/15 flex items-center justify-center shrink-0">
-              <i data-lucide="clock" class="w-6 h-6 text-white"></i>
+          <div class="flex items-center justify-center sm:justify-start space-x-2.5 sm:space-x-3.5 sm:px-4 pt-2 sm:pt-0">
+            <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-white/15 flex items-center justify-center shrink-0">
+              <i data-lucide="clock" class="w-5 h-5 sm:w-6 sm:h-6 text-white"></i>
             </div>
             <div>
-              <div class="text-2xl font-extrabold font-display leading-tight">24/7</div>
-              <div class="text-xs text-blue-100 font-medium">Emergency Support</div>
+              <div class="text-xl sm:text-2xl font-extrabold font-display leading-tight">24/7</div>
+              <div class="text-[11px] sm:text-xs text-blue-100 font-medium">Emergency Support</div>
             </div>
           </div>
 
-          <div class="flex items-center justify-center sm:justify-start space-x-3.5 sm:px-4 pt-3 sm:pt-0">
-            <div class="w-12 h-12 rounded-xl bg-white/15 flex items-center justify-center shrink-0">
-              <i data-lucide="shield-check" class="w-6 h-6 text-white"></i>
+          <div class="flex items-center justify-center sm:justify-start space-x-2.5 sm:space-x-3.5 sm:px-4 pt-2 sm:pt-0">
+            <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-white/15 flex items-center justify-center shrink-0">
+              <i data-lucide="shield-check" class="w-5 h-5 sm:w-6 sm:h-6 text-white"></i>
             </div>
             <div>
-              <div class="text-2xl font-extrabold font-display leading-tight">100%</div>
-              <div class="text-xs text-blue-100 font-medium">Quality Work</div>
+              <div class="text-xl sm:text-2xl font-extrabold font-display leading-tight">100%</div>
+              <div class="text-[11px] sm:text-xs text-blue-100 font-medium">Quality Work</div>
             </div>
           </div>
 
@@ -380,155 +470,143 @@
     </section>
 
     <!-- THE TWO DUAL-ENGINE OPTIONS (SIDE-BY-SIDE CARDS - MATCHING REFERENCE) -->
-    <section class="py-12 lg:py-16 bg-[#f8fafc] border-b border-slate-200/60">
+    <section class="py-10 sm:py-12 lg:py-16 bg-[#f8fafc] border-b border-slate-200/60">
       <div class="w-full max-w-[1600px] xl:max-w-[1680px] 2xl:max-w-[1760px] mx-auto px-4 sm:px-6 lg:px-8 xl:px-10">
         
-        <div class="text-center max-w-3xl mx-auto mb-10">
+        <div class="text-center max-w-3xl mx-auto mb-8 sm:mb-10">
           <span class="px-3.5 py-1 text-xs font-bold uppercase tracking-wider bg-blue-50 text-sugu-blue rounded-full border border-blue-200/60">Dual Booking Engines</span>
-          <h2 class="text-2xl sm:text-3xl lg:text-4xl font-extrabold font-heading text-sugu-navy mt-2.5">Choose the Right Option For Your Need</h2>
+          <h2 class="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-extrabold font-heading text-sugu-navy mt-2.5">Choose the Right Option For Your Need</h2>
           <p class="text-xs sm:text-sm text-slate-500 mt-1.5">Instant standard repairs for today or competitive multi-bid projects for tomorrow.</p>
         </div>
 
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 xl:gap-8 items-stretch">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-5 sm:gap-6 xl:gap-8 items-stretch">
           
-          <!-- OPTION 1: QUICK SERVICE BOOKING CARD (MATCHING REFERENCE MOCKUP) -->
+          <!-- OPTION 1: QUICK SERVICE BOOKING CARD -->
           <div onclick="switchRoute('quick-service')" 
-               class="group relative bg-white rounded-3xl border border-slate-200/90 shadow-sm hover:shadow-xl hover:border-blue-300/80 transition-all duration-300 overflow-hidden cursor-pointer flex flex-col md:flex-row items-stretch min-h-[420px] lg:min-h-[460px] xl:min-h-[480px]">
+               class="group relative bg-white rounded-2xl sm:rounded-3xl border border-slate-200/90 shadow-sm hover:shadow-xl hover:border-blue-300/80 transition-all duration-300 overflow-hidden cursor-pointer flex flex-col md:flex-row items-stretch min-h-0 md:min-h-[420px] lg:min-h-[460px] xl:min-h-[480px]">
             
             <!-- Left Text Content -->
-            <div class="relative z-10 p-6 sm:p-8 lg:p-10 md:w-[48%] lg:w-[46%] xl:w-[44%] flex flex-col justify-between space-y-4 shrink-0">
-              <div class="space-y-3.5">
-                <!-- Badge matching reference -->
+            <div class="relative z-10 p-5 sm:p-8 lg:p-10 md:w-[48%] lg:w-[46%] xl:w-[44%] flex flex-col justify-between space-y-3 sm:space-y-4 shrink-0">
+              <div class="space-y-2.5 sm:space-y-3.5">
                 <div class="flex items-center space-x-2 text-sugu-blue font-bold text-xs sm:text-sm tracking-wide">
                   <i data-lucide="zap" class="w-4 h-4 fill-sugu-blue text-sugu-blue shrink-0"></i>
                   <span>Quick Service Booking</span>
                 </div>
 
-                <!-- Title -->
-                <h3 class="text-2xl sm:text-3xl lg:text-[34px] font-extrabold text-[#07152b] tracking-tight font-heading leading-tight">
+                <h3 class="text-xl sm:text-2xl lg:text-[32px] font-extrabold text-[#07152b] tracking-tight font-heading leading-tight">
                   Need Help Today?
                 </h3>
 
-                <!-- Subtitle -->
                 <p class="text-xs sm:text-sm lg:text-[15px] text-slate-500 leading-relaxed">
                   Book skilled &amp; verified technicians for all your home service needs.
                 </p>
                 
-                <!-- 4 Checkmark Bullets -->
-                <ul class="space-y-3 pt-2 text-xs sm:text-sm lg:text-[15px] text-slate-700 font-medium">
-                  <li class="flex items-center space-x-3">
-                    <span class="w-5 h-5 rounded-full bg-sugu-blue text-white flex items-center justify-center shrink-0 shadow-xs">
-                      <i data-lucide="check" class="w-3 h-3 stroke-[3]"></i>
+                <ul class="space-y-2 sm:space-y-3 pt-1 sm:pt-2 text-xs sm:text-sm lg:text-[15px] text-slate-700 font-medium">
+                  <li class="flex items-center space-x-2.5 sm:space-x-3">
+                    <span class="w-4 h-4 sm:w-5 sm:h-5 rounded-full bg-sugu-blue text-white flex items-center justify-center shrink-0 shadow-xs">
+                      <i data-lucide="check" class="w-2.5 h-2.5 sm:w-3 sm:h-3 stroke-[3]"></i>
                     </span>
                     <span class="leading-tight">15-Minute Response (select cities)</span>
                   </li>
-                  <li class="flex items-center space-x-3">
-                    <span class="w-5 h-5 rounded-full bg-sugu-blue text-white flex items-center justify-center shrink-0 shadow-xs">
-                      <i data-lucide="check" class="w-3 h-3 stroke-[3]"></i>
+                  <li class="flex items-center space-x-2.5 sm:space-x-3">
+                    <span class="w-4 h-4 sm:w-5 sm:h-5 rounded-full bg-sugu-blue text-white flex items-center justify-center shrink-0 shadow-xs">
+                      <i data-lucide="check" class="w-2.5 h-2.5 sm:w-3 sm:h-3 stroke-[3]"></i>
                     </span>
                     <span class="leading-tight">Transparent Pricing</span>
                   </li>
-                  <li class="flex items-center space-x-3">
-                    <span class="w-5 h-5 rounded-full bg-sugu-blue text-white flex items-center justify-center shrink-0 shadow-xs">
-                      <i data-lucide="check" class="w-3 h-3 stroke-[3]"></i>
+                  <li class="flex items-center space-x-2.5 sm:space-x-3">
+                    <span class="w-4 h-4 sm:w-5 sm:h-5 rounded-full bg-sugu-blue text-white flex items-center justify-center shrink-0 shadow-xs">
+                      <i data-lucide="check" class="w-2.5 h-2.5 sm:w-3 sm:h-3 stroke-[3]"></i>
                     </span>
                     <span class="leading-tight">Experienced &amp; Verified Professionals</span>
                   </li>
-                  <li class="flex items-center space-x-3">
-                    <span class="w-5 h-5 rounded-full bg-sugu-blue text-white flex items-center justify-center shrink-0 shadow-xs">
-                      <i data-lucide="check" class="w-3 h-3 stroke-[3]"></i>
+                  <li class="flex items-center space-x-2.5 sm:space-x-3">
+                    <span class="w-4 h-4 sm:w-5 sm:h-5 rounded-full bg-sugu-blue text-white flex items-center justify-center shrink-0 shadow-xs">
+                      <i data-lucide="check" class="w-2.5 h-2.5 sm:w-3 sm:h-3 stroke-[3]"></i>
                     </span>
                     <span class="leading-tight">Clean &amp; Professional Work</span>
                   </li>
                 </ul>
               </div>
               
-              <!-- CTA Button matching reference -->
-              <div class="pt-4 mt-auto">
-                <button class="h-11 sm:h-12 px-7 rounded-full font-bold text-xs sm:text-sm bg-sugu-blue hover:bg-sugu-blueDark text-white shadow-lg shadow-blue-500/25 transition-all duration-200 transform group-hover:translate-x-1 inline-flex items-center justify-center space-x-2 whitespace-nowrap">
+              <div class="pt-3 sm:pt-4 mt-auto">
+                <button class="w-full sm:w-auto min-h-[48px] sm:min-h-[50px] py-3 px-6 sm:px-7 rounded-2xl sm:rounded-full font-extrabold text-sm bg-sugu-blue hover:bg-sugu-blueDark text-white shadow-lg shadow-blue-500/25 transition-all duration-200 transform group-hover:translate-x-1 inline-flex items-center justify-center space-x-2 whitespace-nowrap">
                   <span>Book a Quick Service</span>
                   <i data-lucide="arrow-right" class="w-4 h-4"></i>
                 </button>
               </div>
             </div>
 
-            <!-- Right Image Area (Stretched Full Height, Faded into Card) -->
-            <div class="relative md:w-[52%] lg:w-[54%] xl:w-[56%] w-full h-72 md:h-auto min-h-[300px] md:min-h-full overflow-hidden">
+            <!-- Right Image Area -->
+            <div class="relative md:w-[52%] lg:w-[54%] xl:w-[56%] w-full h-52 sm:h-64 md:h-auto min-h-[220px] sm:min-h-[260px] md:min-h-full overflow-hidden">
               <img src="/static/images/card_plumber_sink.jpg" alt="Quick Service Technician Under Sink" 
                    class="absolute inset-0 w-full h-full object-cover object-[78%_center] group-hover:scale-105 transition-transform duration-700 ease-out" />
-              <!-- Soft gradient dissolve to match reference mockup -->
               <div class="absolute inset-y-0 left-0 w-32 sm:w-40 lg:w-48 bg-gradient-to-r from-white via-white/80 via-25% to-transparent pointer-events-none hidden md:block"></div>
               <div class="absolute inset-x-0 top-0 h-16 bg-gradient-to-b from-white via-white/70 to-transparent pointer-events-none md:hidden"></div>
             </div>
 
           </div>
 
-          <!-- OPTION 2: SMART PROJECT BIDDING CARD (MATCHING REFERENCE MOCKUP) -->
+          <!-- OPTION 2: SMART PROJECT BIDDING CARD -->
           <div onclick="switchRoute('bidding')" 
-               class="group relative bg-white rounded-3xl border border-slate-200/90 shadow-sm hover:shadow-xl hover:border-blue-300/80 transition-all duration-300 overflow-hidden cursor-pointer flex flex-col md:flex-row items-stretch min-h-[420px] lg:min-h-[460px] xl:min-h-[480px]">
+               class="group relative bg-white rounded-2xl sm:rounded-3xl border border-slate-200/90 shadow-sm hover:shadow-xl hover:border-blue-300/80 transition-all duration-300 overflow-hidden cursor-pointer flex flex-col md:flex-row items-stretch min-h-0 md:min-h-[420px] lg:min-h-[460px] xl:min-h-[480px]">
             
             <!-- Left Text Content -->
-            <div class="relative z-10 p-6 sm:p-8 lg:p-10 md:w-[48%] lg:w-[46%] xl:w-[44%] flex flex-col justify-between space-y-4 shrink-0">
-              <div class="space-y-3.5">
-                <!-- Badge matching reference -->
+            <div class="relative z-10 p-5 sm:p-8 lg:p-10 md:w-[48%] lg:w-[46%] xl:w-[44%] flex flex-col justify-between space-y-3 sm:space-y-4 shrink-0">
+              <div class="space-y-2.5 sm:space-y-3.5">
                 <div class="flex items-center space-x-2 text-sugu-blue font-bold text-xs sm:text-sm tracking-wide">
                   <i data-lucide="gavel" class="w-4 h-4 text-sugu-blue shrink-0"></i>
                   <span>Smart Project Bidding</span>
                 </div>
 
-                <!-- Title -->
-                <h3 class="text-2xl sm:text-3xl lg:text-[34px] font-extrabold text-[#07152b] tracking-tight font-heading leading-tight">
+                <h3 class="text-xl sm:text-2xl lg:text-[32px] font-extrabold text-[#07152b] tracking-tight font-heading leading-tight">
                   Planning a Big Project?
                 </h3>
 
-                <!-- Subtitle -->
                 <p class="text-xs sm:text-sm lg:text-[15px] text-slate-500 leading-relaxed">
                   Get competitive bids from verified vendors for your home renovation needs.
                 </p>
                 
-                <!-- 4 Checkmark Bullets -->
-                <ul class="space-y-3 pt-2 text-xs sm:text-sm lg:text-[15px] text-slate-700 font-medium">
-                  <li class="flex items-center space-x-3">
-                    <span class="w-5 h-5 rounded-full bg-sugu-blue text-white flex items-center justify-center shrink-0 shadow-xs">
-                      <i data-lucide="check" class="w-3 h-3 stroke-[3]"></i>
+                <ul class="space-y-2 sm:space-y-3 pt-1 sm:pt-2 text-xs sm:text-sm lg:text-[15px] text-slate-700 font-medium">
+                  <li class="flex items-center space-x-2.5 sm:space-x-3">
+                    <span class="w-4 h-4 sm:w-5 sm:h-5 rounded-full bg-sugu-blue text-white flex items-center justify-center shrink-0 shadow-xs">
+                      <i data-lucide="check" class="w-2.5 h-2.5 sm:w-3 sm:h-3 stroke-[3]"></i>
                     </span>
                     <span class="leading-tight">Reverse Auction Bidding</span>
                   </li>
-                  <li class="flex items-center space-x-3">
-                    <span class="w-5 h-5 rounded-full bg-sugu-blue text-white flex items-center justify-center shrink-0 shadow-xs">
-                      <i data-lucide="check" class="w-3 h-3 stroke-[3]"></i>
+                  <li class="flex items-center space-x-2.5 sm:space-x-3">
+                    <span class="w-4 h-4 sm:w-5 sm:h-5 rounded-full bg-sugu-blue text-white flex items-center justify-center shrink-0 shadow-xs">
+                      <i data-lucide="check" class="w-2.5 h-2.5 sm:w-3 sm:h-3 stroke-[3]"></i>
                     </span>
                     <span class="leading-tight">Transparent &amp; Fair Pricing</span>
                   </li>
-                  <li class="flex items-center space-x-3">
-                    <span class="w-5 h-5 rounded-full bg-sugu-blue text-white flex items-center justify-center shrink-0 shadow-xs">
-                      <i data-lucide="check" class="w-3 h-3 stroke-[3]"></i>
+                  <li class="flex items-center space-x-2.5 sm:space-x-3">
+                    <span class="w-4 h-4 sm:w-5 sm:h-5 rounded-full bg-sugu-blue text-white flex items-center justify-center shrink-0 shadow-xs">
+                      <i data-lucide="check" class="w-2.5 h-2.5 sm:w-3 sm:h-3 stroke-[3]"></i>
                     </span>
                     <span class="leading-tight">Verified Professionals &amp; Contractors</span>
                   </li>
-                  <li class="flex items-center space-x-3">
-                    <span class="w-5 h-5 rounded-full bg-sugu-blue text-white flex items-center justify-center shrink-0 shadow-xs">
-                      <i data-lucide="check" class="w-3 h-3 stroke-[3]"></i>
+                  <li class="flex items-center space-x-2.5 sm:space-x-3">
+                    <span class="w-4 h-4 sm:w-5 sm:h-5 rounded-full bg-sugu-blue text-white flex items-center justify-center shrink-0 shadow-xs">
+                      <i data-lucide="check" class="w-2.5 h-2.5 sm:w-3 sm:h-3 stroke-[3]"></i>
                     </span>
                     <span class="leading-tight">End-to-End Project Support</span>
                   </li>
                 </ul>
               </div>
               
-              <!-- CTA Button matching reference -->
-              <div class="pt-4 mt-auto">
-                <button class="h-11 sm:h-12 px-7 rounded-full font-bold text-xs sm:text-sm bg-sugu-blue hover:bg-sugu-blueDark text-white shadow-lg shadow-blue-500/25 transition-all duration-200 transform group-hover:translate-x-1 inline-flex items-center justify-center space-x-2 whitespace-nowrap">
+              <div class="pt-3 sm:pt-4 mt-auto">
+                <button class="w-full sm:w-auto min-h-[48px] sm:min-h-[50px] py-3 px-6 sm:px-7 rounded-2xl sm:rounded-full font-extrabold text-sm bg-sugu-blue hover:bg-sugu-blueDark text-white shadow-lg shadow-blue-500/25 transition-all duration-200 transform group-hover:translate-x-1 inline-flex items-center justify-center space-x-2 whitespace-nowrap">
                   <span>Explore Projects</span>
                   <i data-lucide="arrow-right" class="w-4 h-4"></i>
                 </button>
               </div>
             </div>
 
-            <!-- Right Image Area (Stretched Full Height, Faded into Card) -->
-            <div class="relative md:w-[52%] lg:w-[54%] xl:w-[56%] w-full h-72 md:h-auto min-h-[300px] md:min-h-full overflow-hidden">
+            <!-- Right Image Area -->
+            <div class="relative md:w-[52%] lg:w-[54%] xl:w-[56%] w-full h-52 sm:h-64 md:h-auto min-h-[220px] sm:min-h-[260px] md:min-h-full overflow-hidden">
               <img src="/static/images/card_contractor_renovation.jpg" alt="Contractor with Blueprint in Renovation" 
                    class="absolute inset-0 w-full h-full object-cover object-[65%_center] group-hover:scale-105 transition-transform duration-700 ease-out" />
-              <!-- Soft gradient dissolve to match reference mockup -->
               <div class="absolute inset-y-0 left-0 w-32 sm:w-40 lg:w-48 bg-gradient-to-r from-white via-white/80 via-25% to-transparent pointer-events-none hidden md:block"></div>
               <div class="absolute inset-x-0 top-0 h-16 bg-gradient-to-b from-white via-white/70 to-transparent pointer-events-none md:hidden"></div>
             </div>
@@ -542,41 +620,41 @@
     <!-- ======================================================== -->
     <!-- POPULAR QUICK SERVICES (EXACT 6 CARDS FROM ATTACHMENT)   -->
     <!-- ======================================================== -->
-    <section class="py-12 bg-white border-b border-slate-100">
+    <section class="py-8 sm:py-12 bg-white border-b border-slate-100">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         
-        <div class="flex items-center justify-between mb-8">
+        <div class="flex items-center justify-between mb-6 sm:mb-8">
           <div>
-            <h2 class="text-2xl sm:text-3xl font-extrabold text-sugu-navy tracking-tight font-heading">Popular Quick Services</h2>
+            <h2 class="text-xl sm:text-2xl md:text-3xl font-extrabold text-sugu-navy tracking-tight font-heading">Popular Quick Services</h2>
             <p class="text-xs sm:text-sm text-slate-500 mt-1">Most booked services for your daily home needs.</p>
           </div>
           <button onclick="switchRoute('quick-service')" class="text-xs sm:text-sm font-bold text-sugu-blue hover:text-sugu-blueDark flex items-center space-x-1 group">
-            <span>View All Services</span>
+            <span>View All</span>
             <i data-lucide="arrow-right" class="w-4 h-4 group-hover:translate-x-1 transition-transform"></i>
           </button>
         </div>
 
         <!-- Dynamic Popular Quick Services Cards -->
-        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
+        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5 sm:gap-4">
           {% for s in popular_services %}
-          <div onclick="switchRoute('quick-service', '{{ s.category.id }}')" class="bg-white rounded-2xl border border-slate-200/80 overflow-hidden shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 cursor-pointer group flex flex-col justify-between">
+          <div onclick="switchRoute('quick-service', '{{ s.category.id }}')" class="bg-white rounded-xl sm:rounded-2xl border border-slate-200/80 overflow-hidden shadow-xs hover:shadow-xl hover:-translate-y-1 transition-all duration-300 cursor-pointer group flex flex-col justify-between">
             <div class="aspect-[4/3] overflow-hidden bg-slate-100 relative">
-              <img src="{% if s.image %}{{ s.image.url }}{% elif s.image_url %}{{ s.image_url }}{% elif s.category and s.category.image %}{{ s.category.image.url }}{% else %}assets/realistic/popular_tap_repair.png{% endif %}" alt="{{ s.title }}" class="w-full h-full object-cover group-hover:scale-108 transition-transform duration-500" />
+              <img src="{% if s.image %}{{ s.image.url }}{% elif s.image_url %}{{ s.image_url }}{% elif s.category and s.category.image %}{{ s.category.image.url }}{% else %}/static/assets/realistic/popular_tap_repair.png{% endif %}" alt="{{ s.title }}" class="w-full h-full object-cover group-hover:scale-108 transition-transform duration-500" />
               {% if s.base_price %}
-              <span class="absolute top-2 left-2 px-2 py-0.5 rounded-lg bg-white/95 backdrop-blur text-[10px] font-bold text-slate-800 shadow-sm border border-slate-100">
+              <span class="absolute top-1.5 left-1.5 sm:top-2 sm:left-2 px-1.5 sm:px-2 py-0.5 rounded-md sm:rounded-lg bg-white/95 backdrop-blur text-[9px] sm:text-[10px] font-bold text-slate-800 shadow-sm border border-slate-100">
                 ₹{{ s.base_price|floatformat:0 }}
               </span>
               {% endif %}
             </div>
-            <div class="p-3 flex items-center justify-between gap-2">
+            <div class="p-2.5 sm:p-3 flex items-center justify-between gap-1.5 sm:gap-2">
               <div class="min-w-0 flex-1">
                 <span class="text-xs sm:text-sm font-bold text-slate-800 truncate block group-hover:text-sugu-blue transition" title="{{ s.title }}">{{ s.title }}</span>
                 {% if s.category %}
                 <span class="text-[10px] text-slate-400 block truncate">{{ s.category.name }}</span>
                 {% endif %}
               </div>
-              <div class="w-6 h-6 rounded-full border border-sugu-blue text-sugu-blue flex items-center justify-center group-hover:bg-sugu-blue group-hover:text-white transition shrink-0">
-                <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
+              <div class="w-5 h-5 sm:w-6 sm:h-6 rounded-full border border-sugu-blue text-sugu-blue flex items-center justify-center group-hover:bg-sugu-blue group-hover:text-white transition shrink-0">
+                <i data-lucide="arrow-right" class="w-3 h-3 sm:w-3.5 sm:h-3.5"></i>
               </div>
             </div>
           </div>
@@ -656,34 +734,34 @@
     </section>
 
     <!-- SECTION: HOW QUICK SERVICE WORKS VS HOW BIDDING WORKS -->
-    <section class="py-16 bg-slate-100/70 border-y border-slate-200">
+    <section class="py-10 sm:py-16 bg-slate-100/70 border-y border-slate-200">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="text-center max-w-3xl mx-auto mb-14">
+        <div class="text-center max-w-3xl mx-auto mb-8 sm:mb-14">
           <span class="px-3.5 py-1 text-xs font-bold uppercase tracking-wider bg-slate-200 text-slate-800 rounded-full">Comparison &amp; Guide</span>
-          <h2 class="text-3xl font-extrabold font-heading text-slate-900 mt-2">
+          <h2 class="text-2xl sm:text-3xl font-extrabold font-heading text-slate-900 mt-2">
             How Quick Service Works vs How Bidding Works
           </h2>
-          <p class="text-sm text-slate-600 mt-2 leading-relaxed">
+          <p class="text-xs sm:text-sm text-slate-600 mt-2 leading-relaxed">
             Choose the workflow that matches your job requirements. Simple on-demand booking for standard jobs, or competitive bids for custom scopes.
           </p>
         </div>
 
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 items-stretch">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-5 sm:gap-8 items-stretch">
           
           <!-- Column A: Quick Service Flow -->
-          <div class="bg-white rounded-3xl p-8 border-2 border-sugu-blue/30 shadow-xl flex flex-col justify-between">
+          <div class="bg-white rounded-2xl sm:rounded-3xl p-5 sm:p-8 border-2 border-sugu-blue/30 shadow-xl flex flex-col justify-between">
             <div>
-              <div class="flex items-center justify-between pb-6 border-b border-slate-100 mb-6">
+              <div class="flex items-center justify-between pb-4 sm:pb-6 border-b border-slate-100 mb-5 sm:mb-6 gap-2">
                 <div class="flex items-center space-x-3">
-                  <div class="w-12 h-12 rounded-2xl bg-blue-100 text-sugu-blue flex items-center justify-center font-bold">
-                    <i data-lucide="zap" class="w-6 h-6 fill-sugu-blue"></i>
+                  <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-blue-100 text-sugu-blue flex items-center justify-center font-bold shrink-0">
+                    <i data-lucide="zap" class="w-5 h-5 sm:w-6 sm:h-6 fill-sugu-blue"></i>
                   </div>
                   <div>
-                    <h3 class="text-xl font-bold text-slate-900">⚡ Quick Service Flow</h3>
-                    <span class="text-xs text-slate-500">For standard, fixed-price repairs &amp; grooming</span>
+                    <h3 class="text-base sm:text-xl font-bold text-slate-900">⚡ Quick Service Flow</h3>
+                    <span class="text-[11px] sm:text-xs text-slate-500">For standard, fixed-price repairs &amp; grooming</span>
                   </div>
                 </div>
-                <span class="text-xs font-bold bg-blue-50 text-sugu-blue px-3 py-1 rounded-full border border-blue-200">
+                <span class="text-[11px] sm:text-xs font-bold bg-blue-50 text-sugu-blue px-2.5 sm:px-3 py-1 rounded-full border border-blue-200 shrink-0 whitespace-nowrap">
                   Fixed Pricing
                 </span>
               </div>
@@ -691,8 +769,8 @@
               <div id="how-qs-steps" class="space-y-4"></div>
             </div>
 
-            <div class="mt-8 pt-6 border-t border-slate-100 text-center">
-              <button onclick="switchRoute('quick-service')" class="w-full h-12 bg-sugu-blue hover:bg-sugu-blueDark text-white rounded-xl font-bold text-sm shadow-md hover:shadow-lg transition flex items-center justify-center space-x-2 whitespace-nowrap">
+            <div class="mt-6 sm:mt-8 pt-5 sm:pt-6 border-t border-slate-100 text-center">
+              <button onclick="switchRoute('quick-service')" class="w-full h-11 sm:h-12 bg-sugu-blue hover:bg-sugu-blueDark text-white rounded-xl font-bold text-xs sm:text-sm shadow-md hover:shadow-lg transition flex items-center justify-center space-x-2 whitespace-nowrap">
                 <span>Select a Quick Service Now</span>
                 <i data-lucide="arrow-right" class="w-4 h-4"></i>
               </button>
@@ -700,19 +778,19 @@
           </div>
 
           <!-- Column B: Bidding Flow -->
-          <div class="bg-white rounded-3xl p-8 border-2 border-amber-500/30 shadow-xl flex flex-col justify-between">
+          <div class="bg-white rounded-2xl sm:rounded-3xl p-5 sm:p-8 border-2 border-amber-500/30 shadow-xl flex flex-col justify-between">
             <div>
-              <div class="flex items-center justify-between pb-6 border-b border-slate-100 mb-6">
+              <div class="flex items-center justify-between pb-4 sm:pb-6 border-b border-slate-100 mb-5 sm:mb-6 gap-2">
                 <div class="flex items-center space-x-3">
-                  <div class="w-12 h-12 rounded-2xl bg-amber-100 text-amber-600 flex items-center justify-center font-bold">
-                    <i data-lucide="gavel" class="w-6 h-6"></i>
+                  <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-amber-100 text-amber-600 flex items-center justify-center font-bold shrink-0">
+                    <i data-lucide="gavel" class="w-5 h-5 sm:w-6 sm:h-6"></i>
                   </div>
                   <div>
-                    <h3 class="text-xl font-bold text-slate-900">🏷️ Bidding Flow</h3>
-                    <span class="text-xs text-slate-500">For renovations, full painting &amp; large projects</span>
+                    <h3 class="text-base sm:text-xl font-bold text-slate-900">🏷️ Bidding Flow</h3>
+                    <span class="text-[11px] sm:text-xs text-slate-500">For renovations, full painting &amp; large projects</span>
                   </div>
                 </div>
-                <span class="text-xs font-bold bg-amber-50 text-amber-700 px-3 py-1 rounded-full border border-amber-200">
+                <span class="text-[11px] sm:text-xs font-bold bg-amber-50 text-amber-700 px-2.5 sm:px-3 py-1 rounded-full border border-amber-200 shrink-0 whitespace-nowrap">
                   Save Up to 40%
                 </span>
               </div>
@@ -720,8 +798,8 @@
               <div id="how-bidding-steps" class="space-y-4"></div>
             </div>
 
-            <div class="mt-8 pt-6 border-t border-slate-100 text-center">
-              <button onclick="switchRoute('bidding')" class="w-full h-12 bg-amber-600 hover:bg-amber-700 text-white rounded-xl font-bold text-sm shadow-md hover:shadow-lg transition flex items-center justify-center space-x-2 whitespace-nowrap">
+            <div class="mt-6 sm:mt-8 pt-5 sm:pt-6 border-t border-slate-100 text-center">
+              <button onclick="switchRoute('bidding')" class="w-full h-11 sm:h-12 bg-amber-600 hover:bg-amber-700 text-white rounded-xl font-bold text-xs sm:text-sm shadow-md hover:shadow-lg transition flex items-center justify-center space-x-2 whitespace-nowrap">
                 <span>Go to End-User Bidding Hub</span>
                 <i data-lucide="arrow-right" class="w-4 h-4"></i>
               </button>
@@ -733,63 +811,63 @@
     </section>
 
     <!-- SECTION: CUSTOMER REVIEWS & PLAYABLE VIDEO SHOWCASE -->
-    <section class="py-16 bg-white">
+    <section class="py-10 sm:py-16 bg-white">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         
-        <div class="flex flex-col md:flex-row md:items-end justify-between mb-10">
+        <div class="flex flex-col md:flex-row md:items-end justify-between mb-8 sm:mb-10 gap-3">
           <div>
             <span class="px-3.5 py-1 text-xs font-bold uppercase tracking-wider bg-rose-100 text-rose-800 rounded-full">{{ cms_transform_section.tag_badge|default:"Real Customer Stories" }}</span>
-            <h2 class="text-3xl font-extrabold font-heading text-slate-900 mt-2">
+            <h2 class="text-2xl sm:text-3xl font-extrabold font-heading text-slate-900 mt-2">
               {{ cms_transform_section.title|default:"Watch How Sugu Transforms Homes" }}
             </h2>
-            <p class="text-sm text-slate-500 mt-1">{{ cms_transform_section.subtitle|default:"Unscripted video testimonials and project walkthroughs across India." }}</p>
+            <p class="text-xs sm:text-sm text-slate-500 mt-1">{{ cms_transform_section.subtitle|default:"Unscripted video testimonials and project walkthroughs across India." }}</p>
           </div>
-          <div class="mt-4 md:mt-0 flex items-center space-x-2">
+          <div class="flex items-center space-x-2">
             <span class="text-xs font-bold text-slate-500">{{ cms_transform_section.counter_text|default:"Over 50,000+ 5-star video reviews" }}</span>
           </div>
         </div>
 
         <!-- Video Testimonial Cards Grid -->
-        <div id="home-videos-grid" class="grid grid-cols-1 md:grid-cols-3 gap-8 mb-16"></div>
+        <div id="home-videos-grid" class="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-8 mb-10 sm:mb-16"></div>
 
         <!-- Customer Written Reviews -->
-        <div class="border-t border-slate-200 pt-14">
-          <div class="text-center max-w-2xl mx-auto mb-10">
-            <h3 class="text-2xl font-bold font-heading text-slate-900">What Our Verified Customers Say</h3>
+        <div class="border-t border-slate-200 pt-10 sm:pt-14">
+          <div class="text-center max-w-2xl mx-auto mb-8 sm:mb-10">
+            <h3 class="text-xl sm:text-2xl font-bold font-heading text-slate-900">What Our Verified Customers Say</h3>
             <p class="text-xs text-slate-500 mt-1">Authentic feedback from verified homeowners and apartment managers.</p>
           </div>
-          <div id="home-reviews-grid" class="grid grid-cols-1 md:grid-cols-3 gap-8">
+          <div id="home-reviews-grid" class="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-8">
             {% for t in cms_testimonials %}
-            <div class="p-6 rounded-2xl bg-white border border-slate-200 shadow-md hover:shadow-xl transition-all duration-300 flex flex-col justify-between">
+            <div class="p-4 sm:p-6 rounded-xl sm:rounded-2xl bg-white border border-slate-200 shadow-md hover:shadow-xl transition-all duration-300 flex flex-col justify-between">
               <div>
-                <div class="flex items-center justify-between mb-4">
-                  <div class="flex items-center space-x-3 min-w-0 pr-2">
+                <div class="flex items-center justify-between mb-3 sm:mb-4 gap-2">
+                  <div class="flex items-center space-x-3 min-w-0 pr-1">
                     {% if t.avatar %}
-                      <img src="{{ t.avatar.url }}" alt="{{ t.client_name }}" class="w-12 h-12 rounded-full object-cover border-2 border-sky-500 shadow-sm shrink-0">
+                      <img src="{{ t.avatar.url }}" alt="{{ t.client_name }}" class="w-10 h-10 sm:w-12 sm:h-12 rounded-full object-cover border-2 border-sky-500 shadow-sm shrink-0">
                     {% else %}
-                      <div class="w-12 h-12 rounded-full bg-gradient-to-tr from-sky-600 to-indigo-600 text-white font-bold flex items-center justify-center text-sm border-2 border-sky-400 shadow-sm shrink-0">
+                      <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-gradient-to-tr from-sky-600 to-indigo-600 text-white font-bold flex items-center justify-center text-xs sm:text-sm border-2 border-sky-400 shadow-sm shrink-0">
                         {{ t.client_name|slice:":1"|upper }}
                       </div>
                     {% endif %}
                     <div class="min-w-0">
-                      <h5 class="font-bold text-slate-900 leading-tight truncate">{{ t.client_name }}</h5>
-                      <span class="text-xs text-slate-500 block truncate">{{ t.client_role_or_company }}</span>
+                      <h5 class="font-bold text-slate-900 text-sm sm:text-base leading-tight truncate">{{ t.client_name }}</h5>
+                      <span class="text-[11px] sm:text-xs text-slate-500 block truncate">{{ t.client_role_or_company }}</span>
                     </div>
                   </div>
-                  <span class="px-2 py-0.5 text-[11px] font-semibold rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 whitespace-nowrap flex-shrink-0 self-start">
+                  <span class="px-2 py-0.5 text-[10px] sm:text-[11px] font-semibold rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 whitespace-nowrap shrink-0 self-start">
                     Verified Customer
                   </span>
                 </div>
-                <div class="flex items-center space-x-1 text-amber-400 mb-3">
-                  <i data-lucide="star" class="w-4 h-4 fill-amber-400"></i>
-                  <i data-lucide="star" class="w-4 h-4 fill-amber-400"></i>
-                  <i data-lucide="star" class="w-4 h-4 fill-amber-400"></i>
-                  <i data-lucide="star" class="w-4 h-4 fill-amber-400"></i>
-                  <i data-lucide="star" class="w-4 h-4 fill-amber-400"></i>
+                <div class="flex items-center space-x-1 text-amber-400 mb-2.5 sm:mb-3">
+                  <i data-lucide="star" class="w-3.5 h-3.5 sm:w-4 sm:h-4 fill-amber-400"></i>
+                  <i data-lucide="star" class="w-3.5 h-3.5 sm:w-4 sm:h-4 fill-amber-400"></i>
+                  <i data-lucide="star" class="w-3.5 h-3.5 sm:w-4 sm:h-4 fill-amber-400"></i>
+                  <i data-lucide="star" class="w-3.5 h-3.5 sm:w-4 sm:h-4 fill-amber-400"></i>
+                  <i data-lucide="star" class="w-3.5 h-3.5 sm:w-4 sm:h-4 fill-amber-400"></i>
                 </div>
-                <p class="text-sm text-slate-700 leading-relaxed">"{{ t.review_text }}"</p>
+                <p class="text-xs sm:text-sm text-slate-700 leading-relaxed">"{{ t.review_text }}"</p>
               </div>
-              <div class="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-400">
+              <div class="mt-3.5 sm:mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-[11px] sm:text-xs text-slate-400">
                 <span>Service: <strong class="text-slate-600">{{ t.service_taken }}</strong></span>
                 <span>{{ t.created_at|date:"d M Y" }}</span>
               </div>
@@ -803,61 +881,63 @@
 
 
     <!-- SECTION: SUGU SERVICES VS UNORGANIZED LOCAL HANDYMEN -->
-    <section class="py-16 bg-slate-50">
+    <section class="py-10 sm:py-16 bg-slate-50">
       <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="text-center mb-10">
+        <div class="text-center mb-8 sm:mb-10">
           {% if cms_why_choose_section.tag_badge %}
             <span class="inline-block px-3.5 py-1 text-xs font-bold uppercase tracking-wider bg-blue-100 text-sugu-navy rounded-full mb-3">{{ cms_why_choose_section.tag_badge }}</span>
           {% endif %}
-          <h2 class="text-3xl font-extrabold font-heading text-slate-900">{{ cms_why_choose_section.title|default:"Why Choose Sugu Services?" }}</h2>
-          <p class="text-sm text-slate-500 mt-1">{{ cms_why_choose_section.subtitle|default:"A transparent comparison between Sugu Services and unverified roadside technicians." }}</p>
+          <h2 class="text-2xl sm:text-3xl font-extrabold font-heading text-slate-900">{{ cms_why_choose_section.title|default:"Why Choose Sugu Services?" }}</h2>
+          <p class="text-xs sm:text-sm text-slate-500 mt-1">{{ cms_why_choose_section.subtitle|default:"A transparent comparison between Sugu Services and unverified roadside technicians." }}</p>
         </div>
 
-        <div class="bg-white rounded-3xl border border-slate-200 shadow-lg overflow-hidden">
-          <table class="w-full text-left text-xs sm:text-sm">
-            <thead class="bg-slate-100 text-slate-700 font-bold border-b border-slate-200">
-              <tr>
-                <th class="p-4 sm:p-5">Feature</th>
-                <th class="p-4 sm:p-5 text-sugu-navy bg-blue-50/60">{{ cms_why_choose_section.col_sugu_title|default:"Sugu Services (Quick &amp; Bidding)" }}</th>
-                <th class="p-4 sm:p-5 text-slate-500">{{ cms_why_choose_section.col_others_title|default:"Unorganized Local Technicians" }}</th>
-              </tr>
-            </thead>
-            <tbody class="divide-y divide-slate-100">
-              {% for f in cms_why_choose_features %}
-              <tr>
-                <td class="p-4 sm:p-5 font-semibold text-slate-800">{{ f.feature_name }}</td>
-                <td class="p-4 sm:p-5 text-emerald-700 font-bold bg-blue-50/30">{{ f.sugu_value }}</td>
-                <td class="p-4 sm:p-5 text-rose-500">{{ f.others_value }}</td>
-              </tr>
-              {% empty %}
-              <tr>
-                <td class="p-4 sm:p-5 font-semibold text-slate-800">Technician Background Check</td>
-                <td class="p-4 sm:p-5 text-emerald-700 font-bold bg-blue-50/30">✓ 7-Step Police &amp; Skill Verified</td>
-                <td class="p-4 sm:p-5 text-rose-500">✗ Zero verification or background check</td>
-              </tr>
-              <tr>
-                <td class="p-4 sm:p-5 font-semibold text-slate-800">Pricing Transparency</td>
-                <td class="p-4 sm:p-5 text-emerald-700 font-bold bg-blue-50/30">✓ Upfront fixed rate or competitive pro bids</td>
-                <td class="p-4 sm:p-5 text-rose-500">✗ Random arbitrary pricing &amp; hidden charges</td>
-              </tr>
-              <tr>
-                <td class="p-4 sm:p-5 font-semibold text-slate-800">Post-Service Warranty</td>
-                <td class="p-4 sm:p-5 text-emerald-700 font-bold bg-blue-50/30">✓ 30-Day Money-Back &amp; Free Re-work</td>
-                <td class="p-4 sm:p-5 text-rose-500">✗ No warranty once technician leaves</td>
-              </tr>
-              <tr>
-                <td class="p-4 sm:p-5 font-semibold text-slate-800">Damage Protection</td>
-                <td class="p-4 sm:p-5 text-emerald-700 font-bold bg-blue-50/30">✓ Up to ₹10,000 Free Insurance Cover</td>
-                <td class="p-4 sm:p-5 text-rose-500">✗ Customer bears 100% loss</td>
-              </tr>
-              <tr>
-                <td class="p-4 sm:p-5 font-semibold text-slate-800">Payment Security</td>
-                <td class="p-4 sm:p-5 text-emerald-700 font-bold bg-blue-50/30">✓ Pay After Service or Work Satisfaction</td>
-                <td class="p-4 sm:p-5 text-rose-500">✗ Demands high non-refundable cash advance</td>
-              </tr>
-              {% endfor %}
-            </tbody>
-          </table>
+        <div class="bg-white rounded-2xl sm:rounded-3xl border border-slate-200 shadow-lg overflow-hidden">
+          <div class="overflow-x-auto">
+            <table class="w-full min-w-[500px] text-left text-xs sm:text-sm">
+              <thead class="bg-slate-100 text-slate-700 font-bold border-b border-slate-200">
+                <tr>
+                  <th class="p-3.5 sm:p-5">Feature</th>
+                  <th class="p-3.5 sm:p-5 text-sugu-navy bg-blue-50/60">{{ cms_why_choose_section.col_sugu_title|default:"Sugu Services (Quick &amp; Bidding)" }}</th>
+                  <th class="p-3.5 sm:p-5 text-slate-500">{{ cms_why_choose_section.col_others_title|default:"Unorganized Local Technicians" }}</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-slate-100">
+                {% for f in cms_why_choose_features %}
+                <tr>
+                  <td class="p-3.5 sm:p-5 font-semibold text-slate-800">{{ f.feature_name }}</td>
+                  <td class="p-3.5 sm:p-5 text-emerald-700 font-bold bg-blue-50/30">{{ f.sugu_value }}</td>
+                  <td class="p-3.5 sm:p-5 text-rose-500">{{ f.others_value }}</td>
+                </tr>
+                {% empty %}
+                <tr>
+                  <td class="p-3.5 sm:p-5 font-semibold text-slate-800">Technician Background Check</td>
+                  <td class="p-3.5 sm:p-5 text-emerald-700 font-bold bg-blue-50/30">✓ 7-Step Police &amp; Skill Verified</td>
+                  <td class="p-3.5 sm:p-5 text-rose-500">✗ Zero verification or background check</td>
+                </tr>
+                <tr>
+                  <td class="p-3.5 sm:p-5 font-semibold text-slate-800">Pricing Transparency</td>
+                  <td class="p-3.5 sm:p-5 text-emerald-700 font-bold bg-blue-50/30">✓ Upfront fixed rate or competitive pro bids</td>
+                  <td class="p-3.5 sm:p-5 text-rose-500">✗ Random arbitrary pricing &amp; hidden charges</td>
+                </tr>
+                <tr>
+                  <td class="p-3.5 sm:p-5 font-semibold text-slate-800">Post-Service Warranty</td>
+                  <td class="p-3.5 sm:p-5 text-emerald-700 font-bold bg-blue-50/30">✓ 30-Day Money-Back &amp; Free Re-work</td>
+                  <td class="p-3.5 sm:p-5 text-rose-500">✗ No warranty once technician leaves</td>
+                </tr>
+                <tr>
+                  <td class="p-3.5 sm:p-5 font-semibold text-slate-800">Damage Protection</td>
+                  <td class="p-3.5 sm:p-5 text-emerald-700 font-bold bg-blue-50/30">✓ Up to ₹10,000 Free Insurance Cover</td>
+                  <td class="p-3.5 sm:p-5 text-rose-500">✗ Customer bears 100% loss</td>
+                </tr>
+                <tr>
+                  <td class="p-3.5 sm:p-5 font-semibold text-slate-800">Payment Security</td>
+                  <td class="p-3.5 sm:p-5 text-emerald-700 font-bold bg-blue-50/30">✓ Pay After Service or Work Satisfaction</td>
+                  <td class="p-3.5 sm:p-5 text-rose-500">✗ Demands high non-refundable cash advance</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
     </section>
@@ -871,28 +951,28 @@
   <main id="view-quick-service" class="hidden transition-opacity duration-300">
     
     <!-- SUB-VIEW A: 13 CATEGORY CARDS GRID -->
-    <section id="qs-category-grid-section" class="py-12 bg-slate-50 min-h-screen">
+    <section id="qs-category-grid-section" class="py-6 sm:py-12 bg-slate-50 min-h-screen">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         
         <!-- Header Banner -->
-        <div class="mb-10 text-center sm:text-left flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-6 sm:p-8 rounded-3xl text-white shadow-xl"
+        <div class="mb-6 sm:mb-10 text-center sm:text-left flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-5 sm:p-8 rounded-2xl sm:rounded-3xl text-white shadow-xl"
           style="background: linear-gradient(135deg, #0c1a30 0%, #102a54 50%, #1b75d0 100%);">
           <div>
-            <div class="flex items-center space-x-2 mb-1.5">
-              <span class="px-2.5 py-0.5 text-xs font-bold bg-white text-sugu-navy rounded-full">⚡ Instant Booking</span>
-              <span class="text-xs text-blue-200">15-Minute Guaranteed Arrival</span>
+            <div class="flex items-center space-x-2 mb-1.5 justify-center sm:justify-start">
+              <span class="px-2.5 py-0.5 text-[11px] sm:text-xs font-bold bg-white text-sugu-navy rounded-full">⚡ Instant Booking</span>
+              <span class="text-[11px] sm:text-xs text-blue-200">15-Minute Guaranteed Arrival</span>
             </div>
-            <h2 class="text-2xl sm:text-3xl font-extrabold font-heading">⚡ Sugu Quick Services Catalog</h2>
+            <h2 class="text-xl sm:text-3xl font-extrabold font-heading">⚡ Sugu Quick Services Catalog</h2>
             <p class="text-xs sm:text-sm text-blue-100 mt-1">Select a category below to browse verified services, view transparent prices, and book in 60 seconds.</p>
           </div>
-          <button onclick="switchRoute('bidding')" class="px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-bold border border-white/20 transition flex items-center space-x-1.5 self-start sm:self-auto">
+          <button onclick="switchRoute('bidding')" class="px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-bold border border-white/20 transition flex items-center justify-center space-x-1.5 w-full sm:w-auto self-stretch sm:self-auto">
             <span>Need Custom Bidding?</span>
             <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
           </button>
         </div>
 
         <!-- THE DYNAMIC 13 CATEGORY CARDS (WITH REALISTIC 3D ICONS FROM ASSETS/ICONS/) -->
-        <div id="qs-12-icons-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4 sm:gap-6">
+        <div id="qs-12-icons-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 sm:gap-6">
           <!-- Rendered dynamically by app.js from data.js -->
         </div>
 
@@ -1123,55 +1203,55 @@
   <!-- 3. VIEW: BIDDING HUB (END-USER BIDDING MARKETPLACE)       -->
   <!-- ======================================================== -->
   <main id="view-bidding" class="hidden transition-opacity duration-300">
-    <section class="py-10 bg-slate-50 min-h-screen">
+    <section class="py-6 sm:py-10 bg-slate-50 min-h-screen">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         
         <!-- Bidding Hub Header -->
-        <div class="mb-8 p-8 rounded-3xl bg-gradient-to-r from-[#0c1a30] via-slate-900 to-amber-950 text-white shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-6">
+        <div class="mb-6 sm:mb-8 p-5 sm:p-8 rounded-2xl sm:rounded-3xl bg-gradient-to-r from-[#0c1a30] via-slate-900 to-amber-950 text-white shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-5 sm:gap-6">
           <div class="max-w-2xl">
             <div class="flex items-center space-x-2 mb-2">
-              <span class="px-2.5 py-0.5 text-xs font-bold bg-amber-500 text-slate-950 rounded-full">For End-Users</span>
-              <span class="text-xs text-amber-200">Save up to 40% vs Traditional Contractors</span>
+              <span class="px-2.5 py-0.5 text-[11px] sm:text-xs font-bold bg-amber-500 text-slate-950 rounded-full">For End-Users</span>
+              <span class="text-[11px] sm:text-xs text-amber-200">Save up to 40% vs Traditional Contractors</span>
             </div>
-            <h2 class="text-3xl font-extrabold font-heading text-white">🏷️ Sugu Bidding Marketplace</h2>
+            <h2 class="text-xl sm:text-3xl font-extrabold font-heading text-white">🏷️ Sugu Bidding Marketplace</h2>
             <p class="text-xs sm:text-sm text-slate-300 mt-1">
               Have a big painting job, custom modular woodwork, complete renovation, or septic job? Post your requirement once and let certified local contractors submit competitive itemized quotes. Compare bids, chat, counter-offer, and hire with 100% Payment Protection!
             </p>
           </div>
 
           <!-- Bidding Sub-Tabs -->
-          <div class="flex flex-wrap items-center gap-2 bg-slate-800/90 p-2 rounded-2xl border border-slate-700/80 flex-shrink-0">
+          <div class="flex flex-wrap items-center gap-1.5 sm:gap-2 bg-slate-800/90 p-1.5 sm:p-2 rounded-2xl border border-slate-700/80 shrink-0 w-full md:w-auto">
             <button id="bid-tab-tenders-btn" onclick="setBiddingTab('tenders')" 
-              class="h-10 px-4 rounded-xl text-xs font-bold transition flex items-center justify-center space-x-1.5 whitespace-nowrap bg-amber-600 text-white shadow">
-              <i data-lucide="layers" class="w-4 h-4"></i>
-              <span>Active Quotes &amp; Bids</span>
+              class="h-9 sm:h-10 px-3 sm:px-4 rounded-xl text-xs font-bold transition flex items-center justify-center space-x-1.5 flex-1 sm:flex-initial whitespace-nowrap bg-amber-600 text-white shadow">
+              <i data-lucide="layers" class="w-3.5 h-3.5 sm:w-4 sm:h-4"></i>
+              <span>Active Quotes</span>
               <span id="bid-badge-count" class="px-1.5 py-0.2 bg-white/20 text-white text-[10px] rounded-full font-black">5</span>
             </button>
             <button id="bid-tab-post-btn" onclick="setBiddingTab('post-job')" 
-              class="h-10 px-4 rounded-xl text-xs font-bold transition flex items-center justify-center space-x-1.5 whitespace-nowrap bg-white text-slate-700 hover:bg-slate-100">
-              <i data-lucide="sparkles" class="w-4 h-4 text-amber-600"></i>
-              <span>⚡ Post Job (3 Easy Taps)</span>
+              class="h-9 sm:h-10 px-3 sm:px-4 rounded-xl text-xs font-bold transition flex items-center justify-center space-x-1.5 flex-1 sm:flex-initial whitespace-nowrap bg-white text-slate-700 hover:bg-slate-100">
+              <i data-lucide="sparkles" class="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-600"></i>
+              <span>⚡ Post Job</span>
             </button>
             <button id="bid-tab-templates-btn" onclick="setBiddingTab('templates')" 
-              class="h-10 px-4 rounded-xl text-xs font-bold transition flex items-center justify-center space-x-1.5 whitespace-nowrap bg-white text-slate-700 hover:bg-slate-100">
-              <i data-lucide="bookmark-check" class="w-4 h-4 text-emerald-600"></i>
-              <span>💡 1-Tap Ready Templates</span>
+              class="h-9 sm:h-10 px-3 sm:px-4 rounded-xl text-xs font-bold transition flex items-center justify-center space-x-1.5 flex-1 sm:flex-initial whitespace-nowrap bg-white text-slate-700 hover:bg-slate-100">
+              <i data-lucide="bookmark-check" class="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-600"></i>
+              <span>💡 Templates</span>
             </button>
           </div>
         </div>
 
         <!-- 3-STEP EASY GUIDED BANNER FOR END-USERS -->
-        <div class="mb-8 p-4 rounded-2xl bg-amber-50/80 border border-amber-200/80 text-amber-950 flex flex-col md:flex-row items-center justify-between gap-4">
+        <div class="mb-6 sm:mb-8 p-3.5 sm:p-4 rounded-2xl bg-amber-50/80 border border-amber-200/80 text-amber-950 flex flex-col md:flex-row items-center justify-between gap-3 sm:gap-4">
           <div class="flex items-center space-x-3">
-            <div class="w-10 h-10 rounded-xl bg-amber-500 text-white flex items-center justify-center font-black flex-shrink-0">
-              <i data-lucide="shield-check" class="w-5 h-5"></i>
+            <div class="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-amber-500 text-white flex items-center justify-center font-black shrink-0">
+              <i data-lucide="shield-check" class="w-4 h-4 sm:w-5 sm:h-5"></i>
             </div>
             <div>
-              <span class="text-xs font-bold uppercase tracking-wider text-amber-700 block">How Bidding Works for You</span>
-              <p class="text-xs text-amber-900 font-medium">1. Tap your service &rarr; 2. Get 3-5 verified contractor quotes in 30 mins &rarr; 3. Negotiate &amp; Pay only after work satisfaction!</p>
+              <span class="text-[11px] sm:text-xs font-bold uppercase tracking-wider text-amber-700 block">How Bidding Works for You</span>
+              <p class="text-[11px] sm:text-xs text-amber-900 font-medium">1. Tap your service &rarr; 2. Get 3-5 verified contractor quotes in 30 mins &rarr; 3. Negotiate &amp; Pay only after work satisfaction!</p>
             </div>
           </div>
-          <div class="flex items-center space-x-2 text-xs font-bold text-amber-800 bg-white/80 px-3 py-1.5 rounded-xl border border-amber-300">
+          <div class="flex items-center space-x-1.5 sm:space-x-2 text-[11px] sm:text-xs font-bold text-amber-800 bg-white/80 px-2.5 sm:px-3 py-1.5 rounded-xl border border-amber-300 self-stretch sm:self-auto justify-center">
             <i data-lucide="lock" class="w-3.5 h-3.5 text-emerald-600"></i>
             <span>100% Secure Payment Guarantee</span>
           </div>
@@ -1201,25 +1281,25 @@
   <!-- ======================================================== -->
   <!-- FLOATING BOTTOM CART BAR (URBAN COMPANY STYLE)           -->
   <!-- ======================================================== -->
-  <div id="floating-cart-bar" class="hidden fixed bottom-0 inset-x-0 z-30 translate-y-full transition-transform duration-300 ease-in-out">
-    <div class="max-w-4xl mx-auto px-4 pb-4">
-      <div class="p-4 rounded-2xl bg-slate-900 text-white shadow-2xl flex items-center justify-between border border-slate-700/80 backdrop-blur-md">
+  <div id="floating-cart-bar" class="hidden fixed bottom-14 md:bottom-0 inset-x-0 z-40 translate-y-full transition-transform duration-300 ease-in-out">
+    <div class="max-w-4xl mx-auto px-3 sm:px-4 pb-2 sm:pb-4">
+      <div class="p-3.5 sm:p-4 rounded-2xl bg-slate-900 text-white shadow-2xl flex items-center justify-between border border-slate-700/80 backdrop-blur-md">
         <div class="flex items-center space-x-3">
-          <div class="w-10 h-10 rounded-xl bg-sugu-blue text-white flex items-center justify-center font-bold">
-            <i data-lucide="shopping-cart" class="w-5 h-5"></i>
+          <div class="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-sugu-blue text-white flex items-center justify-center font-bold shrink-0">
+            <i data-lucide="shopping-cart" class="w-4 h-4 sm:w-5 sm:h-5"></i>
           </div>
           <div>
-            <span id="cart-bar-count" class="text-xs text-blue-300 font-semibold block">0 services added</span>
+            <span id="cart-bar-count" class="text-[11px] sm:text-xs text-blue-300 font-semibold block">0 services added</span>
             <div class="flex items-baseline space-x-1.5">
-              <span class="text-xs text-slate-400">Total:</span>
-              <span id="cart-bar-total" class="text-lg font-black text-white">₹0</span>
+              <span class="text-[11px] sm:text-xs text-slate-400">Total:</span>
+              <span id="cart-bar-total" class="text-base sm:text-lg font-black text-white">₹0</span>
             </div>
           </div>
         </div>
 
-        <button onclick="openCheckoutModal()" class="px-6 py-2.5 rounded-xl bg-sugu-blue hover:bg-sugu-blueDark text-white font-bold text-xs sm:text-sm shadow-lg shadow-blue-500/30 transition flex items-center space-x-2">
+        <button onclick="openCheckoutModal()" class="px-4 sm:px-6 py-2 sm:py-2.5 rounded-xl bg-sugu-blue hover:bg-sugu-blueDark text-white font-bold text-xs sm:text-sm shadow-lg shadow-blue-500/30 transition flex items-center space-x-1.5 sm:space-x-2">
           <span>View Cart &amp; Book</span>
-          <i data-lucide="arrow-right" class="w-4 h-4"></i>
+          <i data-lucide="arrow-right" class="w-3.5 h-3.5 sm:w-4 sm:h-4"></i>
         </button>
       </div>
     </div>
@@ -1829,6 +1909,41 @@
     </div>
   </div>
 
+  <!-- ======================================================== -->
+  <!-- MOBILE STICKY BOTTOM NAVIGATION BAR (APP STYLE)          -->
+  <!-- ======================================================== -->
+  <nav id="mobile-bottom-nav" class="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-slate-200/90 py-1.5 px-2 shadow-[0_-4px_20px_rgba(0,0,0,0.06)] flex items-center justify-around">
+    <button onclick="switchRoute('home')" data-mode="home" class="mobile-bottom-tab flex flex-col items-center justify-center py-1 px-2.5 rounded-xl transition text-sugu-blue font-bold">
+      <i data-lucide="home" class="w-5 h-5"></i>
+      <span class="text-[10px] mt-0.5">Home</span>
+    </button>
+    <button onclick="switchRoute('quick-service')" data-mode="quick-service" class="mobile-bottom-tab flex flex-col items-center justify-center py-1 px-2.5 rounded-xl transition text-slate-500 font-medium hover:text-slate-800">
+      <div class="relative">
+        <i data-lucide="zap" class="w-5 h-5 text-amber-500 fill-amber-500"></i>
+        <span class="absolute -top-1 -right-3.5 px-1 py-0.2 rounded-full bg-blue-600 text-[8px] font-black text-white leading-none">15m</span>
+      </div>
+      <span class="text-[10px] mt-0.5">Quick Service</span>
+    </button>
+    <button onclick="switchRoute('bidding')" data-mode="bidding" class="mobile-bottom-tab flex flex-col items-center justify-center py-1 px-2.5 rounded-xl transition text-slate-500 font-medium hover:text-slate-800">
+      <div class="relative">
+        <i data-lucide="gavel" class="w-5 h-5 text-sugu-blue"></i>
+        <span class="absolute -top-1 -right-4 px-1 py-0.2 rounded-full bg-amber-500 text-[8px] font-black text-white leading-none">-40%</span>
+      </div>
+      <span class="text-[10px] mt-0.5">Bidding</span>
+    </button>
+    <a href="{% if user.is_authenticated %}{% if user.role == 'VENDOR' %}/vendor/dashboard{% elif user.role == 'ADMIN' or user.is_superuser %}/admin-dashboard{% else %}/user/dashboard{% endif %}{% else %}/login/{% endif %}" class="flex flex-col items-center justify-center py-1 px-2.5 rounded-xl transition text-slate-500 font-medium hover:text-slate-800">
+      {% if user.is_authenticated %}
+        <div class="w-5 h-5 rounded-full bg-sugu-blue text-white text-[10px] font-bold flex items-center justify-center">
+          {{ user.first_name|default:user.username|slice:":1"|upper }}
+        </div>
+        <span class="text-[10px] mt-0.5">Account</span>
+      {% else %}
+        <i data-lucide="user" class="w-5 h-5"></i>
+        <span class="text-[10px] mt-0.5">Log In</span>
+      {% endif %}
+    </a>
+  </nav>
+
   <!-- Scripts: Data & Application Logic -->
   <script>
     window.CURRENT_USER = {
@@ -1845,8 +1960,30 @@
     window.DB_VIDEOS = {{ transform_videos_data_json|safe }};
     window.DB_BIDDING_JOBS = {{ bidding_jobs_data_json|safe }};
     window.SERVER_USER_LOCATION = "{{ user_city|default:'' }}{% if user_state %}, {{ user_state }}{% endif %}";
+
+    function toggleMobileNavDrawer() {
+      const drawer = document.getElementById("mobile-nav-drawer");
+      const icon = document.getElementById("mobile-menu-icon");
+      if (!drawer) return;
+      const isHidden = drawer.classList.contains("hidden");
+      if (isHidden) {
+        drawer.classList.remove("hidden");
+        if (icon) icon.setAttribute("data-lucide", "x");
+      } else {
+        drawer.classList.add("hidden");
+        if (icon) icon.setAttribute("data-lucide", "menu");
+      }
+      if (window.lucide && typeof lucide.createIcons === 'function') {
+        lucide.createIcons();
+      }
+    }
   </script>
-  <script src="data.js?v=4.1"></script>
-  <script src="app.js?v=4.1"></script>
+  <script src="{% static 'data.js' %}?v=4.2"></script>
+  <script src="{% static 'app.js' %}?v=4.2"></script>
+  <script>
+    if (window.lucide && typeof lucide.createIcons === 'function') {
+      lucide.createIcons();
+    }
+  </script>
 </body>
 </html>

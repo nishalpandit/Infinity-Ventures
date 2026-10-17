@@ -122,7 +122,7 @@ function syncDynamicCategories() {
               originalPrice: Math.round((dbCat.min_price || 249) * 1.3),
               time: "30 mins",
               badge: "Standard",
-              image: dbCat.image || (tpl ? `assets/icons/${tpl.iconFile}` : "https://images.unsplash.com/photo-1581092160607-ee22621dd758?auto=format&fit=crop&w=600&q=80"),
+              image: dbCat.image || (tpl ? `/static/assets/icons/${tpl.iconFile}` : "https://images.unsplash.com/photo-1581092160607-ee22621dd758?auto=format&fit=crop&w=600&q=80"),
               features: [
                 "Comprehensive doorstep inspection",
                 "Verified certified professional",
@@ -530,6 +530,14 @@ function switchRoute(route, categoryId = null) {
     appState.selectedCategoryId = null;
   }
 
+  // Auto-close mobile drawer if open
+  const drawer = document.getElementById("mobile-nav-drawer");
+  if (drawer && !drawer.classList.contains("hidden")) {
+    drawer.classList.add("hidden");
+    const icon = document.getElementById("mobile-menu-icon");
+    if (icon) icon.setAttribute("data-lucide", "menu");
+  }
+
   window.scrollTo({ top: 0, behavior: 'smooth' });
   renderApp();
 }
@@ -597,9 +605,24 @@ function updateNavState() {
     }
   }
 
-  // Update location text
+  // Update mobile bottom nav tabs
+  const bottomTabs = document.querySelectorAll(".mobile-bottom-tab");
+  bottomTabs.forEach(tab => {
+    const mode = tab.getAttribute("data-mode");
+    if (mode === appState.currentRoute) {
+      tab.classList.add("text-sugu-blue", "font-bold");
+      tab.classList.remove("text-slate-500", "font-medium");
+    } else {
+      tab.classList.remove("text-sugu-blue", "font-bold");
+      tab.classList.add("text-slate-500", "font-medium");
+    }
+  });
+
+  // Update location text in header and drawer
   const locEl = document.getElementById("header-location-text");
   if (locEl) locEl.innerText = appState.userLocation;
+  const drawerLoc = document.getElementById("drawer-location-text");
+  if (drawerLoc) drawerLoc.innerText = appState.userLocation;
 }
 
 // ----------------------------------------------------
@@ -744,11 +767,11 @@ function renderHowItWorks() {
 
   if (qsContainer) {
     qsContainer.innerHTML = SUGU_DATA.howItWorks.quickService.map(s => `
-      <div class="p-5 rounded-2xl bg-white border border-slate-200 shadow-sm hover:shadow-md transition">
-        <div class="w-10 h-10 rounded-xl bg-sky-100 text-sky-700 font-bold flex items-center justify-center mb-3">
+      <div class="p-3.5 sm:p-5 rounded-xl sm:rounded-2xl bg-white border border-slate-200 shadow-sm hover:shadow-md transition">
+        <div class="w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-sky-100 text-sky-700 font-bold flex items-center justify-center mb-2.5 sm:mb-3 text-xs sm:text-sm">
           ${s.step}
         </div>
-        <h5 class="font-bold text-slate-900 mb-1.5">${s.title}</h5>
+        <h5 class="font-bold text-slate-900 text-sm sm:text-base mb-1">${s.title}</h5>
         <p class="text-xs text-slate-600 leading-relaxed">${s.desc}</p>
       </div>
     `).join("");
@@ -756,11 +779,11 @@ function renderHowItWorks() {
 
   if (biddingContainer) {
     biddingContainer.innerHTML = SUGU_DATA.howItWorks.bidding.map(s => `
-      <div class="p-5 rounded-2xl bg-white border border-slate-200 shadow-sm hover:shadow-md transition">
-        <div class="w-10 h-10 rounded-xl bg-amber-100 text-amber-700 font-bold flex items-center justify-center mb-3">
+      <div class="p-3.5 sm:p-5 rounded-xl sm:rounded-2xl bg-white border border-slate-200 shadow-sm hover:shadow-md transition">
+        <div class="w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-amber-100 text-amber-700 font-bold flex items-center justify-center mb-2.5 sm:mb-3 text-xs sm:text-sm">
           ${s.step}
         </div>
-        <h5 class="font-bold text-slate-900 mb-1.5">${s.title}</h5>
+        <h5 class="font-bold text-slate-900 text-sm sm:text-base mb-1">${s.title}</h5>
         <p class="text-xs text-slate-600 leading-relaxed">${s.desc}</p>
       </div>
     `).join("");
@@ -806,30 +829,30 @@ function render12CategoryIcons() {
 
   container.innerHTML = pagedCats.map(cat => {
     const iconFile = cat.iconFile || 'painting_upgrade.png';
-    const imgSrc = cat.isCustomImage ? iconFile : `assets/icons/${iconFile}`;
-    const imgHtml = `<img src="${imgSrc}" alt="${cat.name}" class="w-14 h-14 sm:w-16 sm:h-16 object-contain rounded-xl group-hover:scale-110 transition-transform duration-300">`;
+    const imgSrc = cat.isCustomImage ? iconFile : `/static/assets/icons/${iconFile}`;
+    const imgHtml = `<img src="${imgSrc}" alt="${cat.name}" class="w-12 h-12 sm:w-16 sm:h-16 object-contain rounded-xl group-hover:scale-110 transition-transform duration-300">`;
 
     return `
     <div onclick="selectCategory('${cat.id}')" class="sugu-category-card group cursor-pointer bg-white border border-slate-200/90 rounded-2xl overflow-hidden shadow-xs hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between">
-      <div class="relative overflow-hidden bg-slate-50/80 aspect-[4/3] flex items-center justify-center p-3">
+      <div class="relative overflow-hidden bg-slate-50/80 aspect-[4/3] flex items-center justify-center p-2.5 sm:p-3">
         ${imgHtml}
         <div class="absolute inset-0 bg-[#1b75d0]/5 opacity-0 group-hover:opacity-100 transition-opacity"></div>
       </div>
-      <div class="p-3.5 bg-white border-t border-slate-100 flex flex-col justify-between flex-1">
+      <div class="p-2.5 sm:p-3.5 bg-white border-t border-slate-100 flex flex-col justify-between flex-1">
         <div>
           <div class="flex items-center justify-between text-xs text-slate-500 mb-1">
-            <span class="flex items-center font-semibold text-amber-600">
-              <i data-lucide="star" class="w-3.5 h-3.5 fill-amber-400 mr-0.5"></i> ${(cat.rating || '4.85').split(' ')[0]}
+            <span class="flex items-center font-semibold text-amber-600 text-[11px] sm:text-xs">
+              <i data-lucide="star" class="w-3 h-3 sm:w-3.5 sm:h-3.5 fill-amber-400 mr-0.5"></i> ${(cat.rating || '4.85').split(' ')[0]}
             </span>
-            <span class="text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full text-[10px] font-bold border border-emerald-200">15 Min Pro</span>
+            <span class="text-emerald-700 bg-emerald-50 px-1.5 sm:px-2 py-0.5 rounded-full text-[9px] sm:text-[10px] font-bold border border-emerald-200">15 Min</span>
           </div>
-          <h4 class="font-bold text-slate-900 group-hover:text-[#1b75d0] transition text-sm mb-1">${cat.name}</h4>
-          <p class="text-[11px] text-slate-500 line-clamp-1">${cat.tagline || 'Verified Doorstep Services'}</p>
+          <h4 class="font-bold text-slate-900 group-hover:text-[#1b75d0] transition text-xs sm:text-sm mb-1 truncate">${cat.name}</h4>
+          <p class="text-[10px] sm:text-[11px] text-slate-500 line-clamp-1">${cat.tagline || 'Verified Doorstep Services'}</p>
         </div>
-        <div class="mt-2.5 pt-2 border-t border-slate-100 flex items-center justify-between">
-          <span class="text-xs font-black text-[#1b75d0]">${cat.startingPrice}</span>
-          <span class="text-xs font-bold text-[#1b75d0] flex items-center group-hover:translate-x-1 transition">
-            Book <i data-lucide="chevron-right" class="w-3.5 h-3.5 ml-0.5"></i>
+        <div class="mt-2 sm:mt-2.5 pt-1.5 sm:pt-2 border-t border-slate-100 flex items-center justify-between">
+          <span class="text-[11px] sm:text-xs font-black text-[#1b75d0]">${cat.startingPrice}</span>
+          <span class="text-[11px] sm:text-xs font-bold text-[#1b75d0] flex items-center group-hover:translate-x-1 transition">
+            Book <i data-lucide="chevron-right" class="w-3 h-3 sm:w-3.5 sm:h-3.5 ml-0.5"></i>
           </span>
         </div>
       </div>
@@ -915,7 +938,7 @@ function renderUrbanCompanyDetailFlow() {
   document.getElementById("uc-cat-rating").innerHTML = `<i data-lucide="star" class="w-4 h-4 fill-amber-400 text-amber-400 mr-1"></i> ${currentCat.rating || '4.86'}`;
   const catThumb = document.getElementById("uc-cat-icon-thumb");
   if (catThumb) {
-    catThumb.src = currentCat.isCustomImage ? currentCat.iconFile : `assets/icons/${currentCat.iconFile}`;
+    catThumb.src = currentCat.isCustomImage ? currentCat.iconFile : `/static/assets/icons/${currentCat.iconFile}`;
   }
 
   // Render Horizontal Category Switcher (Urban Company style pill strip)
@@ -925,7 +948,7 @@ function renderUrbanCompanyDetailFlow() {
       <button onclick="selectCategory('${c.id}')" 
         class="flex-shrink-0 flex items-center space-x-2 px-3 py-1.5 rounded-full text-xs font-semibold transition border 
         ${c.id === currentCat.id ? 'bg-sky-600 text-white border-sky-600 shadow' : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'}">
-        <img src="${c.isCustomImage ? c.iconFile : 'assets/icons/' + c.iconFile}" class="w-5 h-5 object-contain rounded-md" alt="${c.name}">
+        <img src="${c.isCustomImage ? c.iconFile : '/static/assets/icons/' + c.iconFile}" class="w-5 h-5 object-contain rounded-md" alt="${c.name}">
         <span>${c.name}</span>
       </button>
     `).join("");
@@ -1098,7 +1121,7 @@ function renderUrbanCompanyDetailFlow() {
       const btnQtyClass = isWomen ? 'bg-pink-600' : 'bg-sky-600';
 
       return `
-        <div class="p-6 rounded-2xl bg-white border border-slate-200 shadow-sm hover:shadow-md transition flex flex-col md:flex-row md:items-start justify-between gap-6 mb-4">
+        <div class="p-4 sm:p-6 rounded-xl sm:rounded-2xl bg-white border border-slate-200 shadow-sm hover:shadow-md transition flex flex-col md:flex-row md:items-start justify-between gap-4 sm:gap-6 mb-4">
           <div class="flex-1">
             <div class="flex items-center space-x-2 mb-2">
               <span class="px-2.5 py-0.5 text-xs font-bold rounded-full ${badgeStyle} border">${item.badge}</span>
@@ -2233,7 +2256,7 @@ function renderActiveBiddingTenders() {
   const cardsHtml = pagedJobs.map(job => {
     const iconSrc = (job.icon && (job.icon.startsWith('http') || job.icon.startsWith('/') || job.icon.includes('/')))
       ? job.icon
-      : (job.icon ? `assets/icons/${job.icon}` : 'assets/icons/painting_upgrade.png');
+      : (job.icon ? `/static/assets/icons/${job.icon}` : '/static/assets/icons/painting_upgrade.png');
 
     const primaryJobPhoto = (job.main_image && (job.main_image.startsWith('http') || job.main_image.startsWith('/')))
       ? job.main_image
@@ -2804,7 +2827,7 @@ function renderPostJobWizard() {
 
           <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
             ${biddingCats.map(c => {
-              const catImg = c.image || (c.isCustomImage ? c.iconFile : (c.iconFile ? 'assets/icons/' + c.iconFile : 'assets/icons/home_renovation.png'));
+              const catImg = c.image || (c.isCustomImage ? c.iconFile : (c.iconFile ? '/static/assets/icons/' + c.iconFile : '/static/assets/icons/home_renovation.png'));
               return `
               <div onclick="selectBiddingCategory('${c.id}')" 
                 class="relative p-3 rounded-2xl border-2 cursor-pointer transition-all duration-300 flex flex-col items-center text-center 
@@ -2996,7 +3019,7 @@ function renderBiddingTemplates() {
 
       <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         ${templates.map(tpl => {
-          const tplIcon = (tpl.icon && (tpl.icon.startsWith('http') || tpl.icon.startsWith('/'))) ? tpl.icon : 'assets/icons/' + (tpl.icon || 'home_renovation.png');
+          const tplIcon = (tpl.icon && (tpl.icon.startsWith('http') || tpl.icon.startsWith('/'))) ? tpl.icon : '/static/assets/icons/' + (tpl.icon || 'home_renovation.png');
           return `
           <div class="p-6 rounded-3xl bg-white border border-slate-200 shadow-md hover:shadow-xl transition-all duration-300 flex flex-col justify-between group">
             <div>

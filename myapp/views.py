@@ -1153,13 +1153,17 @@ def dashboard_view(request, path=''):
 
     ext = os.path.splitext(mapped_path)[1]
     if ext and ext not in ['.html']:
-        file_path = settings.BASE_DIR / 'templates' / mapped_path
-        if file_path.exists():
-            content_type, _ = mimetypes.guess_type(str(file_path))
-            with open(file_path, 'rb') as f:
-                return HttpResponse(f.read(), content_type=content_type or 'application/octet-stream')
-        else:
-            raise Http404(f"Asset {path} not found")
+        candidate_paths = [
+            settings.BASE_DIR / 'templates' / mapped_path,
+            settings.BASE_DIR / 'static' / mapped_path,
+            (settings.STATIC_ROOT / mapped_path) if getattr(settings, 'STATIC_ROOT', None) else None,
+        ]
+        for file_path in candidate_paths:
+            if file_path and file_path.exists() and file_path.is_file():
+                content_type, _ = mimetypes.guess_type(str(file_path))
+                with open(file_path, 'rb') as f:
+                    return HttpResponse(f.read(), content_type=content_type or 'application/octet-stream')
+        raise Http404(f"Asset {path} not found")
         
     template_name = f'{mapped_path}.html'
     context = {}

@@ -403,5 +403,45 @@ urlpatterns = [
     path('api/beauty/book-appointment/', beauty_views.beauty_book_appointment_api, name='beauty_book_appointment_api'),
     path('api/beauty/book-appointment', beauty_views.beauty_book_appointment_api),
 
+    # Phase 1 APIs
+    path('api/user/dashboard/', Api_views.user_dashboard_api, name='user_dashboard_api'),
+    path('api/user/dashboard', Api_views.user_dashboard_api),
+    path('api/vendor/selected-jobs/', Api_views.vendor_selected_jobs_api, name='vendor_selected_jobs_api'),
+    path('api/vendor/selected-jobs', Api_views.vendor_selected_jobs_api),
+    path('api/vendor/kyc/submit/', Api_views.vendor_kyc_submit_api, name='vendor_kyc_submit_api'),
+    path('api/vendor/kyc/submit', Api_views.vendor_kyc_submit_api),
+    path('api/vendor/kyc/status/', Api_views.vendor_kyc_status_api, name='vendor_kyc_status_api'),
+    path('api/vendor/kyc/status', Api_views.vendor_kyc_status_api),
+
+    # Phase 2 APIs: Payouts, Disputes, Job Completion Proof
+    path('api/vendor/wallet/payout/request/', Api_views.vendor_payout_request_api, name='vendor_payout_request_api'),
+    path('api/vendor/wallet/payout/request', Api_views.vendor_payout_request_api),
+    path('api/vendor/wallet/payout/history/', Api_views.vendor_payout_history_api, name='vendor_payout_history_api'),
+    path('api/vendor/wallet/payout/history', Api_views.vendor_payout_history_api),
+    path('api/disputes/create/', Api_views.dispute_create_api, name='dispute_create_api'),
+    path('api/disputes/create', Api_views.dispute_create_api),
+    path('api/disputes/', Api_views.dispute_list_api, name='dispute_list_api'),
+    path('api/disputes', Api_views.dispute_list_api),
+    path('api/disputes/<str:ticket_id>/message/', Api_views.dispute_message_api, name='dispute_message_api'),
+    path('api/disputes/<str:ticket_id>/message', Api_views.dispute_message_api),
+    path('api/disputes/<str:ticket_id>/', Api_views.dispute_detail_api, name='dispute_detail_api'),
+    path('api/disputes/<str:ticket_id>', Api_views.dispute_detail_api),
+    path('api/vendor/jobs/<int:job_id>/submit-proof/', Api_views.vendor_submit_completion_proof_api, name='vendor_submit_completion_proof_api'),
+    path('api/vendor/jobs/<int:job_id>/submit-proof', Api_views.vendor_submit_completion_proof_api),
+    path('api/user/jobs/<int:job_id>/proof/', Api_views.user_view_completion_proof_api, name='user_view_completion_proof_api'),
+    path('api/user/jobs/<int:job_id>/proof', Api_views.user_view_completion_proof_api),
+
+    # Phase 3 APIs: Vendor Earnings Summary & Job Gallery Images
+    path('api/vendor/earnings/', Api_views.vendor_earnings_summary_api, name='vendor_earnings_summary_api'),
+    path('api/vendor/earnings', Api_views.vendor_earnings_summary_api),
+    path('api/user/jobs/<int:job_id>/images/upload/', Api_views.user_job_images_upload_api, name='user_job_images_upload_api'),
+    path('api/user/jobs/<int:job_id>/images/upload', Api_views.user_job_images_upload_api),
+    path('api/user/jobs/<int:job_id>/images/<int:image_id>/delete/', Api_views.user_job_image_delete_api, name='user_job_image_delete_api_post'),
+    path('api/user/jobs/<int:job_id>/images/<int:image_id>/delete', Api_views.user_job_image_delete_api),
+    path('api/user/jobs/<int:job_id>/images/<int:image_id>/', Api_views.user_job_image_delete_api, name='user_job_image_delete_api'),
+    path('api/user/jobs/<int:job_id>/images/<int:image_id>', Api_views.user_job_image_delete_api),
+    path('api/user/jobs/<int:job_id>/images/', Api_views.user_job_images_list_api, name='user_job_images_list_api'),
+    path('api/user/jobs/<int:job_id>/images', Api_views.user_job_images_list_api),
+
     re_path(r'^(?P<path>.*)$', views.dashboard_view, name='dashboard'),
 ]

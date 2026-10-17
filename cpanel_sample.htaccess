@@ -1,0 +1,40 @@
+# ==============================================================================
+# cPanel Apache Configuration for Infinity Ventures (SUGU Services)
+# Place this .htaccess in your cPanel public_html/ or Application Root directory
+# ==============================================================================
+
+# 1. Enable Rewrite Engine
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteBase /
+
+    # Serve static files directly through Apache (bypass Python/Passenger)
+    RewriteCond %{REQUEST_URI} ^/static/(.*)$
+    RewriteCond %{DOCUMENT_ROOT}/staticfiles/$1 -f
+    RewriteRule ^static/(.*)$ /staticfiles/$1 [L]
+
+    # Serve media uploads directly through Apache
+    RewriteCond %{REQUEST_URI} ^/media/(.*)$
+    RewriteCond %{DOCUMENT_ROOT}/media/$1 -f
+    RewriteRule ^media/(.*)$ /media/$1 [L]
+</IfModule>
+
+# 2. Allow CORS for Fonts, SVG & Icons (Prevents Browser Icon Blocking)
+<IfModule mod_headers.c>
+    <FilesMatch "\.(ttf|ttc|otf|eot|woff|woff2|font.css|css|js|svg|png|jpg|jpeg|webp|ico)$">
+        Header set Access-Control-Allow-Origin "*"
+    </FilesMatch>
+</IfModule>
+
+# 3. Correct MIME types for web fonts and icons
+<IfModule mod_mime.c>
+    AddType font/ttf .ttf
+    AddType font/otf .otf
+    AddType font/x-woff .woff
+    AddType font/woff2 .woff2
+    AddType image/svg+xml .svg
+    AddType image/webp .webp
+</IfModule>
+
+# 4. Turn off directory browsing
+Options -Indexes

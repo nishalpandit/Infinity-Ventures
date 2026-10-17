@@ -207,6 +207,7 @@ class Job(models.Model):
     )
     title = models.CharField(max_length=255)
     category = models.ForeignKey('Category', on_delete=models.SET_NULL, null=True, blank=True)
+    subcategory = models.ForeignKey('SubCategory', on_delete=models.SET_NULL, null=True, blank=True, related_name='jobs')
     description = models.TextField(blank=True, null=True)
     required_work = models.JSONField(default=list, blank=True, null=True)
     scope_of_work = models.TextField(blank=True, null=True)

@@ -4,6 +4,7 @@ import random
 from datetime import datetime, date, timedelta
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
+from django.db.models import Q
 from myapp.models import Category, SubCategory, CustomUser, ServiceBooking
 
 # ==============================================================================
