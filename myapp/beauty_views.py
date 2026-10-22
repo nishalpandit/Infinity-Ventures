@@ -5,7 +5,7 @@ from datetime import datetime, date, timedelta
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.db.models import Q
-from myapp.models import Category, SubCategory, CustomUser, ServiceBooking
+from myapp.models import Category, SubCategory, CustomUser, ServiceBooking, QuickService
 
 # ==============================================================================
 # BEAUTY & WELLNESS MASTER CATALOG (AT-HOME SERVICES + LUXURY PARLOUR DIRECTORY)
@@ -83,226 +83,8 @@ BEAUTY_EXPERIENCES = [
 # AT-HOME SERVICES CATALOG (WOMEN & MEN)
 # ------------------------------------------------------------------------------
 AT_HOME_CATALOG = {
-    "womens_salon_spa": [
-        {
-            "id": "salon_facial",
-            "name": "Facials & Cleanup",
-            "items": [
-                {
-                    "id": "facial_o3",
-                    "title": "O3+ Bridal Glow Luxury Facial",
-                    "rating": "4.93",
-                    "reviews": "720K+",
-                    "price": 1399,
-                    "originalPrice": 1999,
-                    "discount": "30% OFF",
-                    "time": "75 mins",
-                    "badge": "Celebrity Glow",
-                    "image": "https://images.unsplash.com/photo-1560066984-138dadb4c035?auto=format&fit=crop&w=600&q=80",
-                    "features": [
-                        "Sealed single-dose mono pack for absolute hygiene",
-                        "Includes blackhead extraction & ultrasonic scrubber",
-                        "Revitalizing peel-off rubber mask",
-                        "Relaxing neck and shoulder acupressure massage"
-                    ]
-                },
-                {
-                    "id": "facial_lotus",
-                    "title": "Lotus Herbal Skin Radiance & De-Tan",
-                    "rating": "4.86",
-                    "reviews": "340K+",
-                    "price": 899,
-                    "originalPrice": 1299,
-                    "discount": "31% OFF",
-                    "time": "55 mins",
-                    "badge": "Herbal Care",
-                    "image": "https://images.unsplash.com/photo-1570172619644-dfd03ed5d881?auto=format&fit=crop&w=600&q=80",
-                    "features": [
-                        "Natural fruit enzyme peel to lift sun tanning",
-                        "Gentle herbal walnut scrub exfoliation",
-                        "Cooling aloe vera gel hydrator"
-                    ]
-                }
-            ]
-        },
-        {
-            "id": "salon_waxing",
-            "name": "Waxing & Hair Removal",
-            "items": [
-                {
-                    "id": "wax_rica_bikini",
-                    "title": "Rica Brazilian Bikini & Underarms Wax",
-                    "rating": "4.91",
-                    "reviews": "490K+",
-                    "price": 1099,
-                    "originalPrice": 1599,
-                    "discount": "31% OFF",
-                    "time": "45 mins",
-                    "badge": "Pain-Less Rica",
-                    "image": "https://images.unsplash.com/photo-1519014816548-bf5fe059798b?auto=format&fit=crop&w=600&q=80",
-                    "features": [
-                        "100% colophony-free Italian liposoluble Rica wax",
-                        "Single-use disposable wooden spatulas & bed roll",
-                        "Pre-wax gel & soothing post-wax chamomile lotion"
-                    ]
-                },
-                {
-                    "id": "wax_honey_full",
-                    "title": "Honey Full Arms, Full Legs & Underarms",
-                    "rating": "4.84",
-                    "reviews": "820K+",
-                    "price": 649,
-                    "originalPrice": 899,
-                    "discount": "28% OFF",
-                    "time": "50 mins",
-                    "badge": "Value Pack",
-                    "image": "https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?auto=format&fit=crop&w=600&q=80",
-                    "features": [
-                        "Warm honey wax suitable for all skin types",
-                        "Post-wax soothing aloe rub",
-                        "Includes sanitization of treatment area"
-                    ]
-                }
-            ]
-        },
-        {
-            "id": "salon_pedi_mani",
-            "name": "Pedicure & Manicure",
-            "items": [
-                {
-                    "id": "pedi_rose_crystal",
-                    "title": "Rose Quartz Crystal Mani-Pedi Spa Ritual",
-                    "rating": "4.94",
-                    "reviews": "390K+",
-                    "price": 1199,
-                    "originalPrice": 1699,
-                    "discount": "29% OFF",
-                    "time": "70 mins",
-                    "badge": "Luxury Pampering",
-                    "image": "https://images.unsplash.com/photo-1519014816548-bf5fe059798b?auto=format&fit=crop&w=600&q=80",
-                    "features": [
-                        "Effervescent rose mineral foot soak & dead-skin heel buffing",
-                        "Cuticle nourishment, nail shaping and buffer shine",
-                        "Ultra-rich shea butter & almond massage cream",
-                        "Breathable quick-dry gel polish topcoat"
-                    ]
-                }
-            ]
-        },
-        {
-            "id": "salon_hair_care",
-            "name": "Hair Spa & Styling",
-            "items": [
-                {
-                    "id": "hair_spa_loreal",
-                    "title": "L'Oreal Professionnel Serie Expert Hair Spa",
-                    "rating": "4.89",
-                    "reviews": "280K+",
-                    "price": 999,
-                    "originalPrice": 1499,
-                    "discount": "33% OFF",
-                    "time": "60 mins",
-                    "badge": "Deep Nourish",
-                    "image": "https://images.unsplash.com/photo-1562322140-8baeececf3df?auto=format&fit=crop&w=600&q=80",
-                    "features": [
-                        "Deep moisture infusion for frizz & split end repair",
-                        "20-minute relaxing neck, shoulder & scalp massage",
-                        "Hot towel steam treatment for cuticles"
-                    ]
-                }
-            ]
-        }
-    ],
-    "mens_salon_massage": [
-        {
-            "id": "men_haircut",
-            "name": "Haircut & Beard Grooming",
-            "items": [
-                {
-                    "id": "men_pro_haircut",
-                    "title": "Master Barber Fade Haircut & Beard Shaping",
-                    "rating": "4.89",
-                    "reviews": "850K+",
-                    "price": 349,
-                    "originalPrice": 499,
-                    "discount": "30% OFF",
-                    "time": "40 mins",
-                    "badge": "Bestseller",
-                    "image": "https://images.unsplash.com/photo-1503951914875-452162b0f3f1?auto=format&fit=crop&w=600&q=80",
-                    "features": [
-                        "Custom hair styling consultation & precision shear cut",
-                        "Electric trimmer zero fade + straight razor edging",
-                        "Post-cut neck cleanup & mini head massage",
-                        "Hair vacuum cleanup — zero hair mess at home"
-                    ]
-                },
-                {
-                    "id": "men_scalp_wash",
-                    "title": "Anti-Dandruff Scalp Clarifying Wash & Head Massage",
-                    "rating": "4.84",
-                    "reviews": "310K+",
-                    "price": 449,
-                    "originalPrice": 599,
-                    "discount": "25% OFF",
-                    "time": "35 mins",
-                    "badge": "Scalp Therapy",
-                    "image": "https://images.unsplash.com/photo-1517832606589-715746200e6f?auto=format&fit=crop&w=600&q=80",
-                    "features": [
-                        "Menthol & tea tree oil cooling scalp stimulation",
-                        "15-minute invigorating acupressure head massage",
-                        "Relieves migraine strain & clears dead scalp skin"
-                    ]
-                }
-            ]
-        },
-        {
-            "id": "men_detan_facial",
-            "name": "D-Tan & Face Rejuvenation",
-            "items": [
-                {
-                    "id": "men_charcoal_detan",
-                    "title": "O3+ Men Charcoal Detox & Sun Tan Removal",
-                    "rating": "4.88",
-                    "reviews": "420K+",
-                    "price": 799,
-                    "originalPrice": 1199,
-                    "discount": "33% OFF",
-                    "time": "45 mins",
-                    "badge": "Pollution Shield",
-                    "image": "https://images.unsplash.com/photo-1544161515-4ab6ce6db874?auto=format&fit=crop&w=600&q=80",
-                    "features": [
-                        "Activated bamboo charcoal pore decongestion",
-                        "Targeted de-tan pack for forehead, nose and neck",
-                        "Hydrating vitamin-C soothing moisturizer"
-                    ]
-                }
-            ]
-        },
-        {
-            "id": "men_massage_spa",
-            "name": "Stress Relief & Deep Tissue Massage",
-            "items": [
-                {
-                    "id": "men_deep_tissue",
-                    "title": "60-Min Deep Tissue Muscle Relaxant Massage",
-                    "rating": "4.93",
-                    "reviews": "510K+",
-                    "price": 1299,
-                    "originalPrice": 1899,
-                    "discount": "32% OFF",
-                    "time": "60 mins",
-                    "badge": "Full Body Bliss",
-                    "image": "https://images.unsplash.com/photo-1544161515-4ab6ce6db874?auto=format&fit=crop&w=600&q=80",
-                    "features": [
-                        "Certified physiotherapist-trained male massage therapist",
-                        "Warm sesame or aromatic almond oil blend",
-                        "Targets shoulder stiffness, lower back tension & fatigue",
-                        "Disposable massage table setup"
-                    ]
-                }
-            ]
-        }
-    ]
+    "womens_salon_spa": [],
+    "mens_salon_massage": []
 }
 
 # ------------------------------------------------------------------------------
@@ -614,10 +396,8 @@ def beauty_experiences_api(request):
 def beauty_services_api(request):
     """
     GET /api/beauty/services/
-    Query parameters:
-      - hub: 'womens_salon_spa' | 'mens_salon_massage' (default: 'womens_salon_spa')
-      - mode: 'home' | 'parlour' (default: 'home')
-    Screen 3: Returns at-home subcategories, services list, features, and pricing.
+    Returns subcategories and services dynamically from database.
+    If no services exist in the database, returns empty subcategories with 0 services.
     """
     if request.method != 'GET':
         return JsonResponse({'status': 'error', 'message': 'Method not allowed'}, status=405)
@@ -625,14 +405,56 @@ def beauty_services_api(request):
     hub = request.GET.get('hub', 'womens_salon_spa')
     mode = request.GET.get('mode', 'home')
 
-    if hub not in AT_HOME_CATALOG:
-        hub = 'womens_salon_spa'
-
     if mode == 'parlour':
-        # Delegate to parlour directory
         return beauty_parlours_api(request)
 
-    subcategories = AT_HOME_CATALOG.get(hub, [])
+    beauty_cat = Category.objects.filter(Q(id=37) | Q(name__icontains='beauty')).first()
+    subcategories = []
+
+    if beauty_cat:
+        db_subs = list(beauty_cat.subcategories.filter(status='active').order_by('id'))
+        if hub == 'womens_salon_spa':
+            matched = [s for s in db_subs if 'women' in (s.name or '').lower()] or db_subs
+        elif hub == 'mens_salon_massage':
+            matched = [s for s in db_subs if 'men' in (s.name or '').lower()] or db_subs
+        else:
+            matched = db_subs
+
+        db_services = QuickService.objects.filter(category=beauty_cat, status='active').select_related('subcategory')
+
+        for sub in matched:
+            items = []
+            for qs in db_services.filter(subcategory=sub):
+                img_url = ''
+                if qs.image:
+                    try:
+                        img_url = qs.image.url
+                    except Exception:
+                        img_url = qs.image_url or ''
+                else:
+                    img_url = qs.image_url or ''
+
+                items.append({
+                    'id': f'qs_{qs.id}',
+                    'dbId': qs.id,
+                    'title': qs.title,
+                    'rating': '4.87',
+                    'reviews': '100+',
+                    'price': float(qs.base_price),
+                    'originalPrice': int(float(qs.base_price) * 1.3),
+                    'time': '45 mins',
+                    'badge': 'Verified',
+                    'image': img_url,
+                    'features': qs.inclusions or ['Doorstep verified expert service']
+                })
+
+            subcategories.append({
+                'id': f'sub_{sub.id}',
+                'dbId': sub.id,
+                'name': sub.name,
+                'items': items
+            })
+
     experience = next((e for e in BEAUTY_EXPERIENCES if e['id'] == hub), BEAUTY_EXPERIENCES[0])
 
     return JsonResponse({
