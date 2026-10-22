@@ -14,7 +14,14 @@ from django.contrib.auth import get_user_model
 from django.utils import timezone
 from django.db import transaction
 from django.db.models import Q
-from .models import UserProfile, VendorProfile, Category, SubCategory, Location, OTPVerification, AuthToken, Job, QuickService, VendorKYC, CustomerAddress, ServiceBooking, GlobalSettings, Message, Bid, BidPlan, BidCreditTransaction, Subscription, VendorWallet, WalletTransaction, PlatformRevenueLedger, ServiceReview
+from .models import (
+    UserProfile, VendorProfile, Category, SubCategory, Location, State,
+    OTPVerification, AuthToken, Job, JobImage, QuickService, VendorKYC,
+    CustomerAddress, ServiceBooking, GlobalSettings, Message, Bid, BidPlan,
+    BidCreditTransaction, Subscription, VendorWallet, WalletTransaction,
+    PlatformRevenueLedger, ServiceReview, DisputeTicket, DisputeMessage,
+    JobCompletionProof
+)
 from .review_services import (
     ReviewError, UNLOCKED_BOOKING_STATUSES, booking_contact_unlocked,
     mask_customer_name, submit_booking_review, vendor_review_summary,
@@ -326,7 +333,7 @@ def user_signup_api(request):
             return JsonResponse({'status': 'error', 'message': "Field 'mobile' is required."}, status=400)
 
         norm_phone = _normalize_phone(mobile)
-        if len(norm_phone) < 10:
+        if len(norm_phone) != 10:
             return JsonResponse({'status': 'error', 'message': "Please enter a valid 10-digit mobile number."}, status=400)
 
         existing_user = _resolve_user_identifier(mobile)
@@ -512,8 +519,14 @@ def vendor_signup_api(request):
             return JsonResponse({'status': 'error', 'message': "Field 'mobile' is required."}, status=400)
 
         norm_phone = _normalize_phone(mobile)
-        if len(norm_phone) < 10:
+        if len(norm_phone) != 10:
             return JsonResponse({'status': 'error', 'message': "Please enter a valid 10-digit mobile number."}, status=400)
+
+        id_type_val = (data.get('id_type') or request.POST.get('id_type') or '').strip().lower()
+        if id_type_val == 'aadhaar' and id_proof:
+            clean_aadhaar = re.sub(r'\D', '', id_proof)
+            if len(clean_aadhaar) != 12:
+                return JsonResponse({'status': 'error', 'message': "Aadhaar number must be exactly 12 digits."}, status=400)
 
         existing_user = _resolve_user_identifier(mobile)
         if existing_user:
@@ -940,6 +953,12 @@ def unified_login_api(request):
         if not identifier or not password:
             return JsonResponse({'status': 'error', 'message': "Email/mobile and password are required."}, status=400)
 
+        # Enforce exactly 10 digits if login identifier is a mobile number
+        if identifier and '@' not in identifier and re.match(r'^\+?[0-9\s\-]+$', identifier):
+            norm = _normalize_phone(identifier)
+            if len(norm) != 10:
+                return JsonResponse({'status': 'error', 'message': "Mobile number must be exactly 10 digits."}, status=400)
+
         user = _resolve_user_identifier(identifier)
         if not user or not user.check_password(password):
             return JsonResponse({'status': 'error', 'message': "Invalid credentials."}, status=401)
@@ -955,7 +974,7 @@ def unified_login_api(request):
         login(request, user)
 
         role = user.role
-        redirect_url = '/admin-dashboard' if (role == 'ADMIN' or user.is_superuser) else ('/vendor/dashboard' if role == 'VENDOR' else '/user/dashboard')
+        redirect_url = '/admin-dashboard' if (role == 'ADMIN' or user.is_superuser) else ('/vendor/dashboard' if role == 'VENDOR' else '/')
         full_name = user.get_full_name() or user.first_name or user.username
         code = f"VEN{user.vendor_profile.id:03d}" if hasattr(user, 'vendor_profile') else f"USR{user.id:03d}"
         token_key = _get_or_create_auth_token(user)
@@ -995,6 +1014,9 @@ def unified_otp_login_api(request):
 
         if not mobile:
             return JsonResponse({'status': 'error', 'message': "Field 'mobile' is required."}, status=400)
+        norm_phone = _normalize_phone(mobile)
+        if len(norm_phone) != 10:
+            return JsonResponse({'status': 'error', 'message': "Please enter a valid 10-digit mobile number."}, status=400)
         if not otp:
             return JsonResponse({'status': 'error', 'message': "Field 'otp' is required."}, status=400)
 
@@ -1069,7 +1091,7 @@ def unified_otp_login_api(request):
         login(request, user)
 
         role = user.role
-        redirect_url = '/admin-dashboard' if (role == 'ADMIN' or user.is_superuser) else ('/vendor/dashboard' if role == 'VENDOR' else '/user/dashboard')
+        redirect_url = '/admin-dashboard' if (role == 'ADMIN' or user.is_superuser) else ('/vendor/dashboard' if role == 'VENDOR' else '/')
         full_name = user.get_full_name() or user.first_name or user.username
         code = f"VEN{user.vendor_profile.id:03d}" if hasattr(user, 'vendor_profile') else f"USR{user.id:03d}"
         token_key = _get_or_create_auth_token(user)
@@ -1116,7 +1138,7 @@ def check_phone_api(request):
             return JsonResponse({'status': 'error', 'message': "Field 'mobile' or 'phone' is required."}, status=400)
 
         norm_phone = _normalize_phone(mobile)
-        if len(norm_phone) < 10:
+        if len(norm_phone) != 10:
             return JsonResponse({'status': 'error', 'message': "Please enter a valid 10-digit mobile number."}, status=400)
 
         # Search UserProfile by normalized or exact phone number
@@ -1196,7 +1218,7 @@ def send_otp_api(request):
             return JsonResponse({'status': 'error', 'message': "Field 'mobile' is required."}, status=400)
 
         norm_phone = _normalize_phone(mobile)
-        if len(norm_phone) < 10:
+        if len(norm_phone) != 10:
             return JsonResponse({'status': 'error', 'message': "Please enter a valid 10-digit mobile number."}, status=400)
 
         existing_user = _resolve_user_identifier(mobile)
@@ -1319,7 +1341,7 @@ def user_otp_signup_api(request):
             return JsonResponse({'status': 'error', 'message': "Field 'otp' is required."}, status=400)
 
         norm_phone = _normalize_phone(mobile)
-        if len(norm_phone) < 10:
+        if len(norm_phone) != 10:
             return JsonResponse({'status': 'error', 'message': "Please enter a valid 10-digit mobile number."}, status=400)
 
         # 1. Verify OTP (allows already-verified active OTPs from multi-step verify -> signup flows)
@@ -1535,7 +1557,7 @@ def vendor_otp_signup_api(request):
             return JsonResponse({'status': 'error', 'message': "Field 'otp' is required."}, status=400)
 
         norm_phone = _normalize_phone(mobile)
-        if len(norm_phone) < 10:
+        if len(norm_phone) != 10:
             return JsonResponse({'status': 'error', 'message': "Please enter a valid 10-digit mobile number."}, status=400)
 
         # 1. Verify OTP (allows already verified active OTP)
@@ -1930,7 +1952,15 @@ def user_post_job_api(request):
             status='open',
             bids_count=0
         )
-        uploaded_files = request.FILES.getlist('images') or request.FILES.getlist('image')
+        uploaded_files = []
+        for key in ['images', 'images[]', 'image', 'image[]', 'photos', 'photos[]']:
+            flist = request.FILES.getlist(key)
+            if flist:
+                uploaded_files.extend(flist)
+        if not uploaded_files and request.FILES:
+            for key in request.FILES:
+                uploaded_files.extend(request.FILES.getlist(key))
+
         if uploaded_files:
             job.image = uploaded_files[0]
             job.save(update_fields=['image'])
@@ -3547,6 +3577,7 @@ def vendor_jobs_api(request):
         return JsonResponse({'status': 'error', 'message': err}, status=401)
 
     try:
+        data = _parse_api_request(request)
         jobs_qs = Job.objects.filter(status='open').select_related('category', 'location', 'user').order_by('-created_at')
 
         vp = getattr(user, 'vendor_profile', None)
@@ -3563,8 +3594,8 @@ def vendor_jobs_api(request):
             if vp.category and vp.category.strip():
                 vendor_categories = vp.categories_list
 
-        req_state = (data.get('state') or request.GET.get('state') or '').strip()
-        req_city = (data.get('city') or request.GET.get('city') or '').strip() or vendor_city or 'Ranchi'
+        req_state = (request.GET.get('state') or '').strip()
+        req_city = (request.GET.get('city') or '').strip() or vendor_city or 'Ranchi'
 
         if req_state and req_state.lower() != 'all':
             jobs_qs = jobs_qs.filter(
@@ -3931,8 +3962,8 @@ def vendor_services_api(request, service_id=None):
             }, status=200)
 
         # Helper to parse JSON fields safely
-        def parse_json_field(field_name):
-            val = data.get(field_name, '')
+        def parse_json_field(field_name, target_dict=data):
+            val = target_dict.get(field_name, '')
             if isinstance(val, str) and val.strip():
                 try:
                     return json.loads(val)
@@ -5265,7 +5296,9 @@ def get_user_jobs_api(request):
             'created_at': job.created_at.strftime("%Y-%m-%d %H:%M:%S"),
             'location': job.location.city if job.location else job.address,
             'bids_count': job.actual_bids_count,
-            'assigned_vendor': job.assigned_vendor.get_full_name() or job.assigned_vendor.username if job.assigned_vendor else None
+            'assigned_vendor': job.assigned_vendor.get_full_name() or job.assigned_vendor.username if job.assigned_vendor else None,
+            'image': _build_absolute_image_url(request, job.image) if job.image else None,
+            'images': [_build_absolute_image_url(request, ji.image) for ji in job.images.all()]
         })
         
     return JsonResponse({'status': 'success', 'jobs': jobs_data})
@@ -7508,6 +7541,12 @@ def vendor_kyc_submit_api(request):
             return JsonResponse({'status': 'error', 'message': f"Invalid 'id_type'. Must be one of: {', '.join(valid_id_types)}."}, status=400)
         if not id_number:
             return JsonResponse({'status': 'error', 'message': "Field 'id_number' is required."}, status=400)
+
+        if id_type == 'aadhaar':
+            clean_aadhaar = re.sub(r'\D', '', id_number)
+            if len(clean_aadhaar) != 12:
+                return JsonResponse({'status': 'error', 'message': "Aadhaar number must be exactly 12 digits."}, status=400)
+            id_number = clean_aadhaar
 
         kyc = VendorKYC.objects.filter(vendor=user).first()
 

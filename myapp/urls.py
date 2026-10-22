@@ -174,6 +174,10 @@ urlpatterns = [
 
     # Service Packages alias (redirected to super_admin_bid_plans)
     path('super-admin/landing/packages/', super_admin_views.super_admin_landing_packages, name='super_admin_landing_packages'),
+    path('super-admin/landing/packages/create/', super_admin_views.super_admin_landing_package_create, name='super_admin_landing_package_create'),
+    path('super-admin/landing/packages/<int:card_id>/edit/', super_admin_views.super_admin_landing_package_edit, name='super_admin_landing_package_edit'),
+    path('super-admin/landing/packages/<int:card_id>/delete/', super_admin_views.super_admin_landing_package_delete, name='super_admin_landing_package_delete'),
+    path('super-admin/landing/packages/<int:card_id>/toggle/', super_admin_views.super_admin_landing_package_toggle, name='super_admin_landing_package_toggle'),
 
     # Testimonials
     path('super-admin/landing/testimonials/', super_admin_views.super_admin_landing_testimonials, name='super_admin_landing_testimonials'),
@@ -225,7 +229,6 @@ urlpatterns = [
     path('api/user/bids/action', Api_views.handle_bid_action_api),
     path('api/user/jobs/<int:job_id>/complete/', Api_views.user_mark_job_complete_api, name='user_mark_job_complete_api'),
     path('api/user/jobs/<int:job_id>/complete', Api_views.user_mark_job_complete_api),
-
 
 
     # Auth APIs for User (Customer) and Vendor (from Api_views.py)
@@ -310,6 +313,8 @@ urlpatterns = [
     path('api/user/quick-services/create', Api_views.user_post_quick_service_api),
 
     # Service Listing & Image Data APIs
+    path('api/user/quick-services/', Api_views.services_nearby_api, name='user_browse_quick_services_api'),
+    path('api/user/quick-services', Api_views.services_nearby_api),
     path('api/services/nearby/', Api_views.services_nearby_api, name='services_nearby_api'),
     path('api/services/nearby', Api_views.services_nearby_api),
     path('api/services/', Api_views.services_nearby_api, name='browse_services_api'),
