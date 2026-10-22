@@ -282,7 +282,7 @@ def get_user_dashboard_context(user, request=None):
         'is_service_available': is_service_available,
         'service_not_available': not is_service_available,
         'service_unavailable_city': user_city,
-        'active_qs': total_available_services,
+        'active_qs': active_qs,
         'user_active_bookings': active_qs,
         'available_services': available_services,
         'active_jobs': active_jobs,
@@ -319,6 +319,8 @@ CITY_COORDINATES_MAP = {
     'mysuru': (12.2958, 76.6394),
     'jamshedpur': (22.8046, 86.2029),
     'dhanbad': (23.7957, 86.4304),
+    'bokaro': (23.6693, 86.1511),
+    'namkum': (23.3396, 85.3789),
     'harmu': (23.3550, 85.3050),
     'morabadi': (23.3850, 85.3250),
     'doranda': (23.3340, 85.3218),
@@ -545,6 +547,10 @@ def dashboard_view(request, path=''):
     # Enforce authentication for vendor/ pages before proceeding
     if path.startswith('vendor/') and not request.user.is_authenticated:
         return redirect(f'/login/?next=/{path}.html')
+
+    # User settings module removed
+    if path.startswith('user/settings') or path == 'user/settings':
+        return redirect('/user/profile/index.html')
 
     # Subscriptions and Notifications modules completely removed
     if any(path.startswith(prefix) for prefix in ['subscriptions', 'admin-dashboard/subscriptions']) or path == 'subscriptions':
@@ -1289,7 +1295,7 @@ def dashboard_view(request, path=''):
             context['tax_calculation_mode'] = 'commission_only'
 
     if path in ['user/quick-services/index', 'user/quick-services', 'user/quick-services/create', 'user/quick-services/details']:
-        return redirect('/user/services/browse.html')
+        return redirect('/')
 
     if path in ['user/quick-services/details', 'quick-services/details'] and path.startswith('user/'):
         qs_id = request.GET.get('id')
@@ -2269,8 +2275,7 @@ def dashboard_view(request, path=''):
                 enhanced_v_bookings.append(b)
             context['my_bookings'] = enhanced_v_bookings
     if path in ['user/services/browse', 'user/services/browse.html']:
-        context['services'] = QuickService.objects.filter(status='active').select_related('vendor', 'vendor__vendor_profile', 'category', 'location').order_by('-created_at')
-        context['categories'] = Category.objects.filter(status='active')
+        return redirect('/')
 
     if path in ['user/services/detail', 'user/services/detail.html']:
         qs_id = request.GET.get('id') or request.GET.get('service_id')
@@ -2299,9 +2304,9 @@ def dashboard_view(request, path=''):
                     category=service.category, status='active'
                 ).exclude(id=service.id).select_related('vendor', 'vendor__vendor_profile')[:3]
             except QuickService.DoesNotExist:
-                return redirect('/user/services/browse.html')
+                return redirect('/')
         else:
-            return redirect('/user/services/browse.html')
+            return redirect('/')
 
     if path in ['user/services/book', 'user/services/book.html']:
         if request.method == 'POST' and request.user.is_authenticated:
@@ -2361,9 +2366,9 @@ def dashboard_view(request, path=''):
                 if request.user.is_authenticated:
                     context['user_addresses'] = CustomerAddress.objects.filter(user=request.user)
             except QuickService.DoesNotExist:
-                return redirect('/user/services/browse.html')
+                return redirect('/')
         else:
-            return redirect('/user/services/browse.html')
+            return redirect('/')
 
     if path in ['user/services/my-bookings', 'user/services/my-bookings.html']:
         if request.user.is_authenticated:
@@ -3002,7 +3007,7 @@ def dashboard_view(request, path=''):
                 try:
                     profile = vendor.vendor_profile
                     company = profile.company_name or vendor.get_full_name() or vendor.username
-                    rating = float(profile.rating)
+                    rating = float(profile.rating) 
                     category = profile.category or 'General Contractor'
                 except Exception:
                     company = vendor.get_full_name() or vendor.username
@@ -3414,7 +3419,7 @@ def dashboard_view(request, path=''):
 
 from django.contrib.auth.decorators import login_required
 
-@login_required(login_url='user_login')
+@login_required(login_url='login')
 def admin_dashboard(request):
     if request.user.is_authenticated:
         if request.user.role == 'VENDOR':
@@ -3693,7 +3698,7 @@ def home_view(request):
             elif user.role == 'VENDOR':
                 return redirect('vendor_dashboard')
             elif user.role in ['USER', 'CUSTOMER']:
-                return redirect('user_dashboard')
+                return redirect('home')
             return redirect('home')
         else:
             error = 'Invalid username, email, phone number, or password.'
@@ -3798,23 +3803,41 @@ def home_view(request):
 
     categories_data = []
     for c in categories:
-        services_qs = c.quickservice_set.filter(status='active').order_by('-created_at')[:10]
+        services_qs = QuickService.objects.filter(category=c, status='active').select_related('subcategory').order_by('-created_at')
         subs = list(c.subcategories.filter(status='active').values('id', 'name'))
+        srv_list = []
+        for s in services_qs:
+            img_url = None
+            if s.image:
+                try:
+                    img_url = s.image.url
+                except Exception:
+                    img_url = None
+            if not img_url:
+                img_url = s.image_url or None
+
+            srv_list.append({
+                'id': s.id,
+                'title': s.title,
+                'price': float(s.base_price),
+                'description': s.description or '',
+                'image': img_url,
+                'subcategory_id': s.subcategory_id,
+                'subcategory_name': s.subcategory.name if s.subcategory else '',
+                'packages': s.service_packages or [],
+                'inclusions': s.inclusions or [],
+                'exclusions': s.exclusions or [],
+            })
+
         categories_data.append({
             'id': str(c.id),
             'name': c.name,
             'image': c.image_url,
             'icon_class': c.icon_class,
             'min_price': float(c.min_price) if c.min_price else 199,
-            'qs_count': c.qs_count,
+            'qs_count': len(srv_list),
             'subcategories': subs,
-            'services': [{
-                'id': s.id,
-                'title': s.title,
-                'price': float(s.base_price),
-                'description': s.description or '',
-                'image': s.image.url if s.image else None,
-            } for s in services_qs]
+            'services': srv_list
         })
 
     popular_services = []
@@ -3976,6 +3999,11 @@ def home_view(request):
             'bids': bids_list
         })
 
+    import math
+    customer_count = User.objects.filter(role__in=['USER', 'CUSTOMER']).count()
+    happy_customers_tier = max(1, math.ceil(max(customer_count, 1) / 1000.0)) * 1000
+    happy_customers_display = f"{happy_customers_tier}+"
+
     context = {
         'error': error,
         'branding': branding,
@@ -4011,6 +4039,7 @@ def home_view(request):
         'is_service_available': is_service_available,
         'service_not_available': not is_service_available if user_city else False,
         'service_unavailable_city': user_city,
+        'happy_customers_display': happy_customers_display,
     }
     return render(request, 'index.html', context)
 
@@ -4028,13 +4057,23 @@ def user_login_view(request):
         elif request.user.role == 'VENDOR':
             return redirect('vendor_dashboard')
         elif request.user.role in ['USER', 'CUSTOMER']:
-            return redirect('user_dashboard')
-        return redirect('admin_dashboard')
+            return redirect('home')
+        return redirect('home')
 
     error = None
     if request.method == 'POST':
         username = request.POST.get('username', '').strip()
         password = request.POST.get('password', '')
+
+        # Validate 10-digit mobile if logging in with phone
+        if username and '@' not in username and (username.isdigit() or username.startswith('+91') or username.startswith('91')):
+            digits_only = re.sub(r'\D', '', username)
+            if digits_only.startswith('91') and len(digits_only) == 12:
+                digits_only = digits_only[2:]
+            if len(digits_only) != 10:
+                error = 'Mobile number must be exactly 10 digits.'
+                return render(request, 'login.html', {'error': error, 'next': next_url})
+
         user = authenticate(request, username=username, password=password)
         if user is not None:
             if user.role == 'VENDOR':
@@ -4056,8 +4095,8 @@ def user_login_view(request):
             elif user.role == 'VENDOR':
                 return redirect('vendor_dashboard')
             elif user.role in ['USER', 'CUSTOMER']:
-                return redirect('user_dashboard')
-            return redirect('admin_dashboard')
+                return redirect('home')
+            return redirect('home')
         else:
             error = 'Invalid username, email, phone number, or password.'
     return render(request, 'login.html', {'error': error, 'next': next_url})
@@ -4075,19 +4114,27 @@ def register_user_view(request):
         password = request.POST.get('password', '')
         confirm_password = request.POST.get('confirm_password', '')
         
-        if password != confirm_password:
+        clean_mobile = re.sub(r'\D', '', mobile)
+        if clean_mobile.startswith('91') and len(clean_mobile) == 12:
+            clean_mobile = clean_mobile[2:]
+
+        if not clean_mobile or len(clean_mobile) != 10:
+            error = 'Mobile number must be exactly 10 digits.'
+        elif password != confirm_password:
             error = 'Passwords do not match.'
         elif User.objects.filter(email=email).exists() or User.objects.filter(username=email).exists():
             error = 'Email is already registered.'
+        elif UserProfile.objects.filter(phone_number=clean_mobile).exists():
+            error = 'Mobile number is already registered.'
         else:
             username = email if email else name.replace(" ", "").lower() + str(User.objects.count())
             user = User.objects.create_user(username=username, email=email, password=password, first_name=name)
             user.role = 'USER'
             user.save()
             profile_img = request.FILES.get('profile_image')
-            UserProfile.objects.create(user=user, phone_number=mobile, profile_image=profile_img)
+            UserProfile.objects.create(user=user, phone_number=clean_mobile, profile_image=profile_img)
             login(request, user, backend='django.contrib.auth.backends.ModelBackend')
-            return redirect('user_dashboard')
+            return redirect('home')
     
     return render(request, 'register_user.html', {'error': error})
 
@@ -4126,7 +4173,18 @@ def register_vendor_view(request):
         password = request.POST.get('password', '')
         confirm_password = request.POST.get('confirm_password', '')
         
-        if not clean_cats:
+        clean_mobile = re.sub(r'\D', '', mobile)
+        if clean_mobile.startswith('91') and len(clean_mobile) == 12:
+            clean_mobile = clean_mobile[2:]
+
+        id_type = request.POST.get('id_type', '').strip().lower()
+        clean_aadhaar = re.sub(r'\D', '', id_proof) if id_type == 'aadhaar' else ''
+
+        if not clean_mobile or len(clean_mobile) != 10:
+            error = 'Mobile number must be exactly 10 digits.'
+        elif id_type == 'aadhaar' and len(clean_aadhaar) != 12:
+            error = 'Aadhaar number must be exactly 12 digits.'
+        elif not clean_cats:
             error = 'Please select at least one main service category.'
         elif password != confirm_password:
             error = 'Passwords do not match.'

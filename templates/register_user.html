@@ -372,9 +372,9 @@
 
         <!-- Mobile Number -->
         <div class="form-group">
-          <label for="mobile">Mobile Number</label>
+          <label for="mobile">Mobile Number <span style="color:#ef4444;">*</span></label>
           <div class="input-wrap">
-            <input type="text" id="mobile" name="mobile" class="form-control" placeholder="Enter your mobile number" value="{{ request.POST.mobile }}">
+            <input type="tel" id="mobile" name="mobile" class="form-control" placeholder="10-digit mobile number" maxlength="10" pattern="[0-9]{10}" inputmode="numeric" required value="{{ request.POST.mobile }}">
             <i class="fa-solid fa-phone icon-left"></i>
           </div>
         </div>
@@ -442,11 +442,32 @@
     }
 
     window.addEventListener('DOMContentLoaded', () => {
+      const mob = document.getElementById('mobile');
       const urlParams = new URLSearchParams(window.location.search);
       const m = urlParams.get('mobile') || urlParams.get('phone');
-      if (m) {
-        const mob = document.getElementById('mobile');
-        if (mob && !mob.value) mob.value = m;
+      if (m && mob && !mob.value) {
+        mob.value = m.replace(/\D/g, '').slice(0, 10);
+      }
+
+      if (mob) {
+        mob.addEventListener('input', function() {
+          this.value = this.value.replace(/\D/g, '').slice(0, 10);
+        });
+      }
+
+      const form = document.querySelector('form');
+      if (form) {
+        form.addEventListener('submit', function(e) {
+          if (mob) {
+            const clean = mob.value.replace(/\D/g, '');
+            if (clean.length !== 10) {
+              e.preventDefault();
+              alert('Mobile number must be exactly 10 digits.');
+              mob.focus();
+              return false;
+            }
+          }
+        });
       }
     });
   </script>

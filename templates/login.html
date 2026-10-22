@@ -638,7 +638,7 @@
           <label class="form-label" for="phoneInput">Mobile Phone Number</label>
           <div class="input-box">
             <span class="phone-prefix"><i class="fa-solid fa-phone"></i> +91</span>
-            <input type="tel" id="phoneInput" class="form-control phone-input" placeholder="98765 43210" maxlength="15" oninput="cleanPhoneInput(this)" autofocus>
+            <input type="tel" id="phoneInput" class="form-control phone-input" placeholder="Enter 10-digit mobile number" maxlength="10" pattern="[0-9]{10}" inputmode="numeric" oninput="cleanPhoneInput(this)" autofocus>
           </div>
         </div>
 
@@ -789,7 +789,7 @@
     }
 
     function cleanPhoneInput(input) {
-      input.value = input.value.replace(/[^0-9\s]/g, '');
+      input.value = input.value.replace(/\D/g, '').slice(0, 10);
     }
 
     // ==========================================
@@ -801,8 +801,9 @@
       const mobile = phoneInput.value.replace(/\D/g, '');
       const btn = document.getElementById('btnGetOtp');
 
-      if (mobile.length < 10) {
+      if (mobile.length !== 10) {
         showAlert('Please enter a valid 10-digit mobile number.');
+        phoneInput.focus();
         return;
       }
 
@@ -931,7 +932,7 @@
           const urlParams = new URLSearchParams(window.location.search);
           const nextUrl = urlParams.get('next') || document.getElementById('loginNextParam')?.value;
           setTimeout(() => {
-            window.location.href = (nextUrl && nextUrl.startsWith('/')) ? nextUrl : (data.redirect_url || '/user/dashboard');
+            window.location.href = (nextUrl && nextUrl.startsWith('/')) ? nextUrl : (data.redirect_url || '/');
           }, 500);
         } else {
           showAlert(data.message || 'Invalid verification code. Please try again.');
@@ -960,6 +961,16 @@
         return;
       }
 
+      // If user typed a numeric phone number in username field, enforce exactly 10 digits
+      const cleanDigits = identifier.replace(/[\s\-\+]/g, '');
+      if (!identifier.includes('@') && /^\d+$/.test(cleanDigits)) {
+        if (cleanDigits.length !== 10) {
+          showAlert('Mobile number must be exactly 10 digits.');
+          document.getElementById('loginUsername').focus();
+          return;
+        }
+      }
+
       btn.disabled = true;
       btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Signing in...';
 
@@ -976,7 +987,7 @@
           const urlParams = new URLSearchParams(window.location.search);
           const nextUrl = urlParams.get('next') || document.getElementById('loginNextParam')?.value;
           setTimeout(() => {
-            window.location.href = (nextUrl && nextUrl.startsWith('/')) ? nextUrl : (data.redirect_url || '/user/dashboard');
+            window.location.href = (nextUrl && nextUrl.startsWith('/')) ? nextUrl : (data.redirect_url || '/');
           }, 500);
         } else {
           showAlert(data.message || 'Invalid credentials.');

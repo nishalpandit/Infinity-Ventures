@@ -741,7 +741,7 @@
         <div class="form-group">
           <label for="mobile">Mobile Number <em>*</em></label>
           <div class="input-wrap">
-            <input type="tel" id="mobile" name="mobile" class="form-control" placeholder="10-digit mobile number" required value="{{ request.POST.mobile }}">
+            <input type="tel" id="mobile" name="mobile" class="form-control" placeholder="10-digit mobile number" maxlength="10" pattern="[0-9]{10}" inputmode="numeric" required value="{{ request.POST.mobile }}">
             <i class="fa-solid fa-phone icon-left"></i>
           </div>
         </div>
@@ -1012,13 +1012,49 @@
 
     // Auto-populate cities if state was previously selected on validation error
     window.addEventListener('DOMContentLoaded', () => {
+      const mobInput = document.getElementById('mobile');
       const urlParams = new URLSearchParams(window.location.search);
       const mParam = urlParams.get('mobile') || urlParams.get('phone');
-      if (mParam) {
-        const mobInput = document.getElementById('mobile');
-        if (mobInput && !mobInput.value) {
-          mobInput.value = mParam;
+      if (mParam && mobInput && !mobInput.value) {
+        mobInput.value = mParam.replace(/\D/g, '').slice(0, 10);
+      }
+
+      if (mobInput) {
+        mobInput.addEventListener('input', function() {
+          this.value = this.value.replace(/\D/g, '').slice(0, 10);
+        });
+      }
+
+      const idTypeSelect = document.getElementById('id_type');
+      const idProofInput = document.getElementById('id_proof');
+
+      function syncIdProofValidation() {
+        if (!idTypeSelect || !idProofInput) return;
+        if (idTypeSelect.value === 'aadhaar') {
+          idProofInput.placeholder = '12-digit Aadhaar number';
+          idProofInput.maxLength = 12;
+          idProofInput.pattern = '[0-9]{12}';
+          idProofInput.inputMode = 'numeric';
+          idProofInput.value = idProofInput.value.replace(/\D/g, '').slice(0, 12);
+        } else {
+          idProofInput.placeholder = 'Enter ID proof number';
+          idProofInput.removeAttribute('maxLength');
+          idProofInput.removeAttribute('pattern');
+          idProofInput.removeAttribute('inputMode');
         }
+      }
+
+      if (idTypeSelect) {
+        idTypeSelect.addEventListener('change', syncIdProofValidation);
+        syncIdProofValidation();
+      }
+
+      if (idProofInput) {
+        idProofInput.addEventListener('input', function() {
+          if (idTypeSelect && idTypeSelect.value === 'aadhaar') {
+            this.value = this.value.replace(/\D/g, '').slice(0, 12);
+          }
+        });
       }
 
       const stateSelect = document.getElementById('state');
@@ -1238,11 +1274,35 @@
       const vendorForm = categoryTrigger.closest('form');
       if (vendorForm) {
         vendorForm.addEventListener('submit', (e) => {
+          const mob = document.getElementById('mobile');
+          if (mob) {
+            const cleanMob = mob.value.replace(/\D/g, '');
+            if (cleanMob.length !== 10) {
+              e.preventDefault();
+              alert('Mobile number must be exactly 10 digits.');
+              mob.focus();
+              return false;
+            }
+          }
+
+          const idTypeSelect = document.getElementById('id_type');
+          const idProofInput = document.getElementById('id_proof');
+          if (idTypeSelect && idTypeSelect.value === 'aadhaar' && idProofInput) {
+            const cleanAadhaar = idProofInput.value.replace(/\D/g, '');
+            if (cleanAadhaar.length !== 12) {
+              e.preventDefault();
+              alert('Aadhaar number must be exactly 12 digits.');
+              idProofInput.focus();
+              return false;
+            }
+          }
+
           if (selectedCategories.size === 0) {
             e.preventDefault();
             categoryTrigger.classList.add('has-error');
             if (categoryErrorMsg) categoryErrorMsg.style.display = 'block';
             categoryTrigger.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            return false;
           }
         });
       }
