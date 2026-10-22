@@ -44,8 +44,8 @@ let appState = {
 function findCategory(catId) {
   if (!catId || !window.SUGU_DATA || !Array.isArray(SUGU_DATA.categories)) return null;
   const s = String(catId).toLowerCase().trim();
-  if (s === '37' || s === 'beauty_wellness' || s.includes('beauty')) {
-    const bCat = SUGU_DATA.categories.find(c => c.id === 'beauty_wellness' || c.isBeautyHub || String(c.id) === '37' || String(c.dbId) === '37');
+  if (s === '37' || s === 'beauty_wellness' || s === 'beauty' || s.includes('beauty')) {
+    const bCat = SUGU_DATA.categories.find(c => String(c.id) === '37' || String(c.dbId) === '37' || c.id === 'beauty_wellness' || c.isBeautyHub || (c.name && c.name.toLowerCase().includes('beauty')));
     if (bCat) return bCat;
   }
   return SUGU_DATA.categories.find(c => 
@@ -85,8 +85,8 @@ function syncDynamicCategories() {
     if (lower.includes('pest')) return existingMap.get('pest_control');
     if (lower.includes('paint')) return existingMap.get('painting_upgrade');
     if (lower.includes('renov')) return existingMap.get('home_renovation');
-    if (lower.includes('beauty') || lower.includes('salon') || lower.includes('spa')) {
-      return existingMap.get('beauty_wellness') || existingMap.get('womens_salon_spa');
+    if (lower.includes('beauty') || lower.includes('salon') || lower.includes('spa') || lower.includes('wellness')) {
+      return existingMap.get('37') || existingMap.get('beauty_wellness') || existingMap.get('womens_salon_spa');
     }
     return null;
   }
@@ -96,13 +96,189 @@ function syncDynamicCategories() {
   dbCats.forEach(dbCat => {
     const strId = String(dbCat.id);
     const tpl = findBestTemplate(dbCat.name);
+    const isBeauty = (dbCat.name && dbCat.name.toLowerCase().includes('beauty')) || strId === '37' || (tpl && (tpl.id === 'beauty_wellness' || tpl.id === '37' || tpl.isBeautyHub));
 
     let subcategories = [];
-    if (dbCat.subcategories && dbCat.subcategories.length > 0) {
+    const hasDbServices = Array.isArray(dbCat.services) && dbCat.services.length > 0;
+
+    if (hasDbServices) {
+      // Build real service items strictly from the database (no fake/dummy items)
+      const dbItems = dbCat.services.map(qs => {
+        const price = typeof qs.price === 'number' ? qs.price : parseFloat(qs.price || 0);
+        const origPrice = Math.round(price * 1.3);
+        let features = [
+          "Doorstep service by verified vendor",
+          "Transparent pricing with no hidden charges",
+          "30-day Sugu guarantee included"
+        ];
+        if (Array.isArray(qs.inclusions) && qs.inclusions.length > 0) {
+          features = qs.inclusions;
+        }
+        return {
+          id: `qs_${qs.id}`,
+          dbId: qs.id,
+          subcategoryId: qs.subcategory_id ? String(qs.subcategory_id) : null,
+          subcategoryName: (qs.subcategory_name || '').trim(),
+          title: qs.title,
+          rating: "4.87",
+          reviews: "120+",
+          price: price,
+          originalPrice: origPrice,
+          time: "45 mins",
+          badge: "Verified",
+          image: qs.image || dbCat.image || (tpl ? `/static/assets/icons/${tpl.iconFile}` : "https://images.unsplash.com/photo-1581092160607-ee22621dd758?auto=format&fit=crop&w=600&q=80"),
+          desc: qs.description || '',
+          features: features
+        };
+      });
+
+      if (dbCat.subcategories && dbCat.subcategories.length > 0) {
+        subcategories = dbCat.subcategories.map(s => {
+          const sId = 'sub_' + s.id;
+          const sIdStr = String(s.id);
+          const sNameLower = (s.name || '').toLowerCase().trim();
+          const matchedItems = dbItems.filter(item => {
+            if (item.subcategoryId && item.subcategoryId === sIdStr) return true;
+            if (item.subcategoryName && item.subcategoryName.toLowerCase() === sNameLower) return true;
+            return false;
+          });
+          return {
+            id: sId,
+            dbId: s.id,
+            name: s.name,
+            items: matchedItems
+          };
+        });
+
+        // Any quick services not tied to a specific subcategory are added to the first subcategory
+        const matchedIds = new Set();
+        subcategories.forEach(sub => sub.items.forEach(it => matchedIds.add(it.id)));
+        const unassigned = dbItems.filter(it => !matchedIds.has(it.id));
+        if (unassigned.length > 0 && subcategories.length > 0) {
+          subcategories[0].items = [...subcategories[0].items, ...unassigned];
+        }
+      } else {
+        subcategories = [
+          {
+            id: `general_${strId}`,
+            name: `All ${dbCat.name} Services`,
+            items: dbItems
+          }
+        ];
+      }
+    } else if (dbCat.subcategories && dbCat.subcategories.length > 0) {
       subcategories = dbCat.subcategories.map(s => {
         const sId = 'sub_' + s.id;
+        const sNameLower = (s.name || '').toLowerCase();
         let items = [];
-        if (tpl && tpl.subcategories) {
+        if (isBeauty) {
+          if (sNameLower.includes('women') || sNameLower.includes('spa')) {
+            const womenTpl = existingMap.get('womens_salon_spa');
+            if (womenTpl && womenTpl.subcategories) {
+              items = womenTpl.subcategories.flatMap(sc => sc.items);
+            }
+          } else if (sNameLower.includes('men') || sNameLower.includes('barber')) {
+            const menTpl = existingMap.get('mens_salon_massage');
+            if (menTpl && menTpl.subcategories) {
+              items = menTpl.subcategories.flatMap(sc => sc.items);
+            }
+          } else if (sNameLower.includes('home')) {
+            items = [
+              {
+                id: `home_service_1`,
+                title: "Doorstep Full Body Ayurvedic Massage",
+                rating: "4.94",
+                reviews: "180+",
+                price: 999,
+                originalPrice: 1499,
+                time: "60 mins",
+                badge: "Popular Doorstep",
+                image: "https://images.unsplash.com/photo-1540555700478-4be289fbecef?auto=format&fit=crop&w=600&q=80",
+                desc: "Certified therapist visits your doorstep with portable massage bed and organic aromatic oils.",
+                features: [
+                  "Certified therapist visits your doorstep with massage bed & oils",
+                  "Disposable sheets, herbal aromatic oils & sanitized towels",
+                  "Relieves chronic fatigue, muscular tension & stress",
+                  "Clean-up included after session"
+                ]
+              },
+              {
+                id: `home_service_2`,
+                title: "At-Home Express Salon & Grooming Combo",
+                rating: "4.89",
+                reviews: "140+",
+                price: 699,
+                originalPrice: 999,
+                time: "45 mins",
+                badge: "Bestseller",
+                image: "https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?auto=format&fit=crop&w=600&q=80",
+                desc: "Quick head-to-face rejuvenation with sealed single-use products.",
+                features: [
+                  "Hair trim/styling, face cleanup & head acupressure massage",
+                  "100% sealed mono-kits for complete hygiene",
+                  "Professional beautician at your convenient time slot",
+                  "No travel or waiting in parlour queues"
+                ]
+              },
+              {
+                id: `home_service_3`,
+                title: "Head-to-Toe Luxury Spa at Home",
+                rating: "4.95",
+                reviews: "260+",
+                price: 1599,
+                originalPrice: 2299,
+                time: "90 mins",
+                badge: "Luxury Combo",
+                image: "https://images.unsplash.com/photo-1519823551278-64ac92734fb1?auto=format&fit=crop&w=600&q=80",
+                desc: "Complete head-to-toe relaxation including full body massage and facial.",
+                features: [
+                  "Full body massage + organic facial + foot reflexology",
+                  "Premium organic botanicals & single-use sanitized equipment",
+                  "Complete spa ambience setup in your bedroom",
+                  "Certified 5-star rated senior therapist"
+                ]
+              },
+              {
+                id: `home_service_4`,
+                title: "Manicure & Pedicure Deluxe at Home",
+                rating: "4.88",
+                reviews: "95+",
+                price: 549,
+                originalPrice: 799,
+                time: "50 mins",
+                badge: "Essential Care",
+                image: "https://images.unsplash.com/photo-1519014816548-bf5fe059798b?auto=format&fit=crop&w=600&q=80",
+                desc: "Relaxing foot and hand care with soothing soak and long-lasting polish.",
+                features: [
+                  "Cuticle care, gentle scrub, detoxifying soak & relaxing massage",
+                  "Sterilized stainless steel tools & single-use buffing pads",
+                  "Long-lasting premium polish application",
+                  "Mess-free doorstep experience"
+                ]
+              }
+            ];
+          } else {
+            items = [
+              {
+                id: `beauty_sub_${s.id}_1`,
+                title: `${s.name} Starter Package`,
+                rating: "4.88",
+                reviews: "80+",
+                price: 499,
+                originalPrice: 799,
+                time: "45 mins",
+                badge: "Verified",
+                image: "https://images.unsplash.com/photo-1560066984-138dadb4c035?auto=format&fit=crop&w=600&q=80",
+                desc: `Professional ${s.name} service with guaranteed satisfaction.`,
+                features: [
+                  "Doorstep service by verified vendor",
+                  "Transparent pricing with no hidden charges",
+                  "30-day Sugu guarantee included"
+                ]
+              }
+            ];
+          }
+        } else if (tpl && tpl.subcategories) {
           const matchingSub = tpl.subcategories.find(ts => 
             (ts.name || '').toLowerCase().includes(s.name.toLowerCase()) || 
             s.name.toLowerCase().includes((ts.name || '').toLowerCase())
@@ -111,29 +287,9 @@ function syncDynamicCategories() {
             items = JSON.parse(JSON.stringify(matchingSub.items));
           }
         }
-        if (items.length === 0) {
-          items = [
-            {
-              id: `${sId}_std`,
-              title: `${s.name} Inspection & Repair`,
-              rating: "4.86",
-              reviews: "150+",
-              price: dbCat.min_price || 249,
-              originalPrice: Math.round((dbCat.min_price || 249) * 1.3),
-              time: "30 mins",
-              badge: "Standard",
-              image: dbCat.image || (tpl ? `/static/assets/icons/${tpl.iconFile}` : "https://images.unsplash.com/photo-1581092160607-ee22621dd758?auto=format&fit=crop&w=600&q=80"),
-              features: [
-                "Comprehensive doorstep inspection",
-                "Verified certified professional",
-                "Standard manufacturer components used",
-                "30-day Sugu service guarantee"
-              ]
-            }
-          ];
-        }
         return {
           id: sId,
+          dbId: s.id,
           name: s.name,
           items: items
         };
@@ -145,58 +301,16 @@ function syncDynamicCategories() {
         {
           id: `general_${strId}`,
           name: `Standard ${dbCat.name}`,
-          items: [
-            {
-              id: `item_${strId}_1`,
-              title: `General ${dbCat.name} Consultation & Service`,
-              rating: "4.88",
-              reviews: "210+",
-              price: dbCat.min_price || 199,
-              originalPrice: Math.round((dbCat.min_price || 199) * 1.35),
-              time: "30 mins",
-              badge: "Instant",
-              image: dbCat.image || "https://images.unsplash.com/photo-1581092160607-ee22621dd758?auto=format&fit=crop&w=600&q=80",
-              features: [
-                "Instant 15-minute pro assignment",
-                "Standardized upfront pricing",
-                "30-day rework warranty"
-              ]
-            }
-          ]
+          items: []
         }
       ];
     }
 
-    // If DB category has live QuickService items from backend, attach them to the first subcategory
-    if (dbCat.services && dbCat.services.length > 0) {
-      const dbItems = dbCat.services.map(qs => ({
-        id: `qs_${qs.id}`,
-        title: qs.title,
-        rating: "4.87",
-        reviews: "120+",
-        price: qs.price,
-        originalPrice: Math.round(qs.price * 1.3),
-        time: "45 mins",
-        badge: "Verified",
-        image: qs.image || dbCat.image || "https://images.unsplash.com/photo-1581092160607-ee22621dd758?auto=format&fit=crop&w=600&q=80",
-        desc: qs.description,
-        features: [
-          "Doorstep service by verified vendor",
-          "Transparent pricing with no hidden charges",
-          "30-day Sugu guarantee included"
-        ]
-      }));
-      if (subcategories[0]) {
-        subcategories[0].items = [...dbItems, ...subcategories[0].items];
-      }
-    }
-
-    const isBeauty = (dbCat.name && dbCat.name.toLowerCase().includes('beauty')) || strId === '37' || (tpl && (tpl.id === 'beauty_wellness' || tpl.isBeautyHub));
     const catObj = {
-      id: isBeauty ? 'beauty_wellness' : strId,
+      id: strId,
       dbId: strId,
-      legacyId: tpl ? tpl.id : null,
-      name: isBeauty ? "Beauty & Spa" : dbCat.name,
+      legacyId: isBeauty ? 'beauty_wellness' : (tpl ? tpl.id : null),
+      name: dbCat.name || (isBeauty ? "Beauty & Wellness" : "Service"),
       iconFile: dbCat.image ? dbCat.image : (tpl ? tpl.iconFile : 'womens_salon_spa.png'),
       isCustomImage: !!dbCat.image,
       icon_class: dbCat.icon_class || 'bi-tools',
@@ -204,8 +318,8 @@ function syncDynamicCategories() {
       rating: tpl ? tpl.rating : "4.91 (4.2M Reviews)",
       startingPrice: dbCat.min_price ? `Starts ₹${dbCat.min_price}` : (tpl ? tpl.startingPrice : "Starts ₹249"),
       isBeautyHub: isBeauty,
-      subcategories: isBeauty ? [] : subcategories,
-      parlours: (tpl && tpl.parlours) ? tpl.parlours : []
+      subcategories: subcategories,
+      parlours: (tpl && tpl.parlours) ? tpl.parlours : (isBeauty ? (existingMap.get('womens_salon_spa')?.parlours || []) : [])
     };
 
     synchronized.push(catObj);
@@ -221,13 +335,22 @@ function syncDynamicCategories() {
     synchronized.push(menTpl);
   }
 
-  // CRITICAL: Replace SUGU_DATA.categories with dynamic categories + beauty experiences!
+  // CRITICAL: Replace SUGU_DATA.categories with dynamic categories from the database!
   SUGU_DATA.categories = synchronized;
 
   // Set default bidding category to the first dynamic category
   if (synchronized.length > 0 && !appState.biddingSelectedCategory) {
     appState.biddingSelectedCategory = synchronized[0].id;
   }
+}
+
+// Proactively run syncDynamicCategories if window.DB_CATEGORIES was already injected
+try {
+  if (typeof window !== 'undefined' && window.DB_CATEGORIES && Array.isArray(window.DB_CATEGORIES) && window.DB_CATEGORIES.length > 0) {
+    syncDynamicCategories();
+  }
+} catch (e) {
+  console.error("Proactive syncDynamicCategories error:", e);
 }
 
 // ----------------------------------------------------
@@ -520,7 +643,13 @@ function switchRoute(route, categoryId = null) {
     if (cat) {
       appState.selectedCategoryId = cat.id;
       if (cat.subcategories && cat.subcategories.length > 0) {
-        appState.selectedSubcategoryId = cat.subcategories[0].id;
+        const currentSubBelongs = cat.subcategories.some(s => s.id === appState.selectedSubcategoryId);
+        if (!currentSubBelongs) {
+          const firstWithItems = cat.subcategories.find(s => s.items && s.items.length > 0);
+          appState.selectedSubcategoryId = firstWithItems ? firstWithItems.id : cat.subcategories[0].id;
+        }
+      } else {
+        appState.selectedSubcategoryId = null;
       }
     } else {
       appState.selectedCategoryId = categoryId;
@@ -815,7 +944,7 @@ function render12CategoryIcons() {
   const paginationContainer = document.getElementById("qs-categories-pagination");
   if (!container) return;
 
-  // Filter out separate gender categories so Beauty & Spa represents both in the master 12 grid
+  // Filter out separate gender categories so Beauty & Wellness represents both in the master 12 grid
   const displayCats = SUGU_DATA.categories.filter(c => c.id !== 'womens_salon_spa' && c.id !== 'mens_salon_massage');
 
   const totalCats = displayCats.length;
@@ -910,14 +1039,19 @@ function changeQsCategoryPage(newPage) {
 window.changeQsCategoryPage = changeQsCategoryPage;
 
 function selectCategory(catId) {
+  appState.currentRoute = 'quick-service';
   const cat = findCategory(catId);
   if (cat) {
     appState.selectedCategoryId = cat.id;
     if (cat.subcategories && cat.subcategories.length > 0) {
-      appState.selectedSubcategoryId = cat.subcategories[0].id;
+      const firstWithItems = cat.subcategories.find(s => s.items && s.items.length > 0);
+      appState.selectedSubcategoryId = firstWithItems ? firstWithItems.id : cat.subcategories[0].id;
+    } else {
+      appState.selectedSubcategoryId = null;
     }
   } else {
     appState.selectedCategoryId = catId;
+    appState.selectedSubcategoryId = null;
   }
   // Reset parlour state cleanly when switching categories
   appState.beautyMode = 'home';
@@ -944,142 +1078,29 @@ function renderUrbanCompanyDetailFlow() {
   // Render Horizontal Category Switcher (Urban Company style pill strip)
   const catPillStrip = document.getElementById("uc-category-pills");
   if (catPillStrip) {
-    catPillStrip.innerHTML = SUGU_DATA.categories.map(c => `
+    const pillCats = SUGU_DATA.categories.filter(c => c.id !== 'womens_salon_spa' && c.id !== 'mens_salon_massage');
+    catPillStrip.innerHTML = pillCats.map(c => `
       <button onclick="selectCategory('${c.id}')" 
         class="flex-shrink-0 flex items-center space-x-2 px-3 py-1.5 rounded-full text-xs font-semibold transition border 
-        ${c.id === currentCat.id ? 'bg-sky-600 text-white border-sky-600 shadow' : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'}">
+        ${String(c.id) === String(currentCat.id) ? 'bg-sky-600 text-white border-sky-600 shadow' : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'}">
         <img src="${c.isCustomImage ? c.iconFile : '/static/assets/icons/' + c.iconFile}" class="w-5 h-5 object-contain rounded-md" alt="${c.name}">
         <span>${c.name}</span>
       </button>
     `).join("");
   }
 
-  // ----------------------------------------------------
-  // BEAUTY & GROOMING SERVICES DUAL NAVIGATION LOGIC (WOMEN & MEN)
-  // ----------------------------------------------------
-  const isBeautyHub = currentCat.id === 'beauty_wellness';
-  const isSalon = currentCat.id === 'womens_salon_spa' || currentCat.id === 'mens_salon_massage';
-  const isMen = currentCat.id === 'mens_salon_massage';
+  // Standard 2-column layout for ALL categories (including Beauty & Wellness)
+  // No intermediate hub cards with images/prices - normal subcategory list on left, services on right
   const beautyHubView = document.getElementById("beauty-gender-hub-view");
+  if (beautyHubView) beautyHubView.classList.add("hidden");
   const beautyGenderToggleBar = document.getElementById("beauty-gender-toggle-bar");
+  if (beautyGenderToggleBar) beautyGenderToggleBar.classList.add("hidden");
   const beautyModeBar = document.getElementById("beauty-service-mode-bar");
-  const standardLayout = document.getElementById("uc-standard-layout");
+  if (beautyModeBar) beautyModeBar.classList.add("hidden");
   const parloursLayout = document.getElementById("beauty-parlours-layout");
-
-  if (isBeautyHub) {
-    if (beautyHubView) beautyHubView.classList.remove("hidden");
-    if (beautyGenderToggleBar) beautyGenderToggleBar.classList.add("hidden");
-    if (beautyModeBar) beautyModeBar.classList.add("hidden");
-    if (standardLayout) standardLayout.classList.add("hidden");
-    if (parloursLayout) parloursLayout.classList.add("hidden");
-    initLucideIcons();
-    return;
-  } else {
-    if (beautyHubView) beautyHubView.classList.add("hidden");
-  }
-
-  if (isSalon) {
-    if (beautyGenderToggleBar) {
-      beautyGenderToggleBar.classList.remove("hidden");
-      const toggleWomens = document.getElementById("toggle-womens-btn");
-      const toggleMens = document.getElementById("toggle-mens-btn");
-      if (toggleWomens && toggleMens) {
-        if (isMen) {
-          toggleMens.className = "px-4 py-1.5 rounded-xl text-xs font-bold transition flex items-center space-x-1.5 bg-sky-100 text-sky-800 border-2 border-sky-600 shadow-sm";
-          toggleWomens.className = "px-4 py-1.5 rounded-xl text-xs font-semibold transition flex items-center space-x-1.5 bg-slate-50 text-slate-600 hover:bg-pink-50 hover:text-pink-700 border border-slate-200";
-        } else {
-          toggleWomens.className = "px-4 py-1.5 rounded-xl text-xs font-bold transition flex items-center space-x-1.5 bg-pink-100 text-pink-800 border-2 border-pink-500 shadow-sm";
-          toggleMens.className = "px-4 py-1.5 rounded-xl text-xs font-semibold transition flex items-center space-x-1.5 bg-slate-50 text-slate-600 hover:bg-sky-50 hover:text-sky-700 border border-slate-200";
-        }
-      }
-    }
-
-    if (beautyModeBar) {
-      beautyModeBar.classList.remove("hidden");
-
-      // Update text for Women vs Men dynamically
-      const homeTitle = document.getElementById("beauty-home-title");
-      const homeBadge = document.getElementById("beauty-home-badge");
-      const homeDesc = document.getElementById("beauty-home-desc");
-      const parlourTitle = document.getElementById("beauty-parlour-title");
-      const parlourBadge = document.getElementById("beauty-parlour-badge");
-      const parlourDesc = document.getElementById("beauty-parlour-desc");
-      const homeIconBox = document.getElementById("beauty-home-icon-box");
-
-      if (isMen) {
-        if (homeTitle) homeTitle.innerText = "1. Grooming & Massage at Home";
-        if (homeBadge) {
-          homeBadge.innerText = "All Services Available";
-          homeBadge.className = "px-2 py-0.5 text-[10px] font-bold uppercase rounded-full bg-sky-100 text-sky-800";
-        }
-        if (homeDesc) homeDesc.innerText = "Certified male stylist visits your home • Single-use sterilized tools & vacuum";
-        if (homeIconBox) homeIconBox.className = "w-12 h-12 rounded-2xl bg-sky-100 text-sky-700 flex items-center justify-center font-bold text-xl flex-shrink-0";
-
-        if (parlourTitle) parlourTitle.innerText = "2. Premium Barbershop & Lounge";
-        if (parlourBadge) parlourBadge.innerText = "Luxury Barbershops";
-        if (parlourDesc) parlourDesc.innerText = "Book visit at Truefitt & Hill, Bounce, Toni & Guy Men, The Man Company";
-      } else {
-        if (homeTitle) homeTitle.innerText = "1. Salon at Home";
-        if (homeBadge) {
-          homeBadge.innerText = "All Services Available";
-          homeBadge.className = "px-2 py-0.5 text-[10px] font-bold uppercase rounded-full bg-pink-100 text-pink-700";
-        }
-        if (homeDesc) homeDesc.innerText = "Certified beautician visits your home • 100% sealed mono-kits";
-        if (homeIconBox) homeIconBox.className = "w-12 h-12 rounded-2xl bg-pink-100 text-pink-600 flex items-center justify-center font-bold text-xl flex-shrink-0";
-
-        if (parlourTitle) parlourTitle.innerText = "2. Premium Parlour Services";
-        if (parlourBadge) parlourBadge.innerText = "Luxury Salon Brands";
-        if (parlourDesc) parlourDesc.innerText = "Book visit at Lakmé Luxe, Enrich, BBlunt, Toni & Guy in your area";
-      }
-    }
-    
-    // Update active beauty mode cards styling
-    const homeCard = document.getElementById("beauty-mode-home-card");
-    const parlourCard = document.getElementById("beauty-mode-parlour-card");
-    const homeCheck = document.getElementById("beauty-home-check");
-    const parlourCheck = document.getElementById("beauty-parlour-check");
-
-    if (appState.beautyMode === 'home') {
-      if (homeCard) {
-        homeCard.className = isMen
-          ? "p-5 rounded-3xl border-2 border-sky-600 bg-sky-50/60 shadow-md ring-2 ring-sky-400/20 cursor-pointer transition-all duration-300 flex items-center justify-between"
-          : "p-5 rounded-3xl border-2 border-pink-500 bg-pink-50/60 shadow-md ring-2 ring-pink-400/20 cursor-pointer transition-all duration-300 flex items-center justify-between";
-      }
-      if (parlourCard) {
-        parlourCard.className = "p-5 rounded-3xl border-2 border-slate-200 bg-white hover:border-amber-400 hover:bg-amber-50/30 cursor-pointer transition-all duration-300 flex items-center justify-between";
-      }
-      if (homeCheck) {
-        homeCheck.classList.remove("hidden");
-        homeCheck.className = `w-6 h-6 rounded-full ${isMen ? 'bg-sky-600' : 'bg-pink-600'} text-white flex items-center justify-center shadow`;
-      }
-      if (parlourCheck) parlourCheck.classList.add("hidden");
-
-      if (standardLayout) standardLayout.classList.remove("hidden");
-      if (parloursLayout) parloursLayout.classList.add("hidden");
-    } else {
-      if (homeCard) {
-        homeCard.className = isMen
-          ? "p-5 rounded-3xl border-2 border-slate-200 bg-white hover:border-sky-400 hover:bg-sky-50/30 cursor-pointer transition-all duration-300 flex items-center justify-between"
-          : "p-5 rounded-3xl border-2 border-slate-200 bg-white hover:border-pink-400 hover:bg-pink-50/30 cursor-pointer transition-all duration-300 flex items-center justify-between";
-      }
-      if (parlourCard) {
-        parlourCard.className = "p-5 rounded-3xl border-2 border-amber-500 bg-amber-50/60 shadow-md ring-2 ring-amber-400/20 cursor-pointer transition-all duration-300 flex items-center justify-between";
-      }
-      if (homeCheck) homeCheck.classList.add("hidden");
-      if (parlourCheck) parlourCheck.classList.remove("hidden");
-
-      if (standardLayout) standardLayout.classList.add("hidden");
-      if (parloursLayout) parloursLayout.classList.remove("hidden");
-      renderBeautyParlourFlow(currentCat);
-      initLucideIcons();
-      return;
-    }
-  } else {
-    if (beautyGenderToggleBar) beautyGenderToggleBar.classList.add("hidden");
-    if (beautyModeBar) beautyModeBar.classList.add("hidden");
-    if (standardLayout) standardLayout.classList.remove("hidden");
-    if (parloursLayout) parloursLayout.classList.add("hidden");
-  }
+  if (parloursLayout) parloursLayout.classList.add("hidden");
+  const standardLayout = document.getElementById("uc-standard-layout");
+  if (standardLayout) standardLayout.classList.remove("hidden");
 
   // Left Sidebar Subcategories (For Home Services & Other Categories)
   const subcatNav = document.getElementById("uc-subcat-nav");
@@ -1097,27 +1118,68 @@ function renderUrbanCompanyDetailFlow() {
   }
 
   // Center Feed: Services of the selected subcategory
-  const activeSub = currentCat.subcategories.find(s => s.id === appState.selectedSubcategoryId) || currentCat.subcategories[0];
+  const activeSub = (currentCat.subcategories && currentCat.subcategories.length > 0)
+    ? (currentCat.subcategories.find(s => s.id === appState.selectedSubcategoryId) || currentCat.subcategories[0])
+    : null;
   const itemsContainer = document.getElementById("uc-services-list");
   const paginationContainer = document.getElementById("uc-services-pagination");
 
+  if (!activeSub) {
+    if (itemsContainer) {
+      document.getElementById("uc-subcat-heading").innerText = currentCat.name;
+      itemsContainer.innerHTML = `
+        <div class="p-10 text-center bg-white rounded-2xl border border-slate-200 shadow-xs my-2">
+          <div class="w-14 h-14 rounded-full bg-slate-100 flex items-center justify-center mx-auto mb-3">
+            <i data-lucide="package-search" class="w-7 h-7 text-slate-400"></i>
+          </div>
+          <h4 class="text-base font-bold text-slate-800">No services available</h4>
+          <p class="text-xs text-slate-500 mt-1 max-w-sm mx-auto">Services for this category will be available soon.</p>
+        </div>
+      `;
+    }
+    if (paginationContainer) paginationContainer.innerHTML = '';
+    if (window.lucide && typeof lucide.createIcons === 'function') {
+      lucide.createIcons();
+    }
+    return;
+  }
+
   if (itemsContainer && activeSub) {
-    const totalItems = activeSub.items.length;
+    const totalItems = activeSub.items ? activeSub.items.length : 0;
     const perPage = appState.qsServicesPerPage || 4;
     const totalPages = Math.ceil(totalItems / perPage) || 1;
     if (appState.qsServicesPage > totalPages) appState.qsServicesPage = totalPages;
     if (appState.qsServicesPage < 1) appState.qsServicesPage = 1;
     const startIdx = (appState.qsServicesPage - 1) * perPage;
     const endIdx = Math.min(startIdx + perPage, totalItems);
-    const pagedItems = activeSub.items.slice(startIdx, endIdx);
+    const pagedItems = activeSub.items ? activeSub.items.slice(startIdx, endIdx) : [];
 
     document.getElementById("uc-subcat-heading").innerText = activeSub.name;
+
+    if (totalItems === 0) {
+      itemsContainer.innerHTML = `
+        <div class="p-10 text-center bg-white rounded-2xl border border-slate-200 shadow-xs my-2">
+          <div class="w-14 h-14 rounded-full bg-slate-100 flex items-center justify-center mx-auto mb-3">
+            <i data-lucide="package-search" class="w-7 h-7 text-slate-400"></i>
+          </div>
+          <h4 class="text-base font-bold text-slate-800">No services yet in ${activeSub.name}</h4>
+          <p class="text-xs text-slate-500 mt-1 max-w-sm mx-auto">Services for this subcategory will be added soon. Please select another subcategory or explore other categories.</p>
+        </div>
+      `;
+      if (paginationContainer) paginationContainer.innerHTML = '';
+      if (window.lucide && typeof lucide.createIcons === 'function') {
+        lucide.createIcons();
+      }
+      return;
+    }
+
     itemsContainer.innerHTML = pagedItems.map(item => {
       const cartItem = appState.cart.find(c => c.item.id === item.id);
       const qty = cartItem ? cartItem.quantity : 0;
-      const isWomen = currentCat.id === 'womens_salon_spa';
-      const badgeStyle = isWomen ? 'bg-pink-50 text-pink-700 border-pink-200' : (isMen ? 'bg-amber-50 text-amber-800 border-amber-200' : 'bg-sky-50 text-sky-700 border-sky-200');
-      const btnAddClass = isWomen ? 'bg-pink-50 hover:bg-pink-600 text-pink-700 hover:text-white border-pink-600' : (isMen ? 'bg-sky-50 hover:bg-sky-600 text-sky-700 hover:text-white border-sky-600' : 'bg-sky-50 hover:bg-sky-600 text-sky-700 hover:text-white border-sky-600');
+      const isWomen = currentCat.id === 'womens_salon_spa' || (activeSub && (activeSub.name || '').toLowerCase().includes('women'));
+      const isMenSub = currentCat.id === 'mens_salon_massage' || (activeSub && (activeSub.name || '').toLowerCase().includes('men'));
+      const badgeStyle = isWomen ? 'bg-pink-50 text-pink-700 border-pink-200' : (isMenSub ? 'bg-amber-50 text-amber-800 border-amber-200' : 'bg-sky-50 text-sky-700 border-sky-200');
+      const btnAddClass = isWomen ? 'bg-pink-50 hover:bg-pink-600 text-pink-700 hover:text-white border-pink-600' : (isMenSub ? 'bg-sky-50 hover:bg-sky-600 text-sky-700 hover:text-white border-sky-600' : 'bg-sky-50 hover:bg-sky-600 text-sky-700 hover:text-white border-sky-600');
       const btnQtyClass = isWomen ? 'bg-pink-600' : 'bg-sky-600';
 
       return `
@@ -1250,15 +1312,183 @@ function backToParloursList() {
   window.scrollTo({ top: 200, behavior: 'smooth' });
 }
 
+// ----------------------------------------------------
+// DYNAMIC BEAUTY EXPERIENCES HUB & SUB-PILLS RENDERERS
+// ----------------------------------------------------
+function getBeautySubcatMeta(sub) {
+  const nameLower = (sub.name || '').toLowerCase();
+  if (nameLower.includes('women')) {
+    return {
+      title: sub.name,
+      rating: "4.91",
+      reviews: "4.2M Reviews",
+      startingPrice: "₹349",
+      badge: "15 Min Pro",
+      tagline: "At-Home Beauty or Book Top Luxury Parlours",
+      desc: "Salon at Home or Book Top Parlours",
+      image: "https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?auto=format&fit=crop&w=600&q=80",
+      targetId: sub.id
+    };
+  } else if (nameLower.includes('men')) {
+    return {
+      title: sub.name,
+      rating: "4.87",
+      reviews: "2.1M Reviews",
+      startingPrice: "₹249",
+      badge: "15 Min Pro",
+      tagline: "At-Home Grooming or Book Top Salons",
+      desc: "At-Home Grooming or Book Top Salons",
+      image: "https://images.unsplash.com/photo-1503951914875-452162b0f3f1?auto=format&fit=crop&w=600&q=80",
+      targetId: sub.id
+    };
+  } else if (nameLower.includes('home')) {
+    return {
+      title: sub.name,
+      rating: "4.94",
+      reviews: "1.5M Reviews",
+      startingPrice: "₹499",
+      badge: "Doorstep Spa",
+      tagline: "Certified Beautician & Relaxing Spa Visits at Home",
+      desc: "Doorstep Certified Beautician & Spa Visits",
+      image: "https://images.unsplash.com/photo-1540555700478-4be289fbecef?auto=format&fit=crop&w=600&q=80",
+      targetId: sub.id
+    };
+  } else {
+    return {
+      title: sub.name,
+      rating: "4.90",
+      reviews: "850K Reviews",
+      startingPrice: "₹299",
+      badge: "Verified",
+      tagline: `Professional ${sub.name} at your doorstep or salon`,
+      desc: `Professional ${sub.name} at your doorstep or salon`,
+      image: "https://images.unsplash.com/photo-1560066984-138dadb4c035?auto=format&fit=crop&w=600&q=80",
+      targetId: sub.id
+    };
+  }
+}
+
+function renderBeautyExperiencesGrid(currentCat) {
+  const container = document.getElementById("beauty-experiences-grid");
+  if (!container) return;
+
+  const subcats = (currentCat && Array.isArray(currentCat.subcategories) && currentCat.subcategories.length > 0)
+    ? currentCat.subcategories
+    : [
+        { id: 'sub_1', name: "Womens Salon and Spa" },
+        { id: 'sub_2', name: "Mens Salon and Massage" },
+        { id: 'sub_43', name: "Home service" }
+      ];
+
+  container.innerHTML = subcats.map(sub => {
+    const meta = getBeautySubcatMeta(sub);
+    const minPrice = (sub.items && sub.items.length > 0)
+      ? `₹${Math.min(...sub.items.map(it => it.price || 999))}`
+      : meta.startingPrice;
+
+    return `
+      <div onclick="selectBeautyExperience('${sub.id}')"
+        class="group bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-sm hover:shadow-2xl transition-all duration-300 hover:-translate-y-1 cursor-pointer flex flex-col justify-between">
+        <div>
+          <div class="aspect-[4/3] w-full overflow-hidden relative bg-slate-100">
+            <img src="${meta.image}" alt="${meta.title}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+            <div class="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent pointer-events-none"></div>
+          </div>
+          <div class="p-5 sm:p-6">
+            <div class="flex items-center justify-between mb-2">
+              <span class="flex items-center text-xs font-bold text-amber-600">
+                <i data-lucide="star" class="w-3.5 h-3.5 fill-amber-400 mr-1"></i> ${meta.rating}
+              </span>
+              <span class="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                ${meta.badge}
+              </span>
+            </div>
+            <h4 class="text-lg sm:text-xl font-black text-slate-900 group-hover:text-pink-600 transition font-heading">
+              ${meta.title}
+            </h4>
+            <p class="text-xs text-slate-500 mt-1 line-clamp-1">${meta.desc}</p>
+          </div>
+        </div>
+        <div class="px-5 sm:px-6 pb-5 sm:pb-6 pt-3 border-t border-slate-100 flex items-center justify-between">
+          <span class="text-sm font-black text-pink-600">${minPrice}</span>
+          <button type="button" class="text-xs font-bold text-pink-600 hover:text-pink-700 flex items-center space-x-1 group-hover:translate-x-1 transition">
+            <span>Book &gt;</span>
+          </button>
+        </div>
+      </div>
+    `;
+  }).join("");
+
+  initLucideIcons();
+}
+window.renderBeautyExperiencesGrid = renderBeautyExperiencesGrid;
+
+function renderBeautyTogglePills(currentCat) {
+  const container = document.getElementById("beauty-subcat-toggle-pills");
+  if (!container || !currentCat || !currentCat.subcategories) return;
+
+  container.innerHTML = currentCat.subcategories.map(sub => {
+    const isCur = sub.id === appState.selectedSubcategoryId;
+    const nameLower = (sub.name || '').toLowerCase();
+    let colorClass = isCur
+      ? 'bg-pink-100 text-pink-800 border-2 border-pink-500 shadow-sm font-bold'
+      : 'bg-slate-50 text-slate-600 hover:bg-pink-50 hover:text-pink-700 border border-slate-200 font-semibold';
+    if (nameLower.includes('men')) {
+      colorClass = isCur
+        ? 'bg-sky-100 text-sky-800 border-2 border-sky-600 shadow-sm font-bold'
+        : 'bg-slate-50 text-slate-600 hover:bg-sky-50 hover:text-sky-700 border border-slate-200 font-semibold';
+    }
+    return `
+      <button onclick="selectBeautyExperience('${sub.id}')"
+        class="px-3 sm:px-4 py-1.5 rounded-xl text-xs transition flex items-center space-x-1.5 shrink-0 ${colorClass}">
+        <span>${sub.name}</span>
+      </button>
+    `;
+  }).join("");
+}
+window.renderBeautyTogglePills = renderBeautyTogglePills;
+
+function selectBeautyExperience(subId) {
+  const currentCat = findCategory(appState.selectedCategoryId) || findCategory('beauty_wellness');
+  if (currentCat) {
+    appState.selectedCategoryId = currentCat.id;
+  }
+  appState.selectedSubcategoryId = subId;
+  appState.beautyMode = 'home';
+  appState.selectedParlourId = null;
+  appState.qsServicesPage = 1;
+  renderApp();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+window.selectBeautyExperience = selectBeautyExperience;
+
+function backToBeautyHub() {
+  appState.selectedSubcategoryId = null;
+  appState.beautyMode = 'home';
+  appState.selectedParlourId = null;
+  renderApp();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+window.backToBeautyHub = backToBeautyHub;
+
 function renderBeautyParlourFlow(currentCat) {
   const container = document.getElementById("beauty-parlours-content");
   if (!container || !currentCat) return;
 
-  const isMen = currentCat.id === 'mens_salon_massage';
+  const activeSub = (currentCat.subcategories || []).find(s => s.id === appState.selectedSubcategoryId);
+  const isMen = currentCat.id === 'mens_salon_massage' || (activeSub && (activeSub.name || '').toLowerCase().includes('men'));
   const salonNoun = isMen ? "Luxury Barbershop / Lounge" : "Luxury Parlour";
   const salonPlural = isMen ? "Luxury Barbershops & Lounges" : "Luxury Parlours";
   const parlourTerm = isMen ? "Barbershop" : "Parlour";
-  const parlours = currentCat.parlours || [];
+
+  let parlours = currentCat.parlours || [];
+  if (isMen) {
+    const menCat = SUGU_DATA.categories.find(c => c.id === 'mens_salon_massage');
+    if (menCat && menCat.parlours && menCat.parlours.length > 0) parlours = menCat.parlours;
+  } else {
+    const womenCat = SUGU_DATA.categories.find(c => c.id === 'womens_salon_spa');
+    if (womenCat && womenCat.parlours && womenCat.parlours.length > 0) parlours = womenCat.parlours;
+  }
 
   if (!appState.selectedParlourId) {
     // 1. RENDER LIST OF LUXURY PARLOUR / BARBERSHOP NAMES
@@ -1629,15 +1859,17 @@ function backToCategories() {
 // CART & URBAN COMPANY CHECKOUT FLOW
 // ----------------------------------------------------
 function addToCart(itemId, categoryId) {
-  const cat = SUGU_DATA.categories.find(c => c.id === categoryId);
+  const cat = findCategory(categoryId) || SUGU_DATA.categories.find(c => c.id === categoryId);
   if (!cat) return;
 
   let targetItem = null;
-  for (const sub of cat.subcategories) {
-    const found = sub.items.find(i => i.id === itemId);
-    if (found) {
-      targetItem = found;
-      break;
+  if (cat.subcategories) {
+    for (const sub of cat.subcategories) {
+      const found = sub.items.find(i => i.id === itemId);
+      if (found) {
+        targetItem = found;
+        break;
+      }
     }
   }
 
@@ -1645,7 +1877,7 @@ function addToCart(itemId, categoryId) {
     appState.cart.push({
       item: targetItem,
       quantity: 1,
-      categoryId: categoryId
+      categoryId: cat.id
     });
     showToast(`Added "${targetItem.title}" to cart!`);
     renderApp();

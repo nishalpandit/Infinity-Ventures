@@ -154,28 +154,104 @@
           <!-- Desktop Auth / Profile Buttons (Hidden on mobile < md) -->
           <div class="hidden md:flex items-center space-x-2.5">
             {% if user.is_authenticated %}
-            <div class="relative group">
-              <a href="{% if user.role == 'VENDOR' %}/vendor/dashboard{% elif user.role == 'ADMIN' or user.is_superuser %}/admin-dashboard{% else %}/user/dashboard{% endif %}" class="h-10 flex items-center space-x-2.5 px-3 rounded-xl border border-slate-200 hover:border-slate-300 bg-white hover:bg-slate-50 transition shadow-xs">
-                <div class="w-7 h-7 rounded-full bg-sugu-blue text-white font-bold flex items-center justify-center border border-blue-400 shadow-sm text-xs">
+            <div class="relative" id="user-profile-dropdown-wrapper">
+              <button type="button" onclick="toggleUserProfileDropdown(event)" class="h-10 flex items-center space-x-2.5 px-3 rounded-xl border border-slate-200 hover:border-slate-300 bg-white hover:bg-slate-50 transition shadow-xs focus:outline-none focus:ring-2 focus:ring-sugu-blue/20">
+                <div class="w-7 h-7 rounded-full bg-sugu-blue text-white font-bold flex items-center justify-center border border-blue-400 shadow-sm text-xs shrink-0">
                   {{ user.first_name|default:user.username|slice:":1"|upper }}
                 </div>
                 <div class="hidden xl:block text-left">
-                  <span class="block text-xs font-bold text-slate-900 leading-tight">{{ user.first_name|default:user.username }}</span>
+                  <span class="block text-xs font-bold text-slate-900 leading-tight max-w-[120px] truncate">{{ user.first_name|default:user.username }}</span>
                   <span class="block text-[10px] font-semibold text-emerald-600 leading-none">
                     {% if user.role == 'VENDOR' %}Vendor Partner{% elif user.role == 'ADMIN' or user.is_superuser %}Admin{% else %}Verified Customer{% endif %}
                   </span>
                 </div>
-                <i data-lucide="chevron-down" class="w-3.5 h-3.5 text-slate-400 hidden xl:block"></i>
-              </a>
-              <div class="absolute right-0 mt-2 w-48 bg-white rounded-2xl shadow-xl border border-slate-100 py-2 hidden group-hover:block transition-all z-50">
-                <a href="{% if user.role == 'VENDOR' %}/vendor/dashboard{% elif user.role == 'ADMIN' or user.is_superuser %}/admin-dashboard{% else %}/user/dashboard{% endif %}" class="flex items-center space-x-2 px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-blue-50 hover:text-sugu-blue">
-                  <i data-lucide="layout-dashboard" class="w-4 h-4"></i>
-                  <span>My Dashboard</span>
-                </a>
-                <a href="/logout/" class="flex items-center space-x-2 px-4 py-2 text-xs font-semibold text-rose-600 hover:bg-rose-50">
-                  <i data-lucide="log-out" class="w-4 h-4"></i>
-                  <span>Log Out</span>
-                </a>
+                <i data-lucide="chevron-down" id="user-profile-chevron" class="w-3.5 h-3.5 text-slate-400 hidden xl:block transition-transform duration-200"></i>
+              </button>
+
+              <!-- Profile Dropdown Menu -->
+              <div id="user-profile-dropdown-menu" class="absolute right-0 mt-2 w-64 bg-white rounded-2xl shadow-2xl border border-slate-100 py-2 hidden transition-all z-50">
+                <!-- User Summary Header -->
+                <div class="px-4 py-2.5 border-b border-slate-100 bg-slate-50/70 rounded-t-2xl">
+                  <div class="flex items-center space-x-2.5">
+                    <div class="w-8 h-8 rounded-full bg-sugu-blue text-white font-bold flex items-center justify-center text-sm shadow-xs shrink-0">
+                      {{ user.first_name|default:user.username|slice:":1"|upper }}
+                    </div>
+                    <div class="min-w-0 flex-1">
+                      <p class="text-xs font-bold text-slate-900 truncate">{{ user.get_full_name|default:user.username }}</p>
+                      <p class="text-[11px] text-slate-500 truncate">{% if user.email %}{{ user.email }}{% elif user.user_profile.phone_number %}{{ user.user_profile.phone_number }}{% else %}Verified Customer{% endif %}</p>
+                    </div>
+                  </div>
+                  <div class="mt-2 flex items-center space-x-1.5">
+                    <span class="px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 text-[10px] font-bold border border-emerald-200 flex items-center">
+                      <i data-lucide="shield-check" class="w-3 h-3 mr-1 text-emerald-600"></i>
+                      {% if user.role == 'VENDOR' %}Vendor Account{% elif user.role == 'ADMIN' or user.is_superuser %}Admin Account{% else %}Customer Account{% endif %}
+                    </span>
+                  </div>
+                </div>
+
+                {% if user.role == 'ADMIN' or user.is_superuser %}
+                <div class="py-1">
+                  <a href="/admin-dashboard" class="flex items-center space-x-3 px-4 py-2.5 text-xs font-semibold text-slate-700 hover:bg-sky-50 hover:text-sky-700 transition">
+                    <i data-lucide="layout-dashboard" class="w-4 h-4 text-sky-600"></i>
+                    <span>Admin Dashboard</span>
+                  </a>
+                  <a href="/super-admin/" class="flex items-center space-x-3 px-4 py-2.5 text-xs font-semibold text-slate-700 hover:bg-sky-50 hover:text-sky-700 transition">
+                    <i data-lucide="shield" class="w-4 h-4 text-purple-600"></i>
+                    <span>Super Admin Panel</span>
+                  </a>
+                </div>
+                {% elif user.role == 'VENDOR' %}
+                <div class="py-1">
+                  <a href="/vendor/dashboard" class="flex items-center space-x-3 px-4 py-2.5 text-xs font-semibold text-slate-700 hover:bg-sky-50 hover:text-sky-700 transition">
+                    <i data-lucide="layout-dashboard" class="w-4 h-4 text-sky-600"></i>
+                    <span>Vendor Dashboard</span>
+                  </a>
+                  <a href="/vendor/jobs/available.html" class="flex items-center space-x-3 px-4 py-2.5 text-xs font-semibold text-slate-700 hover:bg-sky-50 hover:text-sky-700 transition">
+                    <i data-lucide="gavel" class="w-4 h-4 text-amber-600"></i>
+                    <span>Available Bids</span>
+                  </a>
+                </div>
+                {% else %}
+                <!-- Customer Direct Navigation Links -->
+                <div class="py-1">
+                  <a href="/user/jobs/index.html" class="flex items-center space-x-3 px-4 py-2.5 text-xs font-semibold text-slate-700 hover:bg-sky-50 hover:text-sky-700 transition group">
+                    <div class="w-7 h-7 rounded-lg bg-sky-50 text-sky-600 flex items-center justify-center shrink-0 group-hover:bg-sky-600 group-hover:text-white transition">
+                      <i data-lucide="briefcase" class="w-3.5 h-3.5"></i>
+                    </div>
+                    <div>
+                      <span class="block font-bold text-slate-800 group-hover:text-sky-700">My Jobs</span>
+                      <span class="block text-[10px] text-slate-400 font-normal">Track tenders, bids & quotes</span>
+                    </div>
+                  </a>
+
+                  <a href="/user/messages/index.html" class="flex items-center space-x-3 px-4 py-2.5 text-xs font-semibold text-slate-700 hover:bg-sky-50 hover:text-sky-700 transition group">
+                    <div class="w-7 h-7 rounded-lg bg-purple-50 text-purple-600 flex items-center justify-center shrink-0 group-hover:bg-purple-600 group-hover:text-white transition">
+                      <i data-lucide="message-square" class="w-3.5 h-3.5"></i>
+                    </div>
+                    <div>
+                      <span class="block font-bold text-slate-800 group-hover:text-sky-700">Messages</span>
+                      <span class="block text-[10px] text-slate-400 font-normal">Chat with service professionals</span>
+                    </div>
+                  </a>
+
+                  <a href="/user/profile/index.html" class="flex items-center space-x-3 px-4 py-2.5 text-xs font-semibold text-slate-700 hover:bg-sky-50 hover:text-sky-700 transition group">
+                    <div class="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0 group-hover:bg-emerald-600 group-hover:text-white transition">
+                      <i data-lucide="user" class="w-3.5 h-3.5"></i>
+                    </div>
+                    <div>
+                      <span class="block font-bold text-slate-800 group-hover:text-sky-700">My Profile</span>
+                      <span class="block text-[10px] text-slate-400 font-normal">Manage personal details & address</span>
+                    </div>
+                  </a>
+                </div>
+                {% endif %}
+
+                <div class="border-t border-slate-100 pt-1 mt-1">
+                  <a href="/logout/" class="flex items-center space-x-3 px-4 py-2 text-xs font-bold text-rose-600 hover:bg-rose-50 transition">
+                    <i data-lucide="log-out" class="w-4 h-4 text-rose-500"></i>
+                    <span>Log Out</span>
+                  </a>
+                </div>
               </div>
             </div>
             {% else %}
@@ -192,7 +268,7 @@
 
           <!-- Mobile Only Actions (< md): Quick Account Link + Hamburger Menu -->
           <div class="flex md:hidden items-center space-x-1.5">
-            <a href="{% if user.is_authenticated %}{% if user.role == 'VENDOR' %}/vendor/dashboard{% elif user.role == 'ADMIN' or user.is_superuser %}/admin-dashboard{% else %}/user/dashboard{% endif %}{% else %}/login/{% endif %}" class="w-9 h-9 rounded-xl border border-slate-200 bg-slate-50 flex items-center justify-center text-slate-700 hover:bg-slate-100 transition shadow-xs" title="Account">
+            <button type="button" onclick="toggleMobileNavDrawer()" class="w-9 h-9 rounded-xl border border-slate-200 bg-slate-50 flex items-center justify-center text-slate-700 hover:bg-slate-100 transition shadow-xs" title="Account">
               {% if user.is_authenticated %}
                 <div class="w-6 h-6 rounded-full bg-sugu-blue text-white font-bold flex items-center justify-center text-xs">
                   {{ user.first_name|default:user.username|slice:":1"|upper }}
@@ -200,7 +276,7 @@
               {% else %}
                 <i data-lucide="user" class="w-4 h-4 text-slate-600"></i>
               {% endif %}
-            </a>
+            </button>
             <button id="mobile-menu-toggle-btn" onclick="toggleMobileNavDrawer()" class="w-9 h-9 rounded-xl border border-slate-200 bg-white flex items-center justify-center text-slate-700 hover:bg-slate-100 transition shadow-xs" aria-label="Toggle menu">
               <i data-lucide="menu" id="mobile-menu-icon" class="w-5 h-5"></i>
             </button>
@@ -247,11 +323,46 @@
         <!-- Auth Actions in Drawer -->
         {% if user.is_authenticated %}
         <div class="pt-2 border-t border-slate-100 space-y-2">
-          <a href="{% if user.role == 'VENDOR' %}/vendor/dashboard{% elif user.role == 'ADMIN' or user.is_superuser %}/admin-dashboard{% else %}/user/dashboard{% endif %}" class="w-full py-2.5 px-4 rounded-xl bg-sugu-blue text-white font-bold text-xs flex items-center justify-center space-x-2 shadow-sm">
+          <!-- User info card -->
+          <div class="p-3 bg-slate-50 rounded-xl border border-slate-100 flex items-center space-x-3 mb-1">
+            <div class="w-9 h-9 rounded-full bg-sugu-blue text-white font-bold flex items-center justify-center text-sm shadow-xs shrink-0">
+              {{ user.first_name|default:user.username|slice:":1"|upper }}
+            </div>
+            <div class="min-w-0 flex-1">
+              <span class="block text-xs font-bold text-slate-900 truncate">{{ user.get_full_name|default:user.username }}</span>
+              <span class="block text-[10px] text-emerald-600 font-semibold leading-tight">
+                {% if user.role == 'VENDOR' %}Vendor Partner{% elif user.role == 'ADMIN' or user.is_superuser %}Admin Account{% else %}Verified Customer{% endif %}
+              </span>
+            </div>
+          </div>
+
+          {% if user.role == 'ADMIN' or user.is_superuser %}
+          <a href="/admin-dashboard" class="w-full py-2.5 px-3 rounded-xl bg-sugu-blue text-white font-bold text-xs flex items-center space-x-2.5 shadow-sm">
             <i data-lucide="layout-dashboard" class="w-4 h-4"></i>
-            <span>Go to My Dashboard</span>
+            <span>Admin Dashboard</span>
           </a>
-          <a href="/logout/" class="w-full py-2 px-4 rounded-xl border border-rose-200 text-rose-600 hover:bg-rose-50 font-bold text-xs flex items-center justify-center space-x-2 transition">
+          {% elif user.role == 'VENDOR' %}
+          <a href="/vendor/dashboard" class="w-full py-2.5 px-3 rounded-xl bg-sugu-blue text-white font-bold text-xs flex items-center space-x-2.5 shadow-sm">
+            <i data-lucide="layout-dashboard" class="w-4 h-4"></i>
+            <span>Vendor Dashboard</span>
+          </a>
+          {% else %}
+          <!-- Customer mobile quick links -->
+          <a href="/user/jobs/index.html" class="w-full py-2.5 px-3 rounded-xl bg-white border border-slate-200 text-slate-800 font-bold text-xs flex items-center space-x-2.5 hover:bg-slate-50 transition shadow-xs">
+            <i data-lucide="briefcase" class="w-4 h-4 text-sky-600"></i>
+            <span>My Jobs (Bids & Tenders)</span>
+          </a>
+          <a href="/user/messages/index.html" class="w-full py-2.5 px-3 rounded-xl bg-white border border-slate-200 text-slate-800 font-bold text-xs flex items-center space-x-2.5 hover:bg-slate-50 transition shadow-xs">
+            <i data-lucide="message-square" class="w-4 h-4 text-purple-600"></i>
+            <span>Messages & Quotes</span>
+          </a>
+          <a href="/user/profile/index.html" class="w-full py-2.5 px-3 rounded-xl bg-white border border-slate-200 text-slate-800 font-bold text-xs flex items-center space-x-2.5 hover:bg-slate-50 transition shadow-xs">
+            <i data-lucide="user" class="w-4 h-4 text-emerald-600"></i>
+            <span>My Profile</span>
+          </a>
+          {% endif %}
+
+          <a href="/logout/" class="w-full py-2 px-3 rounded-xl border border-rose-200 text-rose-600 hover:bg-rose-50 font-bold text-xs flex items-center justify-center space-x-2 transition">
             <i data-lucide="log-out" class="w-4 h-4"></i>
             <span>Log Out</span>
           </a>
@@ -319,19 +430,23 @@
                 <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                 <span class="relative inline-flex rounded-full h-2 w-2 sm:h-2.5 sm:w-2.5 bg-emerald-500"></span>
               </span>
-              <span>India's Dual-Engine Home Services Platform</span>
+              <span>{{ hero.badge_text|default:"India's Dual-Engine Home Services Platform" }}</span>
             </div>
 
             <!-- Main Hero Heading -->
             <h1 class="text-2xl sm:text-3xl md:text-4xl lg:text-[46px] font-black tracking-tight text-white leading-tight sm:leading-[1.15] font-heading drop-shadow-md">
-              India's First<br />
-              <span class="text-blue-300">Quick-Service Booking</span> &amp;<br />
-              <span class="text-amber-300">Smart Project Bidding Platform</span>
+              {% if hero and hero.headline %}
+                {{ hero.headline|safe }}
+              {% else %}
+                India's First<br />
+                <span class="text-white-300">Quick-Service Booking</span> &amp;<br />
+                <span class="text-white-300">Smart Project Bidding Platform</span>
+              {% endif %}
             </h1>
 
             <!-- Tagline Subtitle -->
             <p class="text-xs sm:text-base lg:text-lg text-blue-100/95 font-medium max-w-xl mx-auto lg:mx-0 drop-shadow-sm">
-              Quick Booking for Today. Smart Bidding for Tomorrow's Projects.
+              {{ hero.subtext|default:"Quick Booking for Today. Smart Bidding for Tomorrow's Projects." }}
             </p>
 
             <!-- Dual Highlights: Lightning (Quick) & Gavel (Bidding) -->
@@ -347,12 +462,12 @@
               </div>
 
               <!-- Highlight 2: Project Bidding -->
-              <div onclick="switchRoute('bidding')" class="flex items-center space-x-3 bg-white/10 hover:bg-white/15 cursor-pointer backdrop-blur-md p-2.5 sm:p-3.5 rounded-xl sm:rounded-2xl border border-white/20 transition shadow-sm hover:border-amber-400/50">
-                <div class="w-10 h-10 rounded-xl bg-amber-500 text-white flex items-center justify-center shrink-0 shadow">
+              <div onclick="switchRoute('bidding')" class="flex items-center space-x-3 bg-white/10 hover:bg-white/15 cursor-pointer backdrop-blur-md p-2.5 sm:p-3.5 rounded-xl sm:rounded-2xl border border-white/20 transition shadow-sm hover:border-blue-400/50">
+                <div class="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-sugu-blue text-white flex items-center justify-center shrink-0 shadow">
                   <i data-lucide="gavel" class="w-4 h-4 sm:w-5 sm:h-5"></i>
                 </div>
                 <div class="text-left text-xs sm:text-sm font-bold text-white leading-snug">
-                  Competitive Offers<br /><span class="text-[11px] sm:text-xs font-normal text-amber-200">for Bigger Projects (Save 40%)</span>
+                  Competitive Offers<br /><span class="text-[11px] sm:text-xs font-normal text-blue-200">for Bigger Projects (Save 40%)</span>
                 </div>
               </div>
             </div>
@@ -369,7 +484,7 @@
                 <span class="tracking-wide">Book a Quick Service &rarr;</span>
               </button>
 
-              <button onclick="switchRoute('bidding')" class="min-h-[52px] sm:min-h-[54px] py-3.5 px-6 rounded-2xl font-extrabold text-sm sm:text-base bg-amber-600 hover:bg-amber-700 active:scale-[0.98] text-white shadow-xl shadow-amber-600/35 transition transform hover:-translate-y-0.5 flex items-center justify-center space-x-2.5 flex-1 border border-amber-400/30">
+              <button onclick="switchRoute('bidding')" class="min-h-[52px] sm:min-h-[54px] py-3.5 px-6 rounded-2xl font-extrabold text-sm sm:text-base bg-sugu-blue hover:bg-sugu-blueDark active:scale-[0.98] text-white shadow-xl shadow-blue-500/35 transition transform hover:-translate-y-0.5 flex items-center justify-center space-x-2.5 flex-1 border border-blue-300/30">
                 <i data-lucide="gavel" class="w-5 h-5 shrink-0"></i>
                 <span class="tracking-wide">Explore Projects &rarr;</span>
               </button>
@@ -387,7 +502,7 @@
     <!-- ======================================================== -->
     <!-- OUR SERVICES (EXACT 8 REALISTIC TILES FROM USER MOCKUP)  -->
     <!-- ======================================================== -->
-    <section class="py-8 sm:py-12 bg-white border-b border-slate-100">
+    <section id="our-services-section" class="py-8 sm:py-12 bg-white border-b border-slate-100">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         
         <div class="mb-6 sm:mb-8 text-center sm:text-left">
@@ -396,26 +511,45 @@
         </div>
 
         <!-- Dynamic Service Category Cards created by Super Admin -->
-        <div class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-2.5 sm:gap-4">
+        <!-- Responsive layout: 1 row on big screens (8 cols), 2 rows on small laptops (4 cols x 2 rows), 2 rows on mobile (2 cols x 2 rows) -->
+        <div id="our-services-grid" class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-4 lg:grid-cols-8 gap-2.5 sm:gap-4">
           {% for cat in categories %}
-          <div onclick="switchRoute('quick-service', '{{ cat.id }}')" class="bg-[#f0f4f9] hover:bg-[#e4ebf5] border border-slate-200/80 rounded-xl sm:rounded-2xl p-2.5 sm:p-4 flex flex-col items-center justify-between text-center transition-all duration-300 hover:shadow-lg hover:-translate-y-1 cursor-pointer group">
-            <div class="w-14 h-14 sm:w-20 sm:h-20 flex items-center justify-center p-1">
-              {% if cat.image %}
-                <img src="{{ cat.image.url }}" alt="{{ cat.name }}" class="max-w-full max-h-full object-contain group-hover:scale-108 transition-transform duration-300 drop-shadow-sm" />
-              {% else %}
-                <div class="w-12 h-12 sm:w-14 sm:h-14 rounded-xl sm:rounded-2xl bg-white shadow-sm flex items-center justify-center text-sugu-blue text-xl sm:text-2xl group-hover:scale-108 transition-transform">
-                  <i class="bi {{ cat.icon_class }}"></i>
+            {% if forloop.counter <= 4 %}
+              <div onclick="switchRoute('quick-service', '{{ cat.id }}')" class="cat-card-item bg-[#f0f4f9] hover:bg-[#e4ebf5] border border-slate-200/80 rounded-xl sm:rounded-2xl p-2.5 sm:p-4 flex flex-col items-center justify-between text-center transition-all duration-300 hover:shadow-lg hover:-translate-y-1 cursor-pointer group">
+            {% elif forloop.counter <= 8 %}
+              <div onclick="switchRoute('quick-service', '{{ cat.id }}')" class="cat-card-item service-cat-extra-mobile hidden sm:flex bg-[#f0f4f9] hover:bg-[#e4ebf5] border border-slate-200/80 rounded-xl sm:rounded-2xl p-2.5 sm:p-4 flex-col items-center justify-between text-center transition-all duration-300 hover:shadow-lg hover:-translate-y-1 cursor-pointer group">
+            {% else %}
+              <div onclick="switchRoute('quick-service', '{{ cat.id }}')" class="cat-card-item service-cat-extra-desktop hidden bg-[#f0f4f9] hover:bg-[#e4ebf5] border border-slate-200/80 rounded-xl sm:rounded-2xl p-2.5 sm:p-4 flex-col items-center justify-between text-center transition-all duration-300 hover:shadow-lg hover:-translate-y-1 cursor-pointer group">
+            {% endif %}
+                <div class="w-14 h-14 sm:w-20 sm:h-20 flex items-center justify-center p-1">
+                  {% if cat.image %}
+                    <img src="{{ cat.image.url }}" alt="{{ cat.name }}" class="max-w-full max-h-full object-contain group-hover:scale-108 transition-transform duration-300 drop-shadow-sm" />
+                  {% else %}
+                    <div class="w-12 h-12 sm:w-14 sm:h-14 rounded-xl sm:rounded-2xl bg-white shadow-sm flex items-center justify-center text-sugu-blue text-xl sm:text-2xl group-hover:scale-108 transition-transform">
+                      <i class="bi {{ cat.icon_class }}"></i>
+                    </div>
+                  {% endif %}
                 </div>
-              {% endif %}
-            </div>
-            <span class="text-xs font-bold text-slate-800 mt-2 line-clamp-1">{{ cat.name }}</span>
-          </div>
+                <span class="text-xs font-bold text-slate-800 mt-2 line-clamp-1">{{ cat.name }}</span>
+              </div>
           {% empty %}
           <div class="col-span-full py-8 text-center text-slate-400 text-sm">
             No active categories found. Categories created by Super Admin will appear here.
           </div>
           {% endfor %}
         </div>
+
+        {% if categories|length > 4 %}
+        <div class="mt-8 text-center {% if categories|length <= 8 %}sm:hidden{% endif %}">
+          <button id="toggle-our-services-btn" type="button" onclick="toggleOurServices()" class="inline-flex items-center justify-center gap-2 px-6 py-2.5 rounded-full bg-white hover:bg-slate-50 text-sugu-blue border border-sugu-blue/30 hover:border-sugu-blue font-bold text-xs sm:text-sm shadow-sm hover:shadow-md transition-all duration-200 group">
+            <span id="toggle-our-services-text">
+              <span class="lg:hidden">View All</span>
+              <span class="hidden lg:inline">View More</span>
+            </span>
+            <i id="toggle-our-services-icon" class="bi bi-chevron-down text-xs transition-transform duration-300 group-hover:translate-y-0.5"></i>
+          </button>
+        </div>
+        {% endif %}
 
       </div>
     </section>
@@ -430,7 +564,7 @@
               <i data-lucide="users" class="w-5 h-5 sm:w-6 sm:h-6 text-white"></i>
             </div>
             <div>
-              <div class="text-xl sm:text-2xl font-extrabold font-display leading-tight">5000+</div>
+              <div class="text-xl sm:text-2xl font-extrabold font-display leading-tight">{{ happy_customers_display|default:"1000+" }}</div>
               <div class="text-[11px] sm:text-xs text-blue-100 font-medium">Happy Customers</div>
             </div>
           </div>
@@ -1008,143 +1142,7 @@
           </div>
         </div>
 
-        <!-- ======================================================== -->
-        <!-- SCREEN 1: BEAUTY & WELLNESS GENDER EXPERIENCE SELECTOR    -->
-        <!-- Exactly matching beauty service.docx image1.png          -->
-        <!-- ======================================================== -->
-        <div id="beauty-gender-hub-view" class="hidden mb-10">
-          <div class="text-center mb-8">
-            <div class="inline-flex items-center space-x-2 px-4 py-1.5 rounded-full bg-pink-50 text-pink-700 text-xs font-bold border border-pink-200 mb-3 shadow-sm">
-              <i data-lucide="sparkles" class="w-4 h-4 text-pink-600"></i>
-              <span>Dual Experience: Doorstep Convenience &amp; Luxury Parlour Slots</span>
-            </div>
-            <h3 class="text-3xl font-black text-slate-900 font-heading">Select Experience / Category</h3>
-            <p class="text-sm text-slate-500 mt-2 max-w-lg mx-auto">
-              Choose your dedicated beauty hub below. Each provides both doorstep service and verified luxury salon visits.
-            </p>
-          </div>
 
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-2xl mx-auto">
-            <!-- Card 1: Women's Salon & Spa -->
-            <div onclick="selectCategory('womens_salon_spa')" 
-              class="bg-white rounded-3xl border-2 border-slate-200/90 shadow-md hover:shadow-2xl hover:border-pink-500 transition-all duration-300 cursor-pointer overflow-hidden group flex flex-col justify-between">
-              <div>
-                <div class="relative aspect-[4/3] overflow-hidden bg-pink-50/50 p-3">
-                  <img src="/static/assets/beauty/women_photo.png" alt="Women's Salon &amp; Spa" class="w-full h-full object-cover rounded-2xl group-hover:scale-105 transition-transform duration-500">
-                  <div class="absolute inset-0 bg-gradient-to-t from-slate-950/40 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                </div>
-                <div class="p-5 pb-0">
-                  <div class="flex items-center justify-between text-xs mb-2">
-                    <span class="flex items-center font-bold text-amber-500">
-                      <i data-lucide="star" class="w-4 h-4 fill-amber-400 mr-1"></i> 4.91
-                    </span>
-                    <span class="text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full text-[11px] font-bold border border-emerald-200">15 Min Pro</span>
-                  </div>
-                  <h4 class="text-xl font-black text-slate-900 group-hover:text-pink-600 transition">Women's Salon &amp; Spa</h4>
-                  <p class="text-xs text-slate-500 mt-1 line-clamp-1">At-Home Beauty or Book Top Parlours</p>
-                </div>
-              </div>
-              <div class="p-5 pt-4 mt-4 border-t border-slate-100 flex items-center justify-between">
-                <span class="text-base font-black text-pink-600">₹349</span>
-                <span class="text-sm font-bold text-pink-600 flex items-center group-hover:translate-x-1 transition">
-                  Book <i data-lucide="chevron-right" class="w-4 h-4 ml-0.5"></i>
-                </span>
-              </div>
-            </div>
-
-            <!-- Card 2: Men's Salon & Massage -->
-            <div onclick="selectCategory('mens_salon_massage')" 
-              class="bg-white rounded-3xl border-2 border-slate-200/90 shadow-md hover:shadow-2xl hover:border-sky-600 transition-all duration-300 cursor-pointer overflow-hidden group flex flex-col justify-between">
-              <div>
-                <div class="relative aspect-[4/3] overflow-hidden bg-sky-50/50 p-3">
-                  <img src="/static/assets/beauty/men_photo.png" alt="Men's Salon &amp; Massage" class="w-full h-full object-cover rounded-2xl group-hover:scale-105 transition-transform duration-500">
-                  <div class="absolute inset-0 bg-gradient-to-t from-slate-950/40 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                </div>
-                <div class="p-5 pb-0">
-                  <div class="flex items-center justify-between text-xs mb-2">
-                    <span class="flex items-center font-bold text-amber-500">
-                      <i data-lucide="star" class="w-4 h-4 fill-amber-400 mr-1"></i> 4.87
-                    </span>
-                    <span class="text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full text-[11px] font-bold border border-emerald-200">15 Min Pro</span>
-                  </div>
-                  <h4 class="text-xl font-black text-slate-900 group-hover:text-sky-600 transition">Men's Salon &amp; Massage</h4>
-                  <p class="text-xs text-slate-500 mt-1 line-clamp-1">At-Home Grooming or Book Top Salons</p>
-                </div>
-              </div>
-              <div class="p-5 pt-4 mt-4 border-t border-slate-100 flex items-center justify-between">
-                <span class="text-base font-black text-sky-600">₹249</span>
-                <span class="text-sm font-bold text-sky-600 flex items-center group-hover:translate-x-1 transition">
-                  Book <i data-lucide="chevron-right" class="w-4 h-4 ml-0.5"></i>
-                </span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Gender Quick Switch & Hub Breadcrumb Bar -->
-        <div id="beauty-gender-toggle-bar" class="hidden mb-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 bg-white rounded-2xl border border-slate-200 shadow-sm">
-          <button onclick="selectCategory('beauty_wellness')" class="text-xs font-bold text-slate-600 hover:text-slate-900 flex items-center transition">
-            <i data-lucide="arrow-left" class="w-4 h-4 mr-1 text-slate-400"></i>
-            <span>← Back to Beauty Options</span>
-          </button>
-          <div class="flex items-center space-x-2">
-            <button id="toggle-womens-btn" onclick="selectCategory('womens_salon_spa')" 
-              class="px-4 py-1.5 rounded-xl text-xs font-bold transition flex items-center space-x-1.5 bg-pink-50 text-pink-700 border border-pink-200">
-              <span>👩 Women's Salon &amp; Spa</span>
-            </button>
-            <button id="toggle-mens-btn" onclick="selectCategory('mens_salon_massage')" 
-              class="px-4 py-1.5 rounded-xl text-xs font-bold transition flex items-center space-x-1.5 bg-slate-50 text-slate-600 hover:bg-sky-50 hover:text-sky-700 border border-slate-200">
-              <span>👨 Men's Salon &amp; Massage</span>
-            </button>
-          </div>
-        </div>
-
-        <!-- Dedicated Beauty Service Dual Navigation Bar (Home Services vs Premium Parlour Services) -->
-        <div id="beauty-service-mode-bar" class="hidden mb-6">
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            
-            <!-- Option 1: Home Services -->
-            <div id="beauty-mode-home-card" onclick="setBeautyServiceMode('home')" 
-              class="p-5 rounded-3xl border-2 border-sugu-blue bg-blue-50/60 shadow-md ring-2 ring-blue-400/20 cursor-pointer transition-all duration-300 flex items-center justify-between">
-              <div class="flex items-center space-x-3.5">
-                <div id="beauty-home-icon-box" class="w-12 h-12 rounded-2xl bg-blue-100 text-sugu-blue flex items-center justify-center font-bold text-xl flex-shrink-0">
-                  <i data-lucide="home" class="w-6 h-6"></i>
-                </div>
-                <div>
-                  <div class="flex items-center space-x-2">
-                    <h4 id="beauty-home-title" class="font-bold text-slate-900 text-base">1. Salon at Home</h4>
-                    <span id="beauty-home-badge" class="px-2 py-0.5 text-[10px] font-bold uppercase rounded-full bg-blue-100 text-sugu-blue">All Services Available</span>
-                  </div>
-                  <p id="beauty-home-desc" class="text-xs text-slate-600 mt-0.5">Certified beautician visits your home • 100% sealed mono-kits</p>
-                </div>
-              </div>
-              <div id="beauty-home-check" class="w-6 h-6 rounded-full bg-sugu-blue text-white flex items-center justify-center shadow">
-                <i data-lucide="check" class="w-3.5 h-3.5 stroke-[3]"></i>
-              </div>
-            </div>
-
-            <!-- Option 2: Premium Parlour Services -->
-            <div id="beauty-mode-parlour-card" onclick="setBeautyServiceMode('parlour')" 
-              class="p-5 rounded-3xl border-2 border-slate-200 bg-white hover:border-amber-400 hover:bg-amber-50/30 cursor-pointer transition-all duration-300 flex items-center justify-between">
-              <div class="flex items-center space-x-3.5">
-                <div id="beauty-parlour-icon-box" class="w-12 h-12 rounded-2xl bg-amber-100 text-amber-600 flex items-center justify-center font-bold text-xl flex-shrink-0">
-                  <i data-lucide="crown" class="w-6 h-6"></i>
-                </div>
-                <div>
-                  <div class="flex items-center space-x-2">
-                    <h4 id="beauty-parlour-title" class="font-bold text-slate-900 text-base">2. Premium Parlour Services</h4>
-                    <span id="beauty-parlour-badge" class="px-2 py-0.5 text-[10px] font-bold uppercase rounded-full bg-amber-100 text-amber-800">Luxury Salon Brands</span>
-                  </div>
-                  <p id="beauty-parlour-desc" class="text-xs text-slate-500 mt-0.5">Book visit at Lakmé Luxe, Enrich, BBlunt, Toni &amp; Guy in your area</p>
-                </div>
-              </div>
-              <div id="beauty-parlour-check" class="hidden w-6 h-6 rounded-full bg-amber-600 text-white flex items-center justify-center shadow">
-                <i data-lucide="check" class="w-3.5 h-3.5 stroke-[3]"></i>
-              </div>
-            </div>
-
-          </div>
-        </div>
 
         <!-- Horizontal Category Pills Strip (Quick Switch across all 13 categories) -->
         <div id="uc-category-pills" class="flex items-center space-x-2 overflow-x-auto pb-4 mb-6 scrollbar-none"></div>
@@ -1931,7 +1929,7 @@
       </div>
       <span class="text-[10px] mt-0.5">Bidding</span>
     </button>
-    <a href="{% if user.is_authenticated %}{% if user.role == 'VENDOR' %}/vendor/dashboard{% elif user.role == 'ADMIN' or user.is_superuser %}/admin-dashboard{% else %}/user/dashboard{% endif %}{% else %}/login/{% endif %}" class="flex flex-col items-center justify-center py-1 px-2.5 rounded-xl transition text-slate-500 font-medium hover:text-slate-800">
+    <a href="{% if user.is_authenticated %}{% if user.role == 'VENDOR' %}/vendor/dashboard{% elif user.role == 'ADMIN' or user.is_superuser %}/admin-dashboard{% else %}#account{% endif %}{% else %}/login/{% endif %}" {% if user.is_authenticated and user.role != 'ADMIN' and user.role != 'VENDOR' and not user.is_superuser %}onclick="toggleMobileNavDrawer(); return false;"{% endif %} class="flex flex-col items-center justify-center py-1 px-2.5 rounded-xl transition text-slate-500 font-medium hover:text-slate-800">
       {% if user.is_authenticated %}
         <div class="w-5 h-5 rounded-full bg-sugu-blue text-white text-[10px] font-bold flex items-center justify-center">
           {{ user.first_name|default:user.username|slice:":1"|upper }}
@@ -1977,9 +1975,82 @@
         lucide.createIcons();
       }
     }
+
+    function toggleUserProfileDropdown(event) {
+      if (event) {
+        event.preventDefault();
+        event.stopPropagation();
+      }
+      const menu = document.getElementById("user-profile-dropdown-menu");
+      const chevron = document.getElementById("user-profile-chevron");
+      if (!menu) return;
+      const isClosed = menu.classList.contains("hidden");
+      if (isClosed) {
+        menu.classList.remove("hidden");
+        if (chevron) chevron.style.transform = "rotate(180deg)";
+      } else {
+        menu.classList.add("hidden");
+        if (chevron) chevron.style.transform = "rotate(0deg)";
+      }
+      if (window.lucide && typeof lucide.createIcons === 'function') {
+        lucide.createIcons();
+      }
+    }
+
+    document.addEventListener("click", function(event) {
+      const wrapper = document.getElementById("user-profile-dropdown-wrapper");
+      const menu = document.getElementById("user-profile-dropdown-menu");
+      const chevron = document.getElementById("user-profile-chevron");
+      if (menu && !menu.classList.contains("hidden")) {
+        if (!wrapper || !wrapper.contains(event.target)) {
+          menu.classList.add("hidden");
+          if (chevron) chevron.style.transform = "rotate(0deg)";
+        }
+      }
+    });
+
+    let isServicesExpanded = false;
+
+    function toggleOurServices() {
+      isServicesExpanded = !isServicesExpanded;
+      const desktopExtras = document.querySelectorAll('.service-cat-extra-desktop');
+      const mobileExtras = document.querySelectorAll('.service-cat-extra-mobile');
+      const btnText = document.getElementById('toggle-our-services-text');
+      const btnIcon = document.getElementById('toggle-our-services-icon');
+
+      if (isServicesExpanded) {
+        desktopExtras.forEach(el => {
+          el.style.display = 'flex';
+        });
+        mobileExtras.forEach(el => {
+          el.style.display = 'flex';
+        });
+        if (btnText) btnText.innerHTML = 'Show Less';
+        if (btnIcon) btnIcon.classList.add('rotate-180');
+      } else {
+        desktopExtras.forEach(el => {
+          el.style.display = '';
+        });
+        mobileExtras.forEach(el => {
+          el.style.display = '';
+        });
+        if (btnText) {
+          btnText.innerHTML = '<span class="lg:hidden">View All</span><span class="hidden lg:inline">View More</span>';
+        }
+        if (btnIcon) btnIcon.classList.remove('rotate-180');
+
+        const section = document.getElementById('our-services-section');
+        if (section) {
+          const topOffset = section.getBoundingClientRect().top + window.pageYOffset - 90;
+          if (window.pageYOffset > topOffset) {
+            window.scrollTo({ top: topOffset, behavior: 'smooth' });
+          }
+        }
+      }
+    }
   </script>
-  <script src="{% static 'data.js' %}?v=4.2"></script>
-  <script src="{% static 'app.js' %}?v=4.2"></script>
+  <script src="{% static 'data.js' %}?v=6.0"></script>
+  <script src="{% static 'app.js' %}?v=6.0"></script>
   <script>
     if (window.lucide && typeof lucide.createIcons === 'function') {
       lucide.createIcons();
