@@ -83,7 +83,7 @@
                 Service not available at your location
               </div>
               <div style="color: #be123c; font-size: 13.5px; line-height: 1.4;">
-                Our home services are currently not available in <strong>{% if user_city %}{{ user_city }}{% elif user_location %}{{ user_location }}{% else %}your location{% endif %}</strong>. We are expanding rapidly to new cities! You can update your location in your profile settings.
+                Our home services are currently not available in <strong>{% if user_city %}{{ user_city }}{% elif user_location %}{{ user_location }}{% else %}your location{% endif %}</strong>. We are expanding rapidly to new cities! You can update your location in your profile.
               </div>
             </div>
           </div>
@@ -105,16 +105,15 @@
             </div>
           </div>
           <div class="hero-actions">
-            <a class="btn btn-primary" href="/user/services/browse.html"><span data-icon="search"></span>Browse Services</a>
-            <a class="btn btn-secondary" href="/user/jobs/create.html"><span data-icon="plus"></span>Post a Job</a>
+            <a class="btn btn-primary" href="/user/jobs/create.html"><span data-icon="plus"></span>Post a Job</a>
           </div>
         </section>
 
         <section class="stats">
           <article class="card stat-card">
-            <div class="stat-top"><span class="stat-icon"><span data-icon="bolt"></span></span><span class="trend">Live</span></div>
+            <div class="stat-top"><span class="stat-icon"><span data-icon="bolt"></span></span></div>
             <div class="stat-value">{{ active_qs|default:0 }}</div>
-            <div class="stat-label">Active Quick Services</div>
+            <div class="stat-label">Active Bookings</div>
           </article>
           <article class="card stat-card">
             <div class="stat-top"><span class="stat-icon teal"><span data-icon="briefcase"></span></span></div>
@@ -144,92 +143,6 @@
         </section>
 
         <div class="stack full-width" style="display: flex; flex-direction: column; gap: 24px; width: 100%;">
-          
-          <!-- Available Quick Services Section -->
-          <section class="card">
-            <div class="card-head">
-              <div>
-                <h2>Available Quick Services</h2>
-                <p>Verified doorstep services ready to book instantly</p>
-              </div>
-              <a class="link small" href="/user/services/browse.html">Browse all in catalog →</a>
-            </div>
-            <div class="card-body" style="padding: 20px;">
-              <div class="browse-card-grid">
-                {% for srv in available_services %}
-                <article class="service-card-rich" style="cursor: pointer;" onclick="if(!event.target.closest('a, button')) window.location.href='/user/services/detail.html?id={{ srv.id }}';">
-                  <div class="service-card-media">
-                    <a href="/user/services/detail.html?id={{ srv.id }}" style="display:block; width:100%; height:100%;">
-                      {% if srv.image %}
-                        <img src="{{ srv.image.url }}" alt="{{ srv.title }}" loading="lazy">
-                      {% elif srv.image_url %}
-                        <img src="{{ srv.image_url }}" alt="{{ srv.title }}" loading="lazy">
-                      {% else %}
-                        <div class="service-card-placeholder">
-                          <span data-icon="bolt" style="font-size:28px;"></span>
-                        </div>
-                      {% endif %}
-                    </a>
-                    
-                    <span class="badge" style="position:absolute; top:10px; left:10px; background:rgba(15,23,42,0.75); color:#fff; font-size:10.5px; font-weight:700; padding:3px 8px; border-radius:12px; backdrop-filter:blur(4px); pointer-events:none;">
-                      {{ srv.category.name|default:"Quick Service" }}
-                    </span>
-                    {% if srv.vendor.vendor_profile.is_online %}
-                    <span class="badge badge-success" style="position:absolute; top:10px; right:10px; font-size:10.5px; padding:3px 8px; border-radius:12px; pointer-events:none;">
-                      Available
-                    </span>
-                    {% else %}
-                    <span class="badge" style="position:absolute; top:10px; right:10px; font-size:10.5px; padding:3px 8px; border-radius:12px; pointer-events:none; background:rgba(239, 68, 68, 0.9); color:white; border: 1px solid #f87171;">
-                      Not Available
-                    </span>
-                    {% endif %}
-                  </div>
-
-                  <div class="service-card-content">
-                    <div class="eyebrow" style="color:var(--text-muted); font-size:11.5px; margin-bottom:4px; font-weight:700; text-transform:uppercase; letter-spacing:0.5px;">
-                      {{ srv.vendor.vendor_profile.company_name|default:srv.vendor.get_full_name|default:srv.vendor.username }}
-                    </div>
-                    <h3 style="font-size:15px; font-weight:700; margin:0 0 6px; line-height:1.35;">
-                      <a href="/user/services/detail.html?id={{ srv.id }}" style="color:inherit; text-decoration:none;">{{ srv.title }}</a>
-                    </h3>
-                    
-                    <p class="service-description" style="font-size:12.5px; color:var(--text-muted); margin:0 0 12px; line-height:1.4; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;">
-                      {{ srv.description|default:"Doorstep service by verified platform expert." }}
-                    </p>
-
-                    <div style="font-size:11.5px; color:var(--text-muted); display:flex; align-items:center; gap:5px; margin-bottom:12px;">
-                      {% if srv.locality %}
-                        <span data-icon="map"></span> <span>{{ srv.locality }}</span>
-                      {% else %}
-                        <span class="avatar xs teal" style="width:18px; height:18px; font-size:9px;">{{ srv.vendor.username|slice:":1"|upper }}</span>
-                        <span>{{ srv.vendor.get_full_name|default:srv.vendor.username }}</span>
-                      {% endif %}
-                    </div>
-
-                    <div class="service-card-footer">
-                      <div>
-                        <span style="font-size:10.5px; color:var(--text-muted); display:block; text-transform:uppercase; font-weight:700;">Starting at</span>
-                        <strong style="font-size:17px; font-weight:800; color:#059669;">₹{{ srv.base_price|floatformat:"0" }}</strong>
-                      </div>
-                      <div style="display:flex; gap:6px;">
-                        <a class="btn btn-secondary btn-sm" href="/user/services/detail.html?id={{ srv.id }}" style="font-size:11.5px; padding:5px 9px;">View Details</a>
-                        {% if srv.vendor.vendor_profile.is_online %}
-                        <a class="btn btn-primary btn-sm" href="/user/services/book.html?id={{ srv.id }}" style="font-size:11.5px; padding:5px 10px;">Book Now</a>
-                        {% else %}
-                        <span class="badge" style="background:#fef2f2; color:#ef4444; border:1px solid #fca5a5; font-size:11px; padding:5px 10px; border-radius:6px; display:inline-flex; align-items:center;">Not Available</span>
-                        {% endif %}
-                      </div>
-                    </div>
-                  </div>
-                </article>
-                {% empty %}
-                <div style="grid-column: 1 / -1; text-align: center; padding: 32px; color: var(--text-muted);">
-                  No active quick services available right now. Check back soon!
-                </div>
-                {% endfor %}
-              </div>
-            </div>
-          </section>
 
           <!-- Recent Bookings Section -->
           <section class="card">
@@ -297,7 +210,7 @@
                   {% empty %}
                   <tr>
                     <td colspan="6" style="text-align: center; color: var(--text-muted); padding: 24px;">
-                      You haven’t booked any quick services yet. Explore the available services above to book a verified professional!
+                      You haven’t booked any quick services yet. <a href="/" class="link">Explore verified services on our website</a> to book an expert!
                     </td>
                   </tr>
                   {% endfor %}

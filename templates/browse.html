@@ -546,7 +546,9 @@ button{cursor:pointer}
 
     <div class="uc-header-right">
       {% if user.is_authenticated %}
-        <a href="/user/dashboard" class="uc-nav-link">Dashboard</a>
+        <a href="/user/jobs/index.html" class="uc-nav-link">My Jobs</a>
+        <a href="/user/messages/index.html" class="uc-nav-link">Messages</a>
+        <a href="/user/profile/index.html" class="uc-nav-link">Profile</a>
         <a href="/logout/" class="uc-nav-link">Logout</a>
       {% else %}
         <a href="/login/" class="uc-nav-link">Login</a>

@@ -28,18 +28,15 @@
 
   const nav = [
     ['dashboard','grid','Dashboard','dashboard.html'],
-    ['browse','search','Browse Services','services/browse.html'],
     ['bookings','list','My Bookings','services/my-bookings.html'],
     ['jobs','briefcase','My Jobs','jobs/index.html'],
 
     ['messages','chat','Messages','messages/index.html'],
-    ['profile','user','Profile','profile/index.html'],
-    ['settings','settings','Settings','settings/security.html']
+    ['profile','user','Profile','profile/index.html']
   ];
   function route(path){ return '/user/' + path; }
   function navActive(k){
     if(pageKey === k) return true;
-    if(k==='browse' && pageKey.startsWith('browse')) return true;
     if(k==='bookings' && pageKey.startsWith('bookings')) return true;
     if(k==='jobs' && pageKey.startsWith('job-') && !pageKey.includes('quotation') && pageKey!=='job-compare') return true;
     if(k==='quotations' && (pageKey.includes('quotation') || pageKey==='job-compare')) return true;
@@ -48,7 +45,6 @@
     if(k==='reviews' && pageKey.startsWith('review')) return true;
     if(k==='support' && pageKey.startsWith('support')) return true;
     if(k==='profile' && pageKey.startsWith('profile')) return true;
-    if(k==='settings' && pageKey.startsWith('setting')) return true;
     return false;
   }
   const sidebarRoot = $('#sidebar-root');
@@ -59,14 +55,14 @@
       return `<div class="nav-parent ${navActive(k)?'open':''}">${link}<button class="submenu-toggle" type="button" aria-label="Toggle quotation links">${icon('down')}</button></div><div class="nav-submenu"><a href="${route('quick-services/quotations.html')}">Quotations</a><a href="${route('jobs/compare.html')}">Compare Quotations</a></div>`;
     }).join('');
     sidebarRoot.outerHTML = `<aside class="sidebar" id="sidebar" aria-label="user navigation">
-      <a class="brand" href="${route('dashboard.html')}"><span class="brand-mark" style="background:transparent;box-shadow:none;padding:0;display:flex;align-items:center;justify-content:center;"><img src="/static/images/logo.png" alt="Sugu" style="height:36px;width:auto;object-fit:contain;"></span><span class="brand-copy"><strong>Sugu</strong><span>User Portal</span></span></a>
+      <a class="brand" href="/" title="Back to Website"><span class="brand-mark" style="background:transparent;box-shadow:none;padding:0;display:flex;align-items:center;justify-content:center;"><img src="/static/images/logo.png" alt="Sugu" style="height:36px;width:auto;object-fit:contain;"></span><span class="brand-copy"><strong>Sugu</strong><span>User Portal</span></span></a>
       <nav class="nav-scroll"><div class="nav-label">Workspace</div>${links}<div class="nav-label">Session</div><a class="nav-link" href="${route('dashboard.html')}" data-confirm="logout" data-tooltip="Logout">${icon('logout')}<span class="nav-text">Logout</span></a></nav>
       <div class="sidebar-bottom"><div class="side-user"><span class="avatar sm dyn-avatar"></span><span class="side-user-copy"><strong class="dyn-name"></strong><span>user account</span></span></div></div>
     </aside>`;
   }
   const topbarRoot = $('#topbar-root');
   if(topbarRoot){
-    topbarRoot.outerHTML = `<header class="topbar"><div class="topbar-left"><button class="icon-btn hamburger" id="mobile-menu" aria-label="Open menu">${icon('menu')}</button><button class="icon-btn desktop-collapse" id="collapse-menu" aria-label="Collapse sidebar">${icon('panel')}</button><div><div class="topbar-title">${pageTitle}</div><div class="breadcrumbs"><a href="${route('dashboard.html')}">user</a> &nbsp;/&nbsp; ${pageTitle}</div></div></div><div class="topbar-actions"><div id="topbar-page-actions" class="topbar-page-actions"></div><a class="icon-btn" href="${route('messages/index.html')}" aria-label="Messages">${icon('chat')}</a><a class="top-user" href="${route('profile/index.html')}"><span class="avatar dyn-avatar"></span><span class="top-user-copy"><strong class="dyn-name"></strong><span>user account</span></span></a></div></header>`;
+    topbarRoot.outerHTML = `<header class="topbar"><div class="topbar-left"><button class="icon-btn hamburger" id="mobile-menu" aria-label="Open menu">${icon('menu')}</button><button class="icon-btn desktop-collapse" id="collapse-menu" aria-label="Collapse sidebar">${icon('panel')}</button><div><div class="topbar-title">${pageTitle}</div><div class="breadcrumbs"><a href="${route('dashboard.html')}">user</a> &nbsp;/&nbsp; ${pageTitle}</div></div></div><div class="topbar-actions"><a class="btn btn-secondary btn-sm nav-website-btn" href="/" style="display:inline-flex;align-items:center;gap:7px;font-weight:600;padding:6px 14px;border-radius:9px;text-decoration:none;border:1px solid var(--line);background:#fff;color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,0.04);transition:all .15s ease;" title="Back to main website">${icon('home')}<span class="nav-website-text">Back to Website</span></a><div id="topbar-page-actions" class="topbar-page-actions"></div><a class="icon-btn" href="${route('messages/index.html')}" aria-label="Messages">${icon('chat')}</a><a class="top-user" href="${route('profile/index.html')}"><span class="avatar dyn-avatar"></span><span class="top-user-copy"><strong class="dyn-name"></strong><span>user account</span></span></a></div></header>`;
   }
 
   // Move page-level action buttons into the topbar and remove empty headers
@@ -109,7 +105,7 @@
                     Service not available at your location
                   </div>
                   <div style="color: #be123c; font-size: 13.5px; line-height: 1.4;">
-                    Our home services are currently not available in <strong>${d.city || 'your location'}</strong>. We are expanding rapidly to new cities! You can update your location in your profile settings.
+                    Our home services are currently not available in <strong>${d.city || 'your location'}</strong>. We are expanding rapidly to new cities! You can update your location in your profile.
                   </div>
                 </div>
               </div>

@@ -207,7 +207,7 @@
     }
   </style>
 </head>
-<body data-page="browse" data-title="Service Details" data-root="../../">
+<body data-page="bookings" data-title="Service Details" data-root="../../">
   <div class="app-shell">
     <div id="sidebar-root"></div>
     <div class="workspace">
@@ -216,11 +216,11 @@
 
         <!-- Top Navigation Bar -->
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:22px; flex-wrap:wrap; gap:12px;">
-          <a href="/user/services/browse.html" class="btn btn-secondary btn-sm" style="font-weight:600;">
-            ← Back to Browse Services
+          <a href="/" class="btn btn-secondary btn-sm" style="font-weight:600;">
+            ← Back to Services
           </a>
           <div style="font-size:12.5px; color:var(--muted); display:flex; align-items:center; gap:6px;">
-            <span>Browse</span> / <span>{{ service.category.name|default:"Quick Service" }}</span> / <strong style="color:var(--ink);">{{ service.title }}</strong>
+            <a href="/" style="color:inherit; text-decoration:none;">Services</a> / <span>{{ service.category.name|default:"Quick Service" }}</span> / <strong style="color:var(--ink);">{{ service.title }}</strong>
           </div>
         </div>
 
