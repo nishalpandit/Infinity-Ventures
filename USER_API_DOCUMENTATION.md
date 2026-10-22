@@ -342,6 +342,31 @@ response :-
 }
 }
 
+Flutter (Dio) Multi-Image Example:
+```dart
+List<MultipartFile> imageFiles = [];
+for (var file in pickedFiles) {
+  imageFiles.add(await MultipartFile.fromFile(file.path, filename: file.name));
+}
+
+FormData formData = FormData.fromMap({
+  'title': 'Leaking Tap Wash Basin',
+  'budget': '1500',
+  'category_id': '26',
+  'subcategory_id': '3',
+  'description': 'Water leaking under cabinet',
+  'address': 'Main Road, Namkum',
+  'city': 'Ranchi',
+  'images': imageFiles, // Supports 1, 2, 5, or more images
+});
+
+Response response = await dio.post(
+  'http://infinityventures.brightcodeapp.com/api/user/post-job/',
+  data: formData,
+  options: Options(headers: {'Authorization': 'Bearer $token'}),
+);
+```
+
 
 API for User Fetch Posted Jobs (with Category & SubCategory)
 url : (http://192.168.1.52:8000/api/user/jobs/)
