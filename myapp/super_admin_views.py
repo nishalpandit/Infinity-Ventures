@@ -1746,9 +1746,87 @@ def super_admin_quick_services(request):
     }
     return render(request, 'superadmin/quick_services.html', context)
 
+def _build_vendors_metadata_map(vendors, locations, categories):
+    from .views import resolve_coordinates_for_location
+    locs = list(locations)
+    cats = list(categories)
+    vendors_map = {}
+
+    for u in vendors:
+        vp = getattr(u, 'vendor_profile', None)
+        loc_text = (vp.location if vp and vp.location else '').strip()
+        addr_text = (vp.address if vp and vp.address else '').strip()
+        city = (vp.city if vp and vp.city else '') or u.assigned_city or ''
+        if not city and loc_text:
+            city = loc_text.split(',')[0].strip()
+        state = u.assigned_state or ''
+        if not state and loc_text and ',' in loc_text:
+            state = loc_text.split(',')[-1].strip()
+
+        # Match Location object
+        matched_loc_id = None
+        for l in locs:
+            l_city = (l.city or '').strip().lower()
+            if city and l_city == city.lower():
+                matched_loc_id = l.id
+                break
+            if loc_text and (l_city in loc_text.lower()):
+                matched_loc_id = l.id
+                break
+
+        # Resolve Lat & Lon
+        lat = float(vp.latitude) if (vp and vp.latitude is not None) else None
+        lon = float(vp.longitude) if (vp and vp.longitude is not None) else None
+        if lat is None or lon is None:
+            for cand in [loc_text, city, state, 'Ranchi']:
+                if cand:
+                    coords = resolve_coordinates_for_location(cand, default_coords=None)
+                    if coords:
+                        lat, lon = coords
+                        break
+            if lat is None or lon is None:
+                lat, lon = 23.369700, 85.334600
+
+        # Match Category
+        matched_cat_id = None
+        if vp and vp.category:
+            v_cat_lower = str(vp.category).strip().lower()
+            for c in cats:
+                c_name_lower = c.name.strip().lower()
+                if c_name_lower in v_cat_lower or v_cat_lower in c_name_lower:
+                    matched_cat_id = c.id
+                    break
+
+        locality_val = loc_text or addr_text or city
+        if matched_loc_id and not locality_val:
+            for l in locs:
+                if l.id == matched_loc_id:
+                    locality_val = f"{l.city}, {l.state}"
+                    break
+
+        vendors_map[u.id] = {
+            'id': u.id,
+            'name': u.get_full_name() or u.username,
+            'username': u.username,
+            'company_name': vp.company_name if vp and vp.company_name else '',
+            'mobile': vp.mobile if vp and vp.mobile else '',
+            'category': vp.category if vp and vp.category else '',
+            'category_id': matched_cat_id,
+            'location_id': matched_loc_id,
+            'city': city,
+            'state': state,
+            'locality': locality_val or 'Ranchi, Jharkhand',
+            'latitude': round(lat, 6) if lat is not None else 23.369700,
+            'longitude': round(lon, 6) if lon is not None else 85.334600,
+            'service_radius_km': 10.0,
+            'is_online': vp.is_online if vp else True,
+        }
+
+    return vendors_map
+
 @sa_required
 def super_admin_qs_create(request):
-    vendors = CustomUser.objects.filter(role='VENDOR').order_by('username')
+    vendors = CustomUser.objects.filter(role='VENDOR').select_related('vendor_profile').order_by('username')
     categories = Category.objects.all().prefetch_related('subcategories').order_by('name')
     locations = Location.objects.all().order_by('state', 'city')
     gs = GlobalSettings.objects.first()
@@ -1900,6 +1978,7 @@ def super_admin_qs_create(request):
         django_messages.success(request, f'Quick Service "{qs.title}" created successfully.')
         return redirect('super_admin_quick_services')
 
+    vendors_map = _build_vendors_metadata_map(vendors, locations, categories)
     return render(request, 'superadmin/qs_form.html', {
         'mode': 'create',
         'vendors': vendors,
@@ -1910,6 +1989,7 @@ def super_admin_qs_create(request):
         'packages_json': json.dumps([]),
         'inclusions_json': json.dumps([]),
         'exclusions_json': json.dumps([]),
+        'vendors_json': json.dumps(vendors_map),
     })
 
 @sa_required
@@ -1917,7 +1997,7 @@ def super_admin_qs_edit(request, qs_id):
     qs = get_object_or_404(QuickService, pk=qs_id)
     categories = Category.objects.all().prefetch_related('subcategories').order_by('name')
     locations = Location.objects.all().order_by('state', 'city')
-    vendors = CustomUser.objects.filter(role='VENDOR').order_by('username')
+    vendors = CustomUser.objects.filter(role='VENDOR').select_related('vendor_profile').order_by('username')
     gs = GlobalSettings.objects.first()
 
     if request.method == 'POST':
@@ -2072,6 +2152,7 @@ def super_admin_qs_edit(request, qs_id):
     inclusions_json = json.dumps(qs.inclusions or [])
     exclusions_json = json.dumps(qs.exclusions or [])
 
+    vendors_map = _build_vendors_metadata_map(vendors, locations, categories)
     return render(request, 'superadmin/qs_form.html', {
         'mode': 'edit',
         'qs': qs,
@@ -2083,6 +2164,7 @@ def super_admin_qs_edit(request, qs_id):
         'packages_json': packages_json,
         'inclusions_json': inclusions_json,
         'exclusions_json': exclusions_json,
+        'vendors_json': json.dumps(vendors_map),
     })
 
 @sa_required
@@ -2389,6 +2471,22 @@ def super_admin_subscription_delete(request, sub_id):
 
 @sa_required
 def super_admin_landing_packages(request):
+    return redirect('super_admin_bid_plans')
+
+@sa_required
+def super_admin_landing_package_create(request):
+    return redirect('super_admin_bid_plans')
+
+@sa_required
+def super_admin_landing_package_edit(request, card_id):
+    return redirect('super_admin_bid_plans')
+
+@sa_required
+def super_admin_landing_package_delete(request, card_id):
+    return redirect('super_admin_bid_plans')
+
+@sa_required
+def super_admin_landing_package_toggle(request, card_id):
     return redirect('super_admin_bid_plans')
 
 

@@ -423,7 +423,7 @@
         <!-- Vendor -->
         <div class="form-field">
           <label>Assigned Vendor <span style="color:#ef4444;">*</span></label>
-          <select name="vendor" class="form-select" required>
+          <select name="vendor" id="qsVendorSelect" class="form-select" required onchange="onVendorChange(this.value)">
             <option value="">-- Select Vendor --</option>
             {% for v in vendors %}
               <option value="{{ v.id }}" {% if qs.vendor_id == v.id %}selected{% endif %}>
@@ -431,15 +431,26 @@
               </option>
             {% endfor %}
           </select>
+          <!-- Vendor live details badge -->
+          <div id="vendorLiveBadge" style="display:none; margin-top:10px; padding:10px 14px; background:#f0f9ff; border:1px solid #bae6fd; border-radius:var(--r-sm); font-size:12px;">
+            <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:4px;">
+              <div style="font-weight:700; color:#0369a1; display:flex; align-items:center; gap:6px;">
+                <i class="fa-solid fa-circle-check" style="color:#0284c7;"></i>
+                <span id="vBadgeName"></span>
+              </div>
+              <span id="vBadgeCategory" style="background:#e0f2fe; color:#0284c7; padding:2px 8px; border-radius:12px; font-weight:700; font-size:11px;"></span>
+            </div>
+            <div style="color:#475569; font-size:11.5px; line-height:1.4;" id="vBadgeDetails"></div>
+          </div>
         </div>
 
         <!-- Master City / Location -->
         <div class="form-field">
           <label>Master Operational City</label>
-          <select name="location" class="form-select">
+          <select name="location" id="qsLocationSelect" class="form-select" onchange="onLocationChange(this)">
             <option value="">-- Optional Master Location --</option>
             {% for loc in locations %}
-              <option value="{{ loc.id }}" {% if qs.location_id == loc.id %}selected{% endif %}>{{ loc.city }}, {{ loc.state }}</option>
+              <option value="{{ loc.id }}" data-city="{{ loc.city }}" data-state="{{ loc.state }}" {% if qs.location_id == loc.id %}selected{% endif %}>{{ loc.city }}, {{ loc.state }}</option>
             {% endfor %}
           </select>
         </div>
@@ -447,14 +458,14 @@
         <!-- Locality Text -->
         <div class="form-field">
           <label>Locality / Coverage Area</label>
-          <input type="text" name="locality" class="form-input" value="{{ qs.locality|default:'' }}" placeholder="e.g. Lalpur, Ranchi or Indiranagar, Bengaluru">
+          <input type="text" name="locality" id="qsLocalityInput" class="form-input" value="{{ qs.locality|default:'' }}" placeholder="e.g. Lalpur, Ranchi or Indiranagar, Bengaluru">
           <div class="field-hint">Used for display badges & geo-targeting</div>
         </div>
 
         <!-- Service Radius -->
         <div class="form-field">
           <label>Delivery Radius (km)</label>
-          <input type="number" step="0.5" name="service_radius_km" class="form-input" value="{{ qs.service_radius_km|default:10.0 }}" min="1" max="100">
+          <input type="number" step="0.5" name="service_radius_km" id="qsRadiusInput" class="form-input" value="{{ qs.service_radius_km|default:10.0 }}" min="1" max="100">
           <div class="field-hint">Range within which this service is available</div>
         </div>
 
@@ -462,11 +473,11 @@
         <div class="form-row-2" style="margin-bottom:0;">
           <div class="form-field" style="margin-bottom:0;">
             <label style="font-size:12px;">Latitude</label>
-            <input type="number" step="0.000001" name="latitude" class="form-input" value="{{ qs.latitude|default:'' }}" placeholder="23.3697">
+            <input type="number" step="0.000001" name="latitude" id="qsLatitudeInput" class="form-input" value="{{ qs.latitude|default:'' }}" placeholder="23.3697">
           </div>
           <div class="form-field" style="margin-bottom:0;">
             <label style="font-size:12px;">Longitude</label>
-            <input type="number" step="0.000001" name="longitude" class="form-input" value="{{ qs.longitude|default:'' }}" placeholder="85.3346">
+            <input type="number" step="0.000001" name="longitude" id="qsLongitudeInput" class="form-input" value="{{ qs.longitude|default:'' }}" placeholder="85.3346">
           </div>
         </div>
       </div>
@@ -770,6 +781,162 @@
     }
   }
 
+  // Vendors metadata dictionary for instant auto-fill
+  const vendorsMap = {{ vendors_json|default:"{}"|safe }};
+
+  const cityCoordsMap = {
+    'ranchi': [23.3697, 85.3346],
+    'lalpur': [23.3697, 85.3346],
+    'namkum': [23.3396, 85.3789],
+    'harmu': [23.3550, 85.3050],
+    'morabadi': [23.3850, 85.3250],
+    'doranda': [23.3340, 85.3218],
+    'jamshedpur': [22.8046, 86.2029],
+    'dhanbad': [23.7957, 86.4304],
+    'bokaro': [23.6693, 86.1511],
+    'mumbai': [19.0760, 72.8777],
+    'pune': [18.5204, 73.8567],
+    'delhi': [28.6139, 77.2090],
+    'new delhi': [28.6139, 77.2090],
+    'bengaluru': [12.9716, 77.5946],
+    'bangalore': [12.9716, 77.5946],
+    'ahmedabad': [23.0225, 72.5714],
+    'kolkata': [22.5726, 88.3639],
+    'hyderabad': [17.3850, 78.4867],
+    'chennai': [13.0827, 80.2707],
+    'mysuru': [12.2958, 76.6394],
+  };
+
+  function highlightField(el) {
+    if (!el) return;
+    el.style.transition = 'background-color 0.4s ease, border-color 0.4s ease, box-shadow 0.4s ease';
+    el.style.backgroundColor = '#ecfdf5';
+    el.style.borderColor = '#10b981';
+    el.style.boxShadow = '0 0 0 3px rgba(16, 185, 129, 0.2)';
+    setTimeout(() => {
+      el.style.backgroundColor = '';
+      el.style.borderColor = '';
+      el.style.boxShadow = '';
+    }, 1400);
+  }
+
+  function updateVendorBadge(v) {
+    const badge = document.getElementById('vendorLiveBadge');
+    if (!badge) return;
+    if (!v) {
+      badge.style.display = 'none';
+      return;
+    }
+    const nameEl = document.getElementById('vBadgeName');
+    const catEl = document.getElementById('vBadgeCategory');
+    const detailsEl = document.getElementById('vBadgeDetails');
+
+    if (nameEl) nameEl.textContent = v.company_name ? `${v.company_name} (${v.name || v.username})` : (v.name || v.username);
+    if (catEl) {
+      catEl.textContent = v.category || 'General';
+      catEl.style.display = v.category ? 'inline-block' : 'none';
+    }
+    if (detailsEl) {
+      const parts = [];
+      if (v.locality) parts.push(`<i class="fa-solid fa-location-dot" style="color:#0284c7;"></i> ${escapeHtml(v.locality)}`);
+      if (v.mobile) parts.push(`<i class="fa-solid fa-phone" style="color:#0284c7;"></i> ${escapeHtml(v.mobile)}`);
+      if (v.latitude && v.longitude) parts.push(`📍 GPS: ${parseFloat(v.latitude).toFixed(4)}, ${parseFloat(v.longitude).toFixed(4)}`);
+      detailsEl.innerHTML = parts.join(' &nbsp;•&nbsp; ');
+    }
+    badge.style.display = 'block';
+  }
+
+  function onVendorChange(vendorId) {
+    if (!vendorId) {
+      updateVendorBadge(null);
+      return;
+    }
+
+    const v = vendorsMap[vendorId];
+    if (!v) return;
+
+    // 1. Auto-select Master Operational City
+    const locSelect = document.getElementById('qsLocationSelect');
+    if (locSelect) {
+      if (v.location_id) {
+        locSelect.value = String(v.location_id);
+        highlightField(locSelect);
+      } else if (v.city) {
+        for (let i = 0; i < locSelect.options.length; i++) {
+          const optCity = locSelect.options[i].getAttribute('data-city') || '';
+          const optText = locSelect.options[i].text.toLowerCase();
+          if ((optCity && optCity.toLowerCase() === v.city.toLowerCase()) || optText.includes(v.city.toLowerCase())) {
+            locSelect.selectedIndex = i;
+            highlightField(locSelect);
+            break;
+          }
+        }
+      }
+    }
+
+    // 2. Auto-fill Locality / Coverage Area
+    const localityInput = document.getElementById('qsLocalityInput');
+    if (localityInput && v.locality) {
+      localityInput.value = v.locality;
+      highlightField(localityInput);
+    }
+
+    // 3. Auto-fill Coordinates (Latitude & Longitude)
+    const latInput = document.getElementById('qsLatitudeInput');
+    const lonInput = document.getElementById('qsLongitudeInput');
+    if (latInput && v.latitude !== null && v.latitude !== undefined) {
+      latInput.value = parseFloat(v.latitude).toFixed(6);
+      highlightField(latInput);
+    }
+    if (lonInput && v.longitude !== null && v.longitude !== undefined) {
+      lonInput.value = parseFloat(v.longitude).toFixed(6);
+      highlightField(lonInput);
+    }
+
+    // 4. Auto-fill Delivery Radius (km)
+    const radiusInput = document.getElementById('qsRadiusInput');
+    if (radiusInput && (!radiusInput.value || radiusInput.value === '10' || radiusInput.value === '10.0')) {
+      radiusInput.value = (v.service_radius_km || 10.0).toFixed(1);
+    }
+
+    // 5. Auto-select Category if not chosen yet
+    const catSelect = document.getElementById('qsCategorySelect');
+    if (catSelect && v.category_id && (!catSelect.value || catSelect.value === '')) {
+      catSelect.value = String(v.category_id);
+      if (typeof onCategoryChange === 'function') {
+        onCategoryChange(catSelect.value);
+      }
+      highlightField(catSelect);
+    }
+
+    // 6. Update Vendor Live Badge
+    updateVendorBadge(v);
+  }
+
+  function onLocationChange(selectEl) {
+    const selectedOpt = selectEl.options[selectEl.selectedIndex];
+    if (!selectedOpt || !selectedOpt.value) return;
+    const city = (selectedOpt.getAttribute('data-city') || selectedOpt.text.split(',')[0] || '').trim().toLowerCase();
+
+    // Auto-fill locality if empty or generic
+    const localityInput = document.getElementById('qsLocalityInput');
+    if (localityInput && (!localityInput.value || localityInput.value.includes('Ranchi'))) {
+      localityInput.value = selectedOpt.text.trim();
+      highlightField(localityInput);
+    }
+
+    // Match coords
+    for (const [k, coords] of Object.entries(cityCoordsMap)) {
+      if (city.includes(k) || k.includes(city)) {
+        const latInput = document.getElementById('qsLatitudeInput');
+        const lonInput = document.getElementById('qsLongitudeInput');
+        if (latInput) { latInput.value = coords[0].toFixed(6); highlightField(latInput); }
+        if (lonInput) { lonInput.value = coords[1].toFixed(6); highlightField(lonInput); }
+        break;
+      }
+    }
+  }
+
   document.addEventListener('DOMContentLoaded', () => {
     renderPackageRows();
     renderInclusions();
@@ -780,6 +947,13 @@
     const catSelect = document.getElementById('qsCategorySelect');
     if (catSelect && catSelect.value) {
       onCategoryChange(catSelect.value, initialSubcatId);
+    }
+
+    // Show initial vendor badge if already selected (e.g. in edit mode)
+    const vendorSelect = document.getElementById('qsVendorSelect');
+    if (vendorSelect && vendorSelect.value) {
+      const v = vendorsMap[vendorSelect.value];
+      if (v) updateVendorBadge(v);
     }
 
     const form = document.getElementById('qsEditForm');
