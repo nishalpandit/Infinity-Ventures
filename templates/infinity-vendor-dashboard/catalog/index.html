@@ -169,6 +169,37 @@
       font-weight: 700;
       margin-top: 10px;
     }
+    .subcat-chip {
+      background: #ffffff;
+      border: 1.5px solid #cbd5e1;
+      padding: 7px 14px;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 600;
+      color: #334155;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      user-select: none;
+    }
+    .subcat-chip:hover {
+      border-color: #0f8a7c;
+      background: #f0fdfa;
+      color: #0f8a7c;
+      transform: translateY(-1px);
+    }
+    .subcat-chip.active {
+      background: #0f8a7c;
+      border-color: #0f8a7c;
+      color: #ffffff;
+      font-weight: 700;
+      box-shadow: 0 4px 10px rgba(15, 138, 124, 0.25);
+    }
+    .subcat-chip.active i {
+      color: #ffffff !important;
+    }
 
     /* Image Preset Selector */
     .img-preset-grid {
@@ -371,6 +402,44 @@
       background: #e8f7f4;
       border-color: #0f8a7c;
       color: #0f8a7c;
+    }
+    .subcat-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 7px 14px;
+      background: #ffffff;
+      border: 1.5px solid #cbd5e1;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+      color: #334155;
+      cursor: pointer;
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+      box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+      user-select: none;
+    }
+    .subcat-chip:hover {
+      border-color: #0f8a7c;
+      color: #0f8a7c;
+      background: #f0fdfa;
+      transform: translateY(-1px);
+    }
+    .subcat-chip.active {
+      background: #0f8a7c;
+      border-color: #0f8a7c;
+      color: #ffffff;
+      font-weight: 700;
+      box-shadow: 0 4px 10px rgba(15,138,124,0.25);
+    }
+    .subcat-chip.active i {
+      color: #ffffff;
+    }
+    .subcat-empty-msg {
+      font-size: 12px;
+      color: #64748b;
+      font-style: italic;
+      padding: 6px 0;
     }
     .loc-active-pill {
       display: flex;
@@ -919,6 +988,23 @@
                       {% endfor %}
                     </div>
                     <input type="hidden" name="category_id" id="formCategory" value="{% if categories %}{{ categories.0.id }}{% endif %}">
+
+                    <!-- Dynamic Subcategory Selection -->
+                    <div id="subcategorySection" style="margin-top:16px; padding:14px 16px; background:#f0fdfa; border:1.5px solid #a7f3d0; border-radius:12px;">
+                      <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;">
+                        <div>
+                          <label style="font-size:12.5px; font-weight:800; color:#065f46; display:flex; align-items:center; gap:6px; margin:0;">
+                            <i class="fa-solid fa-layer-group" style="color:#0f8a7c;"></i> Select Subcategory <span class="required" style="color:#ef4444;">*</span>
+                          </label>
+                          <span style="font-size:11px; color:#047857;">Click to choose the specific trade subcategory</span>
+                        </div>
+                        <span id="subcatCountBadge" style="font-size:11px; font-weight:700; color:#0f8a7c; background:#ffffff; border:1px solid #99f6e4; padding:2px 8px; border-radius:12px;"></span>
+                      </div>
+                      <div id="subcategoryChipsContainer" style="display:flex; flex-wrap:wrap; gap:8px;">
+                        <!-- Dynamically populated via JS -->
+                      </div>
+                      <input type="hidden" name="subcategory_id" id="formSubcategory" value="">
+                    </div>
                   </div>
 
                   <!-- STEP 2: SERVICE DETAILS & STATUS -->
@@ -1524,7 +1610,7 @@
             <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-bottom:14px;">
               <div class="field" style="margin:0;">
                 <label>Category <span class="required">*</span></label>
-                <select name="category_id" id="editCategory" class="select" required>
+                <select name="category_id" id="editCategory" class="select" required onchange="handleEditCategoryChange(this.value)">
                   <option value="">Select Category</option>
                   {% for cat in categories %}
                     <option value="{{ cat.id }}">{{ cat.name }}</option>
@@ -1533,9 +1619,16 @@
               </div>
 
               <div class="field" style="margin:0;">
-                <label>Service Title <span class="required">*</span></label>
-                <input type="text" name="title" id="editTitle" class="input" placeholder="e.g. Switchboard Repair" required autocomplete="off">
+                <label>Subcategory</label>
+                <select name="subcategory_id" id="editSubcategory" class="select">
+                  <option value="">Select Subcategory</option>
+                </select>
               </div>
+            </div>
+
+            <div class="field" style="margin:0 0 14px;">
+              <label>Service Title <span class="required">*</span></label>
+              <input type="text" name="title" id="editTitle" class="input" placeholder="e.g. Switchboard Repair" required autocomplete="off">
             </div>
 
             <!-- Short Description -->
@@ -1702,9 +1795,170 @@
 
   <!-- Serialized Service Data for Edit Modal Consumption -->
   <script type="application/json" id="myServicesDataJson">{{ my_services_json|default:'{}'|safe }}</script>
+  <script type="application/json" id="subcategoriesByCatJson">{{ subcategories_by_cat_json|default:'{}'|safe }}</script>
 
   <!-- Interactive JavaScript Engine -->
   <script>
+    // Subcategories dictionary by category id: { "<cat_id>": [{id, name}, ...] }
+    let SUBCATEGORIES_BY_CAT = {};
+    try {
+      const subcatEl = document.getElementById('subcategoriesByCatJson');
+      if (subcatEl && subcatEl.textContent.trim()) {
+        SUBCATEGORIES_BY_CAT = JSON.parse(subcatEl.textContent);
+      }
+    } catch (e) {
+      console.warn("Failed to parse subcategories JSON", e);
+    }
+
+    // Render subcategories chips in Create Quick Service form
+    function renderSubcategoriesForCategory(catId, preselectedSubcatId = null) {
+      const container = document.getElementById('subcategoryChipsContainer');
+      const badge = document.getElementById('subcatCountBadge');
+      const hiddenInput = document.getElementById('formSubcategory');
+      if (!container) return;
+
+      if (!catId) {
+        container.innerHTML = '<span class="subcat-empty-msg"><i class="fa-solid fa-info-circle"></i> Please select a category first.</span>';
+        if (badge) badge.textContent = '0 available';
+        if (hiddenInput) hiddenInput.value = '';
+        return;
+      }
+
+      const subcats = SUBCATEGORIES_BY_CAT[String(catId)];
+      if (subcats && Array.isArray(subcats)) {
+        displaySubcategoryChips(subcats, preselectedSubcatId);
+      } else {
+        container.innerHTML = '<span class="subcat-empty-msg"><i class="fa-solid fa-spinner fa-spin"></i> Loading subcategories...</span>';
+        fetch(`/api/categories/${catId}/subcategories/`)
+          .then(res => res.json())
+          .then(data => {
+            if (data.status === 'success' && Array.isArray(data.subcategories)) {
+              SUBCATEGORIES_BY_CAT[String(catId)] = data.subcategories;
+              displaySubcategoryChips(data.subcategories, preselectedSubcatId);
+            } else {
+              displaySubcategoryChips([], null);
+            }
+          })
+          .catch(err => {
+            console.error('Error fetching subcategories:', err);
+            displaySubcategoryChips([], null);
+          });
+      }
+    }
+
+    function displaySubcategoryChips(subcats, preselectedSubcatId = null) {
+      const container = document.getElementById('subcategoryChipsContainer');
+      const badge = document.getElementById('subcatCountBadge');
+      const hiddenInput = document.getElementById('formSubcategory');
+      if (!container) return;
+
+      if (!subcats || subcats.length === 0) {
+        container.innerHTML = '<span class="subcat-empty-msg"><i class="fa-solid fa-circle-exclamation" style="color:#f59e0b; margin-right:4px;"></i> No specific subcategories found for this category. You can proceed with standard details.</span>';
+        if (badge) badge.textContent = '0 available';
+        if (hiddenInput) hiddenInput.value = '';
+        return;
+      }
+
+      if (badge) badge.textContent = `${subcats.length} subcategories`;
+
+      let selectedId = preselectedSubcatId ? String(preselectedSubcatId) : String(subcats[0].id);
+      if (hiddenInput) hiddenInput.value = selectedId;
+
+      container.innerHTML = subcats.map((sc) => {
+        const isSelected = String(sc.id) === selectedId;
+        const safeName = escapeHtml(sc.name);
+        return `
+          <button type="button" 
+                  class="subcat-chip ${isSelected ? 'active' : ''}" 
+                  data-id="${sc.id}" 
+                  data-name="${sc.name.replace(/"/g, '&quot;')}"
+                  onclick="selectCreateSubcategory(this, '${sc.id}', '${sc.name.replace(/'/g, "\\'")}')">
+            <i class="fa-solid ${isSelected ? 'fa-circle-check' : 'fa-tag'}"></i>
+            <span>${safeName}</span>
+          </button>
+        `;
+      }).join('');
+
+      if (selectedId) {
+        const matched = subcats.find(s => String(s.id) === selectedId);
+        if (matched) {
+          const titleInput = document.getElementById('formTitle');
+          if (titleInput && (!titleInput.value || titleInput.value === 'Switchboard Repair' || titleInput.value === 'Professional Home Service')) {
+            titleInput.value = matched.name;
+            const descInput = document.getElementById('formDescription');
+            if (descInput && (!descInput.value || descInput.value.includes('Professional'))) {
+              descInput.value = `Professional ${matched.name.toLowerCase()} service by verified experts.`;
+            }
+          }
+        }
+      }
+    }
+
+    function selectCreateSubcategory(btnEl, subcatId, subcatName) {
+      document.querySelectorAll('#subcategoryChipsContainer .subcat-chip').forEach(btn => {
+        btn.classList.remove('active');
+        const icon = btn.querySelector('i');
+        if (icon) {
+          icon.className = 'fa-solid fa-tag';
+        }
+      });
+      btnEl.classList.add('active');
+      const icon = btnEl.querySelector('i');
+      if (icon) {
+        icon.className = 'fa-solid fa-circle-check';
+      }
+
+      const hiddenInput = document.getElementById('formSubcategory');
+      if (hiddenInput) hiddenInput.value = subcatId;
+
+      const titleInput = document.getElementById('formTitle');
+      if (titleInput) {
+        titleInput.value = subcatName;
+        titleInput.setAttribute('data-auto', 'true');
+        const descInput = document.getElementById('formDescription');
+        if (descInput) {
+          descInput.value = `Professional ${subcatName.toLowerCase()} service by verified experts.`;
+        }
+      }
+      updateLivePreview();
+    }
+
+    // Subcategory handling for Edit Modal
+    function handleEditCategoryChange(catId, selectedSubcatId = null) {
+      const select = document.getElementById('editSubcategory');
+      if (!select) return;
+      select.innerHTML = '<option value="">Select Subcategory</option>';
+      if (!catId) return;
+
+      function populateSelect(subcats) {
+        if (!subcats || subcats.length === 0) return;
+        subcats.forEach(sc => {
+          const opt = document.createElement('option');
+          opt.value = sc.id;
+          opt.textContent = sc.name;
+          if (selectedSubcatId && String(sc.id) === String(selectedSubcatId)) {
+            opt.selected = true;
+          }
+          select.appendChild(opt);
+        });
+      }
+
+      const subcats = SUBCATEGORIES_BY_CAT[String(catId)];
+      if (subcats && Array.isArray(subcats)) {
+        populateSelect(subcats);
+      } else {
+        fetch(`/api/categories/${catId}/subcategories/`)
+          .then(res => res.json())
+          .then(data => {
+            if (data.status === 'success' && Array.isArray(data.subcategories)) {
+              SUBCATEGORIES_BY_CAT[String(catId)] = data.subcategories;
+              populateSelect(data.subcategories);
+            }
+          })
+          .catch(e => console.error(e));
+      }
+    }
+
     // Form Visibility Toggle
     function toggleServiceForm() {
       const form = document.getElementById('add-service-form');
@@ -1898,6 +2152,9 @@
         catInput.value = catId;
         catInput.setAttribute('data-name', catName);
       }
+
+      // Populate dynamic subcategories
+      renderSubcategoriesForCategory(catId);
 
       // Populate dynamic suggestions and inclusions
       populateTitleSuggestions(catName);
@@ -2353,6 +2610,7 @@
       document.getElementById('editModalHeading').textContent = `Edit Quick Service: ${srv.title}`;
       document.getElementById('editTitle').value = srv.title || '';
       document.getElementById('editCategory').value = srv.category_id || '';
+      handleEditCategoryChange(srv.category_id || '', srv.subcategory_id || '');
       document.getElementById('editDescription').value = srv.description || '';
       document.getElementById('editLocality').value = srv.locality || '';
       document.getElementById('editRadius').value = srv.service_radius_km || 10;
@@ -2541,10 +2799,14 @@
       // Initialize active category card if present
       const firstActiveCard = document.querySelector('#createCategoryCardGrid .cat-card.active') || document.querySelector('#createCategoryCardGrid .cat-card');
       let initialCat = '';
+      let initialCatId = '';
       if (firstActiveCard) {
         firstActiveCard.classList.add('active');
         const radio = firstActiveCard.querySelector('input[type="radio"]');
-        if (radio) radio.checked = true;
+        if (radio) {
+          radio.checked = true;
+          initialCatId = radio.value;
+        }
         const titleSpan = firstActiveCard.querySelector('.cat-title');
         initialCat = titleSpan ? titleSpan.textContent.trim() : '';
         const catInput = document.getElementById('formCategory');
@@ -2552,6 +2814,9 @@
           catInput.value = radio.value;
           catInput.setAttribute('data-name', initialCat);
         }
+      }
+      if (initialCatId) {
+        renderSubcategoriesForCategory(initialCatId);
       }
       populateTitleSuggestions(initialCat);
       populateInclusions(initialCat);

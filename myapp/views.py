@@ -965,6 +965,13 @@ def dashboard_view(request, path=''):
                 if image_preset:
                     qs_obj.image_url = image_preset
 
+                subcat_id = request.POST.get('subcategory_id')
+                if subcat_id:
+                    qs_obj.subcategory = SubCategory.objects.filter(id=subcat_id).first()
+                cat_id_edit = request.POST.get('category_id')
+                if cat_id_edit:
+                    qs_obj.category = Category.objects.filter(id=cat_id_edit).first()
+
                 qs_obj.title = title
                 qs_obj.status = new_status
                 qs_obj.description = description
@@ -1115,6 +1122,7 @@ def dashboard_view(request, path=''):
                 vendor=request.user,
                 title=title,
                 category=cat_obj,
+                subcategory=SubCategory.objects.filter(id=request.POST.get('subcategory_id')).first() if request.POST.get('subcategory_id') else None,
                 description=description or f"Quality {title} service at your doorstep.",
                 base_price=min_price,
                 service_packages=service_packages,
@@ -1865,14 +1873,14 @@ def dashboard_view(request, path=''):
             elif active_tab == 'account':
                 save_vendor_profile_changes(request, request.user)
                 messages.success(request, "Account details and contact information updated successfully!")
-                return redirect('/vendor/settings/index.html#account')
+                return redirect('/vendor/settings/index.html#profile')
             elif active_tab == 'notifications':
                 messages.success(request, "Notification preferences updated successfully!")
-                return redirect('/vendor/settings/index.html#notifications')
+                return redirect('/vendor/settings/index.html#profile')
             else:
                 save_vendor_profile_changes(request, request.user)
                 messages.success(request, "Settings updated successfully!")
-                return redirect('/vendor/settings/index.html')
+                return redirect('/vendor/settings/index.html#profile')
 
     if path in ['vendor/profile/edit', 'vendor/profile/edit.html']:
         if not request.user.is_authenticated:
@@ -2143,9 +2151,12 @@ def dashboard_view(request, path=''):
 
     if path in ['vendor/catalog', 'vendor/catalog/index', 'vendor/catalog/index.html']:
         if request.user.is_authenticated:
-            srv_qs = QuickService.objects.filter(vendor=request.user).select_related('category').order_by('-created_at')
+            srv_qs = QuickService.objects.filter(vendor=request.user).select_related('category', 'subcategory').order_by('-created_at')
             context['my_services'] = srv_qs
-            context['categories'] = Category.objects.filter(status='active').order_by('name')
+            active_cats = Category.objects.filter(status='active').prefetch_related('subcategories').order_by('name')
+            context['categories'] = active_cats
+            subcat_map = {str(c.id): [{'id': sc.id, 'name': sc.name} for sc in c.subcategories.filter(status='active').order_by('name')] for c in active_cats}
+            context['subcategories_by_cat_json'] = json.dumps(subcat_map)
             gs = GlobalSettings.objects.first()
             context['global_settings'] = gs
             services_data = {}
@@ -2155,6 +2166,8 @@ def dashboard_view(request, path=''):
                     'title': s.title,
                     'category_id': s.category_id or '',
                     'category_name': s.category.name if s.category else '',
+                    'subcategory_id': s.subcategory_id or '',
+                    'subcategory_name': s.subcategory.name if s.subcategory else '',
                     'status': s.status,
                     'description': s.description or '',
                     'locality': s.locality or '',
@@ -2336,13 +2349,15 @@ def dashboard_view(request, path=''):
             if qs_id and scheduled_date and service_address:
                 try:
                     qs = QuickService.objects.select_related('vendor', 'vendor__vendor_profile').get(id=qs_id)
-                    if hasattr(qs.vendor, 'vendor_profile') and not qs.vendor.vendor_profile.is_online:
-                        messages.error(request, "This vendor is currently offline and not accepting bookings.")
-                        return redirect(f'/user/services/detail.html?id={qs_id}')
-                        
+                    target_vendor = qs.vendor
+                    if hasattr(target_vendor, 'vendor_profile') and not target_vendor.vendor_profile.is_online:
+                        alt = QuickService.objects.filter(category=qs.category, vendor__vendor_profile__is_online=True).select_related('vendor').first()
+                        if alt and alt.vendor:
+                            target_vendor = alt.vendor
+
                     ServiceBooking.objects.create(
                         customer=request.user,
-                        vendor=qs.vendor,
+                        vendor=target_vendor,
                         quick_service=qs,
                         package_name=package_name,
                         total_amount=total_amount,
@@ -3818,6 +3833,7 @@ def home_view(request):
 
             srv_list.append({
                 'id': s.id,
+                'vendor_id': s.vendor_id,
                 'title': s.title,
                 'price': float(s.base_price),
                 'description': s.description or '',

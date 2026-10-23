@@ -29,6 +29,8 @@ urlpatterns = [
     path('admin-dashboard/create-company-vendor/', views.create_company_vendor_view, name='create_company_vendor'),
     path('api/manage-location/', views.manage_location_view, name='manage_location_view'),
     path('api/categories/', Api_views.get_categories_api, name='get_categories_api'),
+    path('api/categories/<int:category_id>/subcategories/', Api_views.get_subcategories_api, name='get_subcategories_api'),
+    path('api/categories/<int:category_id>/subcategories', Api_views.get_subcategories_api),
     path('api/locations/', Api_views.get_locations_api, name='get_locations_api'),
     path('api/states/', Api_views.get_states_api, name='get_states_api'),
     path('api/cities/', Api_views.get_cities_api, name='get_cities_api'),
@@ -270,6 +272,10 @@ urlpatterns = [
     path('api/vendor/profile/update', Api_views.vendor_edit_profile_api),
     path('api/vendor/toggle-online/', Api_views.vendor_toggle_online_api, name='vendor_toggle_online_api'),
     path('api/vendor/toggle-online', Api_views.vendor_toggle_online_api),
+    path('api/vendor/schedule/', Api_views.vendor_schedule_api, name='vendor_schedule_api'),
+    path('api/vendor/schedule', Api_views.vendor_schedule_api),
+    path('api/vendor/<int:vendor_id>/available-slots/', Api_views.vendor_available_slots_api, name='vendor_available_slots_api'),
+    path('api/vendor/<int:vendor_id>/available-slots', Api_views.vendor_available_slots_api),
 
     # Vendor Dashboard & Jobs APIs (Bearer Token Protected)
     path('api/vendor/dashboard/', Api_views.vendor_dashboard_api, name='vendor_dashboard_api'),

@@ -26,6 +26,12 @@ from .review_services import (
     ReviewError, UNLOCKED_BOOKING_STATUSES, booking_contact_unlocked,
     mask_customer_name, submit_booking_review, vendor_review_summary,
 )
+from .schedule_services import (
+    ScheduleValidationError,
+    get_slot_availability,
+    normalize_schedule,
+    schedule_for_profile,
+)
 User = get_user_model()
 
 
@@ -42,12 +48,16 @@ def _parse_api_request(request):
     - query parameters (GET fallback)
     """
     data = {}
-    if request.body:
+    content_type = (request.content_type or '').lower()
+    if 'application/json' in content_type:
         try:
-            data = json.loads(request.body.decode('utf-8'))
+            if request.body:
+                data = json.loads(request.body.decode('utf-8'))
         except Exception:
             pass
-    if not data:
+    else:
+        # Multipart and URL-encoded bodies are parsed by Django. Reading the raw
+        # body after request.POST has already been accessed raises an exception.
         data = request.POST.dict()
     if not data and request.GET:
         data = request.GET.dict()
@@ -162,10 +172,6 @@ def _get_user_from_bearer_token(request):
         Session-authenticated user (from web portal)
     Returns: (user_or_None, error_message_or_None)
     """
-    # Allow session-authenticated requests (e.g. from web dashboard)
-    if hasattr(request, 'user') and request.user and request.user.is_authenticated:
-        return request.user, None
-
     auth_header = request.META.get('HTTP_AUTHORIZATION', '')
     token_key = ''
     if auth_header:
@@ -187,17 +193,19 @@ def _get_user_from_bearer_token(request):
             except Exception:
                 pass
 
-    if not token_key:
-        return None, "Authorization header with Bearer token is required."
+    if token_key:
+        token_obj = AuthToken.objects.filter(key=token_key).select_related('user').first()
+        if not token_obj:
+            return None, "Invalid or expired Bearer token."
+        if not token_obj.user.is_active:
+            return None, "User account is suspended or inactive."
+        return token_obj.user, None
 
-    token_obj = AuthToken.objects.filter(key=token_key).select_related('user').first()
-    if not token_obj:
-        return None, "Invalid or expired Bearer token."
+    # Fallback: Allow session-authenticated requests (e.g. from web dashboard)
+    if hasattr(request, 'user') and request.user and request.user.is_authenticated:
+        return request.user, None
 
-    if not token_obj.user.is_active:
-        return None, "User account is suspended or inactive."
-
-    return token_obj.user, None
+    return None, "Authorization header with Bearer token is required."
 
 
 
@@ -2663,6 +2671,9 @@ def _authenticate_api_user(request):
         token = AuthToken.objects.filter(key=token_key).first()
         if token:
             return token.user
+    # Fallback: Django session authentication (for web users logged in via browser)
+    if hasattr(request, 'user') and request.user.is_authenticated:
+        return request.user
     return None
 
 @csrf_exempt
@@ -3154,6 +3165,120 @@ def _handle_vendor_profile_update(request, user, vp):
 
 
 @csrf_exempt
+def vendor_schedule_api(request):
+    """Retrieve or replace the authenticated vendor's weekly schedule."""
+    user, err = _get_user_from_bearer_token(request)
+    if err:
+        return JsonResponse({'status': 'error', 'message': err}, status=401)
+    if user.role != 'VENDOR' and not user.is_superuser:
+        return JsonResponse(
+            {'status': 'error', 'message': 'Access denied. Only vendors can manage schedules.'},
+            status=403,
+        )
+
+    profile, _ = VendorProfile.objects.get_or_create(user=user)
+    if request.method == 'GET':
+        schedule, customized = schedule_for_profile(profile)
+        return JsonResponse({
+            'status': 'success',
+            'customized': customized,
+            'using_fallback': not customized,
+            'schedule': schedule,
+        })
+
+    if request.method != 'POST':
+        return JsonResponse(
+            {'status': 'error', 'message': 'Method not allowed. Use GET or POST.'},
+            status=405,
+        )
+
+    data = _parse_api_request(request)
+    payload = data.get('schedule', data) if isinstance(data, dict) else data
+    if isinstance(payload, str):
+        try:
+            payload = json.loads(payload)
+        except json.JSONDecodeError:
+            return JsonResponse({
+                'status': 'error',
+                'message': 'schedule must contain a valid JSON object.',
+            }, status=400)
+    elif isinstance(data, dict) and 'schedule' not in data and any(
+        f'{day}_active' in data or f'{day}_slots' in data
+        for day in ('monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday')
+    ):
+        # Postman/mobile-friendly multipart format: monday_active=true and
+        # monday_slots=[{"start":"09:00",...}], plus JSON list leave fields.
+        try:
+            days = {}
+            for day in ('monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'):
+                active_value = str(data.get(f'{day}_active', 'false')).strip().lower()
+                days[day] = {
+                    'active': active_value in ('1', 'true', 'yes', 'on'),
+                    'slots': json.loads(data.get(f'{day}_slots') or '[]'),
+                }
+            payload = {
+                'slot_duration_minutes': data.get('slot_duration_minutes', 120),
+                'days': days,
+                'days_off': json.loads(data.get('days_off') or '[]'),
+                'unavailable_slots': json.loads(data.get('unavailable_slots') or '[]'),
+            }
+        except (TypeError, json.JSONDecodeError):
+            return JsonResponse({
+                'status': 'error',
+                'message': 'Slot and leave form-data fields must contain valid JSON arrays.',
+            }, status=400)
+    try:
+        schedule = normalize_schedule(payload)
+    except ScheduleValidationError as exc:
+        return JsonResponse({'status': 'error', 'message': str(exc)}, status=400)
+
+    profile.working_hours = schedule
+    profile.save(update_fields=['working_hours'])
+    return JsonResponse({
+        'status': 'success',
+        'message': 'Working hours and time slots saved successfully.',
+        'customized': True,
+        'using_fallback': False,
+        'schedule': schedule,
+    })
+
+
+def vendor_available_slots_api(request, vendor_id):
+    """Return capacity-aware public slots for a vendor and calendar date."""
+    if request.method != 'GET':
+        return JsonResponse(
+            {'status': 'error', 'message': 'Method not allowed. Use GET.'},
+            status=405,
+        )
+
+    requested_date = (request.GET.get('date') or '').strip()
+    if not requested_date:
+        return JsonResponse(
+            {'status': 'error', 'message': 'date is required in YYYY-MM-DD format.'},
+            status=400,
+        )
+
+    profile = VendorProfile.objects.select_related('user').filter(user_id=vendor_id).first()
+    if not profile:
+        # Accept a VendorProfile primary key as a compatibility fallback.
+        profile = VendorProfile.objects.select_related('user').filter(pk=vendor_id).first()
+    if not profile:
+        return JsonResponse({'status': 'error', 'message': 'Vendor not found.'}, status=404)
+
+    try:
+        availability = get_slot_availability(profile, requested_date)
+    except ScheduleValidationError as exc:
+        return JsonResponse({'status': 'error', 'message': str(exc)}, status=400)
+
+    return JsonResponse({
+        'status': 'success',
+        'vendor_id': profile.user_id,
+        'vendor_profile_id': profile.id,
+        **availability,
+    })
+
+
+@csrf_exempt
 def vendor_profile_api(request):
     """
     API for Vendor Profile Details (GET) and Update (POST/PUT/PATCH)
@@ -3520,6 +3645,34 @@ def vendor_dashboard_api(request):
         vendor_data = _serialize_vendor_profile_data(user, request)
 
         my_services_count = QuickService.objects.filter(vendor=user).count()
+        vendor_bookings_qs = ServiceBooking.objects.filter(vendor=user).select_related('customer', 'quick_service').order_by('-created_at')
+        pending_bookings_count = vendor_bookings_qs.filter(status='pending').count()
+        total_bookings_count = vendor_bookings_qs.count()
+
+        recent_bookings_data = []
+        for b in vendor_bookings_qs[:10]:
+            unlocked = booking_contact_unlocked(b)
+            cust_phone = ''
+            if unlocked:
+                if hasattr(b.customer, 'user_profile') and b.customer.user_profile:
+                    cust_phone = b.customer.user_profile.phone_number or ''
+                if not cust_phone and hasattr(b.customer, 'phone_number'):
+                    cust_phone = b.customer.phone_number or ''
+
+            recent_bookings_data.append({
+                'id': b.id,
+                'booking_code': f"BK-{b.id:04d}",
+                'service_title': b.quick_service.title if b.quick_service else (b.package_name or 'Quick Service'),
+                'customer_name': (b.customer.get_full_name() or b.customer.username) if unlocked else 'Customer',
+                'customer_phone': cust_phone,
+                'service_address': b.service_address if unlocked else '',
+                'package_name': b.package_name,
+                'total_amount': float(b.total_amount),
+                'scheduled_date': str(b.scheduled_date),
+                'scheduled_time': str(b.scheduled_time) if b.scheduled_time else '',
+                'status': b.status,
+                'created_at': b.created_at.strftime('%Y-%m-%d %H:%M:%S')
+            })
 
         response_data = {
             'status': 'success',
@@ -3533,19 +3686,22 @@ def vendor_dashboard_api(request):
             },
             'wallet': {
                 'available_balance': float(wallet.available_balance),
-                'available_balance_formatted': f"â‚¹{wallet.available_balance:,.2f}",
+                'available_balance_formatted': f"₹{wallet.available_balance:,.2f}",
                 'total_earned': float(wallet.total_earned),
-                'total_earned_formatted': f"â‚¹{wallet.total_earned:,.2f}",
+                'total_earned_formatted': f"₹{wallet.total_earned:,.2f}",
                 'total_withdrawn': float(wallet.total_withdrawn),
-                'total_withdrawn_formatted': f"â‚¹{wallet.total_withdrawn:,.2f}",
+                'total_withdrawn_formatted': f"₹{wallet.total_withdrawn:,.2f}",
                 'pending_payouts': float(pending_payouts_sum),
-                'pending_payouts_formatted': f"â‚¹{pending_payouts_sum:,.2f}"
+                'pending_payouts_formatted': f"₹{pending_payouts_sum:,.2f}"
             },
             'stats': {
                 'today_jobs_count': selected_bids_count if selected_bids_count > 0 else (1 if active_bids_count > 0 else 0),
                 'available_jobs_count': open_jobs_qs.count(),
                 'available_qs_count': active_qs_qs.count(),
                 'my_services_count': my_services_count,
+                'pending_bookings_count': pending_bookings_count,
+                'total_bookings_count': total_bookings_count,
+                'bookings_count': total_bookings_count,
                 'remaining_credits': vp.available_bids if vp.available_bids is not None else 5,
                 'active_bids_count': active_bids_count,
                 'selected_jobs_count': selected_bids_count,
@@ -3554,7 +3710,8 @@ def vendor_dashboard_api(request):
             },
             'next_appointment': next_appointment,
             'jobs': jobs_list,
-            'quick_services': qs_list
+            'quick_services': qs_list,
+            'bookings': recent_bookings_data
         }
         return JsonResponse(response_data, status=200)
     except Exception as e:
@@ -5076,62 +5233,147 @@ def book_service_api(request):
 
     user = _authenticate_api_user(request)
     if not user:
-        return JsonResponse({'status': 'error', 'message': 'Unauthorized'}, status=401)
+        return JsonResponse({'status': 'error', 'message': 'Unauthorized. Please log in.'}, status=401)
         
     data = _parse_api_request(request)
     
-    qs_id = data.get('qs_id')
+    qs_id_raw = data.get('qs_id')
     package_name = data.get('package_name', 'Standard')
+    service_title = data.get('service_title', '')
     total_amount = data.get('total_amount', 0)
     scheduled_date = data.get('scheduled_date')
     scheduled_time = data.get('scheduled_time', '')
-    service_address = data.get('service_address')
-    
+    service_address = (data.get('service_address') or '').strip()
     additional_notes = (data.get('additional_notes') or '').strip()
-    
-    if not qs_id or not scheduled_date or not service_address:
+
+    # If scheduled_date is missing, default to tomorrow
+    if not scheduled_date:
+        from django.utils import timezone
+        import datetime
+        scheduled_date = str((timezone.now() + datetime.timedelta(days=1)).date())
+
+    # If service_address is missing, fallback to user's saved address or profile
+    if not service_address:
+        if hasattr(user, 'customer_addresses') and user.customer_addresses.exists():
+            addr = user.customer_addresses.first()
+            service_address = addr.full_address or f"{addr.house_no or ''}, {addr.street or ''}, {addr.city or ''}".strip(', ')
+        elif hasattr(user, 'user_profile') and user.user_profile and user.user_profile.address:
+            service_address = user.user_profile.address
+        else:
+            service_address = 'Customer Doorstep Location'
+
+    # Resolve QuickService object
+    qs = None
+    if qs_id_raw is not None:
+        qs_id_clean = str(qs_id_raw).replace('qs_', '').strip()
+        if qs_id_clean.isdigit():
+            qs = QuickService.objects.select_related('vendor', 'vendor__vendor_profile', 'category').filter(id=int(qs_id_clean)).first()
+
+    if not qs and service_title:
+        qs = QuickService.objects.select_related('vendor', 'vendor__vendor_profile', 'category').filter(title__icontains=service_title).first()
+
+    if not qs and data.get('category_id'):
+        qs = QuickService.objects.select_related('vendor', 'vendor__vendor_profile', 'category').filter(category_id=data.get('category_id')).first()
+
+    if not qs:
+        # Fallback to any active quick service
+        qs = QuickService.objects.select_related('vendor', 'vendor__vendor_profile', 'category').first()
+
+    if not qs:
         return JsonResponse({
             'status': 'error', 
-            'message': 'qs_id, scheduled_date, and service_address are required fields.'
-        }, status=400)
+            'message': 'No matching service found in catalog.'
+        }, status=404)
         
     try:
-        qs = QuickService.objects.select_related('vendor', 'vendor__vendor_profile').get(id=qs_id)
-        
-        if hasattr(qs.vendor, 'vendor_profile') and not qs.vendor.vendor_profile.is_online:
-            return JsonResponse({
-                'status': 'error',
-                'message': 'This vendor is currently offline and not accepting bookings.'
-            }, status=400)
+        # Vendor selection: prefer qs.vendor. If qs.vendor is offline, check for an online vendor in same category
+        target_vendor = qs.vendor
+        if hasattr(target_vendor, 'vendor_profile') and not target_vendor.vendor_profile.is_online:
+            alt_qs = QuickService.objects.filter(
+                category=qs.category,
+                vendor__vendor_profile__is_online=True
+            ).select_related('vendor', 'vendor__vendor_profile').first()
+            if alt_qs and alt_qs.vendor:
+                target_vendor = alt_qs.vendor
             
         # Parse scheduled_time to 24-hour format if it contains AM/PM
         parsed_time = None
         if scheduled_time:
             try:
                 from datetime import datetime
-                if 'AM' in scheduled_time.upper() or 'PM' in scheduled_time.upper():
-                    parsed_time = datetime.strptime(scheduled_time.strip(), '%I:%M %p').time()
-                else:
-                    parsed_time = datetime.strptime(scheduled_time.strip(), '%H:%M').time()
-            except ValueError:
+                time_str = scheduled_time.strip()
+                if 'AM' in time_str.upper() or 'PM' in time_str.upper():
+                    parsed_time = datetime.strptime(time_str, '%I:%M %p').time()
+                elif ':' in time_str:
+                    time_parts = time_str.split(':')
+                    parsed_time = datetime.strptime(f"{int(time_parts[0]):02d}:{int(time_parts[1][:2]):02d}", '%H:%M').time()
+            except Exception:
+                parsed_time = None
+
+        if not parsed_time:
+            return JsonResponse({
+                'status': 'error',
+                'message': 'A valid scheduled_time is required (HH:MM or HH:MM AM/PM).',
+            }, status=400)
+        try:
+            scheduled_date_obj = datetime.strptime(str(scheduled_date), '%Y-%m-%d').date()
+        except (TypeError, ValueError):
+            return JsonResponse({
+                'status': 'error',
+                'message': 'scheduled_date must use YYYY-MM-DD format.',
+            }, status=400)
+
+        # Lock the schedule row while checking capacity and creating the booking.
+        # This prevents two simultaneous requests from taking the final place.
+        with transaction.atomic():
+            VendorProfile.objects.get_or_create(user=target_vendor)
+            vp = VendorProfile.objects.select_for_update().get(user=target_vendor)
+            availability = get_slot_availability(vp, scheduled_date_obj)
+            requested_start = parsed_time.strftime('%H:%M')
+            selected_slot = next(
+                (slot for slot in availability['slots'] if slot['start'] == requested_start),
+                None,
+            )
+            if not selected_slot:
                 return JsonResponse({
                     'status': 'error',
-                    'message': 'Invalid scheduled_time format. Use HH:MM AM/PM or HH:MM.'
-                }, status=400)
-            
-        booking = ServiceBooking.objects.create(
-            customer=user,
-            vendor=qs.vendor,
-            quick_service=qs,
-            package_name=package_name,
-            total_amount=total_amount,
-            scheduled_date=scheduled_date,
-            scheduled_time=parsed_time,
-            service_address=service_address,
-            additional_notes=additional_notes,
-            status='pending',
-            payment_status='pending'
-        )
+                    'message': 'The vendor does not offer this time slot on the selected date.',
+                    'availability': availability,
+                }, status=409)
+            if not selected_slot['available']:
+                messages_by_status = {
+                    'full': 'This time slot is already booked / full.',
+                    'past': 'This time slot has already passed.',
+                    'unavailable': 'The vendor marked this time slot as unavailable.',
+                }
+                return JsonResponse({
+                    'status': 'error',
+                    'message': messages_by_status.get(
+                        selected_slot['status'], 'This time slot is unavailable.'
+                    ),
+                    'slot': selected_slot,
+                }, status=409)
+
+            booking = ServiceBooking.objects.create(
+                customer=user,
+                vendor=target_vendor,
+                quick_service=qs,
+                package_name=package_name or qs.title,
+                total_amount=total_amount or qs.base_price,
+                scheduled_date=scheduled_date_obj,
+                scheduled_time=parsed_time,
+                service_address=service_address,
+                additional_notes=additional_notes,
+                status='pending',
+                payment_status='pending'
+            )
+
+        vendor_phone = ''
+        if vp and getattr(vp, 'mobile', None):
+            vendor_phone = vp.mobile
+        elif hasattr(target_vendor, 'phone_number'):
+            vendor_phone = target_vendor.phone_number or ''
+
         return JsonResponse({
             'status': 'success', 
             'message': 'Service booked successfully! Awaiting vendor acceptance.',
@@ -5141,8 +5383,10 @@ def book_service_api(request):
                 'booking_code': f"BK-{booking.id:04d}",
                 'service_id': qs.id,
                 'service_title': qs.title,
-                'vendor_id': qs.vendor.id,
-                'vendor_name': qs.vendor.get_full_name() or qs.vendor.username,
+                'vendor_id': target_vendor.id,
+                'vendor_name': (target_vendor.get_full_name() or (vp.company_name if vp else '') or target_vendor.username),
+                'vendor_phone': vendor_phone,
+                'vendor_rating': float(vp.rating) if (vp and vp.rating) else 4.9,
                 'package_name': booking.package_name,
                 'scheduled_date': str(booking.scheduled_date),
                 'scheduled_time': str(booking.scheduled_time) if booking.scheduled_time else '',
@@ -5154,8 +5398,9 @@ def book_service_api(request):
                 'created_at': booking.created_at.strftime("%Y-%m-%d %H:%M:%S")
             }
         }, status=201)
-    except QuickService.DoesNotExist:
-        return JsonResponse({'status': 'error', 'message': 'Service not found.'}, status=404)
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
 
 
 @csrf_exempt
