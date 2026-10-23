@@ -31,6 +31,7 @@
     {key:'dashboard', icon:'grid', label:'Dashboard', path:'dashboard.html'},
     {key:'catalog', icon:'bolt', label:'My Services', path:'catalog/index.html'},
     {key:'bookings', icon:'list', label:'My Bookings', path:'bookings/index.html'},
+    {key:'schedule', icon:'calendar', label:'Working Hours', path:'schedule/index.html'},
     {key:'job-group', icon:'briefcase', label:'Jobs', path:'jobs/available.html', children:[
       ['job-available','Available Jobs','jobs/available.html'],
       ['selected-jobs','Selected Jobs','jobs/selected-jobs.html']
@@ -56,6 +57,7 @@
     if(pageKey === k) return true;
     if(k==='catalog' && pageKey.startsWith('catalog')) return true;
     if(k==='bookings' && pageKey.startsWith('bookings')) return true;
+    if(k==='schedule' && pageKey.startsWith('schedule')) return true;
     if(k==='job-group' && (pageKey.startsWith('job-') || pageKey.startsWith('jobs-') || pageKey==='selected-jobs')) return true;
     if(k==='job-available' && (pageKey==='jobs-available' || ['job-details','job-submit'].includes(pageKey))) return true;
     if(k==='selected-jobs' && pageKey==='selected-jobs') return true;

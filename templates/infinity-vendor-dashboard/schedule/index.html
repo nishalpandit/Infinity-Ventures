@@ -1,0 +1,168 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="Manage vendor working hours and booking time slots">
+  <title>Working Hours &amp; Time Slots · Sugu Vendor</title>
+  <link rel="stylesheet" href="/infinity-vendor-dashboard/assets/styles.css">
+  <script>
+    window.VENDOR_NAME = "{{ vendor_name|escapejs }}";
+    window.VENDOR_INITIALS = "{{ vendor_initials|escapejs }}";
+    window.VENDOR_TYPE = "{{ vendor_type|escapejs }}";
+    window.VENDOR_LOCATION = "{{ vendor_location|escapejs }}";
+    window.PROFILE_IMAGE_URL = "{{ profile_image_url|default:''|escapejs }}";
+    window.VENDOR_WALLET_BALANCE = "{{ wallet_balance|default:'0.00'|escapejs }}";
+    window.VENDOR_CREDITS = {{ remaining_credits|default:0 }};
+  </script>
+  <script defer src="/infinity-vendor-dashboard/assets/app.js"></script>
+  <style>
+    .schedule-grid{display:grid;grid-template-columns:290px minmax(0,1fr);gap:20px;align-items:start}
+    .day-list{display:grid;gap:8px}.day-row{display:flex;align-items:center;justify-content:space-between;width:100%;padding:12px;border:1px solid #e4e7ec;border-radius:10px;background:#fff;color:#344054;text-align:left;cursor:pointer}.day-row.selected{border-color:#6366f1;background:#eef2ff;color:#3730a3}.day-row.off{color:#98a2b3;background:#f9fafb}.day-name{font-weight:750}.day-state{font-size:11px;font-weight:700}.switch{position:relative;width:38px;height:22px;display:inline-block}.switch input{opacity:0;width:0;height:0}.switch span{position:absolute;inset:0;border-radius:20px;background:#d0d5dd;transition:.2s}.switch span:before{content:"";position:absolute;width:16px;height:16px;left:3px;top:3px;border-radius:50%;background:white;transition:.2s;box-shadow:0 1px 3px #667085}.switch input:checked+span{background:#6366f1}.switch input:checked+span:before{transform:translateX(16px)}
+    .slot-row{display:grid;grid-template-columns:1fr 1fr 150px 42px;gap:10px;align-items:end;padding:12px 0;border-bottom:1px solid #eef2f6}.slot-row:last-child{border-bottom:0}.slot-row label,.compact-field label{display:block;font-size:11px;font-weight:700;color:#667085;margin-bottom:5px}.slot-row input,.compact-field input,.compact-field select{width:100%;height:39px;border:1px solid #d0d5dd;border-radius:8px;padding:0 10px;background:#fff}.leave-list{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}.leave-chip{display:inline-flex;align-items:center;gap:7px;padding:7px 9px;border-radius:8px;background:#fff7ed;border:1px solid #fed7aa;color:#9a3412;font-size:12px;font-weight:700}.leave-chip button{border:0;background:transparent;color:inherit;cursor:pointer;font-size:16px;line-height:1}.empty-state{padding:26px;text-align:center;color:#667085;background:#f9fafb;border:1px dashed #d0d5dd;border-radius:10px}.inline-form{display:grid;grid-template-columns:minmax(160px,1fr) auto;gap:10px;align-items:end}.blocked-form{grid-template-columns:1fr 1fr auto}.status-note{display:none;margin-bottom:16px;padding:11px 13px;border-radius:9px;font-size:13px;font-weight:650}.status-note.show{display:block}.status-note.success{background:#ecfdf3;color:#027a48;border:1px solid #abefc6}.status-note.error{background:#fef3f2;color:#b42318;border:1px solid #fecdca}
+    @media(max-width:900px){.schedule-grid{grid-template-columns:1fr}.day-list{grid-template-columns:repeat(2,1fr)}}
+    @media(max-width:600px){.slot-row{grid-template-columns:1fr 1fr}.slot-row .capacity{grid-column:1/-1}.inline-form,.blocked-form{grid-template-columns:1fr}.day-list{grid-template-columns:1fr}}
+  </style>
+</head>
+<body data-page="schedule" data-title="Working Hours & Time Slots" data-root="../">
+  <div class="app-shell">
+    <div id="sidebar-root"></div>
+    <div class="workspace">
+      <div id="topbar-root"></div>
+      <main class="page">
+        <div class="page-head">
+          <div>
+            <h1>Working Hours &amp; Time Slots</h1>
+            <p>Control when customers can book you and how many bookings each arrival window accepts.</p>
+          </div>
+          <div class="actions">
+            <button class="btn btn-primary" id="save-schedule" type="button">Save Schedule</button>
+          </div>
+        </div>
+
+        <div id="schedule-message" class="status-note" role="status"></div>
+        <div class="schedule-grid">
+          <section class="card">
+            <div class="card-head"><div><h2>Working days</h2><p>Choose a day to manage its slots.</p></div></div>
+            <div class="card-body"><div id="day-list" class="day-list"></div></div>
+          </section>
+
+          <section class="card">
+            <div class="card-head">
+              <div><h2 id="slot-title">Monday slots</h2><p>Arrival windows use your local India time.</p></div>
+              <button class="btn btn-secondary" id="add-slot" type="button">+ Add slot</button>
+            </div>
+            <div class="card-body">
+              <div class="compact-field" style="max-width:240px;margin-bottom:12px">
+                <label for="slot-duration">Default slot duration (minutes)</label>
+                <input id="slot-duration" type="number" min="15" max="720" step="15" value="120">
+              </div>
+              <div id="slots-list"></div>
+            </div>
+          </section>
+        </div>
+
+        <div class="grid-2" style="margin-top:20px">
+          <section class="card">
+            <div class="card-head"><div><h2>Day off / leave</h2><p>Customers will see no slots on these dates.</p></div></div>
+            <div class="card-body">
+              <div class="inline-form">
+                <div class="compact-field"><label for="day-off-date">Leave date</label><input id="day-off-date" type="date"></div>
+                <button class="btn btn-secondary" id="add-day-off" type="button">Mark Day Off</button>
+              </div>
+              <div id="days-off-list" class="leave-list"></div>
+            </div>
+          </section>
+
+          <section class="card">
+            <div class="card-head"><div><h2>Block a specific slot</h2><p>Keep the rest of that date open.</p></div></div>
+            <div class="card-body">
+              <div class="inline-form blocked-form">
+                <div class="compact-field"><label for="blocked-date">Date</label><input id="blocked-date" type="date"></div>
+                <div class="compact-field"><label for="blocked-start">Slot</label><select id="blocked-start"></select></div>
+                <button class="btn btn-secondary" id="add-blocked-slot" type="button">Block Slot</button>
+              </div>
+              <div id="blocked-list" class="leave-list"></div>
+            </div>
+          </section>
+        </div>
+      </main>
+    </div>
+  </div>
+  {% csrf_token %}
+  <script>
+  document.addEventListener('DOMContentLoaded', function () {
+    const dayKeys = ['monday','tuesday','wednesday','thursday','friday','saturday','sunday'];
+    let selectedDay = 'monday';
+    let schedule = null;
+    const $ = id => document.getElementById(id);
+    const csrf = document.querySelector('[name=csrfmiddlewaretoken]')?.value || '';
+
+    function message(text, type) {
+      const box = $('schedule-message');
+      box.textContent = text; box.className = `status-note show ${type}`;
+      box.scrollIntoView({behavior:'smooth', block:'nearest'});
+    }
+    function safe(value) { return String(value || '').replace(/[&<>'"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c])); }
+    function prettyTime(value) {
+      const [h,m] = String(value).split(':').map(Number); if(Number.isNaN(h)) return value;
+      return `${String(((h+11)%12)+1).padStart(2,'0')}:${String(m).padStart(2,'0')} ${h>=12?'PM':'AM'}`;
+    }
+    function allSlotStarts() {
+      const values = new Set(); dayKeys.forEach(day => schedule.days[day].slots.forEach(slot => values.add(slot.start)));
+      return [...values].sort();
+    }
+    function renderDays() {
+      $('day-list').innerHTML = dayKeys.map(day => {
+        const active = schedule.days[day].active;
+        return `<button type="button" class="day-row ${selectedDay===day?'selected':''} ${active?'':'off'}" data-select-day="${day}"><span><span class="day-name">${day[0].toUpperCase()+day.slice(1)}</span><span class="day-state" style="display:block">${active?'Accepting bookings':'Not working'}</span></span><label class="switch" title="Toggle ${day}"><input type="checkbox" data-toggle-day="${day}" ${active?'checked':''}><span></span></label></button>`;
+      }).join('');
+      document.querySelectorAll('[data-select-day]').forEach(button => button.addEventListener('click', e => {
+        if(e.target.closest('.switch')) return; selectedDay=button.dataset.selectDay; renderAll();
+      }));
+      document.querySelectorAll('[data-toggle-day]').forEach(input => input.addEventListener('change', e => {
+        e.stopPropagation(); schedule.days[input.dataset.toggleDay].active=input.checked; renderAll();
+      }));
+    }
+    function renderSlots() {
+      const day = schedule.days[selectedDay];
+      $('slot-title').textContent = `${selectedDay[0].toUpperCase()+selectedDay.slice(1)} slots`;
+      $('add-slot').disabled = !day.active;
+      if(!day.active) { $('slots-list').innerHTML='<div class="empty-state">Turn this working day on to add arrival slots.</div>'; return; }
+      if(!day.slots.length) { $('slots-list').innerHTML='<div class="empty-state">No slots yet. Add the first arrival window for this day.</div>'; return; }
+      $('slots-list').innerHTML = day.slots.map((slot,index) => `<div class="slot-row">
+        <div><label>Start time</label><input type="time" value="${safe(slot.start)}" data-slot-field="start" data-index="${index}"></div>
+        <div><label>End time</label><input type="time" value="${safe(slot.end)}" data-slot-field="end" data-index="${index}"></div>
+        <div class="capacity"><label>Maximum bookings</label><input type="number" min="1" max="100" value="${slot.max_bookings}" data-slot-field="max_bookings" data-index="${index}"></div>
+        <button class="btn btn-secondary" type="button" title="Delete slot" data-delete-slot="${index}" style="height:39px;padding:0">×</button>
+      </div>`).join('');
+      document.querySelectorAll('[data-slot-field]').forEach(input => input.addEventListener('change', () => {
+        const slot=day.slots[Number(input.dataset.index)]; slot[input.dataset.slotField]=input.dataset.slotField==='max_bookings'?Number(input.value):input.value; renderBlockedSelect();
+      }));
+      document.querySelectorAll('[data-delete-slot]').forEach(button => button.addEventListener('click', () => {day.slots.splice(Number(button.dataset.deleteSlot),1);renderAll();}));
+    }
+    function renderDaysOff() {
+      $('days-off-list').innerHTML = schedule.days_off.length ? schedule.days_off.map((d,i)=>`<span class="leave-chip">${safe(d)} <button type="button" data-delete-off="${i}" aria-label="Remove">×</button></span>`).join('') : '<span style="font-size:12px;color:#667085">No leave dates marked.</span>';
+      document.querySelectorAll('[data-delete-off]').forEach(button=>button.addEventListener('click',()=>{schedule.days_off.splice(Number(button.dataset.deleteOff),1);renderDaysOff();}));
+    }
+    function renderBlockedSelect() {
+      const select=$('blocked-start'); const old=select.value; const starts=allSlotStarts();
+      select.innerHTML=starts.length?starts.map(v=>`<option value="${v}">${prettyTime(v)}</option>`).join(''):'<option value="">Add a working slot first</option>'; if(starts.includes(old)) select.value=old;
+    }
+    function renderBlocked() {
+      $('blocked-list').innerHTML=schedule.unavailable_slots.length?schedule.unavailable_slots.map((x,i)=>`<span class="leave-chip">${safe(x.date)} · ${prettyTime(x.start)} <button type="button" data-delete-block="${i}" aria-label="Remove">×</button></span>`).join(''):'<span style="font-size:12px;color:#667085">No individual slots blocked.</span>';
+      document.querySelectorAll('[data-delete-block]').forEach(button=>button.addEventListener('click',()=>{schedule.unavailable_slots.splice(Number(button.dataset.deleteBlock),1);renderBlocked();}));
+    }
+    function renderAll(){renderDays();renderSlots();renderDaysOff();renderBlockedSelect();renderBlocked();$('slot-duration').value=schedule.slot_duration_minutes;}
+
+    $('add-slot').addEventListener('click',()=>{schedule.days[selectedDay].slots.push({start:'09:00',end:'11:00',max_bookings:1});renderAll();});
+    $('slot-duration').addEventListener('change',e=>schedule.slot_duration_minutes=Number(e.target.value));
+    $('add-day-off').addEventListener('click',()=>{const value=$('day-off-date').value;if(!value)return message('Choose a leave date first.','error');if(!schedule.days_off.includes(value))schedule.days_off.push(value);schedule.days_off.sort();$('day-off-date').value='';renderDaysOff();});
+    $('add-blocked-slot').addEventListener('click',()=>{const date=$('blocked-date').value,start=$('blocked-start').value;if(!date||!start)return message('Choose both a date and a slot to block.','error');if(!schedule.unavailable_slots.some(x=>x.date===date&&x.start===start))schedule.unavailable_slots.push({date,start});$('blocked-date').value='';renderBlocked();});
+    $('save-schedule').addEventListener('click',async()=>{const button=$('save-schedule');button.disabled=true;button.textContent='Saving…';try{const response=await fetch('/api/vendor/schedule/',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json','X-CSRFToken':csrf},body:JSON.stringify({schedule})});const data=await response.json();if(!response.ok)throw new Error(data.message||'Could not save schedule.');schedule=data.schedule;renderAll();message(data.message,'success');}catch(error){message(error.message,'error');}finally{button.disabled=false;button.textContent='Save Schedule';}});
+
+    (async()=>{try{const response=await fetch('/api/vendor/schedule/',{credentials:'same-origin'});const data=await response.json();if(!response.ok)throw new Error(data.message||'Could not load schedule.');schedule=data.schedule;renderAll();if(data.using_fallback)message('Platform standard slots are shown. Save to customize them for your business.','success');}catch(error){message(error.message,'error');}})();
+  });
+  </script>
+</body>
+</html>

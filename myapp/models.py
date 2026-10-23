@@ -45,6 +45,14 @@ class VendorProfile(models.Model):
     available_bids = models.IntegerField(default=5)
     registered_date = models.DateTimeField(default=timezone.now)
     is_online = models.BooleanField(default=True, help_text="Is vendor currently accepting bookings?")
+    working_hours = models.JSONField(
+        default=dict,
+        blank=True,
+        help_text=(
+            "Vendor-managed weekly schedule, custom arrival slots, booking limits, "
+            "date-specific days off, and unavailable slots."
+        ),
+    )
 
     def __str__(self):
         return self.company_name or self.user.username

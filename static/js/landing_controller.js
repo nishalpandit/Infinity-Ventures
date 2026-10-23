@@ -22,6 +22,10 @@ let appState = {
   bookingStep: 1,
   selectedSlotDate: "Today",
   selectedSlotTime: "02:00 PM - 04:00 PM",
+  slotAvailability: null,
+  slotAvailabilityKey: null,
+  slotAvailabilityLoading: false,
+  slotAvailabilityError: null,
   assignedPartner: null,
   biddingPage: 1,
   biddingPerPage: 5,
@@ -117,6 +121,7 @@ function syncDynamicCategories() {
         return {
           id: `qs_${qs.id}`,
           dbId: qs.id,
+          vendorId: qs.vendor_id || null,
           subcategoryId: qs.subcategory_id ? String(qs.subcategory_id) : null,
           subcategoryName: (qs.subcategory_name || '').trim(),
           title: qs.title,
@@ -489,6 +494,18 @@ function initApplication() {
   try { initLocationDetection(); } catch (e) { console.error("Location error:", e); }
   try { initLucideIcons(); } catch (e) { console.error("Lucide error:", e); }
   try { setupEventListeners(); } catch (e) { console.error("Listeners error:", e); }
+  try {
+    const savedCart = localStorage.getItem("sugu_cart");
+    if (savedCart) {
+      const parsed = JSON.parse(savedCart);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        appState.cart = parsed;
+        if (window.CURRENT_USER && window.CURRENT_USER.isAuthenticated) {
+          showToast("Cart restored! Ready to complete your booking.");
+        }
+      }
+    }
+  } catch(e) {}
   renderApp();
 }
 
@@ -1915,6 +1932,106 @@ function renderFloatingCart() {
   }
 }
 
+function localDateIso(date) {
+  const offset = date.getTimezoneOffset();
+  return new Date(date.getTime() - offset * 60000).toISOString().slice(0, 10);
+}
+
+function checkoutVendorIds() {
+  return [...new Set(appState.cart.map(entry => Number(entry.item.vendorId || entry.item.vendor_id)).filter(Boolean))].sort((a, b) => a - b);
+}
+
+function standardSlotAvailability(dateIso) {
+  const definitions = [
+    ['09:00', '11:00'], ['11:00', '13:00'], ['14:00', '16:00'],
+    ['16:00', '18:00'], ['18:30', '20:30']
+  ];
+  const now = new Date();
+  const todayIso = localDateIso(now);
+  const format = value => {
+    const [hour, minute] = value.split(':').map(Number);
+    const suffix = hour >= 12 ? 'PM' : 'AM';
+    return `${String(((hour + 11) % 12) + 1).padStart(2, '0')}:${String(minute).padStart(2, '0')} ${suffix}`;
+  };
+  return {
+    date: dateIso,
+    is_working: dateIso >= todayIso,
+    using_fallback: true,
+    reason: dateIso < todayIso ? 'past_date' : null,
+    slots: definitions.map(([start, end]) => {
+      const [hour, minute] = start.split(':').map(Number);
+      const isPast = dateIso < todayIso || (dateIso === todayIso && (now.getHours() > hour || (now.getHours() === hour && now.getMinutes() >= minute)));
+      return {start, end, label: `${format(start)} - ${format(end)}`, max_bookings: 1, booked_count: 0, remaining_capacity: isPast ? 0 : 1, status: isPast ? 'past' : 'available', available: !isPast};
+    })
+  };
+}
+
+async function loadCheckoutSlotAvailability(dateIso, requestKey) {
+  const vendorIds = checkoutVendorIds();
+  try {
+    if (!vendorIds.length) {
+      if (appState.slotAvailabilityKey !== requestKey) return;
+      appState.slotAvailability = standardSlotAvailability(dateIso);
+    } else {
+      const responses = await Promise.all(vendorIds.map(async vendorId => {
+        const response = await fetch(`/api/vendor/${vendorId}/available-slots/?date=${encodeURIComponent(dateIso)}`, {credentials: 'same-origin'});
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(data.message || 'Could not load vendor time slots.');
+        return data;
+      }));
+      if (appState.slotAvailabilityKey !== requestKey) return;
+      const primary = responses[0];
+      const mergedSlots = primary.slots.map(slot => {
+        const matches = responses.map(result => result.slots.find(candidate => candidate.start === slot.start && candidate.end === slot.end));
+        let status = slot.status;
+        if (matches.some(match => !match || match.status === 'unavailable')) status = 'unavailable';
+        else if (matches.some(match => match.status === 'past')) status = 'past';
+        else if (matches.some(match => match.status === 'full')) status = 'full';
+        return {
+          ...slot,
+          status,
+          available: matches.every(match => match && match.available),
+          remaining_capacity: Math.min(...matches.filter(Boolean).map(match => match.remaining_capacity))
+        };
+      });
+      appState.slotAvailability = {
+        ...primary,
+        is_working: responses.every(result => result.is_working),
+        reason: responses.find(result => !result.is_working)?.reason || primary.reason,
+        using_fallback: responses.every(result => result.using_fallback),
+        slots: mergedSlots
+      };
+    }
+    const available = appState.slotAvailability.slots.filter(slot => slot.available);
+    if (!available.some(slot => slot.label === appState.selectedSlotTime)) {
+      appState.selectedSlotTime = available.length ? available[0].label : null;
+    }
+    appState.slotAvailabilityError = null;
+  } catch (error) {
+    if (appState.slotAvailabilityKey !== requestKey) return;
+    appState.slotAvailability = standardSlotAvailability(dateIso);
+    appState.slotAvailabilityError = `${error.message} Standard platform slots are shown.`;
+    const available = appState.slotAvailability.slots.filter(slot => slot.available);
+    appState.selectedSlotTime = available.length ? available[0].label : null;
+  } finally {
+    if (appState.slotAvailabilityKey === requestKey) {
+      appState.slotAvailabilityLoading = false;
+      renderCheckoutStep();
+    }
+  }
+}
+
+function renderCheckoutSlots(slots) {
+  const statusLabels = {past: 'Past Time', full: 'Booked / Full', unavailable: 'Unavailable'};
+  return slots.map(slot => {
+    if (!slot.available) {
+      return `<div class="flex items-center justify-between p-3 rounded-xl border border-slate-200 bg-slate-100/70 opacity-60 cursor-not-allowed"><div class="flex items-center space-x-3"><span class="w-4 h-4 rounded-full border border-slate-300 bg-slate-200 inline-block"></span><span class="text-xs font-medium text-slate-400 line-through">${slot.text}</span></div><span class="text-[11px] font-semibold text-slate-500">${statusLabels[slot.status] || 'Unavailable'}</span></div>`;
+    }
+    const capacity = slot.max_bookings > 1 ? `${slot.remaining_capacity} place${slot.remaining_capacity === 1 ? '' : 's'} left` : 'Available';
+    return `<label class="flex items-center justify-between p-3 rounded-xl border cursor-pointer transition ${appState.selectedSlotTime === slot.text ? 'border-sky-600 bg-sky-50 text-sky-900 font-bold' : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'}"><div class="flex items-center space-x-3"><input type="radio" name="time_slot" value="${slot.text}" ${appState.selectedSlotTime === slot.text ? 'checked' : ''} onchange="selectTime('${slot.text}')" class="text-sky-600 focus:ring-sky-500"><span class="text-xs font-semibold">${slot.text}</span></div><span class="text-[11px] font-semibold text-emerald-600">${capacity}</span></label>`;
+  }).join('');
+}
+
 function openCheckoutModal() {
   if (appState.cart.length === 0) {
     showToast("Your cart is empty. Please select a service first!");
@@ -1978,36 +2095,12 @@ function renderCheckoutStep() {
           `).join("")}
         </div>
 
-        <!-- Coupon code input -->
-        <div class="p-3.5 rounded-xl bg-sky-50/70 border border-sky-200 mb-6">
-          <label class="block text-xs font-bold text-sky-900 mb-1.5">Apply Coupon / Promo Code</label>
-          <div class="flex gap-2">
-            <input type="text" id="coupon-input" placeholder="Try SUGUFIRST or ACFEST200" 
-              value="${appState.appliedCoupon || ''}"
-              class="flex-1 px-3 py-2 text-xs uppercase font-mono font-bold rounded-lg border border-slate-300 focus:outline-none focus:border-sky-600 bg-white">
-            <button onclick="applyCouponCode()" class="px-4 py-2 bg-sky-600 hover:bg-sky-700 text-white rounded-lg text-xs font-bold transition">
-              Apply
-            </button>
-          </div>
-          ${appState.appliedCoupon ? `
-            <p class="text-[11px] text-emerald-700 font-semibold mt-1.5 flex items-center">
-              <i data-lucide="check-circle" class="w-3.5 h-3.5 mr-1"></i> Coupon "${appState.appliedCoupon}" applied successfully!
-            </p>
-          ` : ''}
-        </div>
-
         <!-- Bill Breakdown -->
         <div class="p-4 rounded-xl bg-slate-50 border border-slate-200 mb-6 space-y-2 text-xs">
           <div class="flex justify-between text-slate-600">
             <span>Item Total</span>
             <span>₹${subtotal}</span>
           </div>
-          ${discount > 0 ? `
-            <div class="flex justify-between text-emerald-600 font-semibold">
-              <span>Coupon Discount</span>
-              <span>- ₹${discount}</span>
-            </div>
-          ` : ''}
           <div class="flex justify-between text-slate-600">
             <span>Safety & Technician Hygiene Fee</span>
             <span>₹${convenienceFee}</span>
@@ -2025,21 +2118,48 @@ function renderCheckoutStep() {
       </div>
     `;
   } else if (appState.bookingStep === 2) {
-    // Step 2: Date & Slot Selection
-    const days = [
-      { label: "Today", date: "2 Oct, Fri" },
-      { label: "Tomorrow", date: "3 Oct, Sat" },
-      { label: "Sun", date: "4 Oct, Sun" },
-      { label: "Mon", date: "5 Oct, Mon" }
-    ];
+    // Step 2: Dynamic Date & Slot Selection from current latest date
+    const days = (function() {
+      const list = [];
+      const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+      const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+      for (let i = 0; i < 4; i++) {
+        const d = new Date();
+        d.setDate(d.getDate() + i);
+        let label;
+        if (i === 0) label = "Today";
+        else if (i === 1) label = "Tomorrow";
+        else label = dayNames[d.getDay()];
 
-    const slots = [
-      "09:00 AM - 11:00 AM",
-      "11:00 AM - 01:00 PM",
-      "02:00 PM - 04:00 PM",
-      "04:00 PM - 06:00 PM",
-      "06:30 PM - 08:30 PM"
-    ];
+        const dateStr = `${d.getDate()} ${monthNames[d.getMonth()]}, ${dayNames[d.getDay()]}`;
+        const iso = localDateIso(d);
+        list.push({ label, date: dateStr, iso });
+      }
+      return list;
+    })();
+
+    if (!appState.selectedSlotDateIso) {
+      appState.selectedSlotDate = days[0].label;
+      appState.selectedSlotDateIso = days[0].iso;
+      appState.selectedSlotDateFormatted = days[0].date;
+    }
+
+    const vendorIds = checkoutVendorIds();
+    const availabilityKey = `${vendorIds.join(',') || 'platform'}:${appState.selectedSlotDateIso}`;
+    if (appState.slotAvailabilityKey !== availabilityKey && !appState.slotAvailabilityLoading) {
+      appState.slotAvailabilityKey = availabilityKey;
+      appState.slotAvailability = null;
+      appState.slotAvailabilityError = null;
+      appState.slotAvailabilityLoading = true;
+      Promise.resolve().then(() => loadCheckoutSlotAvailability(appState.selectedSlotDateIso, availabilityKey));
+    }
+    const availability = appState.slotAvailabilityKey === availabilityKey ? appState.slotAvailability : null;
+    const slots = availability ? availability.slots.map(slot => ({...slot, text: slot.label})) : [];
+    const availableSlots = slots.filter(slot => slot.available);
+    const isToday = appState.selectedSlotDateIso === localDateIso(new Date());
+    const noSlotsMessage = availability && availability.reason === 'day_off'
+      ? 'The vendor is on leave this date.'
+      : 'The vendor is not working or has no arrival windows on this day.';
 
     content.innerHTML = `
       <div>
@@ -2048,11 +2168,11 @@ function renderCheckoutStep() {
           <button onclick="goToBookingStep(1)" class="text-xs font-semibold text-sky-600 hover:underline">← Back</button>
         </div>
 
-        <!-- Date Picker -->
+        <!-- Dynamic Date Picker -->
         <label class="block text-xs font-bold text-slate-700 mb-2">Select Preferred Day</label>
         <div class="grid grid-cols-4 gap-2 mb-6">
           ${days.map(d => `
-            <button onclick="selectDate('${d.label}')" class="p-3 rounded-xl border text-center transition ${appState.selectedSlotDate === d.label ? 'border-sky-600 bg-sky-50 text-sky-800 font-bold shadow-sm' : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'}">
+            <button onclick="selectDate('${d.label}', '${d.iso}', '${d.date}')" class="p-3 rounded-xl border text-center transition ${appState.selectedSlotDate === d.label ? 'border-sky-600 bg-sky-50 text-sky-800 font-bold shadow-sm' : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'}">
               <span class="block text-xs font-bold">${d.label}</span>
               <span class="block text-[11px] text-slate-500">${d.date}</span>
             </button>
@@ -2060,21 +2180,45 @@ function renderCheckoutStep() {
         </div>
 
         <!-- Slot Picker -->
-        <label class="block text-xs font-bold text-slate-700 mb-2">Select 2-Hour Arrival Window</label>
-        <div class="space-y-2 mb-6">
-          ${slots.map(s => `
-            <label class="flex items-center justify-between p-3 rounded-xl border cursor-pointer transition ${appState.selectedSlotTime === s ? 'border-sky-600 bg-sky-50 text-sky-900 font-bold' : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'}">
-              <div class="flex items-center space-x-3">
-                <input type="radio" name="time_slot" value="${s}" ${appState.selectedSlotTime === s ? 'checked' : ''} onchange="selectTime('${s}')" class="text-sky-600 focus:ring-sky-500">
-                <span class="text-xs font-semibold">${s}</span>
-              </div>
-              <span class="text-[11px] font-semibold text-emerald-600">✓ Free Cancellation</span>
-            </label>
-          `).join("")}
+        <div class="flex items-center justify-between mb-2">
+          <label class="text-xs font-bold text-slate-700">Select Arrival Window</label>
+          ${availability && availability.using_fallback ? `
+            <span class="text-[11px] font-bold text-sky-700 bg-sky-50 px-2 py-0.5 rounded-full border border-sky-200">Standard slots</span>
+          ` : ''}
         </div>
 
-        <button onclick="goToBookingStep(3)" class="w-full py-3 bg-sky-600 hover:bg-sky-700 text-white rounded-xl font-bold text-sm shadow-md transition flex items-center justify-center space-x-2">
-          <span>Continue to Address & Payment</span>
+        ${slots.length === 0 ? `
+          <div class="p-4 rounded-xl bg-amber-50 border border-amber-200 text-center mb-6">
+            <p class="text-xs font-bold text-amber-900 mb-1">${appState.slotAvailabilityLoading ? 'Loading vendor availability…' : noSlotsMessage}</p>
+            <p class="text-[11px] text-amber-700 mb-3">${appState.slotAvailabilityLoading ? 'Please wait a moment.' : 'Please choose another available day.'}</p>
+            <button type="button" onclick="selectDate('Tomorrow', '${days[1] ? days[1].iso : ''}', '${days[1] ? days[1].date : ''}')" class="px-4 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-xs font-bold transition shadow-sm">
+              Switch to Tomorrow →
+            </button>
+          </div>
+        ` : `
+          <div class="space-y-2 mb-6">
+            ${slots.map(s => !s.available ? `
+              <div class="flex items-center justify-between p-3 rounded-xl border border-slate-200 bg-slate-100/70 opacity-60 cursor-not-allowed">
+                <div class="flex items-center space-x-3">
+                  <span class="w-4 h-4 rounded-full border border-slate-300 bg-slate-200 inline-block"></span>
+                  <span class="text-xs font-medium text-slate-400 line-through">${s.text}</span>
+                </div>
+                <span class="text-[11px] font-semibold text-slate-400">${s.status === 'full' ? 'Booked / Full' : (s.status === 'past' ? 'Past Time' : 'Unavailable')}</span>
+              </div>
+            ` : `
+              <label class="flex items-center justify-between p-3 rounded-xl border cursor-pointer transition ${appState.selectedSlotTime === s.text ? 'border-sky-600 bg-sky-50 text-sky-900 font-bold' : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'}">
+                <div class="flex items-center space-x-3">
+                  <input type="radio" name="time_slot" value="${s.text}" ${appState.selectedSlotTime === s.text ? 'checked' : ''} onchange="selectTime('${s.text}')" class="text-sky-600 focus:ring-sky-500">
+                  <span class="text-xs font-semibold">${s.text}</span>
+                </div>
+                <span class="text-[11px] font-semibold text-emerald-600">✓ Free Cancellation</span>
+              </label>
+            `).join("")}
+          </div>
+        `}
+
+        <button onclick="${availableSlots.length === 0 ? `selectDate('Tomorrow', '${days[1] ? days[1].iso : ''}', '${days[1] ? days[1].date : ''}')` : 'goToBookingStep(3)'}" ${appState.slotAvailabilityLoading ? 'disabled' : ''} class="w-full py-3 bg-sky-600 hover:bg-sky-700 disabled:bg-slate-300 text-white rounded-xl font-bold text-sm shadow-md transition flex items-center justify-center space-x-2">
+          <span>${appState.slotAvailabilityLoading ? 'Loading Available Slots…' : (availableSlots.length === 0 ? 'Check Tomorrow Instead' : 'Continue to Address & Payment')}</span>
           <i data-lucide="arrow-right" class="w-4 h-4"></i>
         </button>
       </div>
@@ -2104,7 +2248,7 @@ function renderCheckoutStep() {
         <div class="p-3 rounded-xl bg-sky-50 border border-sky-200 mb-5 flex items-center justify-between text-xs">
           <div class="flex items-center space-x-2 text-sky-900">
             <i data-lucide="calendar" class="w-4 h-4 text-sky-600"></i>
-            <span class="font-bold">${appState.selectedSlotDate}, ${appState.selectedSlotTime}</span>
+            <span class="font-bold">${appState.selectedSlotDate} (${appState.selectedSlotDateFormatted || ''}), ${appState.selectedSlotTime}</span>
           </div>
           <span class="text-emerald-700 font-semibold">15-Min Guaranteed Dispatch</span>
         </div>
@@ -2144,12 +2288,23 @@ function renderCheckoutStep() {
 }
 
 function goToBookingStep(step) {
+  if (step === 3 && !appState.selectedSlotTime) {
+    showToast('Please choose an available arrival slot.');
+    return;
+  }
   appState.bookingStep = step;
   renderCheckoutStep();
 }
 
-function selectDate(dateLabel) {
+function selectDate(dateLabel, dateIso, dateFormatted) {
   appState.selectedSlotDate = dateLabel;
+  if (dateIso) appState.selectedSlotDateIso = dateIso;
+  if (dateFormatted) appState.selectedSlotDateFormatted = dateFormatted;
+  appState.selectedSlotTime = null;
+  appState.slotAvailability = null;
+  appState.slotAvailabilityKey = null;
+  appState.slotAvailabilityLoading = false;
+  appState.slotAvailabilityError = null;
   renderCheckoutStep();
 }
 
@@ -2158,37 +2313,150 @@ function selectTime(timeSlot) {
   renderCheckoutStep();
 }
 
-function applyCouponCode() {
-  const input = document.getElementById("coupon-input");
-  if (!input) return;
-  const val = input.value.trim().toUpperCase();
-  if (val === 'SUGUFIRST' || val === 'ACFEST200' || val === 'RENO40') {
-    appState.appliedCoupon = val;
-    showToast(`Coupon "${val}" applied!`);
-  } else {
-    showToast("Invalid promo code. Try SUGUFIRST");
+async function confirmOrder() {
+  // Build booking date from dynamic selected slot
+  const dateStr = appState.selectedSlotDateIso || (function() {
+    const d = new Date();
+    if (appState.selectedSlotDate === 'Tomorrow') {
+      d.setDate(d.getDate() + 1);
+    }
+    return d.toISOString().split('T')[0];
+  })();
+
+  // Extract start time from slot (e.g. "02:00 PM - 04:00 PM" -> "02:00 PM")
+  const slotStartTime = (appState.selectedSlotTime || '02:00 PM').split(' - ')[0].trim();
+
+  // Build service address from the address input field
+  const addressInput = document.querySelector('#checkout-step-content input[placeholder*="Flat"]');
+  const addressDetails = addressInput ? addressInput.value.trim() : 'Flat 402, 4th Floor';
+  const serviceAddress = `${addressDetails}, ${appState.userLocation}`;
+
+  // Get CSRF Token
+  const csrfToken = window.CSRF_TOKEN || (function() {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+      const cookies = document.cookie.split(';');
+      for (let i = 0; i < cookies.length; i++) {
+        const cookie = cookies[i].trim();
+        if (cookie.substring(0, 10) === 'csrftoken=') {
+          cookieValue = decodeURIComponent(cookie.substring(10));
+          break;
+        }
+      }
+    }
+    return cookieValue;
+  })();
+
+  // Compute total
+  const subtotal = appState.cart.reduce((sum, i) => sum + (i.item.price * i.quantity), 0);
+  let discount = 0;
+  if (appState.appliedCoupon === 'SUGUFIRST') {
+    discount = Math.min(200, Math.round(subtotal * 0.5));
+  } else if (appState.appliedCoupon === 'ACFEST200') {
+    discount = 200;
   }
-  renderCheckoutStep();
-}
+  const convenienceFee = 49;
+  const total = Math.max(0, subtotal - discount + convenienceFee);
 
-function confirmOrder() {
-  // Clear cart & trigger live assignment
-  appState.assignedPartner = {
-    name: "Rameshwar Varma",
-    badge: "Master Certified Expert",
-    rating: "4.92 ★ (1,240 jobs)",
-    phone: "+91 98450 12894",
-    arrivalMins: 18,
-    otp: "5429",
-    avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=200&q=80"
-  };
+  // Disable confirm button to prevent double-clicks
+  const confirmBtn = document.querySelector('#checkout-step-content button[onclick="confirmOrder()"]');
+  if (confirmBtn) {
+    confirmBtn.disabled = true;
+    confirmBtn.innerHTML = '<span class="inline-block animate-spin mr-2">⏳</span> Placing Order...';
+  }
 
-  closeCheckoutModal();
-  openOrderSuccessModal();
-  appState.cart = [];
-  appState.appliedCoupon = null;
-  renderFloatingCart();
-  updateNavState();
+  let bookingSuccess = false;
+  let lastBookingData = null;
+  const bookingResults = [];
+
+  try {
+    // Send a booking request for each cart item
+    for (const cartEntry of appState.cart) {
+      const item = cartEntry.item;
+      const qsId = item.dbId || (item.id ? item.id.replace('qs_', '') : null);
+
+      const payload = {
+        qs_id: qsId && !isNaN(Number(qsId)) ? Number(qsId) : null,
+        vendor_id: item.vendorId || item.vendor_id || null,
+        service_title: item.title || '',
+        category_id: cartEntry.categoryId || null,
+        package_name: item.title || 'Standard',
+        total_amount: item.price * cartEntry.quantity,
+        scheduled_date: dateStr,
+        scheduled_time: slotStartTime,
+        service_address: serviceAddress,
+        additional_notes: appState.appliedCoupon ? `Coupon: ${appState.appliedCoupon}` : ''
+      };
+
+      const res = await fetch('/api/user/services/book/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': csrfToken || ''
+        },
+        credentials: 'same-origin',
+        body: JSON.stringify(payload)
+      });
+
+      const data = await res.json().catch(() => ({}));
+
+      if (res.ok && data.status === 'success') {
+        bookingSuccess = true;
+        lastBookingData = data;
+        bookingResults.push(data);
+      } else {
+        console.error('Booking failed for item:', item.title, data.message || data);
+        if (res.status === 401) {
+          try {
+            localStorage.setItem('sugu_cart', JSON.stringify(appState.cart));
+          } catch(e) {}
+          showToast('Please log in to complete your booking. Redirecting...');
+          setTimeout(() => {
+            window.location.href = '/login/?next=' + encodeURIComponent(window.location.pathname);
+          }, 1200);
+          return;
+        }
+        showToast(data.message || 'Failed to book service. Please try again.');
+      }
+    }
+
+    if (bookingSuccess && lastBookingData) {
+      const bk = lastBookingData.booking || {};
+      appState.assignedPartner = {
+        name: bk.vendor_name || 'Assigned Vendor',
+        badge: 'Verified Service Partner',
+        rating: (bk.vendor_rating ? bk.vendor_rating + ' ★' : '4.92 ★'),
+        phone: bk.vendor_phone || '+91 98450 12894',
+        arrivalMins: 18,
+        otp: String(Math.floor(1000 + Math.random() * 9000)),
+        avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=200&q=80',
+        bookingCode: bk.booking_code || ('BK-' + bk.id),
+        bookingId: bk.id
+      };
+
+      try {
+        localStorage.removeItem('sugu_cart');
+      } catch(e) {}
+
+      closeCheckoutModal();
+      openOrderSuccessModal();
+      appState.cart = [];
+      appState.appliedCoupon = null;
+      renderFloatingCart();
+      updateNavState();
+    } else if (!bookingSuccess) {
+      showToast('Could not place any bookings. Please check your cart and try again.');
+    }
+  } catch (err) {
+    console.error('Booking network error:', err);
+    showToast('Network error while placing order. Please check your connection and try again.');
+  } finally {
+    if (confirmBtn) {
+      confirmBtn.disabled = false;
+      confirmBtn.innerHTML = '<i data-lucide="shield-check" class="w-5 h-5"></i><span>Confirm Booking • ₹' + total + '</span>';
+      initLucideIcons();
+    }
+  }
 }
 
 function openOrderSuccessModal() {
@@ -2199,13 +2467,14 @@ function openOrderSuccessModal() {
   const container = document.getElementById("order-tracking-content");
   if (container && appState.assignedPartner) {
     const p = appState.assignedPartner;
+    const displayCode = p.bookingCode || ('BK-' + (p.bookingId || '001'));
     container.innerHTML = `
       <div class="text-center mb-6">
         <div class="w-16 h-16 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto mb-3 shadow-md">
           <i data-lucide="check" class="w-8 h-8 stroke-[3]"></i>
         </div>
         <h3 class="text-2xl font-bold font-heading text-slate-900">Booking Confirmed!</h3>
-        <p class="text-xs text-slate-500 mt-1">Order #SUGU-${Math.floor(100000 + Math.random() * 900000)} • 30-Day Guarantee Backed</p>
+        <p class="text-xs text-slate-500 mt-1">Order #${displayCode} • Request Sent to Service Partner</p>
       </div>
 
       <!-- Live Partner Dispatch Card -->
@@ -2213,9 +2482,9 @@ function openOrderSuccessModal() {
         <div class="flex items-center justify-between text-xs text-sky-400 font-semibold mb-3">
           <span class="flex items-center">
             <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping mr-2"></span>
-            PRO EN ROUTE
+            REQUEST DISPATCHED
           </span>
-          <span>ETA ~${p.arrivalMins} Mins</span>
+          <span>Status: Pending Acceptance</span>
         </div>
         <div class="flex items-center space-x-3">
           <img src="${p.avatar}" alt="${p.name}" class="w-14 h-14 rounded-full object-cover border-2 border-sky-400">
@@ -2224,7 +2493,7 @@ function openOrderSuccessModal() {
             <span class="text-xs text-slate-300 block">${p.badge}</span>
             <span class="text-xs text-amber-400 font-semibold">${p.rating}</span>
           </div>
-          <button onclick="showToast('Calling Pro: ' + '${p.phone}')" class="w-10 h-10 rounded-full bg-sky-600 hover:bg-sky-500 text-white flex items-center justify-center shadow-lg transition">
+          <button onclick="showToast('Calling Partner: ' + '${p.phone}')" class="w-10 h-10 rounded-full bg-sky-600 hover:bg-sky-500 text-white flex items-center justify-center shadow-lg transition">
             <i data-lucide="phone" class="w-4 h-4"></i>
           </button>
         </div>
@@ -2247,7 +2516,7 @@ function openOrderSuccessModal() {
       </div>
 
       <button onclick="closeOrderSuccessModal()" class="w-full py-3 bg-sky-600 hover:bg-sky-700 text-white rounded-xl font-bold text-sm shadow transition">
-        Done & Track in My Bookings
+        Done & Track in My Bookings →
       </button>
     `;
     initLucideIcons();
@@ -2257,7 +2526,7 @@ function openOrderSuccessModal() {
 function closeOrderSuccessModal() {
   const modal = document.getElementById("order-success-modal");
   if (modal) modal.classList.add("hidden");
-  switchRoute('home');
+  window.location.href = '/user/services/my-bookings.html';
 }
 
 // ----------------------------------------------------
@@ -3626,5 +3895,3 @@ window.selectBiddingBudgetPreset = typeof selectBiddingBudgetPreset === 'functio
 window.handlePostJobSubmit = typeof handlePostJobSubmit === 'function' ? handlePostJobSubmit : null;
 window.postFromTemplate = typeof postFromTemplate === 'function' ? postFromTemplate : null;
 window.customizeTemplate = typeof customizeTemplate === 'function' ? customizeTemplate : null;
-
-
