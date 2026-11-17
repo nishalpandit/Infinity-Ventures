@@ -3,28 +3,56 @@
 {% block header_title %}{% if mode == 'create' %}Add SubCategory{% else %}Edit SubCategory{% endif %}{% endblock %}
 
 {% block content %}
-<div class="card" style="max-width: 600px; margin: 0 auto; padding: 30px;">
+<div class="card" style="max-width: 620px; margin: 0 auto; padding: 32px; border-radius: 16px;">
   <form method="POST">
     {% csrf_token %}
     
     <div style="margin-bottom: 20px;">
-      <label style="display: block; font-size: 13px; font-weight: 600; color: var(--text-main); margin-bottom: 8px;">Parent Category</label>
-      <select name="category" required style="width: 100%; padding: 12px; border: 1px solid rgba(0,0,0,0.1); border-radius: 8px; font-family: inherit; font-size: 14px; background: var(--bg-light);">
+      <label style="display: block; font-size: 13px; font-weight: 700; color: var(--text-main); margin-bottom: 8px;">Parent Category <span style="color:#ef4444;">*</span></label>
+      <select name="category" id="subcatParentCat" required style="width: 100%; padding: 12px; border: 1.5px solid rgba(0,0,0,0.1); border-radius: 10px; font-family: inherit; font-size: 14px; background: var(--bg-light);">
         <option value="">-- Select Category --</option>
         {% for c in categories %}
-        <option value="{{ c.id }}" {% if mode == 'edit' and subcat.category_id == c.id %}selected{% endif %}>{{ c.name }}</option>
+        <option value="{{ c.id }}" data-is-beauty="{% if c.is_beauty %}1{% else %}0{% endif %}" {% if mode == 'edit' and subcat.category_id == c.id %}selected{% elif mode == 'create' and selected_cat_id == c.id %}selected{% endif %}>{{ c.name }}</option>
         {% endfor %}
       </select>
     </div>
 
+    <!-- Targeted Gender Section: ONLY FOR BEAUTY CATEGORY -->
+    <div id="genderSection" style="margin-bottom: 22px; display: none; background: #fdf2f8; border: 1.5px solid #fbcfe8; border-radius: 14px; padding: 18px;">
+      <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 800; color: #9d174d; margin-bottom: 6px;">
+        <i class="fa-solid fa-venus-mars"></i> Target Audience: Is this for Men or Women? <span style="color: #ef4444;">*</span>
+      </label>
+      <p style="font-size: 11.5px; color: #be185d; margin: 0 0 14px; line-height: 1.4;">
+        This prompt appears <strong>only for the Beauty category</strong>. Subcategories will be routed directly to the Women or Men experience cards on the user portal.
+      </p>
+      
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+        <label id="labelGenderWomen" style="display: flex; align-items: center; gap: 10px; padding: 12px 14px; background: #fff; border: 2px solid #db2777; border-radius: 10px; cursor: pointer; transition: all 0.2s;">
+          <input type="radio" name="gender" value="women" id="genderRadioWomen" {% if subcat.gender == 'women' or not subcat.gender or subcat.gender == 'all' %}checked{% endif %} onchange="updateGenderUi()">
+          <div>
+            <div style="font-weight: 800; font-size: 13.5px; color: #be185d;"><i class="fa-solid fa-venus" style="margin-right:4px;"></i> Women</div>
+            <div style="font-size: 11px; color: #64748b;">Salon, Spa, Facial & Skincare</div>
+          </div>
+        </label>
+        
+        <label id="labelGenderMen" style="display: flex; align-items: center; gap: 10px; padding: 12px 14px; background: #fff; border: 2px solid #cbd5e1; border-radius: 10px; cursor: pointer; transition: all 0.2s;">
+          <input type="radio" name="gender" value="men" id="genderRadioMen" {% if subcat.gender == 'men' %}checked{% endif %} onchange="updateGenderUi()">
+          <div>
+            <div style="font-weight: 800; font-size: 13.5px; color: #0369a1;"><i class="fa-solid fa-mars" style="margin-right:4px;"></i> Men</div>
+            <div style="font-size: 11px; color: #64748b;">Salon, Haircut, Beard & Massage</div>
+          </div>
+        </label>
+      </div>
+    </div>
+
     <div style="margin-bottom: 20px;">
-      <label style="display: block; font-size: 13px; font-weight: 600; color: var(--text-main); margin-bottom: 8px;">SubCategory Name</label>
-      <input type="text" name="name" required value="{% if mode == 'edit' %}{{ subcat.name }}{% endif %}" style="width: 100%; padding: 12px; border: 1px solid rgba(0,0,0,0.1); border-radius: 8px; font-family: inherit; font-size: 14px;" placeholder="e.g. Sofa Cleaning">
+      <label style="display: block; font-size: 13px; font-weight: 700; color: var(--text-main); margin-bottom: 8px;">SubCategory Name <span style="color:#ef4444;">*</span></label>
+      <input type="text" name="name" required value="{% if mode == 'edit' %}{{ subcat.name }}{% endif %}" style="width: 100%; padding: 12px; border: 1.5px solid rgba(0,0,0,0.1); border-radius: 10px; font-family: inherit; font-size: 14px;" placeholder="e.g. Haircut & Beard Sculpting">
     </div>
 
     <div style="margin-bottom: 30px;">
-      <label style="display: block; font-size: 13px; font-weight: 600; color: var(--text-main); margin-bottom: 8px;">Status</label>
-      <select name="status" style="width: 100%; padding: 12px; border: 1px solid rgba(0,0,0,0.1); border-radius: 8px; font-family: inherit; font-size: 14px; background: var(--bg-light);">
+      <label style="display: block; font-size: 13px; font-weight: 700; color: var(--text-main); margin-bottom: 8px;">Status</label>
+      <select name="status" style="width: 100%; padding: 12px; border: 1.5px solid rgba(0,0,0,0.1); border-radius: 10px; font-family: inherit; font-size: 14px; background: var(--bg-light);">
         <option value="active" {% if mode == 'edit' and subcat.status == 'active' %}selected{% endif %}>Active</option>
         <option value="inactive" {% if mode == 'edit' and subcat.status == 'inactive' %}selected{% endif %}>Inactive</option>
       </select>
@@ -32,8 +60,51 @@
 
     <div style="display: flex; gap: 12px; justify-content: flex-end;">
       <a href="{% url 'super_admin_categories' %}" class="btn btn-outline" style="border-color: rgba(0,0,0,0.1); color: var(--text-muted);">Cancel</a>
-      <button type="submit" class="btn btn-primary">{% if mode == 'create' %}Create SubCategory{% else %}Save Changes{% endif %}</button>
+      <button type="submit" class="btn btn-primary" style="font-weight:700; padding:10px 22px;">{% if mode == 'create' %}Create SubCategory{% else %}Save Changes{% endif %}</button>
     </div>
   </form>
 </div>
+
+<script>
+  function checkCategoryBeauty() {
+    const select = document.getElementById('subcatParentCat');
+    if (!select) return;
+    const selectedOpt = select.options[select.selectedIndex];
+    const isBeauty = selectedOpt && (selectedOpt.getAttribute('data-is-beauty') === '1' || selectedOpt.textContent.toLowerCase().includes('beauty'));
+    const genderSec = document.getElementById('genderSection');
+    if (genderSec) {
+      genderSec.style.display = isBeauty ? 'block' : 'none';
+    }
+  }
+
+  function updateGenderUi() {
+    const radioMen = document.getElementById('genderRadioMen');
+    if (!radioMen) return;
+    const isMen = radioMen.checked;
+    const labelWomen = document.getElementById('labelGenderWomen');
+    const labelMen = document.getElementById('labelGenderMen');
+    if (labelWomen && labelMen) {
+      if (isMen) {
+        labelMen.style.borderColor = '#0284c7';
+        labelMen.style.background = '#f0f9ff';
+        labelWomen.style.borderColor = '#cbd5e1';
+        labelWomen.style.background = '#fff';
+      } else {
+        labelWomen.style.borderColor = '#db2777';
+        labelWomen.style.background = '#fdf2f8';
+        labelMen.style.borderColor = '#cbd5e1';
+        labelMen.style.background = '#fff';
+      }
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded', function() {
+    const catSelect = document.getElementById('subcatParentCat');
+    if (catSelect) {
+      catSelect.addEventListener('change', checkCategoryBeauty);
+    }
+    checkCategoryBeauty();
+    updateGenderUi();
+  });
+</script>
 {% endblock %}

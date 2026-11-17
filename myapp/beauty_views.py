@@ -15,6 +15,7 @@ from myapp.models import Category, SubCategory, CustomUser, ServiceBooking, Quic
 BEAUTY_EXPERIENCES = [
     {
         "id": "womens_salon_spa",
+        "gender": "women",
         "name": "Women's Salon & Spa",
         "tagline": "At-Home Beauty or Book Top Luxury Parlours",
         "rating": 4.91,
@@ -47,6 +48,7 @@ BEAUTY_EXPERIENCES = [
     },
     {
         "id": "mens_salon_massage",
+        "gender": "men",
         "name": "Men's Salon & Massage",
         "tagline": "At-Home Grooming or Book Top Luxury Salons",
         "rating": 4.87,
@@ -396,31 +398,49 @@ def beauty_experiences_api(request):
 def beauty_services_api(request):
     """
     GET /api/beauty/services/
-    Returns subcategories and services dynamically from database.
-    If no services exist in the database, returns empty subcategories with 0 services.
+    Returns subcategories and services dynamically from database for chosen gender and mode.
+    Query parameters:
+      - gender / hub: 'women' (or 'womens_salon_spa') | 'men' (or 'mens_salon_massage')
+      - mode / delivery_mode: 'home' (Salon at Home) | 'parlour' (Premium Parlour)
     """
     if request.method != 'GET':
         return JsonResponse({'status': 'error', 'message': 'Method not allowed'}, status=405)
 
-    hub = request.GET.get('hub', 'womens_salon_spa')
-    mode = request.GET.get('mode', 'home')
+    raw_hub = (request.GET.get('gender') or request.GET.get('hub') or request.GET.get('experience') or '').strip().lower()
+    if raw_hub in ['women', 'womens', 'female', 'womens_salon_spa']:
+        hub = 'womens_salon_spa'
+        gender = 'women'
+    elif raw_hub in ['men', 'mens', 'male', 'mens_salon_massage']:
+        hub = 'mens_salon_massage'
+        gender = 'men'
+    else:
+        hub = 'womens_salon_spa'
+        gender = 'women'
 
-    if mode == 'parlour':
+    mode = (request.GET.get('delivery_mode') or request.GET.get('mode') or 'home').strip().lower()
+
+    if mode in ['parlour', 'salon', 'in_salon', 'in-salon']:
         return beauty_parlours_api(request)
 
     beauty_cat = Category.objects.filter(Q(id=37) | Q(name__icontains='beauty')).first()
     subcategories = []
+    all_services = []
 
     if beauty_cat:
-        db_subs = list(beauty_cat.subcategories.filter(status='active').order_by('id'))
-        if hub == 'womens_salon_spa':
-            matched = [s for s in db_subs if 'women' in (s.name or '').lower()] or db_subs
-        elif hub == 'mens_salon_massage':
-            matched = [s for s in db_subs if 'men' in (s.name or '').lower()] or db_subs
+        db_subs = list(beauty_cat.subcategories.filter(Q(status='active') | Q(quick_services__status='active')).distinct().order_by('id'))
+        if gender == 'women':
+            matched = [s for s in db_subs if getattr(s, 'gender', None) == 'women' or 'women' in (s.name or '').lower()] or db_subs
+            db_services = QuickService.objects.filter(
+                category=beauty_cat, status='active'
+            ).filter(Q(gender='women') | Q(gender='all') | Q(gender__isnull=True)).select_related('subcategory')
+        elif gender == 'men':
+            matched = [s for s in db_subs if getattr(s, 'gender', None) == 'men' or ('men' in (s.name or '').lower() and 'women' not in (s.name or '').lower())] or db_subs
+            db_services = QuickService.objects.filter(
+                category=beauty_cat, status='active'
+            ).filter(Q(gender='men') | Q(gender='all') | Q(gender__isnull=True)).select_related('subcategory')
         else:
             matched = db_subs
-
-        db_services = QuickService.objects.filter(category=beauty_cat, status='active').select_related('subcategory')
+            db_services = QuickService.objects.filter(category=beauty_cat, status='active').select_related('subcategory')
 
         for sub in matched:
             items = []
@@ -428,30 +448,45 @@ def beauty_services_api(request):
                 img_url = ''
                 if qs.image:
                     try:
-                        img_url = qs.image.url
+                        img_url = request.build_absolute_uri(qs.image.url)
                     except Exception:
                         img_url = qs.image_url or ''
                 else:
                     img_url = qs.image_url or ''
+                if img_url and not img_url.startswith('http'):
+                    img_url = request.build_absolute_uri(img_url)
 
-                items.append({
+                service_dict = {
                     'id': f'qs_{qs.id}',
                     'dbId': qs.id,
                     'title': qs.title,
-                    'rating': '4.87',
-                    'reviews': '100+',
+                    'category': 'Beauty',
+                    'subcategory': sub.name,
+                    'rating': '4.91',
+                    'reviews': '120+ reviews',
                     'price': float(qs.base_price),
                     'originalPrice': int(float(qs.base_price) * 1.3),
-                    'time': '45 mins',
-                    'badge': 'Verified',
+                    'time': qs.duration or '45 mins',
+                    'duration': qs.duration or '45 mins',
+                    'brand_name': qs.brand_name or '',
+                    'is_mono_pack': bool(qs.is_mono_pack),
+                    'parlour_name': qs.parlour_name or '',
+                    'gender': qs.gender or 'all',
+                    'delivery_mode': qs.delivery_mode or 'both',
+                    'badge': '100% Sealed Mono-Pack' if qs.is_mono_pack else 'Verified Pro',
                     'image': img_url,
-                    'features': qs.inclusions or ['Doorstep verified expert service']
-                })
+                    'features': qs.inclusions or ['100% Sealed Single-Dose Mono-Pack', 'Sterilized instruments sealed in pouch', 'Single-use cape & gown'],
+                    'packages': qs.service_packages or [],
+                    'service_packages': qs.service_packages or []
+                }
+                items.append(service_dict)
+                all_services.append(service_dict)
 
             subcategories.append({
                 'id': f'sub_{sub.id}',
                 'dbId': sub.id,
                 'name': sub.name,
+                'gender': getattr(sub, 'gender', gender),
                 'items': items
             })
 
@@ -459,11 +494,15 @@ def beauty_services_api(request):
 
     return JsonResponse({
         'status': 'success',
+        'category_id': beauty_cat.id if beauty_cat else 37,
+        'category_name': 'Beauty',
+        'gender': gender,
         'hub': hub,
         'hub_name': experience['name'],
         'mode': 'home',
-        'mode_name': 'Salon at Home' if hub == 'womens_salon_spa' else 'Grooming & Massage at Home',
+        'mode_name': 'Salon at Home' if gender == 'women' else 'Grooming & Massage at Home',
         'subcategories': subcategories,
+        'all_services': all_services,
         'guarantee': '30-Day Money-Back & Free Re-work Guarantee',
         'damage_cover': 'Up to ₹10,000 Free Accidental Damage Cover'
     }, status=200)
@@ -474,15 +513,22 @@ def beauty_parlours_api(request):
     """
     GET /api/beauty/parlours/
     Query parameters:
-      - hub: 'womens_salon_spa' | 'mens_salon_massage' (default: 'womens_salon_spa')
-    Screen 4 & 5: Returns curated luxury verified parlours/barbershops list with badges, distance, ratings.
+      - gender / hub: 'women' | 'men' (default: 'women')
+    Returns curated luxury verified parlours/barbershops list with badges, distance, ratings.
     """
     if request.method != 'GET':
         return JsonResponse({'status': 'error', 'message': 'Method not allowed'}, status=405)
 
-    hub = request.GET.get('hub', 'womens_salon_spa')
-    if hub not in LUXURY_PARLOURS_CATALOG:
+    raw_hub = (request.GET.get('gender') or request.GET.get('hub') or request.GET.get('experience') or '').strip().lower()
+    if raw_hub in ['women', 'womens', 'female', 'womens_salon_spa']:
         hub = 'womens_salon_spa'
+        gender = 'women'
+    elif raw_hub in ['men', 'mens', 'male', 'mens_salon_massage']:
+        hub = 'mens_salon_massage'
+        gender = 'men'
+    else:
+        hub = 'womens_salon_spa'
+        gender = 'women'
 
     parlours = LUXURY_PARLOURS_CATALOG.get(hub, [])
     experience = next((e for e in BEAUTY_EXPERIENCES if e['id'] == hub), BEAUTY_EXPERIENCES[0])
@@ -507,10 +553,11 @@ def beauty_parlours_api(request):
 
     return JsonResponse({
         'status': 'success',
+        'gender': gender,
         'hub': hub,
         'hub_name': experience['name'],
         'mode': 'parlour',
-        'mode_name': 'Premium Parlour Services' if hub == 'womens_salon_spa' else 'Premium Barbershop & Lounge',
+        'mode_name': 'Premium Parlour Services' if gender == 'women' else 'Premium Barbershop & Lounge',
         'guarantee': 'Zero Waiting Time Guarantee • VIP Slot Reserved',
         'count': len(summary_list),
         'parlours': summary_list
@@ -700,7 +747,7 @@ def beauty_book_appointment_api(request):
     ACTIVE_PARLOUR_APPOINTMENTS.append(appointment_record)
 
     # Optional: If customer is logged in, record in Django ServiceBooking table
-    if request.user.is_authenticated:
+    if getattr(request, 'user', None) and request.user.is_authenticated:
         try:
             # find or use first available vendor
             vendor_user = CustomUser.objects.filter(role='vendor').first() or request.user

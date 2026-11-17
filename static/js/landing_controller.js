@@ -33,7 +33,8 @@ let appState = {
   qsCategoryPerPage: 6,
   qsServicesPage: 1,
   qsServicesPerPage: 4,
-  // Women's Beauty Service Dual Navigation State
+  // Beauty Category Gender Segmentation State ('women' | 'men' | null)
+  beautyGender: null,
   beautyMode: 'home', // 'home' | 'parlour'
   selectedParlourId: null,
   selectedParlourService: null,
@@ -129,11 +130,20 @@ function syncDynamicCategories() {
           reviews: "120+",
           price: price,
           originalPrice: origPrice,
-          time: "45 mins",
-          badge: "Verified",
+          time: qs.duration || "45 mins",
+          duration: qs.duration || "45 mins",
+          badge: qs.is_mono_pack ? "100% Sealed Mono-Pack" : "Verified",
           image: qs.image || dbCat.image || (tpl ? `/static/assets/icons/${tpl.iconFile}` : "https://images.unsplash.com/photo-1581092160607-ee22621dd758?auto=format&fit=crop&w=600&q=80"),
           desc: qs.description || '',
-          features: features
+          features: features,
+          packages: qs.packages || [],
+          inclusions: qs.inclusions || [],
+          exclusions: qs.exclusions || [],
+          brand_name: qs.brand_name || '',
+          is_mono_pack: !!qs.is_mono_pack,
+          parlour_name: qs.parlour_name || '',
+          delivery_mode: qs.delivery_mode || 'home',
+          target_gender: qs.target_gender || 'unisex'
         };
       });
 
@@ -151,6 +161,7 @@ function syncDynamicCategories() {
             id: sId,
             dbId: s.id,
             name: s.name,
+            gender: s.gender || 'all',
             items: matchedItems
           };
         });
@@ -296,6 +307,7 @@ function syncDynamicCategories() {
           id: sId,
           dbId: s.id,
           name: s.name,
+          gender: s.gender || 'all',
           items: items
         };
       });
@@ -1058,17 +1070,26 @@ window.changeQsCategoryPage = changeQsCategoryPage;
 function selectCategory(catId) {
   appState.currentRoute = 'quick-service';
   const cat = findCategory(catId);
+  const isBeauty = cat && ((cat.name && cat.name.toLowerCase().includes('beauty')) || String(cat.id) === '37' || cat.isBeautyHub);
   if (cat) {
     appState.selectedCategoryId = cat.id;
-    if (cat.subcategories && cat.subcategories.length > 0) {
-      const firstWithItems = cat.subcategories.find(s => s.items && s.items.length > 0);
-      appState.selectedSubcategoryId = firstWithItems ? firstWithItems.id : cat.subcategories[0].id;
-    } else {
+    if (isBeauty) {
+      // For Beauty category: show the 2 cards (Women and Men) initially
+      appState.beautyGender = null;
       appState.selectedSubcategoryId = null;
+    } else {
+      appState.beautyGender = null;
+      if (cat.subcategories && cat.subcategories.length > 0) {
+        const firstWithItems = cat.subcategories.find(s => s.items && s.items.length > 0);
+        appState.selectedSubcategoryId = firstWithItems ? firstWithItems.id : cat.subcategories[0].id;
+      } else {
+        appState.selectedSubcategoryId = null;
+      }
     }
   } else {
     appState.selectedCategoryId = catId;
     appState.selectedSubcategoryId = null;
+    appState.beautyGender = null;
   }
   // Reset parlour state cleanly when switching categories
   appState.beautyMode = 'home';
@@ -1078,18 +1099,62 @@ function selectCategory(catId) {
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
+function selectBeautyGender(gender) {
+  appState.beautyGender = gender;
+  const currentCat = findCategory(appState.selectedCategoryId) || SUGU_DATA.categories.find(c => (c.name && c.name.toLowerCase().includes('beauty')) || String(c.id) === '37');
+  if (currentCat) {
+    appState.selectedCategoryId = currentCat.id;
+    const targetG = (gender || '').toLowerCase();
+    const matchingSubs = (currentCat.subcategories || []).filter(sub => {
+      const g = (sub.gender || '').toLowerCase();
+      if (g === targetG) return true;
+      const n = (sub.name || '').toLowerCase();
+      return targetG === 'women' ? n.includes('women') : n.includes('men');
+    });
+    if (matchingSubs.length > 0) {
+      appState.selectedSubcategoryId = matchingSubs[0].id;
+    } else {
+      appState.selectedSubcategoryId = null;
+    }
+  }
+  appState.qsServicesPage = 1;
+  renderApp();
+  const el = document.getElementById('uc-cat-title');
+  if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+window.selectBeautyGender = selectBeautyGender;
+
+function backToBeautyHub() {
+  appState.beautyGender = null;
+  appState.selectedSubcategoryId = null;
+  renderApp();
+  const el = document.getElementById('uc-cat-title');
+  if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+window.backToBeautyHub = backToBeautyHub;
+
 function renderUrbanCompanyDetailFlow() {
   const currentCat = findCategory(appState.selectedCategoryId) || SUGU_DATA.categories[0];
   if (!currentCat) return;
   appState.selectedCategoryId = currentCat.id;
 
+  const isBeauty = (currentCat.name && currentCat.name.toLowerCase().includes('beauty')) || String(currentCat.id) === '37' || currentCat.isBeautyHub;
+
   // Header info
-  document.getElementById("uc-cat-title").innerText = currentCat.name;
-  document.getElementById("uc-cat-tagline").innerText = currentCat.tagline || 'Verified Doorstep Services';
+  document.getElementById("uc-cat-title").innerText = isBeauty && appState.beautyGender 
+    ? (appState.beautyGender === 'men' ? "Men's Salon & Grooming" : "Women's Salon & Spa") 
+    : currentCat.name;
+  document.getElementById("uc-cat-tagline").innerText = isBeauty && appState.beautyGender 
+    ? (appState.beautyGender === 'men' ? "Haircut, Beard Trim, Head Massage & Face Care" : "Salon, Facial, Manicure, Pedicure & Doorstep Spa")
+    : (currentCat.tagline || 'Verified Doorstep Services');
   document.getElementById("uc-cat-rating").innerHTML = `<i data-lucide="star" class="w-4 h-4 fill-amber-400 text-amber-400 mr-1"></i> ${currentCat.rating || '4.86'}`;
   const catThumb = document.getElementById("uc-cat-icon-thumb");
   if (catThumb) {
-    catThumb.src = currentCat.isCustomImage ? currentCat.iconFile : `/static/assets/icons/${currentCat.iconFile}`;
+    if (isBeauty && appState.beautyGender) {
+      catThumb.src = appState.beautyGender === 'men' ? '/static/assets/beauty/men_photo.png' : '/static/assets/beauty/women_photo.png';
+    } else {
+      catThumb.src = currentCat.isCustomImage ? currentCat.iconFile : `/static/assets/icons/${currentCat.iconFile}`;
+    }
   }
 
   // Render Horizontal Category Switcher (Urban Company style pill strip)
@@ -1106,38 +1171,117 @@ function renderUrbanCompanyDetailFlow() {
     `).join("");
   }
 
-  // Standard 2-column layout for ALL categories (including Beauty & Wellness)
-  // No intermediate hub cards with images/prices - normal subcategory list on left, services on right
+  // ----------------------------------------------------
+  // BEAUTY GENDER HUB (2 CARDS) VS STANDARD SERVICES VIEW
+  // ----------------------------------------------------
   const beautyHubView = document.getElementById("beauty-gender-hub-view");
-  if (beautyHubView) beautyHubView.classList.add("hidden");
   const beautyGenderToggleBar = document.getElementById("beauty-gender-toggle-bar");
-  if (beautyGenderToggleBar) beautyGenderToggleBar.classList.add("hidden");
   const beautyModeBar = document.getElementById("beauty-service-mode-bar");
-  if (beautyModeBar) beautyModeBar.classList.add("hidden");
-  const parloursLayout = document.getElementById("beauty-parlours-layout");
-  if (parloursLayout) parloursLayout.classList.add("hidden");
   const standardLayout = document.getElementById("uc-standard-layout");
-  if (standardLayout) standardLayout.classList.remove("hidden");
+  const parloursLayout = document.getElementById("beauty-parlours-layout");
 
-  // Left Sidebar Subcategories (For Home Services & Other Categories)
+  if (isBeauty) {
+    if (!appState.beautyGender) {
+      // Step 1: Beauty selected without gender -> Show 2 cards (Women and Men)
+      if (beautyHubView) beautyHubView.classList.remove("hidden");
+      if (beautyGenderToggleBar) beautyGenderToggleBar.classList.add("hidden");
+      if (beautyModeBar) beautyModeBar.classList.add("hidden");
+      if (standardLayout) standardLayout.classList.add("hidden");
+      if (parloursLayout) parloursLayout.classList.add("hidden");
+
+      // Dynamic subcategory counts on the 2 cards
+      const womenCount = (currentCat.subcategories || []).filter(s => (s.gender === 'women' || (s.name && s.name.toLowerCase().includes('women')))).length;
+      const menCount = (currentCat.subcategories || []).filter(s => (s.gender === 'men' || (s.name && s.name.toLowerCase().includes('men')))).length;
+      const wEl = document.getElementById("women-subcats-count");
+      if (wEl) wEl.innerHTML = `<i data-lucide="layers" class="w-3.5 h-3.5"></i><span>${womenCount > 0 ? womenCount + ' Specialized Categories' : "Browse Women's Services"}</span>`;
+      const mEl = document.getElementById("men-subcats-count");
+      if (mEl) mEl.innerHTML = `<i data-lucide="layers" class="w-3.5 h-3.5"></i><span>${menCount > 0 ? menCount + ' Specialized Categories' : "Browse Men's Services"}</span>`;
+
+      initLucideIcons();
+      return;
+    } else {
+      // Step 2: Gender chosen -> Show services layout with top gender toggle bar
+      if (beautyHubView) beautyHubView.classList.add("hidden");
+      if (beautyGenderToggleBar) {
+        beautyGenderToggleBar.classList.remove("hidden");
+        const toggleWomens = document.getElementById("toggle-womens-btn");
+        const toggleMens = document.getElementById("toggle-mens-btn");
+        const activeLabel = document.getElementById("beauty-active-gender-label");
+        if (appState.beautyGender === 'men') {
+          if (toggleMens) toggleMens.className = "px-4 py-1.5 rounded-xl text-xs font-bold transition flex items-center space-x-1.5 bg-sky-100 text-sky-800 border-2 border-sky-600 shadow-xs";
+          if (toggleWomens) toggleWomens.className = "px-4 py-1.5 rounded-xl text-xs font-semibold transition flex items-center space-x-1.5 bg-slate-50 text-slate-600 hover:bg-pink-50 hover:text-pink-700 border border-slate-200";
+          if (activeLabel) activeLabel.textContent = "Men's Salon & Grooming";
+        } else {
+          if (toggleWomens) toggleWomens.className = "px-4 py-1.5 rounded-xl text-xs font-bold transition flex items-center space-x-1.5 bg-pink-100 text-pink-800 border-2 border-pink-500 shadow-xs";
+          if (toggleMens) toggleMens.className = "px-4 py-1.5 rounded-xl text-xs font-semibold transition flex items-center space-x-1.5 bg-slate-50 text-slate-600 hover:bg-sky-50 hover:text-sky-700 border border-slate-200";
+          if (activeLabel) activeLabel.textContent = "Women's Salon & Spa";
+        }
+      }
+      if (beautyModeBar) beautyModeBar.classList.add("hidden");
+      if (standardLayout) standardLayout.classList.remove("hidden");
+      if (parloursLayout) parloursLayout.classList.add("hidden");
+    }
+  } else {
+    // Non-Beauty category: standard layout directly without gender cards
+    appState.beautyGender = null;
+    if (beautyHubView) beautyHubView.classList.add("hidden");
+    if (beautyGenderToggleBar) beautyGenderToggleBar.classList.add("hidden");
+    if (beautyModeBar) beautyModeBar.classList.add("hidden");
+    if (standardLayout) standardLayout.classList.remove("hidden");
+    if (parloursLayout) parloursLayout.classList.add("hidden");
+  }
+
+  // Filter Subcategories: ONLY show the subcategories belonging to chosen gender if in Beauty
+  let displaySubcategories = currentCat.subcategories || [];
+  if (isBeauty && appState.beautyGender) {
+    const targetG = appState.beautyGender.toLowerCase();
+    displaySubcategories = (currentCat.subcategories || []).filter(sub => {
+      const g = (sub.gender || '').toLowerCase();
+      if (g === targetG) return true;
+      if (g === 'all') {
+        const n = (sub.name || '').toLowerCase();
+        return targetG === 'women' ? n.includes('women') : n.includes('men');
+      }
+      return false;
+    });
+    if (displaySubcategories.length === 0) {
+      displaySubcategories = (currentCat.subcategories || []).filter(sub => {
+        const n = (sub.name || '').toLowerCase();
+        return targetG === 'women' ? n.includes('women') : n.includes('men');
+      });
+    }
+  }
+
+  // Active subcategory resolution from filtered list
+  let activeSub = displaySubcategories.find(s => s.id === appState.selectedSubcategoryId);
+  if (!activeSub && displaySubcategories.length > 0) {
+    activeSub = displaySubcategories[0];
+    appState.selectedSubcategoryId = activeSub.id;
+  }
+
+  // Left Sidebar Subcategories Navigation
   const subcatNav = document.getElementById("uc-subcat-nav");
   if (subcatNav) {
-    subcatNav.innerHTML = currentCat.subcategories.map(sub => `
-      <button onclick="selectSubcategory('${sub.id}')" 
-        class="w-full text-left px-4 py-3 rounded-xl text-sm font-semibold transition mb-1 flex items-center justify-between 
-        ${sub.id === appState.selectedSubcategoryId ? 'bg-sky-50 text-sky-700 border-l-4 border-sky-600 font-bold' : 'text-slate-600 hover:bg-slate-50'}">
-        <span>${sub.name}</span>
-        <span class="text-xs px-2 py-0.5 rounded-full ${sub.id === appState.selectedSubcategoryId ? 'bg-sky-200 text-sky-800' : 'bg-slate-100 text-slate-500'}">
-          ${sub.items.length}
-        </span>
-      </button>
-    `).join("");
+    if (displaySubcategories.length === 0) {
+      subcatNav.innerHTML = `<div class="p-4 text-xs text-slate-400 italic">No subcategories available for this category yet.</div>`;
+    } else {
+      subcatNav.innerHTML = displaySubcategories.map(sub => `
+        <button onclick="selectSubcategory('${sub.id}')" 
+          class="w-full text-left px-4 py-3 rounded-xl text-sm font-semibold transition mb-1 flex items-center justify-between 
+          ${sub.id === appState.selectedSubcategoryId ? (isBeauty && appState.beautyGender === 'men' ? 'bg-sky-50 text-sky-700 border-l-4 border-sky-600 font-bold' : (isBeauty ? 'bg-pink-50 text-pink-700 border-l-4 border-pink-500 font-bold' : 'bg-sky-50 text-sky-700 border-l-4 border-sky-600 font-bold')) : 'text-slate-600 hover:bg-slate-50'}">
+          <span>${sub.name}</span>
+          <span class="text-xs px-2 py-0.5 rounded-full ${sub.id === appState.selectedSubcategoryId ? (isBeauty && appState.beautyGender === 'men' ? 'bg-sky-200 text-sky-800' : (isBeauty ? 'bg-pink-200 text-pink-800' : 'bg-sky-200 text-sky-800')) : 'bg-slate-100 text-slate-500'}">
+            ${sub.items.length}
+          </span>
+        </button>
+      `).join("");
+    }
   }
 
   // Center Feed: Services of the selected subcategory
-  const activeSub = (currentCat.subcategories && currentCat.subcategories.length > 0)
-    ? (currentCat.subcategories.find(s => s.id === appState.selectedSubcategoryId) || currentCat.subcategories[0])
-    : null;
+  if (!activeSub && currentCat.subcategories && currentCat.subcategories.length > 0) {
+    activeSub = currentCat.subcategories.find(s => s.id === appState.selectedSubcategoryId) || currentCat.subcategories[0];
+  }
   const itemsContainer = document.getElementById("uc-services-list");
   const paginationContainer = document.getElementById("uc-services-pagination");
 
@@ -1232,8 +1376,9 @@ function renderUrbanCompanyDetailFlow() {
           </div>
 
           <div class="flex flex-col items-center justify-between w-full md:w-44 flex-shrink-0">
-            <div class="relative w-full h-32 rounded-xl overflow-hidden mb-3 border border-slate-100 shadow-inner">
-              <img src="${item.image}" alt="${item.title}" class="w-full h-full object-cover">
+            <div class="relative w-full h-32 rounded-xl overflow-hidden mb-3 border border-slate-100 shadow-inner bg-slate-900 flex items-center justify-center">
+              <img src="${item.image}" alt="" class="absolute inset-0 w-full h-full object-cover blur-md opacity-40 scale-110 pointer-events-none">
+              <img src="${item.image}" alt="${item.title}" class="relative z-10 w-full h-full object-contain">
             </div>
             ${qty === 0 ? `
               <button onclick="addToCart('${item.id}', '${currentCat.id}')" 
@@ -3841,8 +3986,356 @@ function copyPromoCode(code) {
   });
 }
 
+// ----------------------------------------------------
+// SERVICE DETAILS & WARRANTY MODAL
+// ----------------------------------------------------
+function getServiceItemDetails(itemId) {
+  if (!itemId) return null;
+  const targetStr = String(itemId).trim();
+  const rawId = targetStr.replace(/^qs_/, '');
+
+  // 1. Search in SUGU_DATA.categories
+  if (window.SUGU_DATA && Array.isArray(SUGU_DATA.categories)) {
+    for (const cat of SUGU_DATA.categories) {
+      if (cat.subcategories && Array.isArray(cat.subcategories)) {
+        for (const sub of cat.subcategories) {
+          if (sub.items && Array.isArray(sub.items)) {
+            const match = sub.items.find(i => 
+              String(i.id) === targetStr || 
+              String(i.dbId) === targetStr || 
+              String(i.dbId) === rawId ||
+              String(i.id) === `qs_${rawId}`
+            );
+            if (match) {
+              return { item: match, category: cat, subcategory: sub };
+            }
+          }
+        }
+      }
+    }
+  }
+
+  // 2. Search in window.DB_CATEGORIES
+  if (window.DB_CATEGORIES && Array.isArray(window.DB_CATEGORIES)) {
+    for (const c of window.DB_CATEGORIES) {
+      if (c.services && Array.isArray(c.services)) {
+        const match = c.services.find(s => 
+          String(s.id) === targetStr || 
+          String(s.id) === rawId || 
+          `qs_${s.id}` === targetStr
+        );
+        if (match) {
+          const price = typeof match.price === 'number' ? match.price : parseFloat(match.price || 0);
+          const origPrice = Math.round(price * 1.3);
+          const formattedItem = {
+            id: `qs_${match.id}`,
+            dbId: match.id,
+            title: match.title,
+            price: price,
+            originalPrice: origPrice,
+            time: match.duration || "45 mins",
+            duration: match.duration || "45 mins",
+            rating: "4.87",
+            reviews: "120+",
+            badge: match.is_mono_pack ? "100% Sealed Mono-Pack" : "Verified",
+            image: match.image || "https://images.unsplash.com/photo-1581092160607-ee22621dd758?auto=format&fit=crop&w=600&q=80",
+            desc: match.description || "",
+            features: (match.inclusions && match.inclusions.length > 0) ? match.inclusions : [
+              "Complete diagnostic inspection of fittings & components",
+              "Execution by certified, background-checked professional",
+              "Post-service sanitization & debris cleanup",
+              "30 days Sugu protection warranty on workmanship"
+            ],
+            brand_name: match.brand_name || "",
+            is_mono_pack: !!match.is_mono_pack,
+            packages: match.packages || []
+          };
+          return { item: formattedItem, category: c, subcategory: null };
+        }
+      }
+    }
+  }
+
+  return null;
+}
+
 function showItemDetails(itemId) {
-  showToast("Backed by Sugu 30-day rework warranty & ₹10,000 damage protection guarantee.");
+  openServiceDetailsModal(itemId);
+}
+
+function openServiceDetailsModal(itemId) {
+  const result = getServiceItemDetails(itemId);
+  if (!result || !result.item) {
+    showToast("Backed by Sugu 30-day rework warranty & ₹10,000 damage protection guarantee.");
+    return;
+  }
+  const item = result.item;
+  const category = result.category || { id: appState.selectedCategoryId || '37', name: 'Service' };
+  const subcategory = result.subcategory || { name: item.subcategoryName || '' };
+
+  const modal = document.getElementById("service-details-modal");
+  const modalBody = document.getElementById("service-details-modal-body");
+  const modalFooter = document.getElementById("service-details-modal-footer");
+  const headerTitle = document.getElementById("service-details-modal-header-title");
+  const headerSub = document.getElementById("service-details-modal-header-sub");
+
+  if (!modal || !modalBody || !modalFooter) return;
+
+  if (headerTitle) headerTitle.innerText = item.title;
+  if (headerSub) headerSub.innerText = `${category.name || 'Quick Service'}${subcategory.name ? ' • ' + subcategory.name : ''}`;
+
+  const origPrice = item.originalPrice || Math.round(item.price * 1.3);
+  const discountPercent = origPrice > item.price
+    ? Math.round((origPrice - item.price) / origPrice * 100)
+    : 23;
+
+  // Inclusions checklist
+  let inclusions = [];
+  if (Array.isArray(item.features) && item.features.length > 0) {
+    inclusions = item.features;
+  } else if (Array.isArray(item.inclusions) && item.inclusions.length > 0) {
+    inclusions = item.inclusions;
+  } else {
+    inclusions = [
+      "Complete diagnostic inspection of fittings & components",
+      "Execution by certified, background-checked professional",
+      "Post-service sanitization & debris cleanup",
+      "30 days Sugu protection warranty on workmanship"
+    ];
+  }
+
+  // Packages list
+  const hasPackages = Array.isArray(item.packages) && item.packages.length > 0;
+
+  modalBody.innerHTML = `
+    <!-- Top Media & Badges -->
+    <div class="relative w-full h-52 sm:h-60 rounded-2xl overflow-hidden border border-slate-100 shadow-sm bg-slate-950 flex items-center justify-center">
+      <img src="${item.image}" alt="" class="absolute inset-0 w-full h-full object-cover blur-xl opacity-40 scale-110 pointer-events-none">
+      <img src="${item.image}" alt="${item.title}" class="relative z-10 w-full h-full object-contain">
+      <div class="absolute top-3 left-3 z-20 flex flex-wrap gap-1.5">
+        <span class="px-2.5 py-1 text-xs font-bold rounded-full bg-white/95 text-slate-800 shadow-sm border border-slate-200/80 flex items-center">
+          <i data-lucide="star" class="w-3.5 h-3.5 fill-amber-400 text-amber-500 mr-1"></i>
+          ${item.rating || '4.87'} (${item.reviews || '120+ reviews'})
+        </span>
+        ${item.is_mono_pack ? `
+          <span class="px-2.5 py-1 text-xs font-bold rounded-full bg-emerald-600 text-white shadow-sm flex items-center space-x-1">
+            <i data-lucide="shield" class="w-3.5 h-3.5 mr-1"></i> 100% Sealed Mono-Pack
+          </span>
+        ` : ''}
+      </div>
+      ${item.brand_name ? `
+        <div class="absolute bottom-3 left-3">
+          <span class="px-2.5 py-1 text-xs font-bold rounded-full bg-slate-900/90 text-white backdrop-blur-sm border border-white/20">
+            Brand: ${item.brand_name}
+          </span>
+        </div>
+      ` : ''}
+    </div>
+
+    <!-- Title & Pricing -->
+    <div>
+      <div class="flex items-center space-x-2 text-xs font-semibold text-sky-600 mb-1">
+        <span>${category.name || 'Quick Service'}</span>
+        ${subcategory.name ? `<span>•</span><span>${subcategory.name}</span>` : ''}
+      </div>
+      <h3 class="text-xl sm:text-2xl font-extrabold text-slate-900 mb-2">${item.title}</h3>
+      <div class="flex flex-wrap items-center gap-3">
+        <span class="text-2xl font-black text-slate-900">₹${item.price}</span>
+        <span class="text-slate-400 line-through text-sm font-semibold">₹${origPrice}</span>
+        <span class="px-2 py-0.5 rounded-lg bg-emerald-50 text-emerald-700 font-extrabold text-xs border border-emerald-200">
+          ${discountPercent}% OFF
+        </span>
+        <span class="text-slate-300">•</span>
+        <span class="text-slate-600 text-xs font-medium flex items-center">
+          <i data-lucide="clock" class="w-3.5 h-3.5 mr-1 text-slate-400"></i>
+          ${item.duration || item.time || '45 mins'}
+        </span>
+      </div>
+      <p class="text-[11px] text-slate-400 mt-1">Inclusive of all professional tools, labor &amp; taxes.</p>
+    </div>
+
+    <!-- Description & Scope -->
+    <div class="p-4 rounded-2xl bg-slate-50 border border-slate-100">
+      <h4 class="text-xs font-extrabold uppercase tracking-wider text-slate-500 mb-1.5 flex items-center">
+        <i data-lucide="file-text" class="w-3.5 h-3.5 mr-1.5 text-slate-600"></i> Service Scope &amp; Procedure
+      </h4>
+      <p class="text-xs text-slate-700 leading-relaxed">
+        ${item.desc && item.desc.trim().length > 0 ? item.desc : 'Professional doorstep delivery executed with standardized high-grade tools. All procedures strictly comply with Sugu zero-contamination and verified quality protocols.'}
+      </p>
+    </div>
+
+    <!-- What's Included / Inclusions Checklist -->
+    <div>
+      <h4 class="text-xs font-extrabold uppercase tracking-wider text-slate-500 mb-2.5 flex items-center">
+        <i data-lucide="check-circle-2" class="w-4 h-4 mr-1.5 text-emerald-600"></i> What is Included
+      </h4>
+      <div class="grid grid-cols-1 gap-2">
+        ${inclusions.map(inc => `
+          <div class="p-2.5 rounded-xl bg-white border border-slate-200 flex items-start space-x-2.5 shadow-2xs">
+            <div class="w-5 h-5 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center shrink-0 mt-0.5">
+              <i data-lucide="check" class="w-3 h-3 stroke-[2.5]"></i>
+            </div>
+            <span class="text-xs font-medium text-slate-700 leading-tight">${inc}</span>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+
+    ${hasPackages ? `
+      <!-- Service Packages / Upgrades -->
+      <div>
+        <h4 class="text-xs font-extrabold uppercase tracking-wider text-slate-500 mb-2.5 flex items-center">
+          <i data-lucide="layers" class="w-4 h-4 mr-1.5 text-indigo-600"></i> Available Service Packages
+        </h4>
+        <div class="space-y-2">
+          ${item.packages.map((pkg, pIdx) => `
+            <div class="p-3.5 rounded-2xl border border-slate-200 bg-white hover:border-slate-300 transition flex items-center justify-between gap-3 shadow-2xs">
+              <div class="flex-1">
+                <div class="flex items-center space-x-2">
+                  <span class="font-bold text-xs text-slate-900">${pkg.name || `Package ${pIdx + 1}`}</span>
+                  ${pkg.duration ? `<span class="text-[10px] text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded-md">${pkg.duration}</span>` : ''}
+                </div>
+                ${pkg.desc ? `<p class="text-[11px] text-slate-500 mt-0.5">${pkg.desc}</p>` : ''}
+              </div>
+              <div class="text-right shrink-0">
+                <div class="text-sm font-extrabold text-slate-900">₹${pkg.price}</div>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    ` : ''}
+
+    <!-- Sugu Comprehensive Protection & Warranty Card -->
+    <div class="p-4 sm:p-5 rounded-2xl bg-gradient-to-br from-blue-50 via-indigo-50/50 to-sky-50 border border-blue-200/80 shadow-xs space-y-3">
+      <div class="flex items-center justify-between pb-2 border-b border-blue-200/60">
+        <div class="flex items-center space-x-2">
+          <div class="w-7 h-7 rounded-lg bg-blue-600 text-white flex items-center justify-center shadow-xs">
+            <i data-lucide="shield-check" class="w-4 h-4"></i>
+          </div>
+          <div>
+            <span class="font-extrabold text-xs text-blue-950 block">Sugu Protection &amp; Warranty</span>
+            <span class="text-[10px] text-blue-700 font-semibold">100% Guaranteed Assurance</span>
+          </div>
+        </div>
+        <span class="px-2 py-0.5 rounded-full bg-blue-600 text-white text-[10px] font-bold">VERIFIED</span>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+        <div class="flex items-start space-x-2.5">
+          <div class="w-6 h-6 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0 mt-0.5">
+            <i data-lucide="badge-check" class="w-3.5 h-3.5"></i>
+          </div>
+          <div>
+            <h5 class="text-xs font-bold text-slate-900">30-Day Free Re-work</h5>
+            <p class="text-[11px] text-slate-600">Free rework by senior specialist or 100% money back guarantee.</p>
+          </div>
+        </div>
+
+        <div class="flex items-start space-x-2.5">
+          <div class="w-6 h-6 rounded-lg bg-indigo-100 text-indigo-700 flex items-center justify-center shrink-0 mt-0.5">
+            <i data-lucide="shield-alert" class="w-3.5 h-3.5"></i>
+          </div>
+          <div>
+            <h5 class="text-xs font-bold text-slate-900">₹10,000 Damage Cover</h5>
+            <p class="text-[11px] text-slate-600">Zero-liability accidental damage protection policy on every order.</p>
+          </div>
+        </div>
+
+        <div class="flex items-start space-x-2.5">
+          <div class="w-6 h-6 rounded-lg bg-amber-100 text-amber-700 flex items-center justify-center shrink-0 mt-0.5">
+            <i data-lucide="package-check" class="w-3.5 h-3.5"></i>
+          </div>
+          <div>
+            <h5 class="text-xs font-bold text-slate-900">Sealed Mono-Pack Assurance</h5>
+            <p class="text-[11px] text-slate-600">100% sealed genuine kits opened before you. Zero contamination.</p>
+          </div>
+        </div>
+
+        <div class="flex items-start space-x-2.5">
+          <div class="w-6 h-6 rounded-lg bg-sky-100 text-sky-700 flex items-center justify-center shrink-0 mt-0.5">
+            <i data-lucide="user-check" class="w-3.5 h-3.5"></i>
+          </div>
+          <div>
+            <h5 class="text-xs font-bold text-slate-900">Background-Verified Pros</h5>
+            <p class="text-[11px] text-slate-600">Government ID checked, verified background &amp; safety training.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+
+  renderServiceDetailsModalFooter(item, category.id);
+
+  modal.classList.remove("hidden");
+  if (window.lucide && typeof lucide.createIcons === 'function') {
+    lucide.createIcons();
+  }
+}
+
+function renderServiceDetailsModalFooter(item, categoryId) {
+  const modalFooter = document.getElementById("service-details-modal-footer");
+  if (!modalFooter) return;
+
+  const targetStr = String(item.id);
+  const rawId = targetStr.replace(/^qs_/, '');
+  const cartItem = appState.cart.find(c => 
+    String(c.item.id) === targetStr || 
+    String(c.item.dbId) === targetStr || 
+    String(c.item.dbId) === rawId ||
+    String(c.item.id) === `qs_${rawId}`
+  );
+  const qty = cartItem ? cartItem.quantity : 0;
+
+  modalFooter.innerHTML = `
+    <div>
+      <div class="text-[11px] text-slate-400 font-medium">Total Payable</div>
+      <div class="text-lg font-black text-slate-900">₹${item.price}</div>
+    </div>
+    <div class="flex items-center space-x-2">
+      ${qty === 0 ? `
+        <button onclick="handleModalAddToCart('${item.id}', '${categoryId}')" 
+          class="px-6 py-2.5 rounded-xl bg-sugu-blue hover:bg-sugu-blueDark text-white font-bold text-sm shadow-md hover:shadow-lg transition flex items-center space-x-1.5">
+          <i data-lucide="plus" class="w-4 h-4"></i>
+          <span>ADD TO CART</span>
+        </button>
+      ` : `
+        <div class="flex items-center space-x-3 bg-sugu-blue text-white rounded-xl px-3 py-1.5 shadow-md">
+          <button onclick="handleModalUpdateQuantity('${item.id}', -1, '${categoryId}')" class="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-white/20 transition">
+            <i data-lucide="minus" class="w-4 h-4"></i>
+          </button>
+          <span class="text-sm font-extrabold min-w-[20px] text-center">${qty}</span>
+          <button onclick="handleModalUpdateQuantity('${item.id}', 1, '${categoryId}')" class="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-white/20 transition">
+            <i data-lucide="plus" class="w-4 h-4"></i>
+          </button>
+        </div>
+      `}
+    </div>
+  `;
+  if (window.lucide && typeof lucide.createIcons === 'function') {
+    lucide.createIcons();
+  }
+}
+
+function handleModalAddToCart(itemId, categoryId) {
+  addToCart(itemId, categoryId);
+  const result = getServiceItemDetails(itemId);
+  if (result && result.item) {
+    renderServiceDetailsModalFooter(result.item, categoryId);
+  }
+}
+
+function handleModalUpdateQuantity(itemId, delta, categoryId) {
+  updateCartQuantity(itemId, delta);
+  const result = getServiceItemDetails(itemId);
+  if (result && result.item) {
+    renderServiceDetailsModalFooter(result.item, categoryId);
+  }
+}
+
+function closeServiceDetailsModal() {
+  const modal = document.getElementById("service-details-modal");
+  if (modal) modal.classList.add("hidden");
 }
 
 function setupEventListeners() {
@@ -3895,3 +4388,9 @@ window.selectBiddingBudgetPreset = typeof selectBiddingBudgetPreset === 'functio
 window.handlePostJobSubmit = typeof handlePostJobSubmit === 'function' ? handlePostJobSubmit : null;
 window.postFromTemplate = typeof postFromTemplate === 'function' ? postFromTemplate : null;
 window.customizeTemplate = typeof customizeTemplate === 'function' ? customizeTemplate : null;
+window.showItemDetails = showItemDetails;
+window.openServiceDetailsModal = openServiceDetailsModal;
+window.closeServiceDetailsModal = closeServiceDetailsModal;
+window.handleModalAddToCart = handleModalAddToCart;
+window.handleModalUpdateQuantity = handleModalUpdateQuantity;
+window.getServiceItemDetails = getServiceItemDetails;

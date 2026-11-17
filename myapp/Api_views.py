@@ -2100,6 +2100,12 @@ def _serialize_quick_service(request, qs, vendor_profile=None, reviews_avg=None,
         'category_id': qs.category.id if qs.category else None,
         'subcategory': qs.subcategory.name if getattr(qs, 'subcategory', None) else (qs.tags or ''),
         'subcategory_id': qs.subcategory.id if getattr(qs, 'subcategory', None) else None,
+        'gender': getattr(qs, 'gender', 'all') or 'all',
+        'delivery_mode': getattr(qs, 'delivery_mode', 'both') or 'both',
+        'duration': getattr(qs, 'duration', '') or '45 mins',
+        'brand_name': getattr(qs, 'brand_name', '') or '',
+        'is_mono_pack': bool(getattr(qs, 'is_mono_pack', False)),
+        'parlour_name': getattr(qs, 'parlour_name', '') or '',
         'base_price': float(qs.base_price),
         'service_packages': qs.service_packages or [],
         'image': service_image,
@@ -2249,6 +2255,16 @@ def services_nearby_api(request):
                 Q(subcategory__name__icontains=subcategory) |
                 Q(tags__icontains=subcategory)
             )
+
+        # Gender / Target Audience filter (women, men, all)
+        gender_param = (data.get('gender') or request.GET.get('gender') or '').strip().lower()
+        if gender_param and gender_param != 'all':
+            qs = qs.filter(Q(gender=gender_param) | Q(gender='all') | Q(gender__isnull=True))
+
+        # Delivery Mode filter (home, parlour, both)
+        delivery_mode_param = (data.get('delivery_mode') or request.GET.get('delivery_mode') or '').strip().lower()
+        if delivery_mode_param and delivery_mode_param != 'all':
+            qs = qs.filter(Q(delivery_mode=delivery_mode_param) | Q(delivery_mode='both') | Q(delivery_mode__isnull=True))
 
         # Keyword search
         if search:
@@ -2535,9 +2551,11 @@ def get_subcategories_api(request, category_id):
         if not category:
             return JsonResponse({'status': 'error', 'message': 'Category not found'}, status=404)
 
-        subcategories = SubCategory.objects.filter(
-            category=category, status='active'
-        ).annotate(
+        subcat_qs = SubCategory.objects.filter(category=category, status='active')
+        gender_filter = request.GET.get('gender', '').strip().lower()
+        if gender_filter in ['women', 'men']:
+            subcat_qs = subcat_qs.filter(gender=gender_filter)
+        subcategories = subcat_qs.annotate(
             services_count=Count('quick_services', filter=Q(quick_services__status='active'))
         ).order_by('name')
 
@@ -2546,6 +2564,7 @@ def get_subcategories_api(request, category_id):
             subcat_data.append({
                 'id': s.id,
                 'name': s.name,
+                'gender': s.gender or 'all',
                 'status': s.status,
                 'services_count': s.services_count,
             })
@@ -3396,6 +3415,7 @@ CATEGORY_IMAGE_MAP = {
     'Carpentry': 'https://images.unsplash.com/photo-1504148455328-c376907d081c?w=600&auto=format&fit=crop&q=80',
     'Pest Control': 'https://images.unsplash.com/photo-1632788320490-67d739818828?w=600&auto=format&fit=crop&q=80',
     'Home Renovation': 'https://images.unsplash.com/photo-1503387762-592deb58ef4e?w=600&auto=format&fit=crop&q=80',
+    'Beauty': 'https://images.unsplash.com/photo-1560066984-138dadb4c035?w=600&auto=format&fit=crop&q=80',
     'Default': 'https://images.unsplash.com/photo-1581092918056-0c4c3acd3789?w=600&auto=format&fit=crop&q=80',
 }
 
@@ -3403,6 +3423,8 @@ def _resolve_category_name(category=None, title=''):
     if category and hasattr(category, 'name') and category.name:
         return category.name
     t = (title or '').lower()
+    if any(k in t for k in ['beauty', 'salon', 'spa', 'facial', 'haircut', 'waxing', 'massage', 'makeup', 'parlour', 'grooming', 'pedicure', 'manicure']):
+        return 'Beauty'
     if any(k in t for k in ['electr', 'wire', 'switch', 'light', 'fan', 'mcb', 'fuse', 'inverter']):
         return 'Electrical'
     if any(k in t for k in ['plumb', 'pipe', 'tap', 'leak', 'drain', 'flush', 'water tank', 'geyser', 'sink']):
@@ -4038,6 +4060,12 @@ def vendor_services_api(request, service_id=None):
             'category_id': s.category.id if s.category else None,
             'subcategory': s.subcategory.name if s.subcategory else (s.tags or ''),
             'subcategory_id': s.subcategory.id if s.subcategory else None,
+            'gender': getattr(s, 'gender', 'all') or 'all',
+            'delivery_mode': getattr(s, 'delivery_mode', 'both') or 'both',
+            'duration': getattr(s, 'duration', '') or '45 mins',
+            'brand_name': getattr(s, 'brand_name', '') or '',
+            'is_mono_pack': bool(getattr(s, 'is_mono_pack', False)),
+            'parlour_name': getattr(s, 'parlour_name', '') or '',
             'base_price': str(s.base_price),
             'vendor_payout': str(v_payout),
             'service_packages': pkgs,
@@ -4118,16 +4146,95 @@ def vendor_services_api(request, service_id=None):
                 'new_status': srv.status
             }, status=200)
 
-        # Helper to parse JSON fields safely
-        def parse_json_field(field_name, target_dict=data):
-            val = target_dict.get(field_name, '')
+        # Helper to parse packages safely from multipart or JSON
+        def parse_form_packages(default_price=0.0, default_duration='45 mins'):
+            raw_pkgs = data.get('packages') or data.get('service_packages') or data.get('packages_json')
+            if isinstance(raw_pkgs, str) and raw_pkgs.strip():
+                try:
+                    parsed = json.loads(raw_pkgs)
+                    if isinstance(parsed, list):
+                        raw_pkgs = parsed
+                except Exception:
+                    pass
+
+            pkgs = []
+            if isinstance(raw_pkgs, list):
+                for p in raw_pkgs:
+                    if isinstance(p, dict) and p.get('name'):
+                        p_raw = p.get('price') or p.get('vendor_payout', default_price)
+                        try: p_raw = float(p_raw)
+                        except (ValueError, TypeError): p_raw = default_price
+                        calc = gs.calculate_qs_customer_price(p_raw) if gs else {'customer_price': round(p_raw), 'vendor_payout': raw_p, 'commission': 0, 'total_tax': 0}
+                        pkgs.append({
+                            'name': str(p.get('name', 'Package')).strip(),
+                            'price': calc['customer_price'],
+                            'vendor_payout': calc['vendor_payout'],
+                            'commission': calc.get('commission', 0),
+                            'tax': calc.get('total_tax', 0),
+                            'duration': str(p.get('duration', default_duration)).strip() or default_duration,
+                            'desc': str(p.get('desc', p.get('description', ''))).strip()
+                        })
+                if pkgs:
+                    return pkgs
+
+            # Check if multipart form-data array fields exist (e.g. package_name[] or package_name)
+            if hasattr(request, 'POST'):
+                pkg_names = request.POST.getlist('package_name[]') or request.POST.getlist('package_name') or request.POST.getlist('packages_name[]') or request.POST.getlist('packages_name')
+                pkg_prices = request.POST.getlist('package_price[]') or request.POST.getlist('package_price') or request.POST.getlist('packages_price[]') or request.POST.getlist('packages_price')
+                pkg_durations = request.POST.getlist('package_duration[]') or request.POST.getlist('package_duration') or request.POST.getlist('packages_duration[]') or request.POST.getlist('packages_duration')
+                pkg_descs = request.POST.getlist('package_desc[]') or request.POST.getlist('package_desc') or request.POST.getlist('package_description[]') or request.POST.getlist('package_description')
+
+                if pkg_names:
+                    for i, name in enumerate(pkg_names):
+                        if not name.strip():
+                            continue
+                        try: p_raw = float(pkg_prices[i]) if i < len(pkg_prices) else default_price
+                        except (ValueError, TypeError): p_raw = default_price
+                        calc = gs.calculate_qs_customer_price(p_raw) if gs else {'customer_price': round(p_raw), 'vendor_payout': raw_p, 'commission': 0, 'total_tax': 0}
+                        d_val = pkg_descs[i].strip() if i < len(pkg_descs) else ''
+                        dur_val = pkg_durations[i].strip() if i < len(pkg_durations) and pkg_durations[i].strip() else default_duration
+                        pkgs.append({
+                            'name': name.strip(),
+                            'price': calc['customer_price'],
+                            'vendor_payout': calc['vendor_payout'],
+                            'commission': calc.get('commission', 0),
+                            'tax': calc.get('total_tax', 0),
+                            'duration': dur_val,
+                            'desc': d_val
+                        })
+                    if pkgs:
+                        return pkgs
+
+            return []
+
+        # Helper to parse list fields (inclusions / exclusions) safely from multipart or JSON
+        def parse_form_list(field_name):
+            if hasattr(request, 'POST'):
+                raw_list = request.POST.getlist(f"{field_name}[]") or request.POST.getlist(field_name)
+                if len(raw_list) > 1 or (len(raw_list) == 1 and not raw_list[0].startswith('[')):
+                    cleaned = []
+                    for item in raw_list:
+                        if ',' in item:
+                            cleaned.extend([x.strip() for x in item.split(',') if x.strip()])
+                        elif item.strip():
+                            cleaned.append(item.strip())
+                    if cleaned:
+                        return cleaned
+
+            val = data.get(field_name) or data.get(f"{field_name}[]") or data.get(f"{field_name}_json")
             if isinstance(val, str) and val.strip():
                 try:
-                    return json.loads(val)
+                    parsed = json.loads(val)
+                    if isinstance(parsed, list):
+                        return [str(x).strip() for x in parsed if str(x).strip()]
                 except Exception:
-                    return []
+                    pass
+                if ',' in val:
+                    return [x.strip() for x in val.split(',') if x.strip()]
+                return [val.strip()]
             elif isinstance(val, list):
-                return val
+                return [str(x).strip() for x in val if str(x).strip()]
+
             return []
 
         # Determine if this is an Edit or Create
@@ -4180,39 +4287,50 @@ def vendor_services_api(request, service_id=None):
                 except (ValueError, TypeError):
                     pass
 
-            # Packages
-            service_packages = parse_json_field('packages') or parse_json_field('service_packages')
-            if service_packages and isinstance(service_packages, list):
-                updated_packages = []
-                for p in service_packages:
-                    if isinstance(p, dict) and p.get('name'):
-                        raw_p = p.get('price') or p.get('vendor_payout', 0.0)
-                        try:
-                            raw_p = float(raw_p)
-                        except (ValueError, TypeError):
-                            raw_p = 0.0
-                        calc = gs.calculate_qs_customer_price(raw_p) if gs else {'customer_price': round(raw_p), 'vendor_payout': raw_p, 'commission': 0, 'total_tax': 0}
-                        updated_packages.append({
-                            'name': str(p.get('name', 'Package')).strip(),
-                            'price': calc['customer_price'],
-                            'vendor_payout': calc['vendor_payout'],
-                            'commission': calc.get('commission', 0),
-                            'tax': calc.get('total_tax', 0),
-                            'desc': str(p.get('desc', p.get('description', ''))).strip()
-                        })
-                if updated_packages:
-                    qs_obj.service_packages = updated_packages
-                    qs_obj.base_price = min(p['price'] for p in updated_packages)
+            if 'gender' in data:
+                g_val = str(data.get('gender', 'all')).strip().lower()
+                qs_obj.gender = g_val if g_val in ['women', 'men', 'all'] else 'all'
+
+            if 'delivery_mode' in data:
+                dm_val = str(data.get('delivery_mode', 'both')).strip().lower()
+                qs_obj.delivery_mode = dm_val if dm_val in ['home', 'parlour', 'both'] else 'both'
+
+            if 'duration' in data:
+                qs_obj.duration = str(data.get('duration', '')).strip() or '45 mins'
+
+            if 'brand_name' in data:
+                qs_obj.brand_name = str(data.get('brand_name', '')).strip() or None
+
+            if 'is_mono_pack' in data:
+                raw_mono = data.get('is_mono_pack')
+                if isinstance(raw_mono, bool):
+                    qs_obj.is_mono_pack = raw_mono
+                elif isinstance(raw_mono, (int, str)):
+                    qs_obj.is_mono_pack = str(raw_mono).lower() in ['true', '1', 'yes']
+                else:
+                    qs_obj.is_mono_pack = False
+
+            if 'parlour_name' in data:
+                qs_obj.parlour_name = str(data.get('parlour_name', '')).strip() or None
+
+            # Packages (parsed from JSON, array fields, or fallback)
+            updated_packages = parse_form_packages(default_price=float(qs_obj.base_price), default_duration=qs_obj.duration or '45 mins')
+            if updated_packages:
+                qs_obj.service_packages = updated_packages
+                qs_obj.base_price = min(p['price'] for p in updated_packages)
 
             # Inclusions / Exclusions
-            if 'inclusions' in data:
-                qs_obj.inclusions = parse_json_field('inclusions')
-            if 'exclusions' in data:
-                qs_obj.exclusions = parse_json_field('exclusions')
+            inc_edit = parse_form_list('inclusions')
+            if inc_edit:
+                qs_obj.inclusions = inc_edit
+            exc_edit = parse_form_list('exclusions')
+            if exc_edit:
+                qs_obj.exclusions = exc_edit
 
-            # Image
-            if 'image' in request.FILES:
-                qs_obj.image = request.FILES['image']
+            # Image (from multipart upload or preset URL)
+            img_file = request.FILES.get('image') or request.FILES.get('cover_image') or request.FILES.get('file')
+            if img_file:
+                qs_obj.image = img_file
             image_preset = data.get('image_preset') or data.get('image_url')
             if image_preset:
                 qs_obj.image_url = image_preset
@@ -4260,29 +4378,29 @@ def vendor_services_api(request, service_id=None):
                     except Exception:
                         pass
 
-            service_packages = parse_json_field('packages') or parse_json_field('service_packages')
-            inclusions = parse_json_field('inclusions')
-            exclusions = parse_json_field('exclusions')
+            # Target Audience, Delivery Mode & Specifications
+            gender_val = str(data.get('gender', 'all')).strip().lower()
+            if gender_val not in ['women', 'men', 'all']:
+                gender_val = 'all'
 
-            updated_packages = []
-            if service_packages and isinstance(service_packages, list):
-                for p in service_packages:
-                    if isinstance(p, dict) and p.get('name'):
-                        raw_p = p.get('price') or p.get('vendor_payout', base_price)
-                        try:
-                            raw_p = float(raw_p)
-                        except (ValueError, TypeError):
-                            raw_p = base_price
-                        calc = gs.calculate_qs_customer_price(raw_p) if gs else {'customer_price': round(raw_p), 'vendor_payout': raw_p, 'commission': 0, 'total_tax': 0}
-                        updated_packages.append({
-                            'name': str(p.get('name', 'Standard Package')).strip(),
-                            'price': calc['customer_price'],
-                            'vendor_payout': calc['vendor_payout'],
-                            'commission': calc.get('commission', 0),
-                            'tax': calc.get('total_tax', 0),
-                            'desc': str(p.get('desc', p.get('description', ''))).strip()
-                        })
+            delivery_mode_val = str(data.get('delivery_mode', 'both')).strip().lower()
+            if delivery_mode_val not in ['home', 'parlour', 'both']:
+                delivery_mode_val = 'both'
 
+            duration_val = str(data.get('duration', '45 mins')).strip() or '45 mins'
+            brand_name_val = str(data.get('brand_name', '')).strip() or None
+            parlour_name_val = str(data.get('parlour_name', '')).strip() or None
+
+            raw_mono = data.get('is_mono_pack')
+            if isinstance(raw_mono, bool):
+                is_mono_pack_val = raw_mono
+            elif isinstance(raw_mono, (int, str)):
+                is_mono_pack_val = str(raw_mono).lower() in ['true', '1', 'yes']
+            else:
+                is_mono_pack_val = False
+
+            # Parse Packages (from JSON string, multipart arrays, or default)
+            updated_packages = parse_form_packages(default_price=base_price, default_duration=duration_val)
             if not updated_packages:
                 calc = gs.calculate_qs_customer_price(base_price) if gs else {'customer_price': round(base_price), 'vendor_payout': base_price, 'commission': 0, 'total_tax': 0}
                 updated_packages = [{
@@ -4291,8 +4409,13 @@ def vendor_services_api(request, service_id=None):
                     'vendor_payout': calc['vendor_payout'],
                     'commission': calc.get('commission', 0),
                     'tax': calc.get('total_tax', 0),
+                    'duration': duration_val,
                     'desc': data.get('description', '')
                 }]
+
+            # Parse Inclusions & Exclusions (from multipart arrays, comma strings, or JSON)
+            inclusions = parse_form_list('inclusions')
+            exclusions = parse_form_list('exclusions')
 
             final_customer_price = min(p['price'] for p in updated_packages)
             status_val = data.get('status', 'active').strip().lower()
@@ -4314,6 +4437,12 @@ def vendor_services_api(request, service_id=None):
                 category=category,
                 subcategory=subcategory,
                 tags=data.get('tags', '').strip() or None,
+                gender=gender_val,
+                delivery_mode=delivery_mode_val,
+                duration=duration_val,
+                brand_name=brand_name_val,
+                is_mono_pack=is_mono_pack_val,
+                parlour_name=parlour_name_val,
                 base_price=final_customer_price,
                 description=data.get('description', ''),
                 locality=data.get('locality', '').strip(),
@@ -4325,9 +4454,15 @@ def vendor_services_api(request, service_id=None):
                 image_url=image_url_val
             )
             
-            if 'image' in request.FILES:
-                qs.image = request.FILES['image']
+            # Save uploaded image file from multipart form-data
+            img_file = request.FILES.get('image') or request.FILES.get('cover_image') or request.FILES.get('file')
+            if img_file:
+                qs.image = img_file
                 qs.save()
+            elif not qs.image and not qs.image_url:
+                cat_name = _resolve_category_name(qs.category, qs.title)
+                qs.image_url = CATEGORY_IMAGE_MAP.get(cat_name, CATEGORY_IMAGE_MAP.get('Beauty' if 'beauty' in cat_name.lower() else 'Default'))
+                qs.save(update_fields=['image_url'])
 
             return JsonResponse({
                 'status': 'success',
@@ -4394,6 +4529,13 @@ def vendor_service_suggestions_api(request):
             {'title': 'Door & Lock Repair', 'base_price': 249, 'description': 'Door hinge fix, lock replacement and alignment adjustment.'},
             {'title': 'Custom Woodwork', 'base_price': 799, 'description': 'Custom shelving, cabinet and wooden partition fabrication.'},
         ],
+        'Beauty': [
+            {'title': 'O3+ Bridal Glow Facial & De-Tan', 'base_price': 1199, 'duration': '60 mins', 'brand_name': 'O3+', 'is_mono_pack': True, 'gender': 'women', 'delivery_mode': 'home', 'description': 'Deep brightening facial with sealed single-dose mono pack and lactic peel.'},
+            {'title': "Men's Royal Grooming & Beard Styling", 'base_price': 499, 'duration': '45 mins', 'brand_name': "Philips", 'is_mono_pack': False, 'gender': 'men', 'delivery_mode': 'home', 'description': 'Precision haircut, beard shaping with razor finish and soothing face massage.'},
+            {'title': "L'Oréal Anti-Frizz Hair Spa Treatment", 'base_price': 899, 'duration': '60 mins', 'brand_name': "L'Oréal", 'is_mono_pack': False, 'gender': 'women', 'delivery_mode': 'both', 'description': 'Deep nourishing scalp detox, steam therapy and smooth blowout.'},
+            {'title': 'Classic Chocolate Waxing & Threading', 'base_price': 599, 'duration': '45 mins', 'brand_name': 'Rica', 'is_mono_pack': True, 'gender': 'women', 'delivery_mode': 'home', 'description': 'Pain-free peel-off waxing with pre and post-wax soothing lotions.'},
+            {'title': 'Deep Cleansing Charcoal Facial & Scrub', 'base_price': 699, 'duration': '45 mins', 'brand_name': 'Lotus', 'is_mono_pack': True, 'gender': 'all', 'delivery_mode': 'both', 'description': 'Blackhead extraction, active charcoal mask and pore refining tone.'},
+        ],
         '_default': [
             {'title': 'Professional Home Service', 'base_price': 199, 'description': 'Verified and trained professionals for all home needs.'},
             {'title': 'Premium Maintenance Visit', 'base_price': 349, 'description': 'Comprehensive inspection and maintenance by certified experts.'},
@@ -4444,6 +4586,13 @@ def vendor_service_suggestions_api(request):
             '30 days Sugu protection warranty on work',
             'Post-work cleanup and debris removal',
         ],
+        'Beauty': [
+            '100% Sealed Single-Dose Mono-Pack opened in front of customer',
+            'Single-use disposable bedsheet, cape, head-band and wipes',
+            'Sterilized stainless steel tools sealed in freshness pouch',
+            'Post-service cleanup and disposal of all session waste',
+            'Verified & certified aesthetician with rigorous brand training',
+        ],
         '_default': [
             'Complete diagnostic inspection of existing fittings and components',
             'Execution by certified, background-checked professional',
@@ -4459,6 +4608,7 @@ def vendor_service_suggestions_api(request):
         'AC': ['Spare parts / compressor replacement cost', 'Stabilizer or electrical wiring changes'],
         'Painting': ['Furniture shifting or moving', 'Structural repairs or plastering'],
         'Carpentry': ['Raw material / wood cost', 'Glass or mirror installations'],
+        'Beauty': ['Permanent laser treatments or clinical invasive procedures', 'Chemical hair treatments beyond selected package scope', 'Equipment or tools for personal keeping'],
         '_default': ['Major civil masonry, pipe embedding or wall tearing included', 'Spare parts / extra hardware to be purchased or charged separately'],
     }
 
@@ -4466,6 +4616,7 @@ def vendor_service_suggestions_api(request):
         if not cat_name:
             return '_default'
         n = cat_name.lower()
+        if 'beauty' in n or 'salon' in n or 'spa' in n or 'parlour' in n: return 'Beauty'
         if 'electr' in n: return 'Electrical'
         if 'plumb' in n: return 'Plumbing'
         if 'clean' in n: return 'Cleaning'
@@ -4505,6 +4656,8 @@ def vendor_service_suggestions_api(request):
         'suggestions': suggestions,
         'inclusions': inclusions,
         'exclusions': exclusions,
+        'brands': ["O3+", "L'Oréal", "Kérastase", "VLCC", "Lotus", "Havells", "Philips", "Streax"],
+        'durations': ["30 mins", "45 mins", "60 mins", "75 mins", "90 mins", "120 mins"],
         'platform_config': platform_config
     }, status=200)
 
@@ -7385,7 +7538,9 @@ def add_subcategory_api(request):
                 return JsonResponse({'success': False, 'error': 'Category ID and Name are required'})
             
             category = Category.objects.get(id=cat_id)
-            subcat = SubCategory.objects.create(category=category, name=name, status=status)
+            raw_gender = data.get('gender', 'women' if category.is_beauty else 'all')
+            s_gender = raw_gender if raw_gender in ['women', 'men'] else ('women' if category.is_beauty else 'all')
+            subcat = SubCategory.objects.create(category=category, name=name, gender=s_gender, status=status)
             return JsonResponse({'success': True, 'subcategory': {'id': subcat.id, 'name': subcat.name, 'status': subcat.status}})
         except Exception as e:
             return JsonResponse({'success': False, 'error': str(e)})
@@ -7405,6 +7560,7 @@ def update_subcategory_api(request):
             subcat = SubCategory.objects.get(id=subcat_id)
             if 'name' in data: subcat.name = data['name']
             if 'status' in data: subcat.status = data['status']
+            if 'gender' in data: subcat.gender = data['gender']
             subcat.save()
             return JsonResponse({'success': True, 'subcategory': {'id': subcat.id, 'name': subcat.name, 'status': subcat.status}})
         except Exception as e:

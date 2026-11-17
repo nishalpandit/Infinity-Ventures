@@ -630,3 +630,274 @@ response :-
 }
 
 
+
+
+API for Vendor Create Quick Service
+url : (http://192.168.1.52:8000/api/vendor/services/)
+method : POST (multipart/form-data)
+headers :-
+Authorization: Bearer <token>
+params :-
+title: O3+ Diamond Glow Facial & De-Tan
+category_id: 37
+subcategory_id: 12
+gender: women (options: women / men / all)
+delivery_mode: home (options: home / parlour / both)
+duration: 60 mins (options: 30 mins / 45 mins / 60 mins / 75 mins / 90 mins / 120 mins)
+brand_name: O3+ Professional (e.g. O3+, L'Oréal, Kérastase, VLCC, Philips)
+is_mono_pack: true (options: true / false)
+parlour_name: (optional - salon or studio name if parlour visit)
+base_price: 899.00
+locality: Lalpur, Ranchi
+service_radius_km: 10
+description: Deep brightening facial with single-dose sealed mono pack.
+package_name[]: Express Glow
+package_price[]: 899
+package_duration[]: 45 mins
+package_desc[]: Cleansing, scrub and pack
+package_name[]: Royal Bridal Glow
+package_price[]: 1499
+package_duration[]: 75 mins
+package_desc[]: Full 7-step facial with gold serum
+inclusions[]: 100% Sealed Single-Dose Mono-Pack
+inclusions[]: Single-use disposable gown & cape
+inclusions[]: Sterilized instruments sealed in pouch
+exclusions[]: Extra hair spa treatments
+image: (File Upload - optional)
+response :-
+{
+  "status": "success",
+  "message": "Service published successfully with automatic markup.",
+  "service_id": 41,
+  "service": {
+    "id": 41,
+    "title": "O3+ Diamond Glow Facial & De-Tan",
+    "description": "Deep brightening facial with single-dose sealed mono pack.",
+    "category": "Beauty",
+    "category_id": 37,
+    "subcategory": "Women's Salon & Spa",
+    "subcategory_id": 12,
+    "gender": "women",
+    "delivery_mode": "home",
+    "duration": "60 mins",
+    "brand_name": "O3+ Professional",
+    "is_mono_pack": true,
+    "parlour_name": "",
+    "base_price": "899.00",
+    "vendor_payout": "899.0", 
+    "service_packages": [
+      {
+        "name": "Express Glow",
+        "price": 899,
+        "vendor_payout": 899.0,
+        "commission": 0,
+        "tax": 0,
+        "duration": "45 mins",
+        "desc": "Cleansing, scrub and pack"
+      },
+      {
+        "name": "Royal Bridal Glow",
+        "price": 1499,
+        "vendor_payout": 1499.0,
+        "commission": 0,
+        "tax": 0,
+        "duration": "75 mins",
+        "desc": "Full 7-step facial with gold serum"
+      }
+    ],
+    "inclusions": [
+      "100% Sealed Single-Dose Mono-Pack",
+      "Single-use disposable gown & cape",
+      "Sterilized instruments sealed in pouch"
+    ],
+    "exclusions": [
+      "Extra hair spa treatments"
+    ],
+    "tags": "",
+    "status": "active",
+    "locality": "Lalpur, Ranchi",
+    "service_radius_km": 10.0,
+    "image_url": "http://192.168.1.52:8000/media/quick_services/cover_photo.jpg",
+    "created_at": "2026-11-17T13:00:00"
+  }
+}
+
+
+API for Vendor Edit Quick Service
+url : (http://192.168.1.52:8000/api/vendor/services/)
+method : POST (multipart/form-data)
+headers :-
+Authorization: Bearer <token>
+params :-
+action: edit_service
+service_id: 41
+title: O3+ Diamond Glow Facial & De-Tan
+gender: women
+delivery_mode: home
+duration: 75 mins
+brand_name: L'Oréal Professionnel
+is_mono_pack: false
+parlour_name: 
+package_name[]: Express Glow
+package_price[]: 899
+package_duration[]: 45 mins
+package_desc[]: Cleansing, scrub and pack
+image: (File Upload - optional)
+response :-
+{
+  "status": "success",
+  "message": "Service updated successfully.",
+  "service": {
+    "id": 41,
+    "title": "O3+ Diamond Glow Facial & De-Tan",
+    "gender": "women",
+    "delivery_mode": "home",
+    "duration": "75 mins",
+    "brand_name": "L'Oréal Professionnel",
+    "is_mono_pack": false,
+    "image_url": "http://192.168.1.52:8000/media/quick_services/new_photo.jpg"
+  }
+}
+
+
+API for Vendor Get Service Detail
+url : (http://192.168.1.52:8000/api/vendor/services/41/)
+method : GET
+headers :-
+Authorization: Bearer <token>
+response :-
+{
+  "status": "success",
+  "service": {
+    "id": 41,
+    "title": "O3+ Diamond Glow Facial & De-Tan",
+    "gender": "women",
+    "delivery_mode": "home",
+    "duration": "60 mins",
+    "brand_name": "O3+ Professional",
+    "is_mono_pack": true,
+    "parlour_name": "",
+    "base_price": "899.00",
+    "vendor_payout": "899.0",
+    "service_packages": [
+      {
+        "name": "Express Glow",
+        "price": 899,
+        "vendor_payout": 899.0,
+        "duration": "45 mins",
+        "desc": "Cleansing, scrub and pack"
+      }
+    ],
+    "inclusions": [
+      "100% Sealed Single-Dose Mono-Pack"
+    ],
+    "exclusions": [
+      "Extra hair spa treatments"
+    ],
+    "image_url": "http://192.168.1.52:8000/media/quick_services/cover_photo.jpg"
+  },
+  "platform_config": {
+    "commission_percent": 10.0,
+    "cgst_percent": 9.0,
+    "sgst_percent": 9.0,
+    "flat_fee": 0.0,
+    "tax_mode": "commission_only"
+  }
+}
+
+
+API for Vendor List Services
+url : (http://192.168.1.52:8000/api/vendor/services/)
+method : GET
+headers :-
+Authorization: Bearer <token>
+response :-
+{
+  "status": "success",
+  "services": [
+    {
+      "id": 41,
+      "title": "O3+ Diamond Glow Facial & De-Tan",
+      "category": "Beauty",
+      "gender": "women",
+      "delivery_mode": "home",
+      "duration": "60 mins",
+      "brand_name": "O3+ Professional",
+      "is_mono_pack": true,
+      "base_price": "899.00",
+      "image_url": "http://192.168.1.52:8000/media/quick_services/cover_photo.jpg"
+    }
+  ],
+  "platform_config": {
+    "commission_percent": 10.0,
+    "cgst_percent": 9.0,
+    "sgst_percent": 9.0,
+    "flat_fee": 0.0,
+    "tax_mode": "commission_only"
+  }
+}
+
+
+API for Vendor Service Suggestions & Inclusions by Category
+url : (http://192.168.1.52:8000/api/vendor/service-suggestions/?category=Beauty)
+method : GET
+headers :-
+Authorization: Bearer <token>
+response :-
+{
+  "status": "success",
+  "category": "Beauty",
+  "suggestions": [
+    {
+      "title": "O3+ Bridal Glow Facial & De-Tan",
+      "base_price": 1199,
+      "duration": "60 mins",
+      "brand_name": "O3+",
+      "is_mono_pack": true,
+      "gender": "women",
+      "delivery_mode": "home",
+      "description": "Deep brightening facial with sealed single-dose mono pack and lactic peel."
+    },
+    {
+      "title": "Men's Royal Grooming & Beard Styling",
+      "base_price": 499,
+      "duration": "45 mins",
+      "brand_name": "Philips",
+      "is_mono_pack": false,
+      "gender": "men",
+      "delivery_mode": "home",
+      "description": "Precision haircut, beard shaping with razor finish and soothing face massage."
+    }
+  ],
+  "inclusions": [
+    "100% Sealed Single-Dose Mono-Pack opened in front of customer",
+    "Single-use disposable bedsheet, cape, head-band and wipes",
+    "Sterilized stainless steel tools sealed in freshness pouch",
+    "Post-service cleanup and disposal of all session waste",
+    "Verified & certified aesthetician with rigorous brand training"
+  ],
+  "exclusions": [
+    "Permanent laser treatments or clinical invasive procedures",
+    "Chemical hair treatments beyond selected package scope",
+    "Equipment or tools for personal keeping"
+  ],
+  "brands": [
+    "O3+",
+    "L'Oréal",
+    "Kérastase",
+    "VLCC",
+    "Lotus",
+    "Havells",
+    "Philips",
+    "Streax"
+  ],
+  "durations": [
+    "30 mins",
+    "45 mins",
+    "60 mins",
+    "75 mins",
+    "90 mins",
+    "120 mins"
+  ]
+}
+```

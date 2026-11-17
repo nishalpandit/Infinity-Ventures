@@ -719,41 +719,80 @@
     }
     .scc-hero {
       position: relative;
-      height: 140px;
-      background: #1e293b;
+      height: 220px;
+      background: #090e1a;
       overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
-    .scc-hero img {
+    .scc-hero .scc-hero-bg {
+      position: absolute;
+      inset: -15px;
+      width: calc(100% + 30px);
+      height: calc(100% + 30px);
+      object-fit: cover;
+      filter: blur(20px) brightness(0.35);
+      pointer-events: none;
+      z-index: 1;
+    }
+    .scc-hero .scc-hero-img,
+    .scc-hero img:not(.scc-hero-bg) {
+      position: relative;
+      z-index: 2;
       width: 100%;
       height: 100%;
-      object-fit: cover;
+      object-fit: contain;
+      object-position: center;
       display: block;
+      transition: transform 0.3s ease;
+    }
+    .service-catalog-card:hover .scc-hero .scc-hero-img,
+    .service-catalog-card:hover .scc-hero img:not(.scc-hero-bg) {
+      transform: scale(1.02);
     }
     .scc-badge-cat {
       position: absolute;
       top: 10px;
       left: 10px;
-      background: rgba(15, 23, 42, 0.85);
-      backdrop-filter: blur(4px);
+      background: rgba(15, 23, 42, 0.88);
+      backdrop-filter: blur(6px);
       color: #fff;
       font-size: 11px;
       font-weight: 700;
-      padding: 3px 8px;
+      padding: 3px 9px;
       border-radius: 6px;
+      border: 1px solid rgba(255,255,255,0.15);
+      z-index: 3;
     }
     .scc-badge-loc {
       position: absolute;
       bottom: 10px;
       left: 10px;
       background: rgba(16, 185, 129, 0.95);
+      backdrop-filter: blur(6px);
       color: #fff;
       font-size: 11px;
       font-weight: 700;
-      padding: 3px 8px;
+      padding: 3px 9px;
       border-radius: 6px;
       display: inline-flex;
       align-items: center;
       gap: 4px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+      z-index: 3;
+    }
+    .scc-hero .scc-live-badge {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      font-size: 10.5px;
+      font-weight: 700;
+      padding: 2px 9px;
+      border-radius: 6px;
+      backdrop-filter: blur(6px);
+      z-index: 3;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.25);
     }
     .scc-body {
       padding: 16px;
@@ -904,6 +943,118 @@
       justify-content: flex-end;
       gap: 10px;
     }
+  
+    /* Interactive Experience Selection Cards (Browsing Parity) */
+    .exp-choice-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+      margin-bottom: 14px;
+    }
+    @media(max-width: 640px) {
+      .exp-choice-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+    .exp-card {
+      border: 2px solid #e2e8f0;
+      border-radius: 14px;
+      padding: 16px;
+      background: #ffffff;
+      cursor: pointer;
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+      position: relative;
+      user-select: none;
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+    }
+    .exp-card:hover {
+      border-color: #cbd5e1;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+    }
+    .exp-card.active {
+      border-color: #0f8a7c;
+      background: #f0fdfa;
+      box-shadow: 0 0 0 2px rgba(15, 138, 124, 0.2);
+    }
+    .exp-card.women-card.active {
+      border-color: #ec4899;
+      background: #fdf2f8;
+      box-shadow: 0 0 0 3px rgba(236, 72, 153, 0.25);
+    }
+    .exp-card.men-card.active {
+      border-color: #0284c7;
+      background: #f0f9ff;
+      box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.25);
+    }
+    .exp-card.home-mode.active {
+      border-color: #059669;
+      background: #ecfdf5;
+      box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.25);
+    }
+    .exp-card.parlour-mode.active {
+      border-color: #8b5cf6;
+      background: #f5f3ff;
+      box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.25);
+    }
+    .exp-icon-box {
+      width: 44px;
+      height: 44px;
+      border-radius: 12px;
+      background: #f1f5f9;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+      flex-shrink: 0;
+      transition: all 0.2s;
+    }
+    .exp-card.women-card.active .exp-icon-box { background: #fce7f3; }
+    .exp-card.men-card.active .exp-icon-box { background: #e0f2fe; }
+    .exp-card.home-mode.active .exp-icon-box { background: #d1fae5; }
+    .exp-card.parlour-mode.active .exp-icon-box { background: #ede9fe; }
+    .exp-card-body {
+      flex: 1;
+    }
+    .exp-card-title {
+      font-size: 14.5px;
+      font-weight: 800;
+      color: #0f172a;
+      margin-bottom: 2px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .exp-card-desc {
+      font-size: 11.5px;
+      color: #64748b;
+      line-height: 1.35;
+    }
+    .exp-check-tag {
+      font-size: 11px;
+      font-weight: 800;
+      padding: 4px 10px;
+      border-radius: 14px;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      border: 1.5px solid #cbd5e1;
+      background: #f8fafc;
+      color: #64748b;
+      transition: all 0.2s;
+    }
+    .exp-card.active .exp-check-tag {
+      border: none;
+      font-weight: 900;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    }
+    .exp-card.women-card.active .exp-check-tag { background: #ec4899; color: #fff; }
+    .exp-card.men-card.active .exp-check-tag { background: #0284c7; color: #fff; }
+    .exp-card.home-mode.active .exp-check-tag { background: #059669; color: #fff; }
+    .exp-card.parlour-mode.active .exp-check-tag { background: #8b5cf6; color: #fff; }
+
   </style>
 </head>
 <body data-page="catalog" data-title="My Services" data-root="../">
@@ -989,14 +1140,115 @@
                     </div>
                     <input type="hidden" name="category_id" id="formCategory" value="{% if categories %}{{ categories.0.id }}{% endif %}">
 
-                    <!-- Dynamic Subcategory Selection -->
-                    <div id="subcategorySection" style="margin-top:16px; padding:14px 16px; background:#f0fdfa; border:1.5px solid #a7f3d0; border-radius:12px;">
+                    <!-- Smart Experience & Fulfillment Targeting (VISIBLE ONLY FOR BEAUTY) -->
+                    <div id="domainTargetingSection" style="display:none; margin-top:16px; padding:20px; background:#f8fafc; border:1.5px solid #e2e8f0; border-radius:14px;">
+                      
+                      <!-- Target Audience (Gender) -->
+                      <div style="margin-bottom:16px;">
+                        <label style="display:block; font-size:12.5px; font-weight:800; color:#0f172a; margin-bottom:8px;">
+                          <i class="fa-solid fa-venus-mars" style="color:#0f8a7c;"></i> Who is this Beauty Service for? <span style="color:#ef4444;">*</span>
+                        </label>
+                        <div class="exp-choice-grid">
+                          <!-- Women Card -->
+                          <div class="exp-card women-card active" id="vWomenCard" onclick="selectVendorGenderCard('women')">
+                            <div class="exp-icon-box">👩</div>
+                            <div class="exp-card-body">
+                              <div class="exp-card-title">
+                                <span>Women's Salon &amp; Spa</span>
+                                <span class="exp-check-tag" id="vWomenTag"><i class="fa-solid fa-circle-check"></i> SELECTED</span>
+                              </div>
+                              <div class="exp-card-desc">Facials, Waxing, Pedicure, Hair Spa &amp; Styling</div>
+                            </div>
+                          </div>
+
+                          <!-- Men Card -->
+                          <div class="exp-card men-card" id="vMenCard" onclick="selectVendorGenderCard('men')">
+                            <div class="exp-icon-box">👨</div>
+                            <div class="exp-card-body">
+                              <div class="exp-card-title">
+                                <span>Men's Salon &amp; Grooming</span>
+                                <span class="exp-check-tag" id="vMenTag"><i class="fa-regular fa-circle"></i> Select</span>
+                              </div>
+                              <div class="exp-card-desc">Haircut, Beard Trim, Head Massage, Face Care &amp; De-Tan</div>
+                            </div>
+                          </div>
+                        </div>
+
+                        <!-- Unisex pill -->
+                        <div style="display:flex; justify-content:flex-end;">
+                          <label style="font-size:11.5px; color:#64748b; cursor:pointer; display:inline-flex; align-items:center; gap:6px;">
+                            <input type="radio" name="v_gender_radio" id="vRadioGenderAll" onchange="selectVendorGenderCard('all')" style="accent-color:#0f8a7c;">
+                            <span>Or Unisex / Open to All</span>
+                          </label>
+                        </div>
+                        <input type="hidden" name="gender" id="formGender" value="women">
+                      </div>
+
+                      <!-- Service Fulfillment Mode -->
+                      <div>
+                        <label style="display:block; font-size:12.5px; font-weight:800; color:#0f172a; margin-bottom:8px;">
+                          <i class="fa-solid fa-truck-ramp-box" style="color:#0f8a7c;"></i> How will the customer receive this service? <span style="color:#ef4444;">*</span>
+                        </label>
+                        <div class="exp-choice-grid">
+                          <!-- Salon at Home Card -->
+                          <div class="exp-card home-mode active" id="vHomeCard" onclick="selectVendorDeliveryModeCard('home')">
+                            <div class="exp-icon-box">🏠</div>
+                            <div class="exp-card-body">
+                              <div class="exp-card-title">
+                                <span>1. Salon at Home</span>
+                                <span class="exp-check-tag" id="vHomeTag"><i class="fa-solid fa-circle-check"></i> SELECTED</span>
+                              </div>
+                              <div class="exp-card-desc">Doorstep beautician visit with 100% sealed mono-pack guarantee</div>
+                            </div>
+                          </div>
+
+                          <!-- Premium Parlour Visit Card -->
+                          <div class="exp-card parlour-mode" id="vParlourCard" onclick="selectVendorDeliveryModeCard('parlour')">
+                            <div class="exp-icon-box">👑</div>
+                            <div class="exp-card-body">
+                              <div class="exp-card-title">
+                                <span>2. Premium Parlour Visit</span>
+                                <span class="exp-check-tag" id="vParlourTag"><i class="fa-regular fa-circle"></i> Select</span>
+                              </div>
+                              <div class="exp-card-desc">Customer visits verified luxury salon / parlour studio branch</div>
+                            </div>
+                          </div>
+                        </div>
+
+                        <!-- Both modes pill -->
+                        <div style="display:flex; justify-content:flex-end;">
+                          <label style="font-size:11.5px; color:#64748b; cursor:pointer; display:inline-flex; align-items:center; gap:6px;">
+                            <input type="radio" name="v_mode_radio" id="vRadioModeBoth" onchange="selectVendorDeliveryModeCard('both')" style="accent-color:#0f8a7c;">
+                            <span>Available for both Doorstep and Parlour visit</span>
+                          </label>
+                        </div>
+                        <input type="hidden" name="delivery_mode" id="formDeliveryMode" value="home">
+                      </div>
+
+                      <!-- Selection Confirmation Banner -->
+                      <div id="vendorActiveExpSummary" style="margin-top:16px; padding:12px 16px; background:#f0fdfa; border:2px solid #0f8a7c; border-radius:12px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px;">
+                        <div style="display:flex; align-items:center; gap:8px;">
+                          <span style="background:#0f8a7c; color:#fff; font-size:11px; font-weight:800; padding:3px 8px; border-radius:6px; text-transform:uppercase;">Active Experience</span>
+                          <strong id="vSummaryAudienceText" style="font-size:13.5px; color:#0f172a;">👩 Women's Salon &amp; Spa</strong>
+                          <span style="color:#cbd5e1;">•</span>
+                          <strong id="vSummaryModeText" style="font-size:13.5px; color:#0f172a;">🏠 1. Salon at Home</strong>
+                        </div>
+                        <div style="font-size:11.5px; color:#047857; font-weight:700; display:flex; align-items:center; gap:5px;">
+                          <i class="fa-solid fa-circle-check" style="color:#059669;"></i>
+                          <span>Filtering subcategories below</span>
+                        </div>
+                      </div>
+
+                    </div>
+
+                    <!-- Dynamic Subcategory Selection (Filtered by Audience) -->
+                    <div id="subcategorySection" style="margin-top:14px; padding:16px; background:#f0fdfa; border:1.5px solid #a7f3d0; border-radius:12px;">
                       <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;">
                         <div>
                           <label style="font-size:12.5px; font-weight:800; color:#065f46; display:flex; align-items:center; gap:6px; margin:0;">
-                            <i class="fa-solid fa-layer-group" style="color:#0f8a7c;"></i> Select Subcategory <span class="required" style="color:#ef4444;">*</span>
+                            <i class="fa-solid fa-layer-group" style="color:#0f8a7c;"></i> Select Specific Subcategory <span class="required" style="color:#ef4444;">*</span>
                           </label>
-                          <span style="font-size:11px; color:#047857;">Click to choose the specific trade subcategory</span>
+                          <span style="font-size:11px; color:#047857;">Click a subcategory chip to load tailored title suggestions and presets</span>
                         </div>
                         <span id="subcatCountBadge" style="font-size:11px; font-weight:700; color:#0f8a7c; background:#ffffff; border:1px solid #99f6e4; padding:2px 8px; border-radius:12px;"></span>
                       </div>
@@ -1039,6 +1291,64 @@
                     <div class="field" style="margin:0 0 14px;">
                       <label>Subtitle / Tagline</label>
                       <input type="text" name="description" id="formDescription" class="input" placeholder="e.g. Professional switchboard repair service by verified experts." oninput="updateLivePreview()">
+                    </div>
+
+                    
+                    <!-- STEP 2.5: PRODUCT SPECIFICATIONS & BRAND ASSURANCES (BROWSING PARITY) -->
+                    <div style="margin-bottom:16px; padding:14px; background:#f0fdf4; border:1px solid #bbf7d0; border-radius:12px;">
+                      <div style="font-size:12.5px; font-weight:800; color:#166534; display:flex; align-items:center; gap:6px; margin-bottom:10px;">
+                        <i class="fa-solid fa-certificate" style="color:#059669;"></i> Product Specifications &amp; Brand Assurances
+                      </div>
+
+                      <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:12px;">
+                        <!-- Brand / Product Line Used -->
+                        <div>
+                          <label style="font-size:11px; font-weight:700; color:#334155; display:block; margin-bottom:4px;">
+                            Brand / Product Line Used
+                          </label>
+                          <input type="text" name="brand_name" id="formBrandName" class="input" placeholder="e.g. O3+, L'Oreal, Kerastase" style="font-size:12px; padding:6px 10px;" oninput="updateLivePreview()">
+                          <!-- Quick Brand Chips -->
+                          <div style="display:flex; flex-wrap:wrap; gap:4px; margin-top:6px;">
+                            <button type="button" class="quick-chip-sm" onclick="applyBrandSuggestion('O3+ Professional')">O3+</button>
+                            <button type="button" class="quick-chip-sm" onclick="applyBrandSuggestion('L\'Or\u00e9al')">L'Oréal</button>
+                            <button type="button" class="quick-chip-sm" onclick="applyBrandSuggestion('K\u00e9rastase Paris')">Kérastase</button>
+                            <button type="button" class="quick-chip-sm" onclick="applyBrandSuggestion('VLCC Natural')">VLCC</button>
+                            <button type="button" class="quick-chip-sm" onclick="applyBrandSuggestion('Lotus Herbals')">Lotus</button>
+                            <button type="button" class="quick-chip-sm" onclick="applyBrandSuggestion('Havells')">Havells</button>
+                            <button type="button" class="quick-chip-sm" onclick="applyBrandSuggestion('Philips')">Philips</button>
+                          </div>
+                        </div>
+
+                        <!-- Overall Service Duration -->
+                        <div>
+                          <label style="font-size:11px; font-weight:700; color:#334155; display:block; margin-bottom:4px;">
+                            Standard Service Duration
+                          </label>
+                          <input type="text" name="duration" id="formDuration" class="input" value="45 mins" placeholder="e.g. 45 mins" style="font-size:12px; padding:6px 10px;" oninput="updateLivePreview()">
+                          <!-- Quick Duration Chips -->
+                          <div style="display:flex; flex-wrap:wrap; gap:4px; margin-top:6px;">
+                            <button type="button" class="quick-chip-sm" onclick="applyServiceDuration('30 mins')">30m</button>
+                            <button type="button" class="quick-chip-sm active" onclick="applyServiceDuration('45 mins')">45m</button>
+                            <button type="button" class="quick-chip-sm" onclick="applyServiceDuration('60 mins')">60m</button>
+                            <button type="button" class="quick-chip-sm" onclick="applyServiceDuration('75 mins')">75m</button>
+                            <button type="button" class="quick-chip-sm" onclick="applyServiceDuration('90 mins')">90m</button>
+                          </div>
+                        </div>
+                      </div>
+
+                      <!-- Hygiene Checklist & In-Salon Parlour Name -->
+                      <div style="margin-top:12px; padding-top:10px; border-top:1px dashed #86efac; display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap:10px;">
+                        <!-- Sealed Mono-Pack Assurance -->
+                        <label style="display:flex; align-items:center; gap:8px; font-size:11.5px; font-weight:700; color:#166534; cursor:pointer;">
+                          <input type="checkbox" name="is_mono_pack" id="formIsMonoPack" value="1" checked onchange="updateLivePreview()" style="width:16px; height:16px; accent-color:#059669;">
+                          <span>100% Sealed Single-Dose Mono-Pack</span>
+                        </label>
+
+                        <!-- In-Salon Parlour Branch Name -->
+                        <div id="parlourBranchFieldWrap">
+                          <input type="text" name="parlour_name" id="formParlourName" class="input" placeholder="Salon / Studio Name (if parlour visit)" style="font-size:12px; padding:6px 10px;" oninput="updateLivePreview()">
+                        </div>
+                      </div>
                     </div>
 
                     <!-- Listing Status -->
@@ -1168,8 +1478,24 @@
                           </div>
                         </div>
                         <div style="margin-top:8px;">
-                          <label style="font-size:11px; font-weight:700; color:#64748b;">Scope / Work Description</label>
+                          <label style="font-size:11px; font-weight:700; color:#64748b;">Tier Specific Scope (Unique to this package)</label>
                           <input type="text" name="package_desc[]" class="input pkg-input-desc" value="Switch, socket or holder repair" placeholder="e.g. Switch, socket or holder repair" oninput="updateLivePreview()">
+                        </div>
+                        <div style="margin-top:8px;">
+                          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                            <label style="font-size:11px; font-weight:700; color:#64748b;">Package Duration</label>
+                            <span style="font-size:10px; color:#94a3b8;">Choose chip or type</span>
+                          </div>
+                          <div style="display:flex; align-items:center; gap:8px;">
+                            <input type="text" name="package_duration[]" class="input pkg-input-duration" value="45 mins" style="max-width:110px; font-size:12px; padding:5px 8px;" placeholder="e.g. 45 mins" oninput="updateLivePreview()">
+                            <div class="pkg-duration-chips" style="display:flex; flex-wrap:wrap; gap:4px;">
+                              <button type="button" class="quick-chip-sm" onclick="setPkgDuration(this, '30 mins')">30m</button>
+                              <button type="button" class="quick-chip-sm active" onclick="setPkgDuration(this, '45 mins')">45m</button>
+                              <button type="button" class="quick-chip-sm" onclick="setPkgDuration(this, '60 mins')">60m</button>
+                              <button type="button" class="quick-chip-sm" onclick="setPkgDuration(this, '75 mins')">75m</button>
+                              <button type="button" class="quick-chip-sm" onclick="setPkgDuration(this, '90 mins')">90m</button>
+                            </div>
+                          </div>
                         </div>
                       </div>
 
@@ -1190,8 +1516,24 @@
                           </div>
                         </div>
                         <div style="margin-top:8px;">
-                          <label style="font-size:11px; font-weight:700; color:#64748b;">Scope / Work Description</label>
+                          <label style="font-size:11px; font-weight:700; color:#64748b;">Tier Specific Scope (Unique to this package)</label>
                           <input type="text" name="package_desc[]" class="input pkg-input-desc" value="Fan, light & board diagnostic" placeholder="e.g. Diagnostic & wiring checkup" oninput="updateLivePreview()">
+                        </div>
+                        <div style="margin-top:8px;">
+                          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                            <label style="font-size:11px; font-weight:700; color:#64748b;">Package Duration</label>
+                            <span style="font-size:10px; color:#94a3b8;">Choose chip or type</span>
+                          </div>
+                          <div style="display:flex; align-items:center; gap:8px;">
+                            <input type="text" name="package_duration[]" class="input pkg-input-duration" value="45 mins" style="max-width:110px; font-size:12px; padding:5px 8px;" placeholder="e.g. 45 mins" oninput="updateLivePreview()">
+                            <div class="pkg-duration-chips" style="display:flex; flex-wrap:wrap; gap:4px;">
+                              <button type="button" class="quick-chip-sm" onclick="setPkgDuration(this, '30 mins')">30m</button>
+                              <button type="button" class="quick-chip-sm active" onclick="setPkgDuration(this, '45 mins')">45m</button>
+                              <button type="button" class="quick-chip-sm" onclick="setPkgDuration(this, '60 mins')">60m</button>
+                              <button type="button" class="quick-chip-sm" onclick="setPkgDuration(this, '75 mins')">75m</button>
+                              <button type="button" class="quick-chip-sm" onclick="setPkgDuration(this, '90 mins')">90m</button>
+                            </div>
+                          </div>
                         </div>
                       </div>
 
@@ -1212,8 +1554,24 @@
                           </div>
                         </div>
                         <div style="margin-top:8px;">
-                          <label style="font-size:11px; font-weight:700; color:#64748b;">Scope / Work Description</label>
+                          <label style="font-size:11px; font-weight:700; color:#64748b;">Tier Specific Scope (Unique to this package)</label>
                           <input type="text" name="package_desc[]" class="input pkg-input-desc" value="Load distribution & earthing check" placeholder="e.g. Full house safety verification" oninput="updateLivePreview()">
+                        </div>
+                        <div style="margin-top:8px;">
+                          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                            <label style="font-size:11px; font-weight:700; color:#64748b;">Package Duration</label>
+                            <span style="font-size:10px; color:#94a3b8;">Choose chip or type</span>
+                          </div>
+                          <div style="display:flex; align-items:center; gap:8px;">
+                            <input type="text" name="package_duration[]" class="input pkg-input-duration" value="45 mins" style="max-width:110px; font-size:12px; padding:5px 8px;" placeholder="e.g. 45 mins" oninput="updateLivePreview()">
+                            <div class="pkg-duration-chips" style="display:flex; flex-wrap:wrap; gap:4px;">
+                              <button type="button" class="quick-chip-sm" onclick="setPkgDuration(this, '30 mins')">30m</button>
+                              <button type="button" class="quick-chip-sm active" onclick="setPkgDuration(this, '45 mins')">45m</button>
+                              <button type="button" class="quick-chip-sm" onclick="setPkgDuration(this, '60 mins')">60m</button>
+                              <button type="button" class="quick-chip-sm" onclick="setPkgDuration(this, '75 mins')">75m</button>
+                              <button type="button" class="quick-chip-sm" onclick="setPkgDuration(this, '90 mins')">90m</button>
+                            </div>
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -1254,9 +1612,28 @@
                   <div class="builder-step-card">
                     <div class="builder-step-head">
                       <div class="step-badge">5</div>
+                      <div style="flex:1;">
+                        <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px;">
+                          <h4 class="step-title" style="margin:0;">Inclusions &amp; Guarantee Checklist</h4>
+                          <span style="background:#e0f2fe; color:#0284c7; font-size:11px; font-weight:800; padding:2px 8px; border-radius:10px; border:1px solid #bae6fd;">
+                            🌐 Universal (Card &amp; Modal Checklist)
+                          </span>
+                        </div>
+                        <p class="step-subtitle">Platform trust &amp; quality guarantees displayed on customer cards and booking modal.</p>
+                      </div>
+                    </div>
+
+                    <!-- Explainer Box -->
+                    <div style="margin-bottom:14px; padding:12px 14px; background:#f0f9ff; border:1.5px solid #bae6fd; border-radius:10px; font-size:12px; color:#0369a1; line-height:1.45;">
+                      <div style="font-weight:800; margin-bottom:3px; display:flex; align-items:center; gap:6px;">
+                        <i class="fa-solid fa-circle-info" style="color:#0284c7;"></i>
+                        <span>How this displays to customers:</span>
+                      </div>
                       <div>
-                        <h4 class="step-title">Inclusions & Guarantee Checklist</h4>
-                        <p class="step-subtitle">Check the verified trust assurances customers will see on your service modal.</p>
+                        These checklist points appear on your <strong>Customer Service Card</strong> and inside the <strong>Service Booking Modal</strong> under <em>"What's included in this service"</em> (see live preview on the right). They apply to <strong>ALL package tiers</strong> as platform quality &amp; warranty assurances.
+                      </div>
+                      <div style="margin-top:6px; font-size:11px; color:#0284c7; padding-top:6px; border-top:1px dashed #7dd3fc;">
+                        👉 <strong>Tier-specific features:</strong> Defined in the <strong>"Scope / Work Description"</strong> input inside each individual Package Card in STEP 3 above (e.g. <em>Basic: Face only</em> vs <em>Premium: Full Body + De-Tan</em>).
                       </div>
                     </div>
 
@@ -1462,22 +1839,25 @@
                 <!-- Hero Image -->
                 <div class="scc-hero">
                   {% if srv.image %}
-                    <img src="{{ srv.image.url }}" alt="{{ srv.title }}">
+                    <img src="{{ srv.image.url }}" alt="" class="scc-hero-bg" aria-hidden="true">
+                    <img src="{{ srv.image.url }}" alt="{{ srv.title }}" class="scc-hero-img">
                   {% elif srv.image_url %}
-                    <img src="{{ srv.image_url }}" alt="{{ srv.title }}">
+                    <img src="{{ srv.image_url }}" alt="" class="scc-hero-bg" aria-hidden="true">
+                    <img src="{{ srv.image_url }}" alt="{{ srv.title }}" class="scc-hero-img">
                   {% else %}
-                    <img src="https://images.unsplash.com/photo-1621905251189-08b45d6a269e?w=500&auto=format&fit=crop&q=80" alt="{{ srv.title }}">
+                    <img src="https://images.unsplash.com/photo-1621905251189-08b45d6a269e?w=500&auto=format&fit=crop&q=80" alt="" class="scc-hero-bg" aria-hidden="true">
+                    <img src="https://images.unsplash.com/photo-1621905251189-08b45d6a269e?w=500&auto=format&fit=crop&q=80" alt="{{ srv.title }}" class="scc-hero-img">
                   {% endif %}
                   <span class="scc-badge-cat">{{ srv.category.name|default:"General" }}</span>
                   <span class="scc-badge-loc">
                     <i class="fa-solid fa-location-dot"></i> {{ srv.locality|default:"Ranchi" }} · {{ srv.service_radius_km|default:10|floatformat:"0" }} km live
                   </span>
                   {% if srv.status == 'active' %}
-                    <span style="position:absolute; top:10px; right:10px; background:rgba(16,185,129,0.92); color:#fff; font-size:10.5px; font-weight:700; padding:2px 8px; border-radius:6px; backdrop-filter:blur(4px);"><i class="fa-solid fa-circle-check"></i> Live</span>
+                    <span class="scc-live-badge" style="background:rgba(16,185,129,0.92); color:#fff;"><i class="fa-solid fa-circle-check"></i> Live</span>
                   {% elif srv.status == 'paused' %}
-                    <span style="position:absolute; top:10px; right:10px; background:rgba(245,158,11,0.92); color:#fff; font-size:10.5px; font-weight:700; padding:2px 8px; border-radius:6px; backdrop-filter:blur(4px);"><i class="fa-solid fa-circle-pause"></i> Paused</span>
+                    <span class="scc-live-badge" style="background:rgba(245,158,11,0.92); color:#fff;"><i class="fa-solid fa-circle-pause"></i> Paused</span>
                   {% else %}
-                    <span style="position:absolute; top:10px; right:10px; background:rgba(100,116,139,0.92); color:#fff; font-size:10.5px; font-weight:700; padding:2px 8px; border-radius:6px; backdrop-filter:blur(4px);"><i class="fa-solid fa-file-pen"></i> Draft</span>
+                    <span class="scc-live-badge" style="background:rgba(100,116,139,0.92); color:#fff;"><i class="fa-solid fa-file-pen"></i> Draft</span>
                   {% endif %}
                 </div>
 
@@ -1811,7 +2191,7 @@
     }
 
     // Render subcategories chips in Create Quick Service form
-    function renderSubcategoriesForCategory(catId, preselectedSubcatId = null) {
+    function renderSubcategoriesForCategory(catId, preselectedSubcatId = null, targetGender = null) {
       const container = document.getElementById('subcategoryChipsContainer');
       const badge = document.getElementById('subcatCountBadge');
       const hiddenInput = document.getElementById('formSubcategory');
@@ -1824,9 +2204,26 @@
         return;
       }
 
+      if (!targetGender) {
+        const gInput = document.getElementById('formGender');
+        targetGender = gInput ? gInput.value : 'all';
+      }
+
+      function processSubs(rawSubs) {
+        let subcats = [...(rawSubs || [])];
+        const activeCard = document.querySelector('#createCategoryCardGrid .cat-card.active .cat-title');
+        const catName = activeCard ? activeCard.textContent.trim().toLowerCase() : '';
+        const isBeauty = catName.includes('beauty') || catName.includes('salon') || catName.includes('spa');
+
+        if (isBeauty && targetGender && targetGender !== 'all') {
+          subcats = subcats.filter(sc => !sc.gender || sc.gender === 'all' || sc.gender === targetGender);
+        }
+        displaySubcategoryChips(subcats, preselectedSubcatId);
+      }
+
       const subcats = SUBCATEGORIES_BY_CAT[String(catId)];
       if (subcats && Array.isArray(subcats)) {
-        displaySubcategoryChips(subcats, preselectedSubcatId);
+        processSubs(subcats);
       } else {
         container.innerHTML = '<span class="subcat-empty-msg"><i class="fa-solid fa-spinner fa-spin"></i> Loading subcategories...</span>';
         fetch(`/api/categories/${catId}/subcategories/`)
@@ -1834,7 +2231,7 @@
           .then(data => {
             if (data.status === 'success' && Array.isArray(data.subcategories)) {
               SUBCATEGORIES_BY_CAT[String(catId)] = data.subcategories;
-              displaySubcategoryChips(data.subcategories, preselectedSubcatId);
+              processSubs(data.subcategories);
             } else {
               displaySubcategoryChips([], null);
             }
@@ -1867,6 +2264,9 @@
       container.innerHTML = subcats.map((sc) => {
         const isSelected = String(sc.id) === selectedId;
         const safeName = escapeHtml(sc.name);
+        const genderBadge = (sc.gender === 'women') 
+          ? '<span style="font-size:10.5px; opacity:0.85; margin-left:3px; font-weight:700;">(Women)</span>' 
+          : (sc.gender === 'men' ? '<span style="font-size:10.5px; opacity:0.85; margin-left:3px; font-weight:700;">(Men)</span>' : '');
         return `
           <button type="button" 
                   class="subcat-chip ${isSelected ? 'active' : ''}" 
@@ -1874,7 +2274,7 @@
                   data-name="${sc.name.replace(/"/g, '&quot;')}"
                   onclick="selectCreateSubcategory(this, '${sc.id}', '${sc.name.replace(/'/g, "\\'")}')">
             <i class="fa-solid ${isSelected ? 'fa-circle-check' : 'fa-tag'}"></i>
-            <span>${safeName}</span>
+            <span>${safeName}</span> ${genderBadge}
           </button>
         `;
       }).join('');
@@ -1935,7 +2335,7 @@
         subcats.forEach(sc => {
           const opt = document.createElement('option');
           opt.value = sc.id;
-          opt.textContent = sc.name;
+          opt.textContent = sc.name + ((sc.gender === 'women') ? ' (Women)' : (sc.gender === 'men' ? ' (Men)' : ''));
           if (selectedSubcatId && String(sc.id) === String(selectedSubcatId)) {
             opt.selected = true;
           }
@@ -1963,19 +2363,32 @@
     function toggleServiceForm() {
       const form = document.getElementById('add-service-form');
       const btn = document.getElementById('toggleFormBtn');
-      if (form.style.display === 'none') {
+      if (!form) return;
+      const isHidden = (form.style.display === 'none' || window.getComputedStyle(form).display === 'none');
+      if (isHidden) {
         form.style.display = 'block';
         form.scrollIntoView({ behavior: 'smooth', block: 'start' });
         if (btn) btn.style.display = 'none';
-        updateLivePreview();
+        if (typeof updateLivePreview === 'function') {
+          updateLivePreview();
+        }
       } else {
         form.style.display = 'none';
         if (btn) btn.style.display = 'inline-flex';
       }
     }
+    window.toggleServiceForm = toggleServiceForm;
 
     // ====== CATEGORY-BASED DATA MAPS ======
     const CATEGORY_SUGGESTIONS = {
+      'Beauty': [
+        {title: 'O3+ Bridal Glow Luxury Facial', basePrice: 999, desc: 'Single-dose sealed mono pack, blackhead removal, ultrasonic scrub and peel-off glow mask.'},
+        {title: 'Chocolate Roll-On Full Waxing', basePrice: 499, desc: 'Gentle, pain-minimized chocolate roll-on wax with post-wax soothing aloe vera gel.'},
+        {title: 'Keratin Hair Spa & Deep Conditioning', basePrice: 799, desc: 'Intensive keratin cream massage, infrared steam and mirror-shine blowout.'},
+        {title: 'Executive Haircut & Beard Sculpting', basePrice: 299, desc: 'Tailored haircut customized to face shape, precision beard trim & hot towel treatment.'},
+        {title: 'Luxury Express Pedicure & Manicure', basePrice: 599, desc: 'Aroma foot soak, cuticle care, scrub, foot massage and premium polish application.'},
+        {title: 'Charcoal Deep Cleanse & Face Detox', basePrice: 399, desc: 'Active charcoal mask, sebum extraction, facial acupressure and glowing ice roller finish.'},
+      ],
       'Electrical': [
         {title: 'Switchboard Repair', basePrice: 149, desc: 'Professional switchboard repair and wiring fix by certified electricians.'},
         {title: 'Ceiling Fan Installation', basePrice: 199, desc: 'Complete fan mounting, wiring and speed regulator setup.'},
@@ -2102,6 +2515,7 @@
     function getCatKey(catName) {
       if (!catName) return '_default';
       const n = catName.toLowerCase();
+      if (n.includes('beauty') || n.includes('salon') || n.includes('spa') || n.includes('groom')) return 'Beauty';
       if (n.includes('electr')) return 'Electrical';
       if (n.includes('plumb')) return 'Plumbing';
       if (n.includes('clean')) return 'Cleaning';
@@ -2141,6 +2555,92 @@
       `).join('');
     }
 
+    // Helper: update vendor experience cards visual active states
+    function updateVendorExpCardsVisuals() {
+      const gInput = document.getElementById('formGender');
+      const mInput = document.getElementById('formDeliveryMode');
+      const gender = gInput ? gInput.value : 'women';
+      const mode = mInput ? mInput.value : 'home';
+
+      const wCard = document.getElementById('vWomenCard');
+      const mCard = document.getElementById('vMenCard');
+      const wTag = document.getElementById('vWomenTag');
+      const mTag = document.getElementById('vMenTag');
+      const rAll = document.getElementById('vRadioGenderAll');
+
+      if (wCard) {
+        const isW = (gender === 'women');
+        wCard.classList.toggle('active', isW);
+        if (wTag) wTag.innerHTML = isW ? '<i class="fa-solid fa-circle-check"></i> SELECTED' : '<i class="fa-regular fa-circle"></i> Select';
+      }
+      if (mCard) {
+        const isM = (gender === 'men');
+        mCard.classList.toggle('active', isM);
+        if (mTag) mTag.innerHTML = isM ? '<i class="fa-solid fa-circle-check"></i> SELECTED' : '<i class="fa-regular fa-circle"></i> Select';
+      }
+      if (rAll) rAll.checked = (gender === 'all');
+
+      const hCard = document.getElementById('vHomeCard');
+      const pCard = document.getElementById('vParlourCard');
+      const hTag = document.getElementById('vHomeTag');
+      const pTag = document.getElementById('vParlourTag');
+      const rBoth = document.getElementById('vRadioModeBoth');
+
+      if (hCard) {
+        const isH = (mode === 'home');
+        hCard.classList.toggle('active', isH);
+        if (hTag) hTag.innerHTML = isH ? '<i class="fa-solid fa-circle-check"></i> SELECTED' : '<i class="fa-regular fa-circle"></i> Select';
+      }
+      if (pCard) {
+        const isP = (mode === 'parlour');
+        pCard.classList.toggle('active', isP);
+        if (pTag) pTag.innerHTML = isP ? '<i class="fa-solid fa-circle-check"></i> SELECTED' : '<i class="fa-regular fa-circle"></i> Select';
+      }
+      if (rBoth) rBoth.checked = (mode === 'both');
+
+      // Update Summary Banner Text
+      const audText = document.getElementById('vSummaryAudienceText');
+      const modeText = document.getElementById('vSummaryModeText');
+      if (audText) {
+        if (gender === 'women') audText.innerHTML = "👩 Women's Salon &amp; Spa";
+        else if (gender === 'men') audText.innerHTML = "👨 Men's Salon &amp; Grooming";
+        else audText.innerHTML = "✨ Unisex / All Services";
+      }
+      if (modeText) {
+        if (mode === 'home') modeText.innerHTML = "🏠 1. Salon at Home";
+        else if (mode === 'parlour') modeText.innerHTML = "👑 2. Premium Parlour Visit";
+        else modeText.innerHTML = "🔄 Both Doorstep &amp; Parlour";
+      }
+    }
+
+    function selectVendorGenderCard(gender) {
+      const gInput = document.getElementById('formGender');
+      if (gInput) gInput.value = gender;
+      updateVendorExpCardsVisuals();
+
+      const catInput = document.getElementById('formCategory');
+      const catId = catInput ? catInput.value : null;
+      if (catId) {
+        renderSubcategoriesForCategory(catId, null, gender);
+      }
+      updateLivePreview();
+    }
+    window.selectVendorGenderCard = selectVendorGenderCard;
+
+    function selectVendorDeliveryModeCard(mode) {
+      const mInput = document.getElementById('formDeliveryMode');
+      if (mInput) mInput.value = mode;
+      updateVendorExpCardsVisuals();
+
+      // Show/hide parlour name field
+      const parlourWrap = document.getElementById('parlourBranchFieldWrap');
+      if (parlourWrap) {
+        parlourWrap.style.display = (mode === 'parlour' || mode === 'both') ? 'block' : 'none';
+      }
+      updateLivePreview();
+    }
+    window.selectVendorDeliveryModeCard = selectVendorDeliveryModeCard;
+
     function selectCreateCategoryCard(cardEl, catId, catName) {
       document.querySelectorAll('#createCategoryCardGrid .cat-card').forEach(c => c.classList.remove('active'));
       cardEl.classList.add('active');
@@ -2153,8 +2653,27 @@
         catInput.setAttribute('data-name', catName);
       }
 
-      // Populate dynamic subcategories
-      renderSubcategoriesForCategory(catId);
+      // Check if Beauty Category (Target Experience ONLY visible for Beauty)
+      const isBeauty = (catName.toLowerCase().includes('beauty') || catName.toLowerCase().includes('salon') || catName.toLowerCase().includes('spa') || String(catId) === '37');
+      const domainSec = document.getElementById('domainTargetingSection');
+      if (domainSec) {
+        domainSec.style.display = isBeauty ? 'block' : 'none';
+      }
+
+      const gInput = document.getElementById('formGender');
+      const mInput = document.getElementById('formDeliveryMode');
+
+      if (isBeauty) {
+        if (!gInput.value || gInput.value === 'all') {
+          gInput.value = 'women';
+        }
+        updateVendorExpCardsVisuals();
+        renderSubcategoriesForCategory(catId, null, gInput.value);
+      } else {
+        gInput.value = 'all';
+        mInput.value = 'both';
+        renderSubcategoriesForCategory(catId, null, 'all');
+      }
 
       // Populate dynamic suggestions and inclusions
       populateTitleSuggestions(catName);
@@ -2300,7 +2819,7 @@
           </div>
         </div>
         <div style="margin-top:8px;">
-          <label style="font-size:11px; font-weight:700; color:#64748b;">Scope / Work Description</label>
+          <label style="font-size:11px; font-weight:700; color:#64748b;">Tier Specific Scope (Unique to this package)</label>
           <input type="text" name="package_desc[]" class="input pkg-input-desc" value="Full procedure & materials inspection" placeholder="Scope description" oninput="updateLivePreview()">
         </div>
       `;
@@ -2686,7 +3205,7 @@
             </div>
           </div>
           <div style="margin-top:8px;">
-            <label style="font-size:11px; font-weight:700; color:#64748b;">Scope / Work Description</label>
+            <label style="font-size:11px; font-weight:700; color:#64748b;">Tier Specific Scope (Unique to this package)</label>
             <input type="text" class="input" value="${escapeHtml(pkg.desc || '')}" placeholder="Scope description..." oninput="editPackages[${idx}].desc=this.value;">
           </div>
           <div style="margin-top:8px; background:#f0fdf4; border:1px solid #bbf7d0; border-radius:8px; padding:6px 10px; display:flex; justify-content:space-between; align-items:center; font-size:11.5px;">
@@ -2837,6 +3356,63 @@
         });
       }
     });
+
+    // Vendor Target Audience (Gender) Selector
+    function selectVendorGender(gender, btn) {
+      document.querySelectorAll('#vendorGenderSelector .vendor-seg-btn').forEach(b => b.classList.remove('active'));
+      if (btn) btn.classList.add('active');
+      const hidden = document.getElementById('formGender');
+      if (hidden) hidden.value = gender;
+      
+      // Re-filter subcategories chips if Beauty is active
+      const catInput = document.getElementById('formCategory');
+      const catId = catInput ? catInput.value : null;
+      if (catId) {
+        renderSubcategoriesForCategory(catId, null, gender);
+      }
+      updateLivePreview();
+    }
+    window.selectVendorGender = selectVendorGender;
+
+    // Vendor Service Fulfillment Channel Selector
+    function selectVendorDeliveryMode(mode, btn) {
+      document.querySelectorAll('#vendorModeSelector .vendor-seg-btn').forEach(b => b.classList.remove('active'));
+      if (btn) btn.classList.add('active');
+      const hidden = document.getElementById('formDeliveryMode');
+      if (hidden) hidden.value = mode;
+      updateLivePreview();
+    }
+    window.selectVendorDeliveryMode = selectVendorDeliveryMode;
+
+    // Package Duration Chip Handler
+    function setPkgDuration(btn, dur) {
+      const card = btn.closest('.pkg-card');
+      if (!card) return;
+      const input = card.querySelector('.pkg-input-duration');
+      if (input) input.value = dur;
+      card.querySelectorAll('.pkg-duration-chips button').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      updateLivePreview();
+    }
+    window.setPkgDuration = setPkgDuration;
+
+
+    function applyBrandSuggestion(brand) {
+      const input = document.getElementById('formBrandName');
+      if (input) input.value = brand;
+      updateLivePreview();
+    }
+    window.applyBrandSuggestion = applyBrandSuggestion;
+
+    function applyServiceDuration(dur) {
+      const input = document.getElementById('formDuration');
+      if (input) input.value = dur;
+      document.querySelectorAll('#formDuration + div .quick-chip-sm').forEach(b => b.classList.remove('active'));
+      event.target.classList.add('active');
+      updateLivePreview();
+    }
+    window.applyServiceDuration = applyServiceDuration;
+
   </script>
 </body>
 </html>

@@ -1063,12 +1063,19 @@ def super_admin_category_create(request):
         # Handle inline subcategories
         subcat_names = request.POST.getlist('subcat_name[]')
         subcat_statuses = request.POST.getlist('subcat_status[]')
+        subcat_genders = request.POST.getlist('subcat_gender[]')
         for i, sname in enumerate(subcat_names):
             sname = sname.strip()
             if sname:
+                s_gender = subcat_genders[i] if i < len(subcat_genders) else 'all'
+                if cat.is_beauty:
+                    s_gender = s_gender if s_gender in ['women', 'men'] else 'women'
+                else:
+                    s_gender = 'all'
                 SubCategory.objects.create(
                     category=cat,
                     name=sname,
+                    gender=s_gender,
                     status=subcat_statuses[i] if i < len(subcat_statuses) else 'active',
                 )
         django_messages.success(request, 'Category created.')
@@ -1092,6 +1099,7 @@ def super_admin_category_edit(request, cat_id):
         subcat_ids = request.POST.getlist('subcat_id[]')
         subcat_names = request.POST.getlist('subcat_name[]')
         subcat_statuses = request.POST.getlist('subcat_status[]')
+        subcat_genders = request.POST.getlist('subcat_gender[]')
         # Track which existing subcategory IDs are still present
         kept_ids = set()
         for i, sname in enumerate(subcat_names):
@@ -1100,11 +1108,17 @@ def super_admin_category_edit(request, cat_id):
                 continue
             sid = subcat_ids[i] if i < len(subcat_ids) else ''
             s_status = subcat_statuses[i] if i < len(subcat_statuses) else 'active'
+            s_gender = subcat_genders[i] if i < len(subcat_genders) else 'all'
+            if cat.is_beauty:
+                s_gender = s_gender if s_gender in ['women', 'men'] else 'women'
+            else:
+                s_gender = 'all'
             if sid:
                 # Update existing
                 try:
                     sub = SubCategory.objects.get(pk=int(sid), category=cat)
                     sub.name = sname
+                    sub.gender = s_gender
                     sub.status = s_status
                     sub.save()
                     kept_ids.add(sub.id)
@@ -1112,7 +1126,7 @@ def super_admin_category_edit(request, cat_id):
                     pass
             else:
                 # Create new
-                new_sub = SubCategory.objects.create(category=cat, name=sname, status=s_status)
+                new_sub = SubCategory.objects.create(category=cat, name=sname, gender=s_gender, status=s_status)
                 kept_ids.add(new_sub.id)
         # Delete subcategories that were removed from the form
         cat.subcategories.exclude(id__in=kept_ids).delete()
@@ -1136,15 +1150,29 @@ def super_admin_category_delete(request, cat_id):
 def super_admin_subcategory_create(request):
     from .models import SubCategory, Category
     cats = Category.objects.filter(status='active').order_by('name')
+    selected_cat_id = request.GET.get('category_id')
     if request.method == 'POST':
+        cat_id = request.POST.get('category')
+        cat = Category.objects.filter(id=cat_id).first()
+        raw_gender = request.POST.get('gender', '').strip().lower()
+        if cat and cat.is_beauty:
+            gender = raw_gender if raw_gender in ['women', 'men'] else 'women'
+        else:
+            gender = 'all'
+
         SubCategory.objects.create(
-            category_id=request.POST.get('category'),
-            name=request.POST.get('name'),
+            category_id=cat_id,
+            name=request.POST.get('name', '').strip(),
+            gender=gender,
             status=request.POST.get('status', 'active'),
         )
         django_messages.success(request, 'SubCategory created.')
         return redirect('super_admin_categories')
-    return render(request, 'superadmin/subcategory_form.html', {'mode': 'create', 'categories': cats})
+    return render(request, 'superadmin/subcategory_form.html', {
+        'mode': 'create',
+        'categories': cats,
+        'selected_cat_id': int(selected_cat_id) if selected_cat_id and selected_cat_id.isdigit() else None
+    })
 
 @sa_required
 def super_admin_subcategory_edit(request, sub_id):
@@ -1152,8 +1180,17 @@ def super_admin_subcategory_edit(request, sub_id):
     subcat = get_object_or_404(SubCategory, pk=sub_id)
     cats = Category.objects.filter(status='active').order_by('name')
     if request.method == 'POST':
-        subcat.category_id = request.POST.get('category', subcat.category_id)
-        subcat.name = request.POST.get('name', subcat.name)
+        cat_id = request.POST.get('category', subcat.category_id)
+        cat = Category.objects.filter(id=cat_id).first()
+        raw_gender = request.POST.get('gender', subcat.gender).strip().lower()
+        if cat and cat.is_beauty:
+            gender = raw_gender if raw_gender in ['women', 'men'] else 'women'
+        else:
+            gender = 'all'
+
+        subcat.category_id = cat_id
+        subcat.name = request.POST.get('name', subcat.name).strip()
+        subcat.gender = gender
         subcat.status = request.POST.get('status', subcat.status)
         subcat.save()
         django_messages.success(request, f'SubCategory "{subcat.name}" updated.')
@@ -1877,7 +1914,8 @@ def super_admin_qs_create(request):
                                 'vendor_payout': calc['vendor_payout'],
                                 'commission': calc.get('commission', 0),
                                 'tax': calc.get('total_tax', 0),
-                                'desc': str(p.get('desc', '')).strip()
+                                'desc': str(p.get('desc', '')).strip(),
+                                'duration': str(p.get('duration', '45 mins')).strip() or '45 mins'
                             })
             except Exception: pass
 
@@ -1951,6 +1989,13 @@ def super_admin_qs_create(request):
                 "Spare parts / extra hardware to be purchased or charged separately"
             ]
 
+        gender_val = request.POST.get('gender', 'all').strip().lower() or 'all'
+        delivery_mode_val = request.POST.get('delivery_mode', 'both').strip().lower() or 'both'
+        duration_val = request.POST.get('duration', '45 mins').strip() or '45 mins'
+        brand_name_val = request.POST.get('brand_name', '').strip() or None
+        is_mono_pack_val = bool(request.POST.get('is_mono_pack') in ['1', 'true', 'on', True])
+        parlour_name_val = request.POST.get('parlour_name', '').strip() or None
+
         qs = QuickService(
             vendor=vendor,
             title=title,
@@ -1968,6 +2013,12 @@ def super_admin_qs_create(request):
             longitude=lon,
             service_radius_km=radius,
             status=status,
+            gender=gender_val,
+            delivery_mode=delivery_mode_val,
+            duration=duration_val,
+            brand_name=brand_name_val,
+            is_mono_pack=is_mono_pack_val,
+            parlour_name=parlour_name_val,
             description=description or f"Quality {title} service at your doorstep."
         )
         image_file = request.FILES.get('image')
@@ -2033,6 +2084,18 @@ def super_admin_qs_edit(request, qs_id):
 
         qs.description = request.POST.get('description', qs.description).strip()
         qs.locality = request.POST.get('locality', qs.locality or '').strip()
+        if request.POST.get('gender'):
+            qs.gender = request.POST.get('gender').strip().lower()
+        if request.POST.get('delivery_mode'):
+            qs.delivery_mode = request.POST.get('delivery_mode').strip().lower()
+        if request.POST.get('duration'):
+            qs.duration = request.POST.get('duration').strip()
+        if request.POST.get('brand_name') is not None:
+            qs.brand_name = request.POST.get('brand_name').strip() or None
+        if 'is_mono_pack' in request.POST:
+            qs.is_mono_pack = bool(request.POST.get('is_mono_pack') in ['1', 'true', 'on', True])
+        if request.POST.get('parlour_name') is not None:
+            qs.parlour_name = request.POST.get('parlour_name').strip() or None
 
         radius_val = request.POST.get('service_radius_km')
         if radius_val:
@@ -2074,7 +2137,8 @@ def super_admin_qs_edit(request, qs_id):
                                 'vendor_payout': calc['vendor_payout'],
                                 'commission': calc.get('commission', 0),
                                 'tax': calc.get('total_tax', 0),
-                                'desc': str(p.get('desc', '')).strip()
+                                'desc': str(p.get('desc', '')).strip(),
+                                'duration': str(p.get('duration', '45 mins')).strip() or '45 mins'
                             })
             except Exception: pass
 

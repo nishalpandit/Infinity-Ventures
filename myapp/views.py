@@ -909,6 +909,8 @@ def dashboard_view(request, path=''):
                     pkg_names = request.POST.getlist('package_name[]')
                     pkg_prices = request.POST.getlist('package_price[]')
                     pkg_descs = request.POST.getlist('package_desc[]')
+
+                    pkg_durations = request.POST.getlist('package_duration[]')
                     for i, name in enumerate(pkg_names):
                         if not name.strip():
                             continue
@@ -916,13 +918,15 @@ def dashboard_view(request, path=''):
                         except (ValueError, TypeError): p_val = 199.0
                         calc = gs.calculate_qs_customer_price(p_val) if gs else {'customer_price': round(p_val), 'vendor_payout': p_val, 'commission': 0, 'total_tax': 0}
                         d_val = pkg_descs[i].strip() if i < len(pkg_descs) else ""
+                        dur_val = pkg_durations[i].strip() if ("pkg_durations" in locals() and i < len(pkg_durations) and pkg_durations[i].strip()) else "45 mins"
                         service_packages.append({
                             'name': name.strip(),
                             'price': calc['customer_price'],
                             'vendor_payout': calc['vendor_payout'],
                             'commission': calc.get('commission', 0),
                             'tax': calc.get('total_tax', 0),
-                            'desc': d_val
+                            'desc': d_val,
+                        'duration': dur_val
                         })
 
                 if service_packages:
@@ -976,6 +980,18 @@ def dashboard_view(request, path=''):
                 qs_obj.status = new_status
                 qs_obj.description = description
                 qs_obj.locality = locality
+                if request.POST.get('gender'):
+                    qs_obj.gender = request.POST.get('gender').strip().lower()
+                if request.POST.get('delivery_mode'):
+                    qs_obj.delivery_mode = request.POST.get('delivery_mode').strip().lower()
+                if request.POST.get('duration'):
+                    qs_obj.duration = request.POST.get('duration').strip()
+                if request.POST.get('brand_name') is not None:
+                    qs_obj.brand_name = request.POST.get('brand_name').strip() or None
+                if 'is_mono_pack' in request.POST:
+                    qs_obj.is_mono_pack = bool(request.POST.get('is_mono_pack') in ['1', 'true', 'on', True])
+                if request.POST.get('parlour_name') is not None:
+                    qs_obj.parlour_name = request.POST.get('parlour_name').strip() or None
                 qs_obj.save()
 
                 messages.success(request, f"Service '{title}' updated successfully!")
@@ -1059,13 +1075,15 @@ def dashboard_view(request, path=''):
 
                     calc = gs.calculate_qs_customer_price(p_val) if gs else {'customer_price': round(p_val), 'vendor_payout': p_val, 'commission': 0, 'total_tax': 0}
                     d_val = pkg_descs[i].strip() if i < len(pkg_descs) else ""
+                    dur_val = pkg_durations[i].strip() if ("pkg_durations" in locals() and i < len(pkg_durations) and pkg_durations[i].strip()) else "45 mins"
                     service_packages.append({
                         'name': name.strip(),
                         'price': calc['customer_price'],        # Customer listed price
                         'vendor_payout': calc['vendor_payout'],  # Vendor payout
                         'commission': calc.get('commission', 0),
                         'tax': calc.get('total_tax', 0),
-                        'desc': d_val
+                        'desc': d_val,
+                        'duration': dur_val
                     })
 
             if not service_packages:
@@ -1133,6 +1151,12 @@ def dashboard_view(request, path=''):
                 latitude=lat,
                 longitude=lon,
                 service_radius_km=radius,
+                gender=request.POST.get('gender', 'all').strip().lower() or 'all',
+                delivery_mode=request.POST.get('delivery_mode', 'both').strip().lower() or 'both',
+                duration=request.POST.get('duration', '45 mins').strip() or '45 mins',
+                brand_name=request.POST.get('brand_name', '').strip() or None,
+                is_mono_pack=bool(request.POST.get('is_mono_pack') in ['1', 'true', 'on', True]),
+                parlour_name=request.POST.get('parlour_name', '').strip() or None,
                 status=request.POST.get('status', 'active').strip().lower() if request.POST.get('status', 'active').strip().lower() in ['active', 'paused', 'draft'] else 'active'
             )
             if image_file:
@@ -2155,7 +2179,7 @@ def dashboard_view(request, path=''):
             context['my_services'] = srv_qs
             active_cats = Category.objects.filter(status='active').prefetch_related('subcategories').order_by('name')
             context['categories'] = active_cats
-            subcat_map = {str(c.id): [{'id': sc.id, 'name': sc.name} for sc in c.subcategories.filter(status='active').order_by('name')] for c in active_cats}
+            subcat_map = {str(c.id): [{'id': sc.id, 'name': sc.name, 'gender': sc.gender} for sc in c.subcategories.filter(status='active').order_by('name')] for c in active_cats}
             context['subcategories_by_cat_json'] = json.dumps(subcat_map)
             gs = GlobalSettings.objects.first()
             context['global_settings'] = gs
@@ -3819,7 +3843,7 @@ def home_view(request):
     categories_data = []
     for c in categories:
         services_qs = QuickService.objects.filter(category=c, status='active').select_related('subcategory').order_by('-created_at')
-        subs = list(c.subcategories.filter(status='active').values('id', 'name'))
+        subs = list(c.subcategories.filter(status='active').values('id', 'name', 'gender'))
         srv_list = []
         for s in services_qs:
             img_url = None
@@ -3843,6 +3867,12 @@ def home_view(request):
                 'packages': s.service_packages or [],
                 'inclusions': s.inclusions or [],
                 'exclusions': s.exclusions or [],
+                'brand_name': s.brand_name or '',
+                'is_mono_pack': s.is_mono_pack,
+                'duration': s.duration or '45 mins',
+                'parlour_name': s.parlour_name or '',
+                'delivery_mode': s.delivery_mode or 'home',
+                'gender': s.gender or 'all',
             })
 
         categories_data.append({

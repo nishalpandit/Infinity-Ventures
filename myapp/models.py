@@ -152,6 +152,12 @@ class QuickService(models.Model):
     inclusions = models.JSONField(default=list, blank=True, null=True, help_text="List of inclusions")
     exclusions = models.JSONField(default=list, blank=True, null=True, help_text="List of exclusions")
     tags = models.CharField(max_length=255, blank=True, null=True)
+    gender = models.CharField(max_length=20, choices=(('women', 'Women Only'), ('men', 'Men Only'), ('all', 'Unisex / All')), default='all')
+    delivery_mode = models.CharField(max_length=20, choices=(('home', 'At-Home Service'), ('parlour', 'In-Salon / Parlour Visit'), ('both', 'Both At-Home & Parlour')), default='both')
+    duration = models.CharField(max_length=50, blank=True, null=True, default='45 mins')
+    brand_name = models.CharField(max_length=150, blank=True, null=True, help_text="Product brand used e.g. O3+, L'Oreal, Kerastase, Philips")
+    is_mono_pack = models.BooleanField(default=False, help_text="100% Sealed Single-Dose Mono Pack used")
+    parlour_name = models.CharField(max_length=200, blank=True, null=True, help_text="Salon / Parlour branch name if in-salon service")
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='active')
     created_at = models.DateTimeField(default=timezone.now)
 
@@ -626,14 +632,40 @@ class Category(models.Model):
             return '#b45309'
         return '#2563eb'
 
+    @property
+    def is_beauty(self):
+        n = (self.name or '').strip().lower()
+        return 'beauty' in n or self.id == 37
+
 class SubCategory(models.Model):
+    GENDER_CHOICES = (
+        ('all', 'All / Unisex'),
+        ('women', 'Women'),
+        ('men', 'Men'),
+    )
     category = models.ForeignKey(Category, on_delete=models.CASCADE, related_name='subcategories')
     name = models.CharField(max_length=100)
+    gender = models.CharField(
+        max_length=20,
+        choices=GENDER_CHOICES,
+        default='all',
+        blank=True,
+        help_text="Target audience segment (Women / Men) — primarily used for Beauty category."
+    )
     status = models.CharField(max_length=20, choices=Category.STATUS_CHOICES, default='active')
     created_at = models.DateTimeField(default=timezone.now)
 
     def __str__(self):
-        return f"{self.category.name} -> {self.name}"
+        suffix = f" [{self.gender.title()}]" if self.gender in ['women', 'men'] else ""
+        return f"{self.category.name} -> {self.name}{suffix}"
+
+    @property
+    def is_women(self):
+        return self.gender == 'women'
+
+    @property
+    def is_men(self):
+        return self.gender == 'men'
 
 class State(models.Model):
     STATUS_CHOICES = (

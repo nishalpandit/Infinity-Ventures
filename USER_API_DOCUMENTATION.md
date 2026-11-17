@@ -203,6 +203,383 @@ response :-
 }
 
 
+API for User Display Beauty Experience (Cards: Women vs Men)
+url : (http://192.168.1.52:8000/api/user/beauty/)
+method : GET
+response :-
+{
+  "status": "success",
+  "title": "Beauty & Wellness",
+  "subtitle": "Select Experience / Category",
+  "experiences": [
+    {
+      "id": "womens_salon_spa",
+      "gender": "women",
+      "name": "Women's Salon & Spa",
+      "tagline": "At-Home Beauty or Book Top Luxury Parlours",
+      "rating": 4.91,
+      "reviews_count": "4.2M Reviews",
+      "badge": "15 Min Pro",
+      "starting_price": 349,
+      "formatted_price": "₹349",
+      "image": "http://192.168.1.52:8000/static/assets/beauty/women_photo.png",
+      "icon": "http://192.168.1.52:8000/static/assets/icons/womens_salon_spa.png",
+      "hero_title": "Women's Salon, Spa & Parlours",
+      "hero_desc": "Doorstep certified beauticians or guaranteed VIP slot at Bengaluru's top luxury salons.",
+      "modes": [
+        {
+          "id": "home",
+          "name": "1. Salon at Home",
+          "badge": "ALL SERVICES AVAILABLE",
+          "description": "Certified beautician visits your home • 100% sealed mono-kits",
+          "icon": "home",
+          "accent_color": "#ec4899"
+        },
+        {
+          "id": "parlour",
+          "name": "2. Premium Parlour Services",
+          "badge": "LUXURY SALON BRANDS",
+          "description": "Book visit at Lakmé Luxe, Enrich, BBlunt, Toni & Guy in your area",
+          "icon": "crown",
+          "accent_color": "#d97706"
+        }
+      ]
+    },
+    {
+      "id": "mens_salon_massage",
+      "gender": "men",
+      "name": "Men's Salon & Massage",
+      "tagline": "At-Home Grooming or Book Top Luxury Salons",
+      "rating": 4.87,
+      "reviews_count": "2.9M Reviews",
+      "badge": "15 Min Pro",
+      "starting_price": 249,
+      "formatted_price": "₹249",
+      "image": "http://192.168.1.52:8000/static/assets/beauty/men_photo.png",
+      "icon": "http://192.168.1.52:8000/static/assets/icons/mens_salon_massage.png",
+      "hero_title": "Men's Grooming, Massage & Barbershops",
+      "hero_desc": "Certified male barbers at home or royal grooming at Truefitt & Hill, Bounce and top lounges.",
+      "modes": [
+        {
+          "id": "home",
+          "name": "1. Grooming & Massage at Home",
+          "badge": "ALL SERVICES AVAILABLE",
+          "description": "Certified male stylist visits your home • Single-use sterilized tools & vacuum",
+          "icon": "home",
+          "accent_color": "#0284c7"
+        },
+        {
+          "id": "parlour",
+          "name": "2. Premium Barbershop & Lounge",
+          "badge": "LUXURY BARBERSHOPS",
+          "description": "Book visit at Truefitt & Hill, Bounce, Toni & Guy Men, The Man Company",
+          "icon": "crown",
+          "accent_color": "#d97706"
+        }
+      ]
+    }
+  ]
+}
+
+
+API for User Display Beauty Services (At-Home Subcategories & Services)
+url : (http://192.168.1.52:8000/api/user/beauty/services/)
+method : GET
+params :-
+gender: women (options: women / men)
+delivery_mode: home (options: home / parlour)
+response :-
+{
+  "status": "success",
+  "category_id": 37,
+  "category_name": "Beauty",
+  "gender": "women",
+  "hub": "womens_salon_spa",
+  "hub_name": "Women's Salon & Spa",
+  "mode": "home",
+  "mode_name": "Salon at Home",
+  "subcategories": [
+    {
+      "id": "sub_48",
+      "dbId": 48,
+      "name": "Facials & Cleanup",
+      "gender": "women",
+      "items": [
+        {
+          "id": "qs_41",
+          "dbId": 41,
+          "title": "O3+ Diamond Glow Facial & De-Tan",
+          "category": "Beauty",
+          "subcategory": "Facials & Cleanup",
+          "rating": "4.91",
+          "reviews": "120+ reviews",
+          "price": 899.0,
+          "originalPrice": 1168,
+          "time": "60 mins",
+          "duration": "60 mins",
+          "brand_name": "O3+ Professional",
+          "is_mono_pack": true,
+          "parlour_name": "",
+          "gender": "women",
+          "delivery_mode": "home",
+          "badge": "100% Sealed Mono-Pack",
+          "image": "http://192.168.1.52:8000/media/quick_services/facial.jpg",
+          "features": [
+            "100% Sealed Single-Dose Mono-Pack",
+            "Single-use disposable gown & cape",
+            "Sterilized instruments sealed in pouch"
+          ],
+          "packages": [
+            {
+              "name": "Express Glow",
+              "price": 899,
+              "duration": "45 mins",
+              "desc": "Cleansing, scrub and pack"
+            },
+            {
+              "name": "Royal Bridal Glow",
+              "price": 1499,
+              "duration": "75 mins",
+              "desc": "Full 7-step facial with gold serum"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "sub_49",
+      "dbId": 49,
+      "name": "Waxing & Hair Removal",
+      "gender": "women",
+      "items": []
+    },
+    {
+      "id": "sub_50",
+      "dbId": 50,
+      "name": "Pedicure & Manicure",
+      "gender": "women",
+      "items": []
+    },
+    {
+      "id": "sub_51",
+      "dbId": 51,
+      "name": "Hair Spa & Styling",
+      "gender": "women",
+      "items": []
+    }
+  ],
+  "all_services": [
+    {
+      "id": "qs_41",
+      "dbId": 41,
+      "title": "O3+ Diamond Glow Facial & De-Tan",
+      "category": "Beauty",
+      "subcategory": "Facials & Cleanup",
+      "rating": "4.91",
+      "reviews": "120+ reviews",
+      "price": 899.0,
+      "duration": "60 mins",
+      "brand_name": "O3+ Professional",
+      "is_mono_pack": true,
+      "image": "http://192.168.1.52:8000/media/quick_services/facial.jpg"
+    }
+  ],
+  "guarantee": "30-Day Money-Back & Free Re-work Guarantee",
+  "damage_cover": "Up to ₹10,000 Free Accidental Damage Cover"
+}
+
+
+API for User Display Beauty Luxury Parlours Directory
+url : (http://192.168.1.52:8000/api/user/beauty/parlours/)
+method : GET
+params :-
+gender: women (options: women / men)
+response :-
+{
+  "status": "success",
+  "gender": "women",
+  "hub": "womens_salon_spa",
+  "hub_name": "Women's Salon & Spa",
+  "mode": "parlour",
+  "mode_name": "Premium Parlour Services",
+  "guarantee": "Zero Waiting Time Guarantee • VIP Slot Reserved",
+  "count": 3,
+  "parlours": [
+    {
+      "id": "lakme_luxe",
+      "name": "Lakmé Salon Luxe",
+      "brandTag": "Runway Certified",
+      "tagline": "Runway Bridal Expertise & Moroccan Oil Hair Therapy",
+      "rating": "4.94 ★ (3,800+ reviews)",
+      "location": "100ft Road, Indiranagar",
+      "distance": "0.8 km away",
+      "timings": "10:00 AM - 09:00 PM",
+      "image": "https://images.unsplash.com/photo-1560066984-138dadb4c035?auto=format&fit=crop&w=700&q=80",
+      "highlights": [
+        "Lakmé Fashion Week Certified Stylists",
+        "Private VIP Bridal Lounge",
+        "Complimentary Gourmet Brewed Coffee"
+      ],
+      "starting_price": 1599,
+      "services_count": 4
+    },
+    {
+      "id": "enrich_salon",
+      "name": "Enrich Salon & Luxury Spa",
+      "brandTag": "Kerastase Paris",
+      "tagline": "Kerastase Hair Rituals, K-Glow Facials & BIAB Nails",
+      "rating": "4.91 ★ (2,450+ reviews)",
+      "location": "4th Block, Koramangala",
+      "distance": "1.4 km away",
+      "timings": "09:30 AM - 09:30 PM",
+      "image": "https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?auto=format&fit=crop&w=700&q=80",
+      "highlights": [
+        "Kerastase Certified Master Hair Diagnostics",
+        "Dermat-Grade Hydrafacial Suites",
+        "Premium Valet Parking"
+      ],
+      "starting_price": 1299,
+      "services_count": 3
+    }
+  ]
+}
+
+
+API for User Display Beauty Luxury Parlour Details (Services, Slots & Stylists)
+url : (http://192.168.1.52:8000/api/user/beauty/parlours/<parlour_id>/)
+method : GET
+params :-
+parlour_id: lakme_luxe (path parameter e.g. lakme_luxe / enrich_salon / truefitt_hill / bounce_salon)
+response :-
+{
+  "status": "success",
+  "hub": "womens_salon_spa",
+  "hub_name": "Women's Salon & Spa",
+  "parlour": {
+    "id": "lakme_luxe",
+    "name": "Lakmé Salon Luxe",
+    "brandTag": "Runway Certified",
+    "tagline": "Runway Bridal Expertise & Moroccan Oil Hair Therapy",
+    "rating": "4.94 ★ (3,800+ reviews)",
+    "location": "100ft Road, Indiranagar",
+    "distance": "0.8 km away",
+    "timings": "10:00 AM - 09:00 PM",
+    "image": "https://images.unsplash.com/photo-1560066984-138dadb4c035?auto=format&fit=crop&w=700&q=80",
+    "highlights": [
+      "Lakmé Fashion Week Certified Stylists",
+      "Private VIP Bridal Lounge",
+      "Complimentary Gourmet Brewed Coffee"
+    ],
+    "starting_price": 1599,
+    "services": [
+      {
+        "id": "lakme_moroccan_spa",
+        "title": "Moroccan Oil Hydration Hair Ritual & Blowout",
+        "category": "Hair Care",
+        "price": 1899,
+        "originalPrice": 2499,
+        "discount": "24% OFF",
+        "time": "60 mins",
+        "image": "https://images.unsplash.com/photo-1562322140-8baeececf3df?auto=format&fit=crop&w=500&q=80",
+        "desc": "Deep argan oil treatment infused with infrared heat to restore silkiness and mirror shine."
+      },
+      {
+        "id": "lakme_bridal_hd",
+        "title": "Runway HD Airbrush Bridal Transformation",
+        "category": "Bridal Studio",
+        "price": 8999,
+        "originalPrice": 12000,
+        "discount": "25% OFF",
+        "time": "3 Hours",
+        "image": "https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?auto=format&fit=crop&w=500&q=80",
+        "desc": "Complete pre-bridal skin prep, Temptu HD airbrush base, 3D lash installation, and designer saree draping."
+      }
+    ]
+  },
+  "stylist_tiers": [
+    {
+      "id": "Senior Stylist",
+      "name": "Senior Stylist",
+      "desc": "Certified Expert (Included)",
+      "extra_fee": 0
+    },
+    {
+      "id": "Art Director",
+      "name": "Master Art Director",
+      "desc": "+₹300 (Celebrity Stylist)",
+      "extra_fee": 300
+    }
+  ],
+  "available_dates": [
+    {"key": "Today", "label": "Today", "date": "17 Nov, Tue"},
+    {"key": "Tomorrow", "label": "Tomorrow", "date": "18 Nov, Wed"}
+  ],
+  "available_slots": [
+    "10:00 AM - 11:00 AM",
+    "11:30 AM - 12:30 PM",
+    "02:00 PM - 03:00 PM",
+    "04:30 PM - 05:30 PM",
+    "06:00 PM - 07:00 PM"
+  ],
+  "booking_terms": "Pay at Salon • Free Cancellation Anytime Before Scheduled Slot"
+}
+
+
+API for User Book Beauty Parlour Appointment / Instant VIP Pass
+url : (http://192.168.1.52:8000/api/beauty/book-appointment/)
+method : POST
+params :-
+parlour_id: lakme_luxe
+service_id: lakme_moroccan_spa
+slot_date: 2026-11-20
+slot_time: 02:00 PM - 03:00 PM
+stylist_tier: Senior Stylist (options: Senior Stylist / Art Director)
+customer_name: Ananya Verma
+customer_phone: 9876543210
+customer_email: ananya@example.com
+response :-
+{
+  "status": "success",
+  "message": "Appointment confirmed at Lakmé Salon Luxe! Pass #LUXE-4821",
+  "appointment": {
+    "pass_code": "LUXE-4821",
+    "booking_id": "BK-A91B2C3D",
+    "status": "CONFIRMED",
+    "hub": "womens_salon_spa",
+    "hub_name": "Women's Salon & Spa",
+    "parlour": {
+      "id": "lakme_luxe",
+      "name": "Lakmé Salon Luxe",
+      "brandTag": "Runway Certified",
+      "location": "100ft Road, Indiranagar",
+      "distance": "0.8 km away",
+      "timings": "10:00 AM - 09:00 PM"
+    },
+    "service": {
+      "id": "lakme_moroccan_spa",
+      "title": "Moroccan Oil Hydration Hair Ritual & Blowout",
+      "time": "60 mins",
+      "category": "Hair Care",
+      "price": 1899.0
+    },
+    "stylist_tier": "Senior Stylist",
+    "stylist_label": "Senior Stylist",
+    "slot_date": "2026-11-20",
+    "slot_time": "02:00 PM - 03:00 PM",
+    "customer_name": "Ananya Verma",
+    "customer_phone": "9876543210",
+    "payment_mode": "PAY_AT_SALON",
+    "total_amount": 1899.0,
+    "currency": "INR",
+    "instructions": [
+      "Present VIP Pass #LUXE-4821 at the reception of Lakmé Salon Luxe.",
+      "Zero waiting time guaranteed for your reserved time slot.",
+      "You can pay after treatment completion via UPI, Card, or Cash."
+    ]
+  }
+}
+
+
 API for Get SubCategories for a Specific Category
 url : (http://192.168.1.52:8000/api/categories/<category_id>/subcategories/)
 example : (http://192.168.1.52:8000/api/categories/26/subcategories/)
@@ -228,6 +605,383 @@ response :-
     {"id": 6, "name": "Drainage & Blockage Cleaning", "status": "active", "services_count": 3},
     {"id": 7, "name": "Basin & Sink Installation", "status": "active", "services_count": 2}
   ]
+}
+
+
+API for User Display Beauty Experience (Cards: Women vs Men)
+url : (http://192.168.1.52:8000/api/user/beauty/)
+method : GET
+response :-
+{
+  "status": "success",
+  "title": "Beauty & Wellness",
+  "subtitle": "Select Experience / Category",
+  "experiences": [
+    {
+      "id": "womens_salon_spa",
+      "gender": "women",
+      "name": "Women's Salon & Spa",
+      "tagline": "At-Home Beauty or Book Top Luxury Parlours",
+      "rating": 4.91,
+      "reviews_count": "4.2M Reviews",
+      "badge": "15 Min Pro",
+      "starting_price": 349,
+      "formatted_price": "₹349",
+      "image": "http://192.168.1.52:8000/static/assets/beauty/women_photo.png",
+      "icon": "http://192.168.1.52:8000/static/assets/icons/womens_salon_spa.png",
+      "hero_title": "Women's Salon, Spa & Parlours",
+      "hero_desc": "Doorstep certified beauticians or guaranteed VIP slot at Bengaluru's top luxury salons.",
+      "modes": [
+        {
+          "id": "home",
+          "name": "1. Salon at Home",
+          "badge": "ALL SERVICES AVAILABLE",
+          "description": "Certified beautician visits your home • 100% sealed mono-kits",
+          "icon": "home",
+          "accent_color": "#ec4899"
+        },
+        {
+          "id": "parlour",
+          "name": "2. Premium Parlour Services",
+          "badge": "LUXURY SALON BRANDS",
+          "description": "Book visit at Lakmé Luxe, Enrich, BBlunt, Toni & Guy in your area",
+          "icon": "crown",
+          "accent_color": "#d97706"
+        }
+      ]
+    },
+    {
+      "id": "mens_salon_massage",
+      "gender": "men",
+      "name": "Men's Salon & Massage",
+      "tagline": "At-Home Grooming or Book Top Luxury Salons",
+      "rating": 4.87,
+      "reviews_count": "2.9M Reviews",
+      "badge": "15 Min Pro",
+      "starting_price": 249,
+      "formatted_price": "₹249",
+      "image": "http://192.168.1.52:8000/static/assets/beauty/men_photo.png",
+      "icon": "http://192.168.1.52:8000/static/assets/icons/mens_salon_massage.png",
+      "hero_title": "Men's Grooming, Massage & Barbershops",
+      "hero_desc": "Certified male barbers at home or royal grooming at Truefitt & Hill, Bounce and top lounges.",
+      "modes": [
+        {
+          "id": "home",
+          "name": "1. Grooming & Massage at Home",
+          "badge": "ALL SERVICES AVAILABLE",
+          "description": "Certified male stylist visits your home • Single-use sterilized tools & vacuum",
+          "icon": "home",
+          "accent_color": "#0284c7"
+        },
+        {
+          "id": "parlour",
+          "name": "2. Premium Barbershop & Lounge",
+          "badge": "LUXURY BARBERSHOPS",
+          "description": "Book visit at Truefitt & Hill, Bounce, Toni & Guy Men, The Man Company",
+          "icon": "crown",
+          "accent_color": "#d97706"
+        }
+      ]
+    }
+  ]
+}
+
+
+API for User Display Beauty Services (At-Home Subcategories & Services)
+url : (http://192.168.1.52:8000/api/user/beauty/services/)
+method : GET
+params :-
+gender: women (options: women / men)
+delivery_mode: home (options: home / parlour)
+response :-
+{
+  "status": "success",
+  "category_id": 37,
+  "category_name": "Beauty",
+  "gender": "women",
+  "hub": "womens_salon_spa",
+  "hub_name": "Women's Salon & Spa",
+  "mode": "home",
+  "mode_name": "Salon at Home",
+  "subcategories": [
+    {
+      "id": "sub_48",
+      "dbId": 48,
+      "name": "Facials & Cleanup",
+      "gender": "women",
+      "items": [
+        {
+          "id": "qs_41",
+          "dbId": 41,
+          "title": "O3+ Diamond Glow Facial & De-Tan",
+          "category": "Beauty",
+          "subcategory": "Facials & Cleanup",
+          "rating": "4.91",
+          "reviews": "120+ reviews",
+          "price": 899.0,
+          "originalPrice": 1168,
+          "time": "60 mins",
+          "duration": "60 mins",
+          "brand_name": "O3+ Professional",
+          "is_mono_pack": true,
+          "parlour_name": "",
+          "gender": "women",
+          "delivery_mode": "home",
+          "badge": "100% Sealed Mono-Pack",
+          "image": "http://192.168.1.52:8000/media/quick_services/facial.jpg",
+          "features": [
+            "100% Sealed Single-Dose Mono-Pack",
+            "Single-use disposable gown & cape",
+            "Sterilized instruments sealed in pouch"
+          ],
+          "packages": [
+            {
+              "name": "Express Glow",
+              "price": 899,
+              "duration": "45 mins",
+              "desc": "Cleansing, scrub and pack"
+            },
+            {
+              "name": "Royal Bridal Glow",
+              "price": 1499,
+              "duration": "75 mins",
+              "desc": "Full 7-step facial with gold serum"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "sub_49",
+      "dbId": 49,
+      "name": "Waxing & Hair Removal",
+      "gender": "women",
+      "items": []
+    },
+    {
+      "id": "sub_50",
+      "dbId": 50,
+      "name": "Pedicure & Manicure",
+      "gender": "women",
+      "items": []
+    },
+    {
+      "id": "sub_51",
+      "dbId": 51,
+      "name": "Hair Spa & Styling",
+      "gender": "women",
+      "items": []
+    }
+  ],
+  "all_services": [
+    {
+      "id": "qs_41",
+      "dbId": 41,
+      "title": "O3+ Diamond Glow Facial & De-Tan",
+      "category": "Beauty",
+      "subcategory": "Facials & Cleanup",
+      "rating": "4.91",
+      "reviews": "120+ reviews",
+      "price": 899.0,
+      "duration": "60 mins",
+      "brand_name": "O3+ Professional",
+      "is_mono_pack": true,
+      "image": "http://192.168.1.52:8000/media/quick_services/facial.jpg"
+    }
+  ],
+  "guarantee": "30-Day Money-Back & Free Re-work Guarantee",
+  "damage_cover": "Up to ₹10,000 Free Accidental Damage Cover"
+}
+
+
+API for User Display Beauty Luxury Parlours Directory
+url : (http://192.168.1.52:8000/api/user/beauty/parlours/)
+method : GET
+params :-
+gender: women (options: women / men)
+response :-
+{
+  "status": "success",
+  "gender": "women",
+  "hub": "womens_salon_spa",
+  "hub_name": "Women's Salon & Spa",
+  "mode": "parlour",
+  "mode_name": "Premium Parlour Services",
+  "guarantee": "Zero Waiting Time Guarantee • VIP Slot Reserved",
+  "count": 3,
+  "parlours": [
+    {
+      "id": "lakme_luxe",
+      "name": "Lakmé Salon Luxe",
+      "brandTag": "Runway Certified",
+      "tagline": "Runway Bridal Expertise & Moroccan Oil Hair Therapy",
+      "rating": "4.94 ★ (3,800+ reviews)",
+      "location": "100ft Road, Indiranagar",
+      "distance": "0.8 km away",
+      "timings": "10:00 AM - 09:00 PM",
+      "image": "https://images.unsplash.com/photo-1560066984-138dadb4c035?auto=format&fit=crop&w=700&q=80",
+      "highlights": [
+        "Lakmé Fashion Week Certified Stylists",
+        "Private VIP Bridal Lounge",
+        "Complimentary Gourmet Brewed Coffee"
+      ],
+      "starting_price": 1599,
+      "services_count": 4
+    },
+    {
+      "id": "enrich_salon",
+      "name": "Enrich Salon & Luxury Spa",
+      "brandTag": "Kerastase Paris",
+      "tagline": "Kerastase Hair Rituals, K-Glow Facials & BIAB Nails",
+      "rating": "4.91 ★ (2,450+ reviews)",
+      "location": "4th Block, Koramangala",
+      "distance": "1.4 km away",
+      "timings": "09:30 AM - 09:30 PM",
+      "image": "https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?auto=format&fit=crop&w=700&q=80",
+      "highlights": [
+        "Kerastase Certified Master Hair Diagnostics",
+        "Dermat-Grade Hydrafacial Suites",
+        "Premium Valet Parking"
+      ],
+      "starting_price": 1299,
+      "services_count": 3
+    }
+  ]
+}
+
+
+API for User Display Beauty Luxury Parlour Details (Services, Slots & Stylists)
+url : (http://192.168.1.52:8000/api/user/beauty/parlours/<parlour_id>/)
+method : GET
+params :-
+parlour_id: lakme_luxe (path parameter e.g. lakme_luxe / enrich_salon / truefitt_hill / bounce_salon)
+response :-
+{
+  "status": "success",
+  "hub": "womens_salon_spa",
+  "hub_name": "Women's Salon & Spa",
+  "parlour": {
+    "id": "lakme_luxe",
+    "name": "Lakmé Salon Luxe",
+    "brandTag": "Runway Certified",
+    "tagline": "Runway Bridal Expertise & Moroccan Oil Hair Therapy",
+    "rating": "4.94 ★ (3,800+ reviews)",
+    "location": "100ft Road, Indiranagar",
+    "distance": "0.8 km away",
+    "timings": "10:00 AM - 09:00 PM",
+    "image": "https://images.unsplash.com/photo-1560066984-138dadb4c035?auto=format&fit=crop&w=700&q=80",
+    "highlights": [
+      "Lakmé Fashion Week Certified Stylists",
+      "Private VIP Bridal Lounge",
+      "Complimentary Gourmet Brewed Coffee"
+    ],
+    "starting_price": 1599,
+    "services": [
+      {
+        "id": "lakme_moroccan_spa",
+        "title": "Moroccan Oil Hydration Hair Ritual & Blowout",
+        "category": "Hair Care",
+        "price": 1899,
+        "originalPrice": 2499,
+        "discount": "24% OFF",
+        "time": "60 mins",
+        "image": "https://images.unsplash.com/photo-1562322140-8baeececf3df?auto=format&fit=crop&w=500&q=80",
+        "desc": "Deep argan oil treatment infused with infrared heat to restore silkiness and mirror shine."
+      },
+      {
+        "id": "lakme_bridal_hd",
+        "title": "Runway HD Airbrush Bridal Transformation",
+        "category": "Bridal Studio",
+        "price": 8999,
+        "originalPrice": 12000,
+        "discount": "25% OFF",
+        "time": "3 Hours",
+        "image": "https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?auto=format&fit=crop&w=500&q=80",
+        "desc": "Complete pre-bridal skin prep, Temptu HD airbrush base, 3D lash installation, and designer saree draping."
+      }
+    ]
+  },
+  "stylist_tiers": [
+    {
+      "id": "Senior Stylist",
+      "name": "Senior Stylist",
+      "desc": "Certified Expert (Included)",
+      "extra_fee": 0
+    },
+    {
+      "id": "Art Director",
+      "name": "Master Art Director",
+      "desc": "+₹300 (Celebrity Stylist)",
+      "extra_fee": 300
+    }
+  ],
+  "available_dates": [
+    {"key": "Today", "label": "Today", "date": "17 Nov, Tue"},
+    {"key": "Tomorrow", "label": "Tomorrow", "date": "18 Nov, Wed"}
+  ],
+  "available_slots": [
+    "10:00 AM - 11:00 AM",
+    "11:30 AM - 12:30 PM",
+    "02:00 PM - 03:00 PM",
+    "04:30 PM - 05:30 PM",
+    "06:00 PM - 07:00 PM"
+  ],
+  "booking_terms": "Pay at Salon • Free Cancellation Anytime Before Scheduled Slot"
+}
+
+
+API for User Book Beauty Parlour Appointment / Instant VIP Pass
+url : (http://192.168.1.52:8000/api/beauty/book-appointment/)
+method : POST
+params :-
+parlour_id: lakme_luxe
+service_id: lakme_moroccan_spa
+slot_date: 2026-11-20
+slot_time: 02:00 PM - 03:00 PM
+stylist_tier: Senior Stylist (options: Senior Stylist / Art Director)
+customer_name: Ananya Verma
+customer_phone: 9876543210
+customer_email: ananya@example.com
+response :-
+{
+  "status": "success",
+  "message": "Appointment confirmed at Lakmé Salon Luxe! Pass #LUXE-4821",
+  "appointment": {
+    "pass_code": "LUXE-4821",
+    "booking_id": "BK-A91B2C3D",
+    "status": "CONFIRMED",
+    "hub": "womens_salon_spa",
+    "hub_name": "Women's Salon & Spa",
+    "parlour": {
+      "id": "lakme_luxe",
+      "name": "Lakmé Salon Luxe",
+      "brandTag": "Runway Certified",
+      "location": "100ft Road, Indiranagar",
+      "distance": "0.8 km away",
+      "timings": "10:00 AM - 09:00 PM"
+    },
+    "service": {
+      "id": "lakme_moroccan_spa",
+      "title": "Moroccan Oil Hydration Hair Ritual & Blowout",
+      "time": "60 mins",
+      "category": "Hair Care",
+      "price": 1899.0
+    },
+    "stylist_tier": "Senior Stylist",
+    "stylist_label": "Senior Stylist",
+    "slot_date": "2026-11-20",
+    "slot_time": "02:00 PM - 03:00 PM",
+    "customer_name": "Ananya Verma",
+    "customer_phone": "9876543210",
+    "payment_mode": "PAY_AT_SALON",
+    "total_amount": 1899.0,
+    "currency": "INR",
+    "instructions": [
+      "Present VIP Pass #LUXE-4821 at the reception of Lakmé Salon Luxe.",
+      "Zero waiting time guaranteed for your reserved time slot.",
+      "You can pay after treatment completion via UPI, Card, or Cash."
+    ]
+  }
 }
 
 
@@ -266,6 +1020,383 @@ response :-
       }
     }
   ]
+}
+
+
+API for User Display Beauty Experience (Cards: Women vs Men)
+url : (http://192.168.1.52:8000/api/user/beauty/)
+method : GET
+response :-
+{
+  "status": "success",
+  "title": "Beauty & Wellness",
+  "subtitle": "Select Experience / Category",
+  "experiences": [
+    {
+      "id": "womens_salon_spa",
+      "gender": "women",
+      "name": "Women's Salon & Spa",
+      "tagline": "At-Home Beauty or Book Top Luxury Parlours",
+      "rating": 4.91,
+      "reviews_count": "4.2M Reviews",
+      "badge": "15 Min Pro",
+      "starting_price": 349,
+      "formatted_price": "₹349",
+      "image": "http://192.168.1.52:8000/static/assets/beauty/women_photo.png",
+      "icon": "http://192.168.1.52:8000/static/assets/icons/womens_salon_spa.png",
+      "hero_title": "Women's Salon, Spa & Parlours",
+      "hero_desc": "Doorstep certified beauticians or guaranteed VIP slot at Bengaluru's top luxury salons.",
+      "modes": [
+        {
+          "id": "home",
+          "name": "1. Salon at Home",
+          "badge": "ALL SERVICES AVAILABLE",
+          "description": "Certified beautician visits your home • 100% sealed mono-kits",
+          "icon": "home",
+          "accent_color": "#ec4899"
+        },
+        {
+          "id": "parlour",
+          "name": "2. Premium Parlour Services",
+          "badge": "LUXURY SALON BRANDS",
+          "description": "Book visit at Lakmé Luxe, Enrich, BBlunt, Toni & Guy in your area",
+          "icon": "crown",
+          "accent_color": "#d97706"
+        }
+      ]
+    },
+    {
+      "id": "mens_salon_massage",
+      "gender": "men",
+      "name": "Men's Salon & Massage",
+      "tagline": "At-Home Grooming or Book Top Luxury Salons",
+      "rating": 4.87,
+      "reviews_count": "2.9M Reviews",
+      "badge": "15 Min Pro",
+      "starting_price": 249,
+      "formatted_price": "₹249",
+      "image": "http://192.168.1.52:8000/static/assets/beauty/men_photo.png",
+      "icon": "http://192.168.1.52:8000/static/assets/icons/mens_salon_massage.png",
+      "hero_title": "Men's Grooming, Massage & Barbershops",
+      "hero_desc": "Certified male barbers at home or royal grooming at Truefitt & Hill, Bounce and top lounges.",
+      "modes": [
+        {
+          "id": "home",
+          "name": "1. Grooming & Massage at Home",
+          "badge": "ALL SERVICES AVAILABLE",
+          "description": "Certified male stylist visits your home • Single-use sterilized tools & vacuum",
+          "icon": "home",
+          "accent_color": "#0284c7"
+        },
+        {
+          "id": "parlour",
+          "name": "2. Premium Barbershop & Lounge",
+          "badge": "LUXURY BARBERSHOPS",
+          "description": "Book visit at Truefitt & Hill, Bounce, Toni & Guy Men, The Man Company",
+          "icon": "crown",
+          "accent_color": "#d97706"
+        }
+      ]
+    }
+  ]
+}
+
+
+API for User Display Beauty Services (At-Home Subcategories & Services)
+url : (http://192.168.1.52:8000/api/user/beauty/services/)
+method : GET
+params :-
+gender: women (options: women / men)
+delivery_mode: home (options: home / parlour)
+response :-
+{
+  "status": "success",
+  "category_id": 37,
+  "category_name": "Beauty",
+  "gender": "women",
+  "hub": "womens_salon_spa",
+  "hub_name": "Women's Salon & Spa",
+  "mode": "home",
+  "mode_name": "Salon at Home",
+  "subcategories": [
+    {
+      "id": "sub_48",
+      "dbId": 48,
+      "name": "Facials & Cleanup",
+      "gender": "women",
+      "items": [
+        {
+          "id": "qs_41",
+          "dbId": 41,
+          "title": "O3+ Diamond Glow Facial & De-Tan",
+          "category": "Beauty",
+          "subcategory": "Facials & Cleanup",
+          "rating": "4.91",
+          "reviews": "120+ reviews",
+          "price": 899.0,
+          "originalPrice": 1168,
+          "time": "60 mins",
+          "duration": "60 mins",
+          "brand_name": "O3+ Professional",
+          "is_mono_pack": true,
+          "parlour_name": "",
+          "gender": "women",
+          "delivery_mode": "home",
+          "badge": "100% Sealed Mono-Pack",
+          "image": "http://192.168.1.52:8000/media/quick_services/facial.jpg",
+          "features": [
+            "100% Sealed Single-Dose Mono-Pack",
+            "Single-use disposable gown & cape",
+            "Sterilized instruments sealed in pouch"
+          ],
+          "packages": [
+            {
+              "name": "Express Glow",
+              "price": 899,
+              "duration": "45 mins",
+              "desc": "Cleansing, scrub and pack"
+            },
+            {
+              "name": "Royal Bridal Glow",
+              "price": 1499,
+              "duration": "75 mins",
+              "desc": "Full 7-step facial with gold serum"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "sub_49",
+      "dbId": 49,
+      "name": "Waxing & Hair Removal",
+      "gender": "women",
+      "items": []
+    },
+    {
+      "id": "sub_50",
+      "dbId": 50,
+      "name": "Pedicure & Manicure",
+      "gender": "women",
+      "items": []
+    },
+    {
+      "id": "sub_51",
+      "dbId": 51,
+      "name": "Hair Spa & Styling",
+      "gender": "women",
+      "items": []
+    }
+  ],
+  "all_services": [
+    {
+      "id": "qs_41",
+      "dbId": 41,
+      "title": "O3+ Diamond Glow Facial & De-Tan",
+      "category": "Beauty",
+      "subcategory": "Facials & Cleanup",
+      "rating": "4.91",
+      "reviews": "120+ reviews",
+      "price": 899.0,
+      "duration": "60 mins",
+      "brand_name": "O3+ Professional",
+      "is_mono_pack": true,
+      "image": "http://192.168.1.52:8000/media/quick_services/facial.jpg"
+    }
+  ],
+  "guarantee": "30-Day Money-Back & Free Re-work Guarantee",
+  "damage_cover": "Up to ₹10,000 Free Accidental Damage Cover"
+}
+
+
+API for User Display Beauty Luxury Parlours Directory
+url : (http://192.168.1.52:8000/api/user/beauty/parlours/)
+method : GET
+params :-
+gender: women (options: women / men)
+response :-
+{
+  "status": "success",
+  "gender": "women",
+  "hub": "womens_salon_spa",
+  "hub_name": "Women's Salon & Spa",
+  "mode": "parlour",
+  "mode_name": "Premium Parlour Services",
+  "guarantee": "Zero Waiting Time Guarantee • VIP Slot Reserved",
+  "count": 3,
+  "parlours": [
+    {
+      "id": "lakme_luxe",
+      "name": "Lakmé Salon Luxe",
+      "brandTag": "Runway Certified",
+      "tagline": "Runway Bridal Expertise & Moroccan Oil Hair Therapy",
+      "rating": "4.94 ★ (3,800+ reviews)",
+      "location": "100ft Road, Indiranagar",
+      "distance": "0.8 km away",
+      "timings": "10:00 AM - 09:00 PM",
+      "image": "https://images.unsplash.com/photo-1560066984-138dadb4c035?auto=format&fit=crop&w=700&q=80",
+      "highlights": [
+        "Lakmé Fashion Week Certified Stylists",
+        "Private VIP Bridal Lounge",
+        "Complimentary Gourmet Brewed Coffee"
+      ],
+      "starting_price": 1599,
+      "services_count": 4
+    },
+    {
+      "id": "enrich_salon",
+      "name": "Enrich Salon & Luxury Spa",
+      "brandTag": "Kerastase Paris",
+      "tagline": "Kerastase Hair Rituals, K-Glow Facials & BIAB Nails",
+      "rating": "4.91 ★ (2,450+ reviews)",
+      "location": "4th Block, Koramangala",
+      "distance": "1.4 km away",
+      "timings": "09:30 AM - 09:30 PM",
+      "image": "https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?auto=format&fit=crop&w=700&q=80",
+      "highlights": [
+        "Kerastase Certified Master Hair Diagnostics",
+        "Dermat-Grade Hydrafacial Suites",
+        "Premium Valet Parking"
+      ],
+      "starting_price": 1299,
+      "services_count": 3
+    }
+  ]
+}
+
+
+API for User Display Beauty Luxury Parlour Details (Services, Slots & Stylists)
+url : (http://192.168.1.52:8000/api/user/beauty/parlours/<parlour_id>/)
+method : GET
+params :-
+parlour_id: lakme_luxe (path parameter e.g. lakme_luxe / enrich_salon / truefitt_hill / bounce_salon)
+response :-
+{
+  "status": "success",
+  "hub": "womens_salon_spa",
+  "hub_name": "Women's Salon & Spa",
+  "parlour": {
+    "id": "lakme_luxe",
+    "name": "Lakmé Salon Luxe",
+    "brandTag": "Runway Certified",
+    "tagline": "Runway Bridal Expertise & Moroccan Oil Hair Therapy",
+    "rating": "4.94 ★ (3,800+ reviews)",
+    "location": "100ft Road, Indiranagar",
+    "distance": "0.8 km away",
+    "timings": "10:00 AM - 09:00 PM",
+    "image": "https://images.unsplash.com/photo-1560066984-138dadb4c035?auto=format&fit=crop&w=700&q=80",
+    "highlights": [
+      "Lakmé Fashion Week Certified Stylists",
+      "Private VIP Bridal Lounge",
+      "Complimentary Gourmet Brewed Coffee"
+    ],
+    "starting_price": 1599,
+    "services": [
+      {
+        "id": "lakme_moroccan_spa",
+        "title": "Moroccan Oil Hydration Hair Ritual & Blowout",
+        "category": "Hair Care",
+        "price": 1899,
+        "originalPrice": 2499,
+        "discount": "24% OFF",
+        "time": "60 mins",
+        "image": "https://images.unsplash.com/photo-1562322140-8baeececf3df?auto=format&fit=crop&w=500&q=80",
+        "desc": "Deep argan oil treatment infused with infrared heat to restore silkiness and mirror shine."
+      },
+      {
+        "id": "lakme_bridal_hd",
+        "title": "Runway HD Airbrush Bridal Transformation",
+        "category": "Bridal Studio",
+        "price": 8999,
+        "originalPrice": 12000,
+        "discount": "25% OFF",
+        "time": "3 Hours",
+        "image": "https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?auto=format&fit=crop&w=500&q=80",
+        "desc": "Complete pre-bridal skin prep, Temptu HD airbrush base, 3D lash installation, and designer saree draping."
+      }
+    ]
+  },
+  "stylist_tiers": [
+    {
+      "id": "Senior Stylist",
+      "name": "Senior Stylist",
+      "desc": "Certified Expert (Included)",
+      "extra_fee": 0
+    },
+    {
+      "id": "Art Director",
+      "name": "Master Art Director",
+      "desc": "+₹300 (Celebrity Stylist)",
+      "extra_fee": 300
+    }
+  ],
+  "available_dates": [
+    {"key": "Today", "label": "Today", "date": "17 Nov, Tue"},
+    {"key": "Tomorrow", "label": "Tomorrow", "date": "18 Nov, Wed"}
+  ],
+  "available_slots": [
+    "10:00 AM - 11:00 AM",
+    "11:30 AM - 12:30 PM",
+    "02:00 PM - 03:00 PM",
+    "04:30 PM - 05:30 PM",
+    "06:00 PM - 07:00 PM"
+  ],
+  "booking_terms": "Pay at Salon • Free Cancellation Anytime Before Scheduled Slot"
+}
+
+
+API for User Book Beauty Parlour Appointment / Instant VIP Pass
+url : (http://192.168.1.52:8000/api/beauty/book-appointment/)
+method : POST
+params :-
+parlour_id: lakme_luxe
+service_id: lakme_moroccan_spa
+slot_date: 2026-11-20
+slot_time: 02:00 PM - 03:00 PM
+stylist_tier: Senior Stylist (options: Senior Stylist / Art Director)
+customer_name: Ananya Verma
+customer_phone: 9876543210
+customer_email: ananya@example.com
+response :-
+{
+  "status": "success",
+  "message": "Appointment confirmed at Lakmé Salon Luxe! Pass #LUXE-4821",
+  "appointment": {
+    "pass_code": "LUXE-4821",
+    "booking_id": "BK-A91B2C3D",
+    "status": "CONFIRMED",
+    "hub": "womens_salon_spa",
+    "hub_name": "Women's Salon & Spa",
+    "parlour": {
+      "id": "lakme_luxe",
+      "name": "Lakmé Salon Luxe",
+      "brandTag": "Runway Certified",
+      "location": "100ft Road, Indiranagar",
+      "distance": "0.8 km away",
+      "timings": "10:00 AM - 09:00 PM"
+    },
+    "service": {
+      "id": "lakme_moroccan_spa",
+      "title": "Moroccan Oil Hydration Hair Ritual & Blowout",
+      "time": "60 mins",
+      "category": "Hair Care",
+      "price": 1899.0
+    },
+    "stylist_tier": "Senior Stylist",
+    "stylist_label": "Senior Stylist",
+    "slot_date": "2026-11-20",
+    "slot_time": "02:00 PM - 03:00 PM",
+    "customer_name": "Ananya Verma",
+    "customer_phone": "9876543210",
+    "payment_mode": "PAY_AT_SALON",
+    "total_amount": 1899.0,
+    "currency": "INR",
+    "instructions": [
+      "Present VIP Pass #LUXE-4821 at the reception of Lakmé Salon Luxe.",
+      "Zero waiting time guaranteed for your reserved time slot.",
+      "You can pay after treatment completion via UPI, Card, or Cash."
+    ]
+  }
 }
 
 
@@ -397,6 +1528,383 @@ response :-
 }
 
 
+API for User Display Beauty Experience (Cards: Women vs Men)
+url : (http://192.168.1.52:8000/api/user/beauty/)
+method : GET
+response :-
+{
+  "status": "success",
+  "title": "Beauty & Wellness",
+  "subtitle": "Select Experience / Category",
+  "experiences": [
+    {
+      "id": "womens_salon_spa",
+      "gender": "women",
+      "name": "Women's Salon & Spa",
+      "tagline": "At-Home Beauty or Book Top Luxury Parlours",
+      "rating": 4.91,
+      "reviews_count": "4.2M Reviews",
+      "badge": "15 Min Pro",
+      "starting_price": 349,
+      "formatted_price": "₹349",
+      "image": "http://192.168.1.52:8000/static/assets/beauty/women_photo.png",
+      "icon": "http://192.168.1.52:8000/static/assets/icons/womens_salon_spa.png",
+      "hero_title": "Women's Salon, Spa & Parlours",
+      "hero_desc": "Doorstep certified beauticians or guaranteed VIP slot at Bengaluru's top luxury salons.",
+      "modes": [
+        {
+          "id": "home",
+          "name": "1. Salon at Home",
+          "badge": "ALL SERVICES AVAILABLE",
+          "description": "Certified beautician visits your home • 100% sealed mono-kits",
+          "icon": "home",
+          "accent_color": "#ec4899"
+        },
+        {
+          "id": "parlour",
+          "name": "2. Premium Parlour Services",
+          "badge": "LUXURY SALON BRANDS",
+          "description": "Book visit at Lakmé Luxe, Enrich, BBlunt, Toni & Guy in your area",
+          "icon": "crown",
+          "accent_color": "#d97706"
+        }
+      ]
+    },
+    {
+      "id": "mens_salon_massage",
+      "gender": "men",
+      "name": "Men's Salon & Massage",
+      "tagline": "At-Home Grooming or Book Top Luxury Salons",
+      "rating": 4.87,
+      "reviews_count": "2.9M Reviews",
+      "badge": "15 Min Pro",
+      "starting_price": 249,
+      "formatted_price": "₹249",
+      "image": "http://192.168.1.52:8000/static/assets/beauty/men_photo.png",
+      "icon": "http://192.168.1.52:8000/static/assets/icons/mens_salon_massage.png",
+      "hero_title": "Men's Grooming, Massage & Barbershops",
+      "hero_desc": "Certified male barbers at home or royal grooming at Truefitt & Hill, Bounce and top lounges.",
+      "modes": [
+        {
+          "id": "home",
+          "name": "1. Grooming & Massage at Home",
+          "badge": "ALL SERVICES AVAILABLE",
+          "description": "Certified male stylist visits your home • Single-use sterilized tools & vacuum",
+          "icon": "home",
+          "accent_color": "#0284c7"
+        },
+        {
+          "id": "parlour",
+          "name": "2. Premium Barbershop & Lounge",
+          "badge": "LUXURY BARBERSHOPS",
+          "description": "Book visit at Truefitt & Hill, Bounce, Toni & Guy Men, The Man Company",
+          "icon": "crown",
+          "accent_color": "#d97706"
+        }
+      ]
+    }
+  ]
+}
+
+
+API for User Display Beauty Services (At-Home Subcategories & Services)
+url : (http://192.168.1.52:8000/api/user/beauty/services/)
+method : GET
+params :-
+gender: women (options: women / men)
+delivery_mode: home (options: home / parlour)
+response :-
+{
+  "status": "success",
+  "category_id": 37,
+  "category_name": "Beauty",
+  "gender": "women",
+  "hub": "womens_salon_spa",
+  "hub_name": "Women's Salon & Spa",
+  "mode": "home",
+  "mode_name": "Salon at Home",
+  "subcategories": [
+    {
+      "id": "sub_48",
+      "dbId": 48,
+      "name": "Facials & Cleanup",
+      "gender": "women",
+      "items": [
+        {
+          "id": "qs_41",
+          "dbId": 41,
+          "title": "O3+ Diamond Glow Facial & De-Tan",
+          "category": "Beauty",
+          "subcategory": "Facials & Cleanup",
+          "rating": "4.91",
+          "reviews": "120+ reviews",
+          "price": 899.0,
+          "originalPrice": 1168,
+          "time": "60 mins",
+          "duration": "60 mins",
+          "brand_name": "O3+ Professional",
+          "is_mono_pack": true,
+          "parlour_name": "",
+          "gender": "women",
+          "delivery_mode": "home",
+          "badge": "100% Sealed Mono-Pack",
+          "image": "http://192.168.1.52:8000/media/quick_services/facial.jpg",
+          "features": [
+            "100% Sealed Single-Dose Mono-Pack",
+            "Single-use disposable gown & cape",
+            "Sterilized instruments sealed in pouch"
+          ],
+          "packages": [
+            {
+              "name": "Express Glow",
+              "price": 899,
+              "duration": "45 mins",
+              "desc": "Cleansing, scrub and pack"
+            },
+            {
+              "name": "Royal Bridal Glow",
+              "price": 1499,
+              "duration": "75 mins",
+              "desc": "Full 7-step facial with gold serum"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "sub_49",
+      "dbId": 49,
+      "name": "Waxing & Hair Removal",
+      "gender": "women",
+      "items": []
+    },
+    {
+      "id": "sub_50",
+      "dbId": 50,
+      "name": "Pedicure & Manicure",
+      "gender": "women",
+      "items": []
+    },
+    {
+      "id": "sub_51",
+      "dbId": 51,
+      "name": "Hair Spa & Styling",
+      "gender": "women",
+      "items": []
+    }
+  ],
+  "all_services": [
+    {
+      "id": "qs_41",
+      "dbId": 41,
+      "title": "O3+ Diamond Glow Facial & De-Tan",
+      "category": "Beauty",
+      "subcategory": "Facials & Cleanup",
+      "rating": "4.91",
+      "reviews": "120+ reviews",
+      "price": 899.0,
+      "duration": "60 mins",
+      "brand_name": "O3+ Professional",
+      "is_mono_pack": true,
+      "image": "http://192.168.1.52:8000/media/quick_services/facial.jpg"
+    }
+  ],
+  "guarantee": "30-Day Money-Back & Free Re-work Guarantee",
+  "damage_cover": "Up to ₹10,000 Free Accidental Damage Cover"
+}
+
+
+API for User Display Beauty Luxury Parlours Directory
+url : (http://192.168.1.52:8000/api/user/beauty/parlours/)
+method : GET
+params :-
+gender: women (options: women / men)
+response :-
+{
+  "status": "success",
+  "gender": "women",
+  "hub": "womens_salon_spa",
+  "hub_name": "Women's Salon & Spa",
+  "mode": "parlour",
+  "mode_name": "Premium Parlour Services",
+  "guarantee": "Zero Waiting Time Guarantee • VIP Slot Reserved",
+  "count": 3,
+  "parlours": [
+    {
+      "id": "lakme_luxe",
+      "name": "Lakmé Salon Luxe",
+      "brandTag": "Runway Certified",
+      "tagline": "Runway Bridal Expertise & Moroccan Oil Hair Therapy",
+      "rating": "4.94 ★ (3,800+ reviews)",
+      "location": "100ft Road, Indiranagar",
+      "distance": "0.8 km away",
+      "timings": "10:00 AM - 09:00 PM",
+      "image": "https://images.unsplash.com/photo-1560066984-138dadb4c035?auto=format&fit=crop&w=700&q=80",
+      "highlights": [
+        "Lakmé Fashion Week Certified Stylists",
+        "Private VIP Bridal Lounge",
+        "Complimentary Gourmet Brewed Coffee"
+      ],
+      "starting_price": 1599,
+      "services_count": 4
+    },
+    {
+      "id": "enrich_salon",
+      "name": "Enrich Salon & Luxury Spa",
+      "brandTag": "Kerastase Paris",
+      "tagline": "Kerastase Hair Rituals, K-Glow Facials & BIAB Nails",
+      "rating": "4.91 ★ (2,450+ reviews)",
+      "location": "4th Block, Koramangala",
+      "distance": "1.4 km away",
+      "timings": "09:30 AM - 09:30 PM",
+      "image": "https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?auto=format&fit=crop&w=700&q=80",
+      "highlights": [
+        "Kerastase Certified Master Hair Diagnostics",
+        "Dermat-Grade Hydrafacial Suites",
+        "Premium Valet Parking"
+      ],
+      "starting_price": 1299,
+      "services_count": 3
+    }
+  ]
+}
+
+
+API for User Display Beauty Luxury Parlour Details (Services, Slots & Stylists)
+url : (http://192.168.1.52:8000/api/user/beauty/parlours/<parlour_id>/)
+method : GET
+params :-
+parlour_id: lakme_luxe (path parameter e.g. lakme_luxe / enrich_salon / truefitt_hill / bounce_salon)
+response :-
+{
+  "status": "success",
+  "hub": "womens_salon_spa",
+  "hub_name": "Women's Salon & Spa",
+  "parlour": {
+    "id": "lakme_luxe",
+    "name": "Lakmé Salon Luxe",
+    "brandTag": "Runway Certified",
+    "tagline": "Runway Bridal Expertise & Moroccan Oil Hair Therapy",
+    "rating": "4.94 ★ (3,800+ reviews)",
+    "location": "100ft Road, Indiranagar",
+    "distance": "0.8 km away",
+    "timings": "10:00 AM - 09:00 PM",
+    "image": "https://images.unsplash.com/photo-1560066984-138dadb4c035?auto=format&fit=crop&w=700&q=80",
+    "highlights": [
+      "Lakmé Fashion Week Certified Stylists",
+      "Private VIP Bridal Lounge",
+      "Complimentary Gourmet Brewed Coffee"
+    ],
+    "starting_price": 1599,
+    "services": [
+      {
+        "id": "lakme_moroccan_spa",
+        "title": "Moroccan Oil Hydration Hair Ritual & Blowout",
+        "category": "Hair Care",
+        "price": 1899,
+        "originalPrice": 2499,
+        "discount": "24% OFF",
+        "time": "60 mins",
+        "image": "https://images.unsplash.com/photo-1562322140-8baeececf3df?auto=format&fit=crop&w=500&q=80",
+        "desc": "Deep argan oil treatment infused with infrared heat to restore silkiness and mirror shine."
+      },
+      {
+        "id": "lakme_bridal_hd",
+        "title": "Runway HD Airbrush Bridal Transformation",
+        "category": "Bridal Studio",
+        "price": 8999,
+        "originalPrice": 12000,
+        "discount": "25% OFF",
+        "time": "3 Hours",
+        "image": "https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?auto=format&fit=crop&w=500&q=80",
+        "desc": "Complete pre-bridal skin prep, Temptu HD airbrush base, 3D lash installation, and designer saree draping."
+      }
+    ]
+  },
+  "stylist_tiers": [
+    {
+      "id": "Senior Stylist",
+      "name": "Senior Stylist",
+      "desc": "Certified Expert (Included)",
+      "extra_fee": 0
+    },
+    {
+      "id": "Art Director",
+      "name": "Master Art Director",
+      "desc": "+₹300 (Celebrity Stylist)",
+      "extra_fee": 300
+    }
+  ],
+  "available_dates": [
+    {"key": "Today", "label": "Today", "date": "17 Nov, Tue"},
+    {"key": "Tomorrow", "label": "Tomorrow", "date": "18 Nov, Wed"}
+  ],
+  "available_slots": [
+    "10:00 AM - 11:00 AM",
+    "11:30 AM - 12:30 PM",
+    "02:00 PM - 03:00 PM",
+    "04:30 PM - 05:30 PM",
+    "06:00 PM - 07:00 PM"
+  ],
+  "booking_terms": "Pay at Salon • Free Cancellation Anytime Before Scheduled Slot"
+}
+
+
+API for User Book Beauty Parlour Appointment / Instant VIP Pass
+url : (http://192.168.1.52:8000/api/beauty/book-appointment/)
+method : POST
+params :-
+parlour_id: lakme_luxe
+service_id: lakme_moroccan_spa
+slot_date: 2026-11-20
+slot_time: 02:00 PM - 03:00 PM
+stylist_tier: Senior Stylist (options: Senior Stylist / Art Director)
+customer_name: Ananya Verma
+customer_phone: 9876543210
+customer_email: ananya@example.com
+response :-
+{
+  "status": "success",
+  "message": "Appointment confirmed at Lakmé Salon Luxe! Pass #LUXE-4821",
+  "appointment": {
+    "pass_code": "LUXE-4821",
+    "booking_id": "BK-A91B2C3D",
+    "status": "CONFIRMED",
+    "hub": "womens_salon_spa",
+    "hub_name": "Women's Salon & Spa",
+    "parlour": {
+      "id": "lakme_luxe",
+      "name": "Lakmé Salon Luxe",
+      "brandTag": "Runway Certified",
+      "location": "100ft Road, Indiranagar",
+      "distance": "0.8 km away",
+      "timings": "10:00 AM - 09:00 PM"
+    },
+    "service": {
+      "id": "lakme_moroccan_spa",
+      "title": "Moroccan Oil Hydration Hair Ritual & Blowout",
+      "time": "60 mins",
+      "category": "Hair Care",
+      "price": 1899.0
+    },
+    "stylist_tier": "Senior Stylist",
+    "stylist_label": "Senior Stylist",
+    "slot_date": "2026-11-20",
+    "slot_time": "02:00 PM - 03:00 PM",
+    "customer_name": "Ananya Verma",
+    "customer_phone": "9876543210",
+    "payment_mode": "PAY_AT_SALON",
+    "total_amount": 1899.0,
+    "currency": "INR",
+    "instructions": [
+      "Present VIP Pass #LUXE-4821 at the reception of Lakmé Salon Luxe.",
+      "Zero waiting time guaranteed for your reserved time slot.",
+      "You can pay after treatment completion via UPI, Card, or Cash."
+    ]
+  }
+}
+
+
 API for User Book a Quick Service (15-Min Doorstep Service)
 url : (http://192.168.1.52:8000/api/user/services/book/)
 method : POST
@@ -512,6 +2020,383 @@ response :-
 }
 
 
+API for User Display Beauty Experience (Cards: Women vs Men)
+url : (http://192.168.1.52:8000/api/user/beauty/)
+method : GET
+response :-
+{
+  "status": "success",
+  "title": "Beauty & Wellness",
+  "subtitle": "Select Experience / Category",
+  "experiences": [
+    {
+      "id": "womens_salon_spa",
+      "gender": "women",
+      "name": "Women's Salon & Spa",
+      "tagline": "At-Home Beauty or Book Top Luxury Parlours",
+      "rating": 4.91,
+      "reviews_count": "4.2M Reviews",
+      "badge": "15 Min Pro",
+      "starting_price": 349,
+      "formatted_price": "₹349",
+      "image": "http://192.168.1.52:8000/static/assets/beauty/women_photo.png",
+      "icon": "http://192.168.1.52:8000/static/assets/icons/womens_salon_spa.png",
+      "hero_title": "Women's Salon, Spa & Parlours",
+      "hero_desc": "Doorstep certified beauticians or guaranteed VIP slot at Bengaluru's top luxury salons.",
+      "modes": [
+        {
+          "id": "home",
+          "name": "1. Salon at Home",
+          "badge": "ALL SERVICES AVAILABLE",
+          "description": "Certified beautician visits your home • 100% sealed mono-kits",
+          "icon": "home",
+          "accent_color": "#ec4899"
+        },
+        {
+          "id": "parlour",
+          "name": "2. Premium Parlour Services",
+          "badge": "LUXURY SALON BRANDS",
+          "description": "Book visit at Lakmé Luxe, Enrich, BBlunt, Toni & Guy in your area",
+          "icon": "crown",
+          "accent_color": "#d97706"
+        }
+      ]
+    },
+    {
+      "id": "mens_salon_massage",
+      "gender": "men",
+      "name": "Men's Salon & Massage",
+      "tagline": "At-Home Grooming or Book Top Luxury Salons",
+      "rating": 4.87,
+      "reviews_count": "2.9M Reviews",
+      "badge": "15 Min Pro",
+      "starting_price": 249,
+      "formatted_price": "₹249",
+      "image": "http://192.168.1.52:8000/static/assets/beauty/men_photo.png",
+      "icon": "http://192.168.1.52:8000/static/assets/icons/mens_salon_massage.png",
+      "hero_title": "Men's Grooming, Massage & Barbershops",
+      "hero_desc": "Certified male barbers at home or royal grooming at Truefitt & Hill, Bounce and top lounges.",
+      "modes": [
+        {
+          "id": "home",
+          "name": "1. Grooming & Massage at Home",
+          "badge": "ALL SERVICES AVAILABLE",
+          "description": "Certified male stylist visits your home • Single-use sterilized tools & vacuum",
+          "icon": "home",
+          "accent_color": "#0284c7"
+        },
+        {
+          "id": "parlour",
+          "name": "2. Premium Barbershop & Lounge",
+          "badge": "LUXURY BARBERSHOPS",
+          "description": "Book visit at Truefitt & Hill, Bounce, Toni & Guy Men, The Man Company",
+          "icon": "crown",
+          "accent_color": "#d97706"
+        }
+      ]
+    }
+  ]
+}
+
+
+API for User Display Beauty Services (At-Home Subcategories & Services)
+url : (http://192.168.1.52:8000/api/user/beauty/services/)
+method : GET
+params :-
+gender: women (options: women / men)
+delivery_mode: home (options: home / parlour)
+response :-
+{
+  "status": "success",
+  "category_id": 37,
+  "category_name": "Beauty",
+  "gender": "women",
+  "hub": "womens_salon_spa",
+  "hub_name": "Women's Salon & Spa",
+  "mode": "home",
+  "mode_name": "Salon at Home",
+  "subcategories": [
+    {
+      "id": "sub_48",
+      "dbId": 48,
+      "name": "Facials & Cleanup",
+      "gender": "women",
+      "items": [
+        {
+          "id": "qs_41",
+          "dbId": 41,
+          "title": "O3+ Diamond Glow Facial & De-Tan",
+          "category": "Beauty",
+          "subcategory": "Facials & Cleanup",
+          "rating": "4.91",
+          "reviews": "120+ reviews",
+          "price": 899.0,
+          "originalPrice": 1168,
+          "time": "60 mins",
+          "duration": "60 mins",
+          "brand_name": "O3+ Professional",
+          "is_mono_pack": true,
+          "parlour_name": "",
+          "gender": "women",
+          "delivery_mode": "home",
+          "badge": "100% Sealed Mono-Pack",
+          "image": "http://192.168.1.52:8000/media/quick_services/facial.jpg",
+          "features": [
+            "100% Sealed Single-Dose Mono-Pack",
+            "Single-use disposable gown & cape",
+            "Sterilized instruments sealed in pouch"
+          ],
+          "packages": [
+            {
+              "name": "Express Glow",
+              "price": 899,
+              "duration": "45 mins",
+              "desc": "Cleansing, scrub and pack"
+            },
+            {
+              "name": "Royal Bridal Glow",
+              "price": 1499,
+              "duration": "75 mins",
+              "desc": "Full 7-step facial with gold serum"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "sub_49",
+      "dbId": 49,
+      "name": "Waxing & Hair Removal",
+      "gender": "women",
+      "items": []
+    },
+    {
+      "id": "sub_50",
+      "dbId": 50,
+      "name": "Pedicure & Manicure",
+      "gender": "women",
+      "items": []
+    },
+    {
+      "id": "sub_51",
+      "dbId": 51,
+      "name": "Hair Spa & Styling",
+      "gender": "women",
+      "items": []
+    }
+  ],
+  "all_services": [
+    {
+      "id": "qs_41",
+      "dbId": 41,
+      "title": "O3+ Diamond Glow Facial & De-Tan",
+      "category": "Beauty",
+      "subcategory": "Facials & Cleanup",
+      "rating": "4.91",
+      "reviews": "120+ reviews",
+      "price": 899.0,
+      "duration": "60 mins",
+      "brand_name": "O3+ Professional",
+      "is_mono_pack": true,
+      "image": "http://192.168.1.52:8000/media/quick_services/facial.jpg"
+    }
+  ],
+  "guarantee": "30-Day Money-Back & Free Re-work Guarantee",
+  "damage_cover": "Up to ₹10,000 Free Accidental Damage Cover"
+}
+
+
+API for User Display Beauty Luxury Parlours Directory
+url : (http://192.168.1.52:8000/api/user/beauty/parlours/)
+method : GET
+params :-
+gender: women (options: women / men)
+response :-
+{
+  "status": "success",
+  "gender": "women",
+  "hub": "womens_salon_spa",
+  "hub_name": "Women's Salon & Spa",
+  "mode": "parlour",
+  "mode_name": "Premium Parlour Services",
+  "guarantee": "Zero Waiting Time Guarantee • VIP Slot Reserved",
+  "count": 3,
+  "parlours": [
+    {
+      "id": "lakme_luxe",
+      "name": "Lakmé Salon Luxe",
+      "brandTag": "Runway Certified",
+      "tagline": "Runway Bridal Expertise & Moroccan Oil Hair Therapy",
+      "rating": "4.94 ★ (3,800+ reviews)",
+      "location": "100ft Road, Indiranagar",
+      "distance": "0.8 km away",
+      "timings": "10:00 AM - 09:00 PM",
+      "image": "https://images.unsplash.com/photo-1560066984-138dadb4c035?auto=format&fit=crop&w=700&q=80",
+      "highlights": [
+        "Lakmé Fashion Week Certified Stylists",
+        "Private VIP Bridal Lounge",
+        "Complimentary Gourmet Brewed Coffee"
+      ],
+      "starting_price": 1599,
+      "services_count": 4
+    },
+    {
+      "id": "enrich_salon",
+      "name": "Enrich Salon & Luxury Spa",
+      "brandTag": "Kerastase Paris",
+      "tagline": "Kerastase Hair Rituals, K-Glow Facials & BIAB Nails",
+      "rating": "4.91 ★ (2,450+ reviews)",
+      "location": "4th Block, Koramangala",
+      "distance": "1.4 km away",
+      "timings": "09:30 AM - 09:30 PM",
+      "image": "https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?auto=format&fit=crop&w=700&q=80",
+      "highlights": [
+        "Kerastase Certified Master Hair Diagnostics",
+        "Dermat-Grade Hydrafacial Suites",
+        "Premium Valet Parking"
+      ],
+      "starting_price": 1299,
+      "services_count": 3
+    }
+  ]
+}
+
+
+API for User Display Beauty Luxury Parlour Details (Services, Slots & Stylists)
+url : (http://192.168.1.52:8000/api/user/beauty/parlours/<parlour_id>/)
+method : GET
+params :-
+parlour_id: lakme_luxe (path parameter e.g. lakme_luxe / enrich_salon / truefitt_hill / bounce_salon)
+response :-
+{
+  "status": "success",
+  "hub": "womens_salon_spa",
+  "hub_name": "Women's Salon & Spa",
+  "parlour": {
+    "id": "lakme_luxe",
+    "name": "Lakmé Salon Luxe",
+    "brandTag": "Runway Certified",
+    "tagline": "Runway Bridal Expertise & Moroccan Oil Hair Therapy",
+    "rating": "4.94 ★ (3,800+ reviews)",
+    "location": "100ft Road, Indiranagar",
+    "distance": "0.8 km away",
+    "timings": "10:00 AM - 09:00 PM",
+    "image": "https://images.unsplash.com/photo-1560066984-138dadb4c035?auto=format&fit=crop&w=700&q=80",
+    "highlights": [
+      "Lakmé Fashion Week Certified Stylists",
+      "Private VIP Bridal Lounge",
+      "Complimentary Gourmet Brewed Coffee"
+    ],
+    "starting_price": 1599,
+    "services": [
+      {
+        "id": "lakme_moroccan_spa",
+        "title": "Moroccan Oil Hydration Hair Ritual & Blowout",
+        "category": "Hair Care",
+        "price": 1899,
+        "originalPrice": 2499,
+        "discount": "24% OFF",
+        "time": "60 mins",
+        "image": "https://images.unsplash.com/photo-1562322140-8baeececf3df?auto=format&fit=crop&w=500&q=80",
+        "desc": "Deep argan oil treatment infused with infrared heat to restore silkiness and mirror shine."
+      },
+      {
+        "id": "lakme_bridal_hd",
+        "title": "Runway HD Airbrush Bridal Transformation",
+        "category": "Bridal Studio",
+        "price": 8999,
+        "originalPrice": 12000,
+        "discount": "25% OFF",
+        "time": "3 Hours",
+        "image": "https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?auto=format&fit=crop&w=500&q=80",
+        "desc": "Complete pre-bridal skin prep, Temptu HD airbrush base, 3D lash installation, and designer saree draping."
+      }
+    ]
+  },
+  "stylist_tiers": [
+    {
+      "id": "Senior Stylist",
+      "name": "Senior Stylist",
+      "desc": "Certified Expert (Included)",
+      "extra_fee": 0
+    },
+    {
+      "id": "Art Director",
+      "name": "Master Art Director",
+      "desc": "+₹300 (Celebrity Stylist)",
+      "extra_fee": 300
+    }
+  ],
+  "available_dates": [
+    {"key": "Today", "label": "Today", "date": "17 Nov, Tue"},
+    {"key": "Tomorrow", "label": "Tomorrow", "date": "18 Nov, Wed"}
+  ],
+  "available_slots": [
+    "10:00 AM - 11:00 AM",
+    "11:30 AM - 12:30 PM",
+    "02:00 PM - 03:00 PM",
+    "04:30 PM - 05:30 PM",
+    "06:00 PM - 07:00 PM"
+  ],
+  "booking_terms": "Pay at Salon • Free Cancellation Anytime Before Scheduled Slot"
+}
+
+
+API for User Book Beauty Parlour Appointment / Instant VIP Pass
+url : (http://192.168.1.52:8000/api/beauty/book-appointment/)
+method : POST
+params :-
+parlour_id: lakme_luxe
+service_id: lakme_moroccan_spa
+slot_date: 2026-11-20
+slot_time: 02:00 PM - 03:00 PM
+stylist_tier: Senior Stylist (options: Senior Stylist / Art Director)
+customer_name: Ananya Verma
+customer_phone: 9876543210
+customer_email: ananya@example.com
+response :-
+{
+  "status": "success",
+  "message": "Appointment confirmed at Lakmé Salon Luxe! Pass #LUXE-4821",
+  "appointment": {
+    "pass_code": "LUXE-4821",
+    "booking_id": "BK-A91B2C3D",
+    "status": "CONFIRMED",
+    "hub": "womens_salon_spa",
+    "hub_name": "Women's Salon & Spa",
+    "parlour": {
+      "id": "lakme_luxe",
+      "name": "Lakmé Salon Luxe",
+      "brandTag": "Runway Certified",
+      "location": "100ft Road, Indiranagar",
+      "distance": "0.8 km away",
+      "timings": "10:00 AM - 09:00 PM"
+    },
+    "service": {
+      "id": "lakme_moroccan_spa",
+      "title": "Moroccan Oil Hydration Hair Ritual & Blowout",
+      "time": "60 mins",
+      "category": "Hair Care",
+      "price": 1899.0
+    },
+    "stylist_tier": "Senior Stylist",
+    "stylist_label": "Senior Stylist",
+    "slot_date": "2026-11-20",
+    "slot_time": "02:00 PM - 03:00 PM",
+    "customer_name": "Ananya Verma",
+    "customer_phone": "9876543210",
+    "payment_mode": "PAY_AT_SALON",
+    "total_amount": 1899.0,
+    "currency": "INR",
+    "instructions": [
+      "Present VIP Pass #LUXE-4821 at the reception of Lakmé Salon Luxe.",
+      "Zero waiting time guaranteed for your reserved time slot.",
+      "You can pay after treatment completion via UPI, Card, or Cash."
+    ]
+  }
+}
+
+
 API for Job Image Gallery List
 url : (http://192.168.1.52:8000/api/user/jobs/<job_id>/images/)
 method : GET
@@ -527,6 +2412,383 @@ response :-
       "created_at": "2026-10-16 11:30:00"
     }
   ]
+}
+
+
+API for User Display Beauty Experience (Cards: Women vs Men)
+url : (http://192.168.1.52:8000/api/user/beauty/)
+method : GET
+response :-
+{
+  "status": "success",
+  "title": "Beauty & Wellness",
+  "subtitle": "Select Experience / Category",
+  "experiences": [
+    {
+      "id": "womens_salon_spa",
+      "gender": "women",
+      "name": "Women's Salon & Spa",
+      "tagline": "At-Home Beauty or Book Top Luxury Parlours",
+      "rating": 4.91,
+      "reviews_count": "4.2M Reviews",
+      "badge": "15 Min Pro",
+      "starting_price": 349,
+      "formatted_price": "₹349",
+      "image": "http://192.168.1.52:8000/static/assets/beauty/women_photo.png",
+      "icon": "http://192.168.1.52:8000/static/assets/icons/womens_salon_spa.png",
+      "hero_title": "Women's Salon, Spa & Parlours",
+      "hero_desc": "Doorstep certified beauticians or guaranteed VIP slot at Bengaluru's top luxury salons.",
+      "modes": [
+        {
+          "id": "home",
+          "name": "1. Salon at Home",
+          "badge": "ALL SERVICES AVAILABLE",
+          "description": "Certified beautician visits your home • 100% sealed mono-kits",
+          "icon": "home",
+          "accent_color": "#ec4899"
+        },
+        {
+          "id": "parlour",
+          "name": "2. Premium Parlour Services",
+          "badge": "LUXURY SALON BRANDS",
+          "description": "Book visit at Lakmé Luxe, Enrich, BBlunt, Toni & Guy in your area",
+          "icon": "crown",
+          "accent_color": "#d97706"
+        }
+      ]
+    },
+    {
+      "id": "mens_salon_massage",
+      "gender": "men",
+      "name": "Men's Salon & Massage",
+      "tagline": "At-Home Grooming or Book Top Luxury Salons",
+      "rating": 4.87,
+      "reviews_count": "2.9M Reviews",
+      "badge": "15 Min Pro",
+      "starting_price": 249,
+      "formatted_price": "₹249",
+      "image": "http://192.168.1.52:8000/static/assets/beauty/men_photo.png",
+      "icon": "http://192.168.1.52:8000/static/assets/icons/mens_salon_massage.png",
+      "hero_title": "Men's Grooming, Massage & Barbershops",
+      "hero_desc": "Certified male barbers at home or royal grooming at Truefitt & Hill, Bounce and top lounges.",
+      "modes": [
+        {
+          "id": "home",
+          "name": "1. Grooming & Massage at Home",
+          "badge": "ALL SERVICES AVAILABLE",
+          "description": "Certified male stylist visits your home • Single-use sterilized tools & vacuum",
+          "icon": "home",
+          "accent_color": "#0284c7"
+        },
+        {
+          "id": "parlour",
+          "name": "2. Premium Barbershop & Lounge",
+          "badge": "LUXURY BARBERSHOPS",
+          "description": "Book visit at Truefitt & Hill, Bounce, Toni & Guy Men, The Man Company",
+          "icon": "crown",
+          "accent_color": "#d97706"
+        }
+      ]
+    }
+  ]
+}
+
+
+API for User Display Beauty Services (At-Home Subcategories & Services)
+url : (http://192.168.1.52:8000/api/user/beauty/services/)
+method : GET
+params :-
+gender: women (options: women / men)
+delivery_mode: home (options: home / parlour)
+response :-
+{
+  "status": "success",
+  "category_id": 37,
+  "category_name": "Beauty",
+  "gender": "women",
+  "hub": "womens_salon_spa",
+  "hub_name": "Women's Salon & Spa",
+  "mode": "home",
+  "mode_name": "Salon at Home",
+  "subcategories": [
+    {
+      "id": "sub_48",
+      "dbId": 48,
+      "name": "Facials & Cleanup",
+      "gender": "women",
+      "items": [
+        {
+          "id": "qs_41",
+          "dbId": 41,
+          "title": "O3+ Diamond Glow Facial & De-Tan",
+          "category": "Beauty",
+          "subcategory": "Facials & Cleanup",
+          "rating": "4.91",
+          "reviews": "120+ reviews",
+          "price": 899.0,
+          "originalPrice": 1168,
+          "time": "60 mins",
+          "duration": "60 mins",
+          "brand_name": "O3+ Professional",
+          "is_mono_pack": true,
+          "parlour_name": "",
+          "gender": "women",
+          "delivery_mode": "home",
+          "badge": "100% Sealed Mono-Pack",
+          "image": "http://192.168.1.52:8000/media/quick_services/facial.jpg",
+          "features": [
+            "100% Sealed Single-Dose Mono-Pack",
+            "Single-use disposable gown & cape",
+            "Sterilized instruments sealed in pouch"
+          ],
+          "packages": [
+            {
+              "name": "Express Glow",
+              "price": 899,
+              "duration": "45 mins",
+              "desc": "Cleansing, scrub and pack"
+            },
+            {
+              "name": "Royal Bridal Glow",
+              "price": 1499,
+              "duration": "75 mins",
+              "desc": "Full 7-step facial with gold serum"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "sub_49",
+      "dbId": 49,
+      "name": "Waxing & Hair Removal",
+      "gender": "women",
+      "items": []
+    },
+    {
+      "id": "sub_50",
+      "dbId": 50,
+      "name": "Pedicure & Manicure",
+      "gender": "women",
+      "items": []
+    },
+    {
+      "id": "sub_51",
+      "dbId": 51,
+      "name": "Hair Spa & Styling",
+      "gender": "women",
+      "items": []
+    }
+  ],
+  "all_services": [
+    {
+      "id": "qs_41",
+      "dbId": 41,
+      "title": "O3+ Diamond Glow Facial & De-Tan",
+      "category": "Beauty",
+      "subcategory": "Facials & Cleanup",
+      "rating": "4.91",
+      "reviews": "120+ reviews",
+      "price": 899.0,
+      "duration": "60 mins",
+      "brand_name": "O3+ Professional",
+      "is_mono_pack": true,
+      "image": "http://192.168.1.52:8000/media/quick_services/facial.jpg"
+    }
+  ],
+  "guarantee": "30-Day Money-Back & Free Re-work Guarantee",
+  "damage_cover": "Up to ₹10,000 Free Accidental Damage Cover"
+}
+
+
+API for User Display Beauty Luxury Parlours Directory
+url : (http://192.168.1.52:8000/api/user/beauty/parlours/)
+method : GET
+params :-
+gender: women (options: women / men)
+response :-
+{
+  "status": "success",
+  "gender": "women",
+  "hub": "womens_salon_spa",
+  "hub_name": "Women's Salon & Spa",
+  "mode": "parlour",
+  "mode_name": "Premium Parlour Services",
+  "guarantee": "Zero Waiting Time Guarantee • VIP Slot Reserved",
+  "count": 3,
+  "parlours": [
+    {
+      "id": "lakme_luxe",
+      "name": "Lakmé Salon Luxe",
+      "brandTag": "Runway Certified",
+      "tagline": "Runway Bridal Expertise & Moroccan Oil Hair Therapy",
+      "rating": "4.94 ★ (3,800+ reviews)",
+      "location": "100ft Road, Indiranagar",
+      "distance": "0.8 km away",
+      "timings": "10:00 AM - 09:00 PM",
+      "image": "https://images.unsplash.com/photo-1560066984-138dadb4c035?auto=format&fit=crop&w=700&q=80",
+      "highlights": [
+        "Lakmé Fashion Week Certified Stylists",
+        "Private VIP Bridal Lounge",
+        "Complimentary Gourmet Brewed Coffee"
+      ],
+      "starting_price": 1599,
+      "services_count": 4
+    },
+    {
+      "id": "enrich_salon",
+      "name": "Enrich Salon & Luxury Spa",
+      "brandTag": "Kerastase Paris",
+      "tagline": "Kerastase Hair Rituals, K-Glow Facials & BIAB Nails",
+      "rating": "4.91 ★ (2,450+ reviews)",
+      "location": "4th Block, Koramangala",
+      "distance": "1.4 km away",
+      "timings": "09:30 AM - 09:30 PM",
+      "image": "https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?auto=format&fit=crop&w=700&q=80",
+      "highlights": [
+        "Kerastase Certified Master Hair Diagnostics",
+        "Dermat-Grade Hydrafacial Suites",
+        "Premium Valet Parking"
+      ],
+      "starting_price": 1299,
+      "services_count": 3
+    }
+  ]
+}
+
+
+API for User Display Beauty Luxury Parlour Details (Services, Slots & Stylists)
+url : (http://192.168.1.52:8000/api/user/beauty/parlours/<parlour_id>/)
+method : GET
+params :-
+parlour_id: lakme_luxe (path parameter e.g. lakme_luxe / enrich_salon / truefitt_hill / bounce_salon)
+response :-
+{
+  "status": "success",
+  "hub": "womens_salon_spa",
+  "hub_name": "Women's Salon & Spa",
+  "parlour": {
+    "id": "lakme_luxe",
+    "name": "Lakmé Salon Luxe",
+    "brandTag": "Runway Certified",
+    "tagline": "Runway Bridal Expertise & Moroccan Oil Hair Therapy",
+    "rating": "4.94 ★ (3,800+ reviews)",
+    "location": "100ft Road, Indiranagar",
+    "distance": "0.8 km away",
+    "timings": "10:00 AM - 09:00 PM",
+    "image": "https://images.unsplash.com/photo-1560066984-138dadb4c035?auto=format&fit=crop&w=700&q=80",
+    "highlights": [
+      "Lakmé Fashion Week Certified Stylists",
+      "Private VIP Bridal Lounge",
+      "Complimentary Gourmet Brewed Coffee"
+    ],
+    "starting_price": 1599,
+    "services": [
+      {
+        "id": "lakme_moroccan_spa",
+        "title": "Moroccan Oil Hydration Hair Ritual & Blowout",
+        "category": "Hair Care",
+        "price": 1899,
+        "originalPrice": 2499,
+        "discount": "24% OFF",
+        "time": "60 mins",
+        "image": "https://images.unsplash.com/photo-1562322140-8baeececf3df?auto=format&fit=crop&w=500&q=80",
+        "desc": "Deep argan oil treatment infused with infrared heat to restore silkiness and mirror shine."
+      },
+      {
+        "id": "lakme_bridal_hd",
+        "title": "Runway HD Airbrush Bridal Transformation",
+        "category": "Bridal Studio",
+        "price": 8999,
+        "originalPrice": 12000,
+        "discount": "25% OFF",
+        "time": "3 Hours",
+        "image": "https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?auto=format&fit=crop&w=500&q=80",
+        "desc": "Complete pre-bridal skin prep, Temptu HD airbrush base, 3D lash installation, and designer saree draping."
+      }
+    ]
+  },
+  "stylist_tiers": [
+    {
+      "id": "Senior Stylist",
+      "name": "Senior Stylist",
+      "desc": "Certified Expert (Included)",
+      "extra_fee": 0
+    },
+    {
+      "id": "Art Director",
+      "name": "Master Art Director",
+      "desc": "+₹300 (Celebrity Stylist)",
+      "extra_fee": 300
+    }
+  ],
+  "available_dates": [
+    {"key": "Today", "label": "Today", "date": "17 Nov, Tue"},
+    {"key": "Tomorrow", "label": "Tomorrow", "date": "18 Nov, Wed"}
+  ],
+  "available_slots": [
+    "10:00 AM - 11:00 AM",
+    "11:30 AM - 12:30 PM",
+    "02:00 PM - 03:00 PM",
+    "04:30 PM - 05:30 PM",
+    "06:00 PM - 07:00 PM"
+  ],
+  "booking_terms": "Pay at Salon • Free Cancellation Anytime Before Scheduled Slot"
+}
+
+
+API for User Book Beauty Parlour Appointment / Instant VIP Pass
+url : (http://192.168.1.52:8000/api/beauty/book-appointment/)
+method : POST
+params :-
+parlour_id: lakme_luxe
+service_id: lakme_moroccan_spa
+slot_date: 2026-11-20
+slot_time: 02:00 PM - 03:00 PM
+stylist_tier: Senior Stylist (options: Senior Stylist / Art Director)
+customer_name: Ananya Verma
+customer_phone: 9876543210
+customer_email: ananya@example.com
+response :-
+{
+  "status": "success",
+  "message": "Appointment confirmed at Lakmé Salon Luxe! Pass #LUXE-4821",
+  "appointment": {
+    "pass_code": "LUXE-4821",
+    "booking_id": "BK-A91B2C3D",
+    "status": "CONFIRMED",
+    "hub": "womens_salon_spa",
+    "hub_name": "Women's Salon & Spa",
+    "parlour": {
+      "id": "lakme_luxe",
+      "name": "Lakmé Salon Luxe",
+      "brandTag": "Runway Certified",
+      "location": "100ft Road, Indiranagar",
+      "distance": "0.8 km away",
+      "timings": "10:00 AM - 09:00 PM"
+    },
+    "service": {
+      "id": "lakme_moroccan_spa",
+      "title": "Moroccan Oil Hydration Hair Ritual & Blowout",
+      "time": "60 mins",
+      "category": "Hair Care",
+      "price": 1899.0
+    },
+    "stylist_tier": "Senior Stylist",
+    "stylist_label": "Senior Stylist",
+    "slot_date": "2026-11-20",
+    "slot_time": "02:00 PM - 03:00 PM",
+    "customer_name": "Ananya Verma",
+    "customer_phone": "9876543210",
+    "payment_mode": "PAY_AT_SALON",
+    "total_amount": 1899.0,
+    "currency": "INR",
+    "instructions": [
+      "Present VIP Pass #LUXE-4821 at the reception of Lakmé Salon Luxe.",
+      "Zero waiting time guaranteed for your reserved time slot.",
+      "You can pay after treatment completion via UPI, Card, or Cash."
+    ]
+  }
 }
 
 
@@ -604,6 +2866,383 @@ response :-
       "created_at": "2026-10-16 11:45:00"
     }
   ]
+}
+
+
+API for User Display Beauty Experience (Cards: Women vs Men)
+url : (http://192.168.1.52:8000/api/user/beauty/)
+method : GET
+response :-
+{
+  "status": "success",
+  "title": "Beauty & Wellness",
+  "subtitle": "Select Experience / Category",
+  "experiences": [
+    {
+      "id": "womens_salon_spa",
+      "gender": "women",
+      "name": "Women's Salon & Spa",
+      "tagline": "At-Home Beauty or Book Top Luxury Parlours",
+      "rating": 4.91,
+      "reviews_count": "4.2M Reviews",
+      "badge": "15 Min Pro",
+      "starting_price": 349,
+      "formatted_price": "₹349",
+      "image": "http://192.168.1.52:8000/static/assets/beauty/women_photo.png",
+      "icon": "http://192.168.1.52:8000/static/assets/icons/womens_salon_spa.png",
+      "hero_title": "Women's Salon, Spa & Parlours",
+      "hero_desc": "Doorstep certified beauticians or guaranteed VIP slot at Bengaluru's top luxury salons.",
+      "modes": [
+        {
+          "id": "home",
+          "name": "1. Salon at Home",
+          "badge": "ALL SERVICES AVAILABLE",
+          "description": "Certified beautician visits your home • 100% sealed mono-kits",
+          "icon": "home",
+          "accent_color": "#ec4899"
+        },
+        {
+          "id": "parlour",
+          "name": "2. Premium Parlour Services",
+          "badge": "LUXURY SALON BRANDS",
+          "description": "Book visit at Lakmé Luxe, Enrich, BBlunt, Toni & Guy in your area",
+          "icon": "crown",
+          "accent_color": "#d97706"
+        }
+      ]
+    },
+    {
+      "id": "mens_salon_massage",
+      "gender": "men",
+      "name": "Men's Salon & Massage",
+      "tagline": "At-Home Grooming or Book Top Luxury Salons",
+      "rating": 4.87,
+      "reviews_count": "2.9M Reviews",
+      "badge": "15 Min Pro",
+      "starting_price": 249,
+      "formatted_price": "₹249",
+      "image": "http://192.168.1.52:8000/static/assets/beauty/men_photo.png",
+      "icon": "http://192.168.1.52:8000/static/assets/icons/mens_salon_massage.png",
+      "hero_title": "Men's Grooming, Massage & Barbershops",
+      "hero_desc": "Certified male barbers at home or royal grooming at Truefitt & Hill, Bounce and top lounges.",
+      "modes": [
+        {
+          "id": "home",
+          "name": "1. Grooming & Massage at Home",
+          "badge": "ALL SERVICES AVAILABLE",
+          "description": "Certified male stylist visits your home • Single-use sterilized tools & vacuum",
+          "icon": "home",
+          "accent_color": "#0284c7"
+        },
+        {
+          "id": "parlour",
+          "name": "2. Premium Barbershop & Lounge",
+          "badge": "LUXURY BARBERSHOPS",
+          "description": "Book visit at Truefitt & Hill, Bounce, Toni & Guy Men, The Man Company",
+          "icon": "crown",
+          "accent_color": "#d97706"
+        }
+      ]
+    }
+  ]
+}
+
+
+API for User Display Beauty Services (At-Home Subcategories & Services)
+url : (http://192.168.1.52:8000/api/user/beauty/services/)
+method : GET
+params :-
+gender: women (options: women / men)
+delivery_mode: home (options: home / parlour)
+response :-
+{
+  "status": "success",
+  "category_id": 37,
+  "category_name": "Beauty",
+  "gender": "women",
+  "hub": "womens_salon_spa",
+  "hub_name": "Women's Salon & Spa",
+  "mode": "home",
+  "mode_name": "Salon at Home",
+  "subcategories": [
+    {
+      "id": "sub_48",
+      "dbId": 48,
+      "name": "Facials & Cleanup",
+      "gender": "women",
+      "items": [
+        {
+          "id": "qs_41",
+          "dbId": 41,
+          "title": "O3+ Diamond Glow Facial & De-Tan",
+          "category": "Beauty",
+          "subcategory": "Facials & Cleanup",
+          "rating": "4.91",
+          "reviews": "120+ reviews",
+          "price": 899.0,
+          "originalPrice": 1168,
+          "time": "60 mins",
+          "duration": "60 mins",
+          "brand_name": "O3+ Professional",
+          "is_mono_pack": true,
+          "parlour_name": "",
+          "gender": "women",
+          "delivery_mode": "home",
+          "badge": "100% Sealed Mono-Pack",
+          "image": "http://192.168.1.52:8000/media/quick_services/facial.jpg",
+          "features": [
+            "100% Sealed Single-Dose Mono-Pack",
+            "Single-use disposable gown & cape",
+            "Sterilized instruments sealed in pouch"
+          ],
+          "packages": [
+            {
+              "name": "Express Glow",
+              "price": 899,
+              "duration": "45 mins",
+              "desc": "Cleansing, scrub and pack"
+            },
+            {
+              "name": "Royal Bridal Glow",
+              "price": 1499,
+              "duration": "75 mins",
+              "desc": "Full 7-step facial with gold serum"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "sub_49",
+      "dbId": 49,
+      "name": "Waxing & Hair Removal",
+      "gender": "women",
+      "items": []
+    },
+    {
+      "id": "sub_50",
+      "dbId": 50,
+      "name": "Pedicure & Manicure",
+      "gender": "women",
+      "items": []
+    },
+    {
+      "id": "sub_51",
+      "dbId": 51,
+      "name": "Hair Spa & Styling",
+      "gender": "women",
+      "items": []
+    }
+  ],
+  "all_services": [
+    {
+      "id": "qs_41",
+      "dbId": 41,
+      "title": "O3+ Diamond Glow Facial & De-Tan",
+      "category": "Beauty",
+      "subcategory": "Facials & Cleanup",
+      "rating": "4.91",
+      "reviews": "120+ reviews",
+      "price": 899.0,
+      "duration": "60 mins",
+      "brand_name": "O3+ Professional",
+      "is_mono_pack": true,
+      "image": "http://192.168.1.52:8000/media/quick_services/facial.jpg"
+    }
+  ],
+  "guarantee": "30-Day Money-Back & Free Re-work Guarantee",
+  "damage_cover": "Up to ₹10,000 Free Accidental Damage Cover"
+}
+
+
+API for User Display Beauty Luxury Parlours Directory
+url : (http://192.168.1.52:8000/api/user/beauty/parlours/)
+method : GET
+params :-
+gender: women (options: women / men)
+response :-
+{
+  "status": "success",
+  "gender": "women",
+  "hub": "womens_salon_spa",
+  "hub_name": "Women's Salon & Spa",
+  "mode": "parlour",
+  "mode_name": "Premium Parlour Services",
+  "guarantee": "Zero Waiting Time Guarantee • VIP Slot Reserved",
+  "count": 3,
+  "parlours": [
+    {
+      "id": "lakme_luxe",
+      "name": "Lakmé Salon Luxe",
+      "brandTag": "Runway Certified",
+      "tagline": "Runway Bridal Expertise & Moroccan Oil Hair Therapy",
+      "rating": "4.94 ★ (3,800+ reviews)",
+      "location": "100ft Road, Indiranagar",
+      "distance": "0.8 km away",
+      "timings": "10:00 AM - 09:00 PM",
+      "image": "https://images.unsplash.com/photo-1560066984-138dadb4c035?auto=format&fit=crop&w=700&q=80",
+      "highlights": [
+        "Lakmé Fashion Week Certified Stylists",
+        "Private VIP Bridal Lounge",
+        "Complimentary Gourmet Brewed Coffee"
+      ],
+      "starting_price": 1599,
+      "services_count": 4
+    },
+    {
+      "id": "enrich_salon",
+      "name": "Enrich Salon & Luxury Spa",
+      "brandTag": "Kerastase Paris",
+      "tagline": "Kerastase Hair Rituals, K-Glow Facials & BIAB Nails",
+      "rating": "4.91 ★ (2,450+ reviews)",
+      "location": "4th Block, Koramangala",
+      "distance": "1.4 km away",
+      "timings": "09:30 AM - 09:30 PM",
+      "image": "https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?auto=format&fit=crop&w=700&q=80",
+      "highlights": [
+        "Kerastase Certified Master Hair Diagnostics",
+        "Dermat-Grade Hydrafacial Suites",
+        "Premium Valet Parking"
+      ],
+      "starting_price": 1299,
+      "services_count": 3
+    }
+  ]
+}
+
+
+API for User Display Beauty Luxury Parlour Details (Services, Slots & Stylists)
+url : (http://192.168.1.52:8000/api/user/beauty/parlours/<parlour_id>/)
+method : GET
+params :-
+parlour_id: lakme_luxe (path parameter e.g. lakme_luxe / enrich_salon / truefitt_hill / bounce_salon)
+response :-
+{
+  "status": "success",
+  "hub": "womens_salon_spa",
+  "hub_name": "Women's Salon & Spa",
+  "parlour": {
+    "id": "lakme_luxe",
+    "name": "Lakmé Salon Luxe",
+    "brandTag": "Runway Certified",
+    "tagline": "Runway Bridal Expertise & Moroccan Oil Hair Therapy",
+    "rating": "4.94 ★ (3,800+ reviews)",
+    "location": "100ft Road, Indiranagar",
+    "distance": "0.8 km away",
+    "timings": "10:00 AM - 09:00 PM",
+    "image": "https://images.unsplash.com/photo-1560066984-138dadb4c035?auto=format&fit=crop&w=700&q=80",
+    "highlights": [
+      "Lakmé Fashion Week Certified Stylists",
+      "Private VIP Bridal Lounge",
+      "Complimentary Gourmet Brewed Coffee"
+    ],
+    "starting_price": 1599,
+    "services": [
+      {
+        "id": "lakme_moroccan_spa",
+        "title": "Moroccan Oil Hydration Hair Ritual & Blowout",
+        "category": "Hair Care",
+        "price": 1899,
+        "originalPrice": 2499,
+        "discount": "24% OFF",
+        "time": "60 mins",
+        "image": "https://images.unsplash.com/photo-1562322140-8baeececf3df?auto=format&fit=crop&w=500&q=80",
+        "desc": "Deep argan oil treatment infused with infrared heat to restore silkiness and mirror shine."
+      },
+      {
+        "id": "lakme_bridal_hd",
+        "title": "Runway HD Airbrush Bridal Transformation",
+        "category": "Bridal Studio",
+        "price": 8999,
+        "originalPrice": 12000,
+        "discount": "25% OFF",
+        "time": "3 Hours",
+        "image": "https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?auto=format&fit=crop&w=500&q=80",
+        "desc": "Complete pre-bridal skin prep, Temptu HD airbrush base, 3D lash installation, and designer saree draping."
+      }
+    ]
+  },
+  "stylist_tiers": [
+    {
+      "id": "Senior Stylist",
+      "name": "Senior Stylist",
+      "desc": "Certified Expert (Included)",
+      "extra_fee": 0
+    },
+    {
+      "id": "Art Director",
+      "name": "Master Art Director",
+      "desc": "+₹300 (Celebrity Stylist)",
+      "extra_fee": 300
+    }
+  ],
+  "available_dates": [
+    {"key": "Today", "label": "Today", "date": "17 Nov, Tue"},
+    {"key": "Tomorrow", "label": "Tomorrow", "date": "18 Nov, Wed"}
+  ],
+  "available_slots": [
+    "10:00 AM - 11:00 AM",
+    "11:30 AM - 12:30 PM",
+    "02:00 PM - 03:00 PM",
+    "04:30 PM - 05:30 PM",
+    "06:00 PM - 07:00 PM"
+  ],
+  "booking_terms": "Pay at Salon • Free Cancellation Anytime Before Scheduled Slot"
+}
+
+
+API for User Book Beauty Parlour Appointment / Instant VIP Pass
+url : (http://192.168.1.52:8000/api/beauty/book-appointment/)
+method : POST
+params :-
+parlour_id: lakme_luxe
+service_id: lakme_moroccan_spa
+slot_date: 2026-11-20
+slot_time: 02:00 PM - 03:00 PM
+stylist_tier: Senior Stylist (options: Senior Stylist / Art Director)
+customer_name: Ananya Verma
+customer_phone: 9876543210
+customer_email: ananya@example.com
+response :-
+{
+  "status": "success",
+  "message": "Appointment confirmed at Lakmé Salon Luxe! Pass #LUXE-4821",
+  "appointment": {
+    "pass_code": "LUXE-4821",
+    "booking_id": "BK-A91B2C3D",
+    "status": "CONFIRMED",
+    "hub": "womens_salon_spa",
+    "hub_name": "Women's Salon & Spa",
+    "parlour": {
+      "id": "lakme_luxe",
+      "name": "Lakmé Salon Luxe",
+      "brandTag": "Runway Certified",
+      "location": "100ft Road, Indiranagar",
+      "distance": "0.8 km away",
+      "timings": "10:00 AM - 09:00 PM"
+    },
+    "service": {
+      "id": "lakme_moroccan_spa",
+      "title": "Moroccan Oil Hydration Hair Ritual & Blowout",
+      "time": "60 mins",
+      "category": "Hair Care",
+      "price": 1899.0
+    },
+    "stylist_tier": "Senior Stylist",
+    "stylist_label": "Senior Stylist",
+    "slot_date": "2026-11-20",
+    "slot_time": "02:00 PM - 03:00 PM",
+    "customer_name": "Ananya Verma",
+    "customer_phone": "9876543210",
+    "payment_mode": "PAY_AT_SALON",
+    "total_amount": 1899.0,
+    "currency": "INR",
+    "instructions": [
+      "Present VIP Pass #LUXE-4821 at the reception of Lakmé Salon Luxe.",
+      "Zero waiting time guaranteed for your reserved time slot.",
+      "You can pay after treatment completion via UPI, Card, or Cash."
+    ]
+  }
 }
 
 

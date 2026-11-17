@@ -846,7 +846,7 @@ const SUGU_DATA = {
     {
       id: "37",
       dbId: "37",
-      name: "Beauty & Wellness",
+      name: "Beauty",
       iconFile: "womens_salon_spa.png",
       tagline: "Salon at Home or Book Top Luxury Parlours",
       rating: "4.91 (4.2M Reviews)",

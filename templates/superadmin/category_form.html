@@ -149,7 +149,7 @@
     
     <div class="form-group">
       <label>Category Name</label>
-      <input type="text" name="name" class="form-control" value="{{ cat.name|default:'' }}" required placeholder="e.g. AC Services, Home Painting, Carpentry">
+      <input type="text" name="name" id="catNameInput" class="form-control" value="{{ cat.name|default:'' }}" required placeholder="e.g. AC Services, Home Painting, Carpentry" oninput="toggleBeautyFields()">
     </div>
 
     <!-- Category Image Field -->
@@ -225,12 +225,19 @@
         Subcategories
         <span class="subcat-count-badge" id="subcatCount">0</span>
       </h4>
+      <div id="beautyInlineBanner" style="display:none; margin-bottom:12px; background:#fdf2f8; border:1px solid #fbcfe8; border-radius:8px; padding:10px 14px; font-size:12.5px; color:#be185d;">
+        <i class="fa-solid fa-venus-mars" style="margin-right:4px;"></i> <strong>Beauty Category:</strong> Please specify whether each subcategory is for <strong>Women</strong> or <strong>Men</strong>.
+      </div>
       <div class="subcat-list" id="subcatList">
         {% if mode == 'edit' and subcategories %}
           {% for sub in subcategories %}
           <div class="subcat-row">
             <input type="hidden" name="subcat_id[]" value="{{ sub.id }}">
             <input type="text" name="subcat_name[]" value="{{ sub.name }}" placeholder="Subcategory name" required>
+            <select name="subcat_gender[]" class="subcat-gender-select" style="width: 110px; padding: 10px 12px; border: 1.5px solid #fbcfe8; border-radius: 6px; font-family: inherit; font-size: 13px; background: #fff; color: #be185d; font-weight: 700; display: none;">
+              <option value="women" {% if sub.gender == 'women' %}selected{% endif %}>♀ Women</option>
+              <option value="men" {% if sub.gender == 'men' %}selected{% endif %}>♂ Men</option>
+            </select>
             <select name="subcat_status[]">
               <option value="active" {% if sub.status == 'active' %}selected{% endif %}>Active</option>
               <option value="inactive" {% if sub.status == 'inactive' %}selected{% endif %}>Inactive</option>
@@ -257,14 +264,33 @@
 </div>
 
 <script>
-function addSubcatRow(name, status) {
+function checkIsBeauty() {
+  const nameInput = document.getElementById('catNameInput');
+  return nameInput && nameInput.value.toLowerCase().includes('beauty');
+}
+
+function toggleBeautyFields() {
+  const isBeauty = checkIsBeauty();
+  const banner = document.getElementById('beautyInlineBanner');
+  if (banner) banner.style.display = isBeauty ? 'block' : 'none';
+  document.querySelectorAll('.subcat-gender-select').forEach(sel => {
+    sel.style.display = isBeauty ? 'block' : 'none';
+  });
+}
+
+function addSubcatRow(name, status, gender) {
   const list = document.getElementById('subcatList');
   const row = document.createElement('div');
   row.className = 'subcat-row';
   row.style.animation = 'fadeIn 0.25s ease';
+  const isBeauty = checkIsBeauty();
   row.innerHTML = `
     <input type="hidden" name="subcat_id[]" value="">
     <input type="text" name="subcat_name[]" value="${name || ''}" placeholder="Subcategory name" required>
+    <select name="subcat_gender[]" class="subcat-gender-select" style="width: 110px; padding: 10px 12px; border: 1.5px solid #fbcfe8; border-radius: 6px; font-family: inherit; font-size: 13px; background: #fff; color: #be185d; font-weight: 700; display: ${isBeauty ? 'block' : 'none'};">
+      <option value="women" ${(!gender || gender === 'women') ? 'selected' : ''}>♀ Women</option>
+      <option value="men" ${gender === 'men' ? 'selected' : ''}>♂ Men</option>
+    </select>
     <select name="subcat_status[]">
       <option value="active" ${(!status || status === 'active') ? 'selected' : ''}>Active</option>
       <option value="inactive" ${status === 'inactive' ? 'selected' : ''}>Inactive</option>
@@ -370,7 +396,8 @@ if (dropZone) {
   });
 }
 
-// init count
+// init count & beauty field visibility
 updateCount();
+toggleBeautyFields();
 </script>
 {% endblock %}
