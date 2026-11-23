@@ -725,6 +725,31 @@ class OTPVerification(models.Model):
         return f"{self.mobile} - {self.otp} ({self.purpose})"
 
 
+class AccountDeletionRequest(models.Model):
+    STATUS_CHOICES = (
+        ('pending', 'Pending'),
+        ('processing', 'Processing'),
+        ('completed', 'Completed'),
+        ('rejected', 'Rejected'),
+    )
+    user = models.ForeignKey(
+        'CustomUser',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='account_deletion_requests',
+    )
+    phone_number = models.CharField(max_length=20)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+    requested_at = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        ordering = ['-requested_at']
+
+    def __str__(self):
+        return f"Account deletion request {self.pk} ({self.status})"
+
+
 class AuthToken(models.Model):
     user = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='auth_tokens')
     key = models.CharField(max_length=64, unique=True, db_index=True)

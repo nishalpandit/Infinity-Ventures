@@ -472,5 +472,10 @@ urlpatterns = [
     path('api/user/jobs/<int:job_id>/images/', Api_views.user_job_images_list_api, name='user_job_images_list_api'),
     path('api/user/jobs/<int:job_id>/images', Api_views.user_job_images_list_api),
 
+    path('delete-account/', views.account_deletion_view, name='account_deletion'),
+    path('delete-account', views.account_deletion_view, name='account_deletion_no_slash'),
+    path('api/account-deletion/send-otp/', Api_views.account_deletion_send_otp_api, name='account_deletion_send_otp'),
+    path('api/account-deletion/verify-otp/', Api_views.account_deletion_verify_otp_api, name='account_deletion_verify_otp'),
+    path('api/account-deletion/submit/', Api_views.account_deletion_submit_api, name='account_deletion_submit'),
     re_path(r'^(?P<path>.*)$', views.dashboard_view, name='dashboard'),
 ]

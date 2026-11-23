@@ -5,7 +5,8 @@ from .models import (
     Bid, Subscription, Category, Location, State, Message, GlobalSettings,
     SiteBranding, HeroSection, QuickServiceCard, FeaturedProjectCard,
     PackageCard, Testimonial, TrustMetric, VendorWallet, WalletTransaction, PayoutRequest,
-    DisputeTicket, DisputeMessage, JobCompletionProof, ServiceReview, ServiceBooking
+    DisputeTicket, DisputeMessage, JobCompletionProof, ServiceReview, ServiceBooking,
+    AccountDeletionRequest
 )
 
 @admin.action(description='Suspend selected users')
@@ -144,6 +145,14 @@ class PayoutRequestAdmin(admin.ModelAdmin):
 admin.site.register(VendorWallet, VendorWalletAdmin)
 admin.site.register(WalletTransaction, WalletTransactionAdmin)
 admin.site.register(PayoutRequest, PayoutRequestAdmin)
+
+@admin.register(AccountDeletionRequest)
+class AccountDeletionRequestAdmin(admin.ModelAdmin):
+    list_display = ('id', 'phone_number', 'status', 'requested_at')
+    list_filter = ('status', 'requested_at')
+    search_fields = ('phone_number', 'user__username', 'user__email')
+    readonly_fields = ('phone_number', 'user', 'requested_at')
+
 
 class DisputeMessageInline(admin.TabularInline):
     model = DisputeMessage

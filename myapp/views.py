@@ -1,5 +1,6 @@
 from django.shortcuts import render, redirect
 from django.views.decorators.cache import never_cache
+from django.views.decorators.csrf import ensure_csrf_cookie
 from django.contrib.auth import authenticate, login, logout, get_user_model
 from django.contrib import messages
 from django.db.models import Q, Sum, Count, Avg, Prefetch
@@ -4925,4 +4926,8 @@ def search_locations_api(request):
 
     return JsonResponse({'results': results})
 
+@ensure_csrf_cookie
+def account_deletion_view(request):
+    """Displays instructions for requesting deletion of a Sugu Services account."""
+    return render(request, 'account_deletion.html')
 

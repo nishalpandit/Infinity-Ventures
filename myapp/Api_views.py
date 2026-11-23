@@ -1,21 +1,26 @@
 import json
 import re
 import random
+import secrets
+import logging
 import io
 import base64
 import qrcode
 from datetime import timedelta
 from decimal import Decimal
+from django.conf import settings
 from django.http import JsonResponse
 from django.views.decorators.http import require_POST
 from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth import authenticate, login
 from django.contrib.auth import get_user_model
+from django.contrib.auth.hashers import check_password, make_password
 from django.utils import timezone
+from django.utils.module_loading import import_string
 from django.db import transaction
 from django.db.models import Q
 from .models import (
-    UserProfile, VendorProfile, Category, SubCategory, Location, State,
+    UserProfile, VendorProfile, Category, SubCategory, Location, State, AccountDeletionRequest,
     OTPVerification, AuthToken, Job, JobImage, QuickService, VendorKYC,
     CustomerAddress, ServiceBooking, GlobalSettings, Message, Bid, BidPlan,
     BidCreditTransaction, Subscription, VendorWallet, WalletTransaction,
@@ -33,6 +38,7 @@ from .schedule_services import (
     schedule_for_profile,
 )
 User = get_user_model()
+logger = logging.getLogger(__name__)
 
 
 # =====================================================================
@@ -1319,6 +1325,143 @@ def verify_otp_api(request):
     except Exception as e:
         return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
 
+
+@require_POST
+def account_deletion_send_otp_api(request):
+    """Send an OTP to verify account ownership before accepting a request."""
+    data = _parse_api_request(request)
+    phone = _normalize_phone(data.get('phone') or data.get('mobile') or '')
+    if len(phone) != 10:
+        return JsonResponse({'status': 'error', 'message': 'Enter a valid 10-digit phone number.'}, status=400)
+
+    sender_path = getattr(settings, 'ACCOUNT_DELETION_SMS_BACKEND', None)
+    if not sender_path and not settings.DEBUG:
+        return JsonResponse({
+            'status': 'error',
+            'message': 'Phone verification is temporarily unavailable. Please contact support.',
+        }, status=503)
+
+    now = timezone.now()
+    recent_codes = OTPVerification.objects.filter(
+        mobile=phone,
+        purpose='account_deletion',
+        created_at__gte=now - timedelta(hours=1),
+    )
+    if recent_codes.filter(created_at__gte=now - timedelta(minutes=1)).exists():
+        return JsonResponse({'status': 'error', 'message': 'Please wait before requesting another code.'}, status=429)
+    if recent_codes.count() >= 5:
+        return JsonResponse({'status': 'error', 'message': 'Too many codes requested. Try again later.'}, status=429)
+
+    user = _resolve_user_identifier(phone)
+    if not user or not user.is_active:
+        return JsonResponse({
+            'status': 'error',
+            'message': 'No active account was found for that phone number.',
+        }, status=404)
+
+    OTPVerification.objects.filter(
+        mobile=phone,
+        purpose='account_deletion',
+        is_verified=False,
+        expires_at__gte=now,
+    ).update(is_verified=True, expires_at=now)
+
+    otp = f"{secrets.randbelow(1_000_000):06d}"
+    record = OTPVerification.objects.create(
+        mobile=phone,
+        otp=make_password(otp),
+        purpose='account_deletion',
+        expires_at=now + timedelta(minutes=10),
+    )
+    if sender_path:
+        try:
+            sms_sender = import_string(sender_path)
+            sms_sender(
+                phone,
+                f"Your Sugu Services verification code is {otp}. It expires in 10 minutes. Do not share it.",
+            )
+        except Exception as exc:
+            record.delete()
+            logger.error("Account deletion OTP delivery failed (%s).", type(exc).__name__)
+            return JsonResponse({
+                'status': 'error',
+                'message': 'We could not send a verification code. Please try again later.',
+            }, status=502)
+
+    request.session[f'account_deletion_otp_attempts_{phone}'] = 0
+    response = {'status': 'success', 'message': 'Verification code sent.'}
+    if not sender_path:
+        response['debug_otp'] = otp
+        response['message'] = 'Development mode: use the test code shown below. No SMS was sent.'
+    return JsonResponse(response)
+
+
+@require_POST
+def account_deletion_verify_otp_api(request):
+    """Verify a deletion-request OTP and authorize only the request flow."""
+    data = _parse_api_request(request)
+    phone = _normalize_phone(data.get('phone') or data.get('mobile') or '')
+    otp = str(data.get('otp') or '').strip()
+    if len(phone) != 10 or not otp:
+        return JsonResponse({'status': 'error', 'message': 'Enter your phone number and verification code.'}, status=400)
+
+    attempts_key = f'account_deletion_otp_attempts_{phone}'
+    attempts = request.session.get(attempts_key, 0)
+    if attempts >= 5:
+        return JsonResponse({'status': 'error', 'message': 'Too many attempts. Request a new code.'}, status=429)
+
+    record = OTPVerification.objects.filter(
+        mobile=phone,
+        purpose='account_deletion',
+        is_verified=False,
+        expires_at__gte=timezone.now(),
+    ).order_by('-created_at').first()
+    if not record or not check_password(otp, record.otp):
+        request.session[attempts_key] = attempts + 1
+        return JsonResponse({'status': 'error', 'message': 'Invalid or expired verification code.'}, status=400)
+
+    user = _resolve_user_identifier(phone)
+    if not user or not user.is_active:
+        return JsonResponse({'status': 'error', 'message': 'Invalid or expired verification code.'}, status=400)
+
+    record.is_verified = True
+    record.expires_at = timezone.now()
+    record.save(update_fields=['is_verified', 'expires_at'])
+    request.session['account_deletion_verified_user'] = user.pk
+    request.session['account_deletion_verified_phone'] = phone
+    request.session['account_deletion_verified_at'] = int(timezone.now().timestamp())
+    return JsonResponse({'status': 'success', 'message': 'Phone number verified.'})
+
+
+@require_POST
+def account_deletion_submit_api(request):
+    """Record a verified deletion request; this endpoint never deletes an account."""
+    user_id = request.session.get('account_deletion_verified_user')
+    phone = request.session.get('account_deletion_verified_phone')
+    verified_at = request.session.get('account_deletion_verified_at')
+    now = timezone.now()
+    if not user_id or not phone or not verified_at or now.timestamp() - verified_at > 15 * 60:
+        return JsonResponse({'status': 'error', 'message': 'Verify your phone number before continuing.'}, status=403)
+
+    user = User.objects.filter(pk=user_id, is_active=True).first()
+    if not user or _resolve_user_identifier(phone) != user:
+        return JsonResponse({'status': 'error', 'message': 'Account verification expired. Please start again.'}, status=403)
+
+    deletion_request = AccountDeletionRequest.objects.filter(
+        user=user,
+        status__in=('pending', 'processing'),
+    ).first()
+    if not deletion_request:
+        deletion_request = AccountDeletionRequest.objects.create(user=user, phone_number=phone)
+
+    request.session.pop('account_deletion_verified_user', None)
+    request.session.pop('account_deletion_verified_phone', None)
+    request.session.pop('account_deletion_verified_at', None)
+    return JsonResponse({
+        'status': 'success',
+        'message': 'Your deletion request has been received. Your account has not been deleted or changed.',
+        'request_id': deletion_request.pk,
+    })
 
 # =====================================================================
 # 5. USER OTP SIGNUP & LOGIN APIS
